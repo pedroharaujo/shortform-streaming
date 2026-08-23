@@ -1,0 +1,62 @@
+name: Implementation task
+description: Track one verifiable task or subtask from the implementation plan.
+title: "[PLAN-ID] "
+labels:
+  - implementation
+body:
+  - type: input
+    id: plan_id
+    attributes:
+      label: Plan task ID
+      description: For example P1-T02.
+      placeholder: P0-T01
+    validations:
+      required: true
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: State the outcome, not the implementation activity.
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the bounded work and relevant user journey.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and decisions
+      description: Link prerequisite tasks, ADRs, and decision-register entries.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use specific, observable checklist items.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation and integration tests
+      description: Name exact automated, integration/device, security, or manual evidence.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and rollback
+      description: Cover security, privacy, rights, money, data, cost, and recovery where applicable.
+    validations:
+      required: true

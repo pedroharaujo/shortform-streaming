@@ -1,0 +1,70 @@
+# Secrets and environment configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+service-account*.json
+
+# Licensed/confidential material
+media/
+licensed-media/
+contracts/
+private/
+*.mp4
+*.mov
+*.mkv
+*.m3u8
+*.ts
+*.vtt
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+dist/
+build/
+
+# Node / Expo
+node_modules/
+.expo/
+.expo-shared/
+web-build/
+coverage/
+*.jks
+*.keystore
+
+# Generated native projects (Expo CNG; revisit if native folders are intentionally committed)
+mobile/android/
+mobile/ios/
+
+# Infrastructure
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local tooling
+.tmp/
+tmp/
+artifacts/

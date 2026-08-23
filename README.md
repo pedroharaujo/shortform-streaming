@@ -1,7 +1,25 @@
-# Microdrama Platform
+# Shortform Streaming
 
-Public mobile-first streaming platform monorepo (planned).
+Public monorepo for a mobile-first vertical microdrama streaming platform.
 
-The implementation source of truth is [MICRODRAMA_IMPLEMENTATION_PLAN.md](./MICRODRAMA_IMPLEMENTATION_PLAN.md).
+The MVP consists of a Django REST backend/Django Admin and one React Native/Expo application for iOS and Android. A consumer web client is explicitly post-MVP.
 
-The MVP consists of a Django REST backend/Django Admin and a React Native/Expo app for iOS and Android. A consumer web client is explicitly post-MVP.
+## Project status
+
+Implementation has started with Phase 0 product, rights, compliance, architecture, and cost gates. Brazil/`pt-BR` is a proposed first-market assumption and is not approved until recorded in the decision register.
+
+## Source of truth
+
+- [Complete product and implementation plan](./MICRODRAMA_IMPLEMENTATION_PLAN.md)
+- [MVP product brief](./docs/product/MVP_PRODUCT_BRIEF.md)
+- [Decision register](./docs/product/DECISION_REGISTER.md)
+- [Content-rights checklist](./docs/product/CONTENT_RIGHTS_CHECKLIST.md)
+- [Store and privacy compliance matrix](./docs/product/STORE_COMPLIANCE_MATRIX.md)
+- [Unit-cost model](./docs/product/COST_MODEL.md)
+- [Architecture decision records](./docs/adr/)
+
+## Repository safety
+
+This repository is public. Never commit secrets, real `.env` files, licensed video or artwork, confidential contracts/rates, provider payloads, production data, personal data, store credentials, or signing material.
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) and [SECURITY.md](./SECURITY.md) before making changes.

@@ -513,7 +513,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 ### Phase 1 — Repository, Local Development, and Continuous Integration
 
-#### P1-T01 — Create and protect the private monorepo
+#### P1-T01 — Create and protect the public monorepo
 
 **Description:** Create `microdrama-platform`, add the agreed directory structure, ownership rules, issue/PR templates, contribution guide, and branch protection.
 
@@ -523,7 +523,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 **Acceptance criteria:**
 
-- [ ] Repository is private, default branch is protected, and pull requests require passing checks.
+- [ ] Repository is public, the default branch is protected, and pull requests require passing checks.
 - [ ] `sources/`, real media, environment files, keys, and credentials are ignored.
 - [ ] README explains setup, architecture, and common commands.
 
@@ -1744,7 +1744,7 @@ These are primary sources used to validate changeable decisions. Recheck them at
 ## 16. Final MVP Completion Checklist
 
 - [ ] Product, rights, policy, architecture, and cost decisions approved.
-- [ ] Private protected monorepo and full CI operational.
+- [ ] Public protected monorepo and full CI operational, with no secrets, licensed media, or confidential contracts committed.
 - [ ] Rights-aware catalog and Django Admin operational.
 - [ ] Firebase auth and account deletion operational.
 - [ ] Private GCP HLS pipeline and signed playback operational.
