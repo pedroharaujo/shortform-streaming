@@ -218,12 +218,10 @@ Install stable supported releases and commit lockfiles. Avoid pinning this plann
 
 **Video**
 
-- Google Cloud Storage private buckets for source and packaged media.
-- Google Transcoder API for asynchronous HLS renditions (for example 360p, 540p, and 720p) and thumbnails.
-- Google Cloud CDN with a private backend bucket and short-lived signed URL-prefix access or signed cookies.
-- Django issues playback authorization only after entitlement and territory checks.
-- Keep a `VideoProvider` boundary so a managed DRM/video vendor can replace the GCP path if licensing, reliability, or economics require it.
-- Video delivery is expected to be a paid variable cost; free tiers are not a realistic streaming business model at scale.
+- Bunny Stream is the default: upload a vertical master, encode ABR HLS (for example 360p, 540p, and 720p) plus thumbnails, and deliver from Bunny’s CDN with short-lived token access.
+- Django issues playback authorization only after entitlement and territory checks, then returns an HLS URL the app plays in `expo-video` (not Bunny’s web player).
+- Keep a `VideoProvider` boundary. The documented fallback is private GCS → Google Transcoder → Cloud CDN signed access; activate it only if Bunny fails P2-T05, a license/residency/support constraint forbids Bunny, or measured cost/reliability is worse. D-019 may still require a DRM-capable provider.
+- Do not run both pipelines in production. Video delivery is a paid variable cost; free tiers are not a realistic streaming business model at scale.
 
 **Monetization**
 
@@ -270,12 +268,12 @@ iOS / Android ---- HTTPS ---- Cloud Run: Django API/Admin
      |
      +-- authorized HLS request
             |
-        Cloud CDN (signed, expiring access)
-            |
-        private Cloud Storage HLS outputs
+        Bunny Stream CDN (token, expiring access)
             ^
             |
-      Transcoder API <- private source upload
+      Bunny encode <- staff upload via Django
+            |
+      fallback (only if activated): GCS -> Transcoder -> Cloud CDN
 ```
 
 ### Trust boundaries
@@ -504,12 +502,12 @@ Two decision classes apply throughout the roadmap:
 
 **Objective:** Make technical tradeoffs and contribution economics explicit.
 
-**Dependencies:** Accepted technical decisions D-010 through D-013, D-015, and D-016, plus approved pricing/reporting decisions D-021/D-022. D-014 is not a dependency: P0-T04 records its GCP path as a reversible ADR hypothesis and a provisional cost baseline for P2-T05 to validate or supersede. P0-T01, P0-T02, and P0-T03 may proceed in parallel.
+**Dependencies:** Accepted technical decisions D-010 through D-013, D-015, and D-016, plus approved pricing/reporting decisions D-021/D-022. D-014 is accepted as Bunny Stream default with GCP Cloud CDN fallback; P0-T04 records that ADR and a provisional cost baseline. P2-T05 still has to prove Bunny on device before production video configuration. P0-T01, P0-T02, and P0-T03 may proceed in parallel.
 
 **Acceptance criteria:**
 
-- [ ] ADRs exist for monorepo, modular monolith, Firebase Auth, Supabase PostgreSQL, GCP video, RevenueCat, and Firebase analytics/experimentation.
-- [ ] The video ADR labels D-014 conditional and reversible; completing P0-T04 requires a provider boundary and provisional cost assumptions, not proof that D-014 is accepted.
+- [ ] ADRs exist for monorepo, modular monolith, Firebase Auth, Supabase PostgreSQL, video delivery (Bunny default / GCP CDN fallback), RevenueCat, and Firebase analytics/experimentation.
+- [ ] The video ADR records D-014 as Bunny Stream default with GCP Cloud CDN fallback; completing P0-T04 requires a `VideoProvider` boundary and provisional cost assumptions for both paths. P2-T05 remains the on-device proof for Bunny.
 - [ ] Cost sheet supports minutes watched, renditions, egress, MAU, purchases, and ad revenue inputs.
 - [ ] Thresholds for reconsidering Supabase, CDN, transcoder, and MMP are documented.
 
@@ -711,28 +709,29 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 - [ ] Component tests cover loading, error, empty, published, and locked states.
 - [ ] Maestro opens the app, selects a series, and selects a free episode against seeded staging/local data.
 
-#### P2-T05 — Prove the GCP video pipeline
+#### P2-T05 — Prove Bunny Stream playback (GCP Cloud CDN fallback)
 
-**Description:** Build a spike that uploads a test vertical master to a private source bucket, transcodes HLS renditions, places outputs in a private delivery bucket, and plays them through Cloud CDN signed access.
+**Description:** Spike the default path: upload a test vertical master through the `VideoProvider` to Bunny Stream, encode ABR HLS, and play it on Android and iOS with a short-lived token. If Bunny fails this spike, a license/residency/support constraint forbids it, or measured cost/reliability is worse, spike the documented GCP fallback (private GCS → Transcoder → Cloud CDN signed access) before continuing.
 
-**Objective:** Retire the highest technical and cost risk before building the full player.
+**Objective:** Retire the highest technical and cost risk on the chosen default before building the full player.
 
-**Dependencies:** P1-T03 plus the reversible provider-boundary ADR and provisional video-cost baseline produced by P0-T04. P2-T05 validates or supersedes D-014; it does not depend on D-014 being accepted. Use only self-owned, generated, or purpose-made test media; commercial licensing is not a proof-of-concept dependency.
+**Dependencies:** P1-T03 plus the video ADR and provisional video-cost baseline from P0-T04. P2-T05 proves or rejects Bunny Stream as the production default; it does not re-open D-014 unless Bunny fails. Use only self-owned, generated, or purpose-made test media; commercial licensing is not a proof-of-concept dependency.
 
 **Acceptance criteria:**
 
-- [ ] 9:16 test media produces 360p/540p/720p HLS and thumbnails with correct rotation, audio, duration, and captions.
-- [ ] Android and iOS development builds play adaptive HLS through expiring signed access.
-- [ ] Unsigned, expired, and direct-origin access fail; cost per source minute is recorded.
+- [ ] 9:16 test media produces 360p/540p/720p HLS and thumbnails with correct rotation, audio, duration, and captions on Bunny Stream.
+- [ ] Android and iOS development builds play adaptive HLS through expiring token access using `expo-video` (not Bunny’s web player).
+- [ ] Unsigned, expired, and hotlink access fail; Django remains the authorizer; cost per source minute is recorded.
+- [ ] If Bunny fails, a GCP Cloud CDN fallback spike is recorded and D-014 is updated before player work continues.
 
 **Validation and integration tests:**
 
 - [ ] Test on constrained and normal networks; capture startup time, switching, rebuffering, seek, and background/foreground behavior.
-- [ ] If requirements fail, complete an ADR comparing a managed video/DRM provider before continuing.
+- [ ] If Bunny cannot meet requirements, complete the GCP fallback spike (or a DRM-vendor ADR if D-019 applies) before continuing.
 
 #### P2-T06 — Implement production media ingestion workflow
 
-**Description:** Add MediaAsset state machine, checksum/deduplication, signed staff upload, Transcoder job submission/status reconciliation, caption validation, thumbnail output, and admin retry/takedown controls. Develop with provider fakes and self-owned/generated test media; real licensed media is admitted only after P0-T02 review.
+**Description:** Add MediaAsset state machine, checksum/deduplication, signed staff upload, Bunny Stream (default `VideoProvider`) job submission/status reconciliation, caption validation, thumbnail output, and admin retry/takedown that also expires/deletes the provider asset. Keep a GCP Transcoder adapter unplugged unless the fallback is activated. Develop with provider fakes and self-owned/generated test media; real licensed media is admitted only after P0-T02 review.
 
 **Objective:** Make ingestion repeatable, auditable, and safe for licensed media.
 
@@ -746,7 +745,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **Validation and integration tests:**
 
-- [ ] Integration test runs a short self-owned/generated fixture through upload → job → ready using a provider fake and a non-production smoke test with GCP; no real provider credential is required for local checks.
+- [ ] Integration test runs a short self-owned/generated fixture through upload → job → ready using a provider fake and a non-production smoke test against Bunny Stream (or the GCP fallback if that path is active); no production provider credential is required for local checks.
 - [ ] Corrupt upload, checksum mismatch, failed job, retry, and takedown paths pass.
 
 #### P2-T07 — Implement entitlement-aware playback authorization
@@ -1145,7 +1144,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 #### P5-T01 — Provision staging infrastructure as code
 
-**Description:** Define staging Cloud Run, Artifact Registry, Storage buckets, CDN/load balancer, Transcoder permissions, Tasks/Scheduler, Secret Manager, DNS, budgets, and least-privilege IAM with OpenTofu/Terraform.
+**Description:** Define staging Cloud Run, Artifact Registry, Secret Manager (including Bunny Stream credentials), Storage buckets for non-video artifacts, Tasks/Scheduler, DNS, budgets, and least-privilege IAM with OpenTofu/Terraform. Provision GCS + Cloud CDN + Transcoder only if the D-014 GCP fallback is activated.
 
 **Objective:** Create a reproducible environment without console-only drift.
 
@@ -1154,7 +1153,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 **Acceptance criteria:**
 
 - [ ] Plan is reviewable and apply is repeatable with remote encrypted state.
-- [ ] Source/output buckets are private, public access prevention is enforced, and lifecycle/CORS rules are minimal.
+- [ ] Non-video buckets are private, public access prevention is enforced, and lifecycle/CORS rules are minimal. GCS HLS origin/CDN exist only if the GCP video fallback is active.
 - [ ] Budget alerts and labels identify product, environment, owner, and cost center.
 
 **Validation and integration tests:**
@@ -1606,7 +1605,7 @@ The backend is intentionally client-neutral. Do not start this phase until mobil
 - **Mobile unit/component tests:** state, rendering, analytics triggers, paywall branches, offline/error handling.
 - **Contract tests:** generated OpenAPI client against Django and provider webhook fixtures.
 - **Device E2E:** Maestro on Android and iOS development/release candidates.
-- **Cloud smoke tests:** real staging Firebase, Supabase, Cloud Run, GCS/CDN/Transcoder, RevenueCat sandbox, and AdMob test ads.
+- **Cloud smoke tests:** real staging Firebase, Supabase, Cloud Run, Bunny Stream (or GCS/CDN/Transcoder if the fallback is active), RevenueCat sandbox, and AdMob test ads.
 - **Security tests:** authorization matrix, webhook forgery/replay, rate limits, dependency/container scans, OWASP checklist.
 - **Performance tests:** API load, playback authorization latency, catalog response, database concurrency, HLS startup/rebuffer.
 - **Recovery tests:** database restore, deploy rollback, key rotation, provider event replay/reconciliation.
@@ -1755,7 +1754,7 @@ The accepted technical baseline permits this sequence now; Public Release Readin
 6. P0-T02/P0-T03/P0-T04 (S–M each) — Continue rights, compliance, ADR, and cost readiness in parallel; do not block Phase 1 on company/store registration data.
 7. P2-T03 (M) — Build the rights-aware catalog using generated metadata and self-owned/generated test media.
 8. P2-T04 (M) — Build anonymous home/detail screens against local seeded data.
-9. P2-T05 (M) — Test the video-provider boundary and HLS path using only approved test media.
+9. P2-T05 (M) — Prove Bunny Stream HLS (GCP Cloud CDN fallback only if Bunny fails) using only approved test media.
 10. P2-T01 (M) — Add identity with emulator/mocked verification while preserving anonymous catalog access.
 11. P2-T06/P2-T07 (M each) — Exercise ingestion and playback authorization with provider fakes and non-production credentials only where a smoke test requires them.
 12. P2-T08 (M) — Complete anonymous discovery-to-free-play, progress, resume, and autoplay.
@@ -1771,9 +1770,10 @@ These are primary sources used to validate changeable decisions. Recheck them at
 - Supabase pricing and free-plan limits: https://supabase.com/pricing
 - Google Cloud Run pricing/free tier: https://cloud.google.com/run/pricing
 - Google Cloud Storage pricing/free tier: https://cloud.google.com/storage/pricing
-- Google Cloud CDN pricing: https://cloud.google.com/cdn/pricing
-- Google Transcoder API overview and pricing: https://cloud.google.com/transcoder/docs and https://cloud.google.com/transcoder/pricing
-- Cloud CDN signed access: https://cloud.google.com/cdn/docs/authenticate-content
+- Bunny Stream pricing and docs: https://bunny.net/pricing/ and https://docs.bunny.net/docs/stream-http-api
+- Google Cloud CDN pricing (fallback): https://cloud.google.com/cdn/pricing
+- Google Transcoder API overview and pricing (fallback): https://cloud.google.com/transcoder/docs and https://cloud.google.com/transcoder/pricing
+- Cloud CDN signed access (fallback): https://cloud.google.com/cdn/docs/authenticate-content
 - Firebase pricing: https://firebase.google.com/pricing
 - Firebase Authentication: https://firebase.google.com/docs/auth
 - Firebase A/B Testing: https://firebase.google.com/docs/ab-testing
@@ -1795,8 +1795,9 @@ These are primary sources used to validate changeable decisions. Recheck them at
 
 - Supabase Free is appropriate for prototypes but can pause after inactivity and lacks production-grade backup/SLA features; public production should be paid.
 - Cloud Run has an always-free allowance, but network and dependent services can still incur costs.
-- Cloud Storage has limited free usage in specified US regions; Cloud CDN is usage-priced.
-- Transcoder is pay-per-output-minute and each rendition affects cost.
+- Bunny Stream bills storage plus CDN delivery; encoding is included. GCP Cloud CDN plus Transcoder remains the fallback cost model.
+- Cloud Storage has limited free usage in specified US regions; Cloud CDN is usage-priced if the fallback is active.
+- Transcoder is pay-per-output-minute and each rendition affects cost if the GCP fallback is active.
 - Firebase Analytics, A/B Testing, Crashlytics, and several engagement tools have no-cost allowances, but quotas/pricing can change; Remote Config pricing changes begin in September 2026.
 - Apple and Google generally require their purchase systems for in-app digital content and virtual currency, subject to evolving regional programs and legal exceptions. The conservative default is store billing.
 - Customer price currency and developer payout currency are separate: storefronts localize customer prices, while Apple pays in the configured bank-account currency and Google pays in the payments-profile currency. The business target is EUR settlement, subject to account and bank eligibility.
@@ -1814,7 +1815,7 @@ This is a hard publication gate, not a prerequisite for Phase 1 or isolated prod
 - [ ] Public protected monorepo and full CI operational, with no secrets, licensed media, or confidential contracts committed.
 - [ ] Rights-aware catalog and Django Admin operational.
 - [ ] Firebase auth and account deletion operational.
-- [ ] Private GCP HLS pipeline and signed playback operational.
+- [ ] Bunny Stream HLS pipeline and tokenized playback operational (GCP Cloud CDN fallback documented and unused unless activated).
 - [ ] Vertical player, progress, and free episode journey operational.
 - [ ] Coin ledger/unlock, store coin packs, subscription, restore, and rewarded ad operational.
 - [ ] All commerce/reward paths are server-verified, idempotent, reconciled, and supportable.
