@@ -11,4 +11,9 @@ os.environ.setdefault(
 from .base import *  # noqa: E402,F403
 
 DEBUG = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
+local_allowed_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = (
+    [host.strip() for host in local_allowed_hosts.split(",") if host.strip()]
+    if local_allowed_hosts.strip()
+    else ["localhost", "127.0.0.1", "[::1]"]
+)

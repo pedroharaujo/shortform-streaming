@@ -127,9 +127,10 @@ Production settings fail immediately unless all of these values are non-empty:
 - `DATABASE_URL`: a standard PostgreSQL connection URL.
 
 `DATABASE_CONNECT_TIMEOUT` defaults to two seconds so readiness does not hang on an
-unreachable database. Production enables HTTPS redirect, secure cookies, proxy HTTPS
-handling, HSTS, and related Django deployment protections. Do not reuse the local example
-values or commit a populated `.env`.
+unreachable database and accepts only an integer from 1 through 10. SQLite, MySQL, and
+other database engines are rejected in every environment. Production enables HTTPS
+redirect, secure cookies, proxy HTTPS handling, HSTS, and related Django deployment
+protections. Do not reuse the local example values or commit a populated `.env`.
 
 ## Project status
 
