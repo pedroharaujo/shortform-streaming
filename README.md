@@ -1,6 +1,6 @@
 # Microdrama Platform
 
-Private mobile-first streaming platform monorepo (planned).
+Public mobile-first streaming platform monorepo (planned).
 
 The implementation source of truth is [MICRODRAMA_IMPLEMENTATION_PLAN.md](./MICRODRAMA_IMPLEMENTATION_PLAN.md).
 

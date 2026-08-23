@@ -3,7 +3,7 @@
 **Document status:** Implementation-ready baseline  
 **Language:** English  
 **Last reviewed:** 2026-08-23  
-**Repository:** `microdrama-platform` (private monorepo)  
+**Repository:** `pedroharaujo/shortform-streaming` (public monorepo)  
 **MVP clients:** iOS and Android only; Django Admin is the only web interface
 
 ---
