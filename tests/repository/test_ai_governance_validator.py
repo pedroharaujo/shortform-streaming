@@ -102,6 +102,35 @@ class AiGovernanceValidatorTests(unittest.TestCase):
                     expected_error,
                 )
 
+    def test_rejects_passive_path_first_policy(self) -> None:
+        self.assert_contract_regression(
+            "ai/roles/validation-planner.md",
+            (
+                "- Classify risk from intended behavior, affected consumers, data "
+                "flow, and failure impact; never classify from file extension or "
+                "path alone."
+            ),
+            (
+                "- Risk is classified primarily by file extension or path. Record "
+                "semantic impact; never classify only from file extension or path."
+            ),
+            "validation planner Hard boundaries must classify semantic risk",
+        )
+
+    def test_accepts_paths_as_only_a_secondary_signal(self) -> None:
+        self.validate_contract_variant(
+            "ai/roles/validation-planner.md",
+            (
+                "- Classify risk from intended behavior, affected consumers, data "
+                "flow, and failure impact; never classify from file extension or "
+                "path alone."
+            ),
+            (
+                "- Record intended behavior and affected consumers. File paths are "
+                "only a secondary signal, never the primary basis for classification."
+            ),
+        )
+
     def test_rejects_planner_manifest_ownership(self) -> None:
         self.assert_contract_regression(
             "ai/roles/validation-planner.md",
@@ -198,6 +227,20 @@ class AiGovernanceValidatorTests(unittest.TestCase):
                     new,
                     "R3 trigger security controls is missing",
                 )
+
+    def test_rejects_duplicate_r3_entries_in_the_same_format(self) -> None:
+        r3_row = (
+            "| `R3` | Authentication, authorization, security controls or trust "
+            "boundaries, secrets, privacy, rights, commerce, payments, entitlements, "
+            "dependencies or supply-chain integrity, infrastructure, destructive "
+            "migrations, or data deletion. |"
+        )
+        self.assert_contract_regression(
+            "ai/roles/validation-planner.md",
+            r3_row,
+            f"{r3_row}\n{r3_row}",
+            "validation planner risk classification must define exactly one R3 entry",
+        )
 
     def test_rejects_unbounded_omission_inventory(self) -> None:
         self.assert_contract_regression(

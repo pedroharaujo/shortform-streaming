@@ -45,7 +45,7 @@ def risk_entry(content: str, level: str, location: str) -> str:
     matches = [
         match.group("body")
         for pattern in patterns
-        if (match := re.search(pattern, content, re.MULTILINE))
+        for match in re.finditer(pattern, content, re.MULTILINE)
     ]
     if len(matches) != 1:
         raise AssertionError(f"{location} must define exactly one {level} entry")
@@ -126,17 +126,23 @@ def validate_semantic_classification(planner: str, loop: str) -> None:
         r"\b(?:file extensions?|paths?)\b",
         re.IGNORECASE,
     )
+    secondary_signal_prohibition = re.compile(
+        r"\bfile paths?\s+(?:are|remain)\s+only\s+a\s+secondary\s+signal,\s*"
+        r"never\s+the\s+primary\s+basis\s+for\s+(?:risk\s+)?classification\b",
+        re.IGNORECASE,
+    )
     primary_classifier = re.compile(
-        r"(?:\bclassif(?:y|ication)\b[^.\n]{0,60}"
+        r"(?:\bclassif(?:y|ied|ying|ication)\b[^.\n]{0,60}"
         r"\b(?:primary|primarily|sole|solely|only|alone|first)\b"
         r"[^.\n]{0,80}\b(?:from|by|based on)\b[^.\n]{0,80}"
         r"\b(?:file extensions?|paths?)\b|"
-        r"\bclassif(?:y|ication)\b[^.\n]{0,60}"
+        r"\bclassif(?:y|ied|ying|ication)\b[^.\n]{0,60}"
         r"\b(?:from|by|based on)\b[^.\n]{0,80}"
         r"\b(?:file extensions?|paths?)\b[^.\n]{0,40}"
         r"\b(?:primary|primarily|sole|solely|only|alone|first)\b|"
-        r"\b(?:file extensions?|paths?)\b[^.\n]{0,60}"
-        r"\b(?:primary|sole|only)\b[^.\n]{0,30}"
+        r"\b(?:file extensions?|paths?)\b\s+"
+        r"(?:is|are|remain|become|serve as|act as)\s+(?:the\s+)?"
+        r"(?:primary|sole|only)\s+"
         r"\b(?:classifier|basis|criterion|input|signal)\b)",
         re.IGNORECASE,
     )
@@ -160,9 +166,11 @@ def validate_semantic_classification(planner: str, loop: str) -> None:
             and not passive_prohibition.search(statement)
             for statement in statements
         )
-        has_prohibition = direct_prohibition.search(
-            section
-        ) or passive_prohibition.search(section)
+        has_prohibition = (
+            direct_prohibition.search(section)
+            or passive_prohibition.search(section)
+            or secondary_signal_prohibition.search(section)
+        )
         if (
             not any(term in folded for term in semantic_terms)
             or not has_prohibition
