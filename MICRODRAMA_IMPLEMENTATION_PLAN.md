@@ -1,0 +1,1760 @@
+# Microdrama Platform — Product and Implementation Plan
+
+**Document status:** Implementation-ready baseline  
+**Language:** English  
+**Last reviewed:** 2026-08-23  
+**Repository:** `microdrama-platform` (private monorepo)  
+**MVP clients:** iOS and Android only; Django Admin is the only web interface
+
+---
+
+## 1. How to Use This Plan
+
+This file is the source of truth for product scope, architecture, delivery order, and acceptance. It is designed to be given directly to Codex or Cursor.
+
+Execution rules:
+
+1. Implement one task per focused change or pull request unless two tasks are explicitly coupled.
+2. Read the task objective, dependencies, acceptance criteria, and validation before coding.
+3. Do not mark a task complete until its automated tests and stated integration test pass.
+4. Record evidence in the pull request: commands run, screenshots where relevant, migration impact, and rollback notes.
+5. Keep API, analytics, and entitlement behavior backward-compatible. Use migrations and feature flags for risky changes.
+6. Prefer vertical slices that leave a usable path working end to end.
+7. Do not add a consumer web frontend during the MVP.
+8. Do not serve video bytes through Django.
+9. Do not trust the mobile client for purchases, coin balances, rewarded-ad grants, or entitlements.
+10. Recheck provider prices and app-store policies before production launch; they change over time.
+
+### Definition of Done for Every Task
+
+- Acceptance criteria are demonstrably satisfied.
+- New behavior has automated tests at the appropriate level.
+- Existing test suites, linting, type checks, and builds pass.
+- Security, privacy, analytics, accessibility, and localization impacts are considered.
+- Documentation and environment examples are updated.
+- No secrets, real user data, or licensed media are committed.
+
+---
+
+## 2. Product Summary
+
+Build a mobile-first streaming platform for licensed vertical microdramas. Users discover a series, watch short episodes in a vertical player, and continue through a configurable mix of free episodes, rewarded-ad unlocks, coin unlocks, and an all-access subscription.
+
+The first business goal is not to become a large streaming catalog. It is to validate a repeatable acquisition and monetization loop:
+
+> Creative/campaign → acquired user → series → episode progression → monetization → cohort LTV → contribution margin.
+
+Start with 5–10 non-exclusive licensed series. Use data to identify profitable genres, hooks, audiences, markets, paywall positions, and prices. Only after positive unit economics should the company expand the catalog, produce owned IP, and offer distribution services.
+
+### Business layers and long-term sequence
+
+1. **Platform first:** license content, acquire viewers, learn what monetizes.
+2. **Studio second:** produce owned content based on validated demand signals.
+3. **Distributor later:** license owned and third-party catalogs to other platforms.
+
+### MVP hypothesis
+
+The product is viable when selected acquired cohorts can achieve projected contribution LTV greater than CAC after store fees, content revenue share, refunds, ad costs, infrastructure, and taxes.
+
+---
+
+## 3. MVP Scope and Product Decisions
+
+### Included in MVP
+
+- iOS and Android mobile apps built from one React Native/Expo TypeScript codebase.
+- Django REST API and Django Admin.
+- Catalog, series detail, episode list, vertical adaptive-streaming player, autoplay next, and watch progress.
+- Anonymous browsing and free playback; account required before the first monetized unlock or cross-device sync.
+- Email/password, Apple, and Google sign-in through Firebase Authentication.
+- Configurable episode access policy: free, rewarded ad, coins, or subscription.
+- Consumable coin packs through Apple In-App Purchase and Google Play Billing.
+- Auto-renewing subscription through the stores.
+- Rewarded ads through Google AdMob, with server-side verification when available.
+- Server-authoritative coin ledger and entitlements.
+- Push notifications, analytics, crash reporting, remote configuration, and A/B testing.
+- Content ingestion, rights metadata, media processing, signed playback access, and basic editorial curation.
+- Staging and production deployment, CI/CD, observability, privacy controls, and account deletion.
+
+### Explicitly excluded from MVP
+
+- Consumer web streaming client.
+- User-generated content, comments, social feed, chat, creator uploads, and profiles visible to other users.
+- Offline downloads.
+- Live streaming.
+- Multiple profiles per account and household sharing.
+- Smart-TV apps.
+- Recommendation machine learning; MVP recommendations are editorial/rule-based.
+- Microservices, Kubernetes, Kafka, Elasticsearch, GraphQL, and a custom admin frontend.
+- Custom DRM unless a content license contract requires it.
+- Direct credit-card checkout inside mobile apps for digital goods.
+
+### Default access and monetization rules
+
+- The number of free episodes is configurable per series and experiment cohort; a reasonable seed is the first 3–5 episodes.
+- A free episode requires no login.
+- At a locked episode, the server returns the allowed unlock methods and localized offer metadata.
+- Access precedence is: active subscription → existing episode entitlement → free policy → locked.
+- A successful rewarded ad grants one persistent episode entitlement to the authenticated account.
+- A coin unlock debits the server ledger atomically and grants a persistent episode entitlement.
+- A subscription grants access to the eligible catalog only while active; separately unlocked episodes remain available.
+- Purchased coins do not expire. Coins cannot be transferred, cashed out, or used outside this product.
+- Rewarded ads are always opt-in, clearly state the reward, and never interrupt playback.
+- Use interstitial ads only after a later experiment proves they improve contribution without damaging retention.
+- Store purchase restoration and subscription resynchronization are mandatory.
+
+### Content and rights decisions
+
+- Launch with licensed, non-exclusive content where possible.
+- Every series must record licensor, territories, platforms, languages, start/end dates, exclusivity, revenue-share rules, takedown status, and source-contract reference.
+- The API must hide expired, out-of-territory, unpublished, or takedown content.
+- Originals and subtitles are private assets. Public bucket access is prohibited.
+- Signed access reduces casual sharing but is not DRM. A contract requiring Widevine/FairPlay changes the video-provider decision before ingestion.
+
+### Initial success metrics
+
+Primary business metric:
+
+- **Cohort contribution margin:** net IAP/subscription revenue + rewarded-ad revenue − CAC − content royalties/revenue share − variable infrastructure − refunds/taxes.
+
+Core product metrics:
+
+- Install-to-first-play conversion.
+- Episode 1 start and completion rates.
+- Episode N continuation curve and paywall reach.
+- Rewarded-ad offer acceptance and verified reward rate.
+- Paywall view-to-purchase conversion.
+- Trial-to-paid and subscription renewal/churn.
+- D1, D7, and D30 retention.
+- ARPDAU, payer conversion, ad ARPDAU, and D7/D30 cohort LTV.
+- Playback start time, rebuffer ratio, completion rate, and playback error rate.
+- CAC and LTV/CAC by creative, campaign, country, series, and experiment variant.
+
+Launch gates should be set after the first test market is chosen. Do not invent universal thresholds before baseline data exists.
+
+---
+
+## 4. Technology and Local Setup
+
+Install stable supported releases and commit lockfiles. Avoid pinning this planning document to transient version numbers.
+
+### Required developer tools
+
+- Git and a GitHub account.
+- Docker Desktop with Docker Compose.
+- Python, managed with `uv`; use the current stable Python supported by the selected Django LTS.
+- Node.js current LTS, Corepack, and `pnpm`.
+- Android Studio, Android SDK, and an emulator or physical Android device.
+- EAS CLI and an Expo account.
+- Google Cloud CLI.
+- Firebase CLI.
+- OpenTofu or Terraform CLI.
+- Optional: PostgreSQL client, Bruno/Insomnia, and Maestro CLI.
+- For local iOS builds: macOS and Xcode. On Windows/Linux, use EAS cloud builds for iOS.
+
+### Accounts required before beta
+
+- Private GitHub repository.
+- Google Cloud billing account and separate staging/production projects.
+- Firebase staging/production projects.
+- Supabase organization and database projects.
+- Expo/EAS project.
+- Apple Developer Program and App Store Connect.
+- Google Play Console.
+- RevenueCat.
+- Google AdMob.
+- A transactional email provider for production auth email if Firebase requires customization.
+- DNS/domain provider.
+- Sentry is optional if Firebase Crashlytics plus Cloud Error Reporting is sufficient.
+- Meta and TikTok advertiser accounts only when acquisition testing starts.
+
+### Selected stack
+
+**Monorepo and tooling**
+
+- `pnpm` workspace for JavaScript/TypeScript.
+- `uv` for Python dependencies and virtual environments.
+- Docker Compose for local PostgreSQL and service parity.
+- Ruff for Python lint/format; mypy or pyright for type checking.
+- ESLint, Prettier, and strict TypeScript for mobile.
+- Pre-commit hooks for fast local checks.
+
+**Backend**
+
+- Django LTS, Django REST Framework, and `drf-spectacular` OpenAPI.
+- Gunicorn in production.
+- PostgreSQL.
+- `pytest`, `pytest-django`, Factory Boy, and coverage.
+- Modular monolith with bounded Django apps, not microservices.
+- Cloud Tasks and Cloud Scheduler for durable asynchronous/scheduled work where needed.
+
+**Mobile**
+
+- React Native with Expo and TypeScript.
+- Expo Router.
+- Expo development builds; Expo Go is not sufficient for purchases, AdMob, and native Firebase modules.
+- TanStack Query for server state; a small Zustand store only for transient UI/session state.
+- `expo-video` for HLS playback, subject to an early proof-of-concept.
+- React Hook Form and Zod for forms and client validation.
+- React Native Testing Library and Jest; Maestro for end-to-end device tests.
+
+**Identity and mobile platform services**
+
+- Firebase Authentication for email/password, Google, and Apple sign-in.
+- Firebase Analytics, Remote Config, A/B Testing, Crashlytics, Performance Monitoring, Cloud Messaging, and App Check.
+- Django verifies Firebase ID tokens and owns application profiles and authorization.
+
+**Database**
+
+- Supabase managed PostgreSQL for development and early staging because its free tier is useful for prototyping.
+- Upgrade production to a paid Supabase plan before public launch; the free plan has pausing, backup, resource, and SLA limitations.
+- Keep standard PostgreSQL and Django migrations so migration to GCP Cloud SQL remains straightforward.
+- The mobile app never connects directly to Supabase.
+
+**Video**
+
+- Google Cloud Storage private buckets for source and packaged media.
+- Google Transcoder API for asynchronous HLS renditions (for example 360p, 540p, and 720p) and thumbnails.
+- Google Cloud CDN with a private backend bucket and short-lived signed URL-prefix access or signed cookies.
+- Django issues playback authorization only after entitlement and territory checks.
+- Keep a `VideoProvider` boundary so a managed DRM/video vendor can replace the GCP path if licensing, reliability, or economics require it.
+- Video delivery is expected to be a paid variable cost; free tiers are not a realistic streaming business model at scale.
+
+**Monetization**
+
+- RevenueCat SDK/webhooks for store product presentation, receipt lifecycle, and subscription entitlements.
+- Apple In-App Purchase and Google Play Billing for mobile digital subscriptions and coin packs.
+- Django coin ledger for currency balance and episode unlocks.
+- Google AdMob rewarded ads, using test ad units outside production and server-side verification in production.
+
+**Analytics and experimentation**
+
+- Firebase Analytics event collection.
+- Firebase Remote Config and A/B Testing for paywall position, free-episode count, coin price, ad offer, and messaging.
+- BigQuery export for raw event analysis and cohort joins.
+- Looker Studio for the first dashboards.
+- Platform-native attribution plus campaign/deep-link parameters for small tests; select an MMP such as Adjust or AppsFlyer before material paid acquisition if native attribution cannot answer cohort economics reliably.
+
+**Infrastructure and operations**
+
+- Cloud Run for Django API/Admin.
+- Artifact Registry for container images.
+- Secret Manager for secrets.
+- Cloud Logging, Monitoring, Trace/Error Reporting, and uptime checks.
+- GitHub Actions with Google Workload Identity Federation; no long-lived GCP service-account keys.
+- OpenTofu/Terraform for reproducible GCP resources.
+
+---
+
+## 5. Target Architecture
+
+```text
+                         Internal staff
+                              |
+                         Django Admin
+                              |
+iOS / Android ---- HTTPS ---- Cloud Run: Django API/Admin
+     |                        |       |        |
+     |                        |       |        +-- Cloud Tasks/Scheduler
+     |                        |       +----------- Supabase PostgreSQL
+     |                        +------------------- Firebase token verification
+     |
+     +-- Firebase Auth / Analytics / Remote Config / Crashlytics / FCM
+     +-- RevenueCat -> Apple IAP / Google Play Billing
+     +-- AdMob rewarded ad
+     |
+     +-- authorized HLS request
+            |
+        Cloud CDN (signed, expiring access)
+            |
+        private Cloud Storage HLS outputs
+            ^
+            |
+      Transcoder API <- private source upload
+```
+
+### Trust boundaries
+
+- Mobile input is untrusted.
+- Firebase authenticates identity; Django authorizes every business action.
+- RevenueCat and AdMob callbacks are untrusted until signature/authenticity and idempotency checks pass.
+- Database transactions are the authority for coin balance and permanent episode entitlements.
+- Firebase Analytics is not the financial ledger.
+- CDN URLs are bearer credentials and must be short-lived and excluded from logs/analytics.
+
+### Proposed monorepo
+
+```text
+microdrama-platform/
+├── backend/
+│   ├── config/
+│   ├── apps/
+│   │   ├── accounts/
+│   │   ├── catalog/
+│   │   ├── playback/
+│   │   ├── entitlements/
+│   │   ├── commerce/
+│   │   ├── advertising/
+│   │   ├── experiments/
+│   │   └── notifications/
+│   ├── tests/
+│   ├── manage.py
+│   └── pyproject.toml
+├── mobile/
+│   ├── app/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── features/
+│   │   ├── components/
+│   │   ├── analytics/
+│   │   └── test/
+│   ├── app.config.ts
+│   ├── eas.json
+│   └── package.json
+├── packages/
+│   └── api-client/              # generated from OpenAPI
+├── infra/
+│   ├── modules/
+│   └── environments/
+├── docs/
+│   ├── adr/
+│   ├── api/
+│   ├── analytics/
+│   ├── runbooks/
+│   └── product/
+├── scripts/
+├── .github/workflows/
+├── compose.yaml
+├── pnpm-workspace.yaml
+├── .env.example
+├── CONTRIBUTING.md
+└── README.md
+```
+
+### Core domain model
+
+- `UserProfile`: Firebase UID, locale, country, consent state, timestamps, deletion state.
+- `Series`: localized metadata, artwork, genre, status, editorial rank.
+- `Season`: optional grouping; model now even if MVP normally has one.
+- `Episode`: order, localized metadata, duration, publication window, policy reference.
+- `ContentRight`: licensor, territories, languages, platforms, dates, exclusivity, contract reference, takedown.
+- `MediaAsset`: source/output locations, rendition state, checksum, codec, aspect ratio, captions, processing status.
+- `AccessPolicy`: free/ad/coin/subscription configuration and experiment-safe defaults.
+- `EpisodeEntitlement`: user, episode, source, granted/expiry/revocation metadata.
+- `Wallet`: one per user and currency namespace.
+- `CoinLedgerEntry`: immutable credit/debit/adjustment with idempotency key and running audit fields.
+- `StoreTransaction`: store/provider transaction identity, product, state, raw-event reference, user, timestamps.
+- `SubscriptionState`: provider entitlement, status, expiry, grace/billing-retry state.
+- `RewardClaim`: ad network transaction, user, episode/reward, verification state, idempotency key.
+- `WatchProgress`: user/device, episode, position, completion, last watched.
+- `ExperimentExposure`: optional server record only for financially material server-side decisions; Firebase remains the primary assignment system.
+- `NotificationPreference` and `PushToken`.
+
+Critical constraints:
+
+- Unique episode order within a season.
+- Unique permanent entitlement per user/episode/source semantics.
+- Unique external store transaction ID.
+- Unique rewarded-ad transaction ID.
+- Ledger entries are immutable; corrections are compensating entries.
+- Coin debit and entitlement grant happen in one database transaction with row locking.
+- Rights and publication checks are evaluated server-side at catalog and playback time.
+
+---
+
+## 6. API and Event Contracts
+
+### Initial REST surface
+
+- `GET /v1/config/bootstrap`
+- `GET /v1/catalog/home`
+- `GET /v1/series/{id}`
+- `GET /v1/episodes/{id}`
+- `POST /v1/playback/{episode_id}/authorize`
+- `PUT /v1/progress/{episode_id}`
+- `GET /v1/me`
+- `DELETE /v1/me`
+- `GET /v1/me/wallet`
+- `GET /v1/me/entitlements`
+- `GET /v1/offers/{episode_id}`
+- `POST /v1/unlocks/coins`
+- `POST /v1/rewards/intents`
+- `GET /v1/rewards/{id}`
+- `POST /v1/webhooks/revenuecat`
+- `GET /v1/webhooks/admob/ssv` or the provider-required verified callback form
+- `POST /v1/push/register`
+- `DELETE /v1/push/register/{token}`
+- `GET /health/live` and `GET /health/ready`
+
+Rules:
+
+- Cursor pagination for lists that can grow.
+- Stable opaque public IDs; never expose sequential database IDs as an assumption.
+- Consistent error envelope with code, safe message, correlation ID, and field errors.
+- `Idempotency-Key` required on wallet-changing client commands.
+- OpenAPI is generated in CI; the TypeScript client is generated from it.
+- Version breaking changes under a new API prefix; additive changes are preferred.
+
+### Canonical analytics events
+
+- `app_open`, `sign_up`, `login`, `account_deleted`
+- `home_viewed`, `series_impression`, `series_opened`
+- `episode_started`, `episode_progress`, `episode_completed`, `playback_error`
+- `locked_episode_viewed`, `offer_presented`, `offer_selected`
+- `rewarded_ad_loaded`, `rewarded_ad_started`, `rewarded_ad_completed`, `reward_granted`, `reward_failed`
+- `coin_pack_viewed`, `purchase_started`, `purchase_succeeded`, `purchase_failed`, `purchase_restored`
+- `coins_spent`, `episode_unlocked`
+- `subscription_started`, `subscription_renewed`, `subscription_cancelled`, `subscription_expired`
+- `push_permission_prompted`, `push_permission_result`, `notification_opened`
+- `experiment_exposure`
+
+Common properties:
+
+- `event_id`, anonymous/app-instance ID, authenticated user ID where consent permits.
+- App version/build, platform, locale, country, timestamp, and session ID.
+- Series/episode IDs and episode number.
+- Offer/paywall ID, coin price, store product ID, access method.
+- Experiment ID/variant.
+- Campaign, ad set, creative, source, medium, and deep-link target where available.
+
+Never send email, auth token, signed video URL, full IP address, payment receipt, contract reference, or free-form error payload to analytics.
+
+---
+
+## 7. Delivery Roadmap and Tasks
+
+The sequence below is dependency-ordered and keeps high-risk proofs early. Estimates should be added only after one engineer has completed the first vertical slice and calibrated velocity.
+
+### Phase 0 — Product, Rights, and Delivery Foundations
+
+#### P0-T01 — Approve MVP product brief and launch market
+
+**Description:** Convert this plan into an approved one-page brief naming the first country, primary language, target audience, content rating, catalog size, and success/stop criteria.
+
+**Objective:** Prevent architecture and store work from proceeding with unresolved product assumptions.
+
+**Dependencies:** None.
+
+**Acceptance criteria:**
+
+- [ ] One launch market and currency are selected.
+- [ ] MVP inclusions/exclusions and monetization defaults are approved.
+- [ ] KPI definitions, experiment guardrails, budget ceiling, and stop/go review date are documented.
+
+**Validation and integration tests:**
+
+- [ ] Product, engineering, growth, and legal/content owners review the same brief.
+- [ ] Trace every MVP screen and backend domain in this plan to at least one approved user journey.
+
+#### P0-T02 — Complete content-rights and media-requirements checklist
+
+**Description:** Define the contractual metadata and technical delivery package required from each licensor.
+
+**Objective:** Ensure every published asset is legally and technically distributable.
+
+**Dependencies:** P0-T01.
+
+**Acceptance criteria:**
+
+- [ ] Checklist covers territories, platforms, languages, dates, exclusivity, edits, advertising rights, promotion clips, royalties, takedown SLA, DRM, subtitles, and age rating.
+- [ ] Media specification covers vertical aspect ratio, codecs, audio, captions, posters, episode numbering, checksums, and source quality.
+- [ ] No title can be marked publishable without required rights records.
+
+**Validation and integration tests:**
+
+- [ ] Run the checklist against one sample licensing package and record gaps.
+- [ ] Legal/content owner signs off before any real media reaches production.
+
+#### P0-T03 — Create product policy and store-compliance matrix
+
+**Description:** Map coins, subscriptions, rewarded ads, account deletion, privacy, consent, and age rating to Apple, Google Play, AdMob, GDPR/UK GDPR, and launch-market requirements.
+
+**Objective:** Avoid building monetization flows that stores or regulators reject.
+
+**Dependencies:** P0-T01.
+
+**Acceptance criteria:**
+
+- [ ] Mobile digital goods use store billing by default.
+- [ ] Coin non-expiry, refund handling, restore behavior, subscription disclosure, and rewarded-ad consent are documented.
+- [ ] Privacy policy, terms, content policy, support contact, and data-deletion process have owners and deadlines.
+
+**Validation and integration tests:**
+
+- [ ] Compliance reviewer walks through every monetization screen against the matrix.
+- [ ] Store review notes template explains the business model and test account path.
+
+#### P0-T04 — Establish architecture decision records and cost model
+
+**Description:** Record the decisions in this plan as ADRs and build a unit-cost model for database, API, video processing, CDN egress, analytics, ads, and store commissions.
+
+**Objective:** Make technical tradeoffs and contribution economics explicit.
+
+**Dependencies:** P0-T01, P0-T02.
+
+**Acceptance criteria:**
+
+- [ ] ADRs exist for monorepo, modular monolith, Firebase Auth, Supabase PostgreSQL, GCP video, RevenueCat, and Firebase analytics/experimentation.
+- [ ] Cost sheet supports minutes watched, renditions, egress, MAU, purchases, and ad revenue inputs.
+- [ ] Thresholds for reconsidering Supabase, CDN, transcoder, and MMP are documented.
+
+**Validation and integration tests:**
+
+- [ ] Model one small beta, target launch, and 10× scenario.
+- [ ] Confirm infrastructure variable cost flows into cohort contribution margin.
+
+### Checkpoint 0 — Product feasibility
+
+- [ ] Launch market, rights checklist, policy matrix, and cost model are approved.
+- [ ] A sample content package can meet the proposed ingestion contract.
+- [ ] Any mandatory DRM requirement is known before the video proof-of-concept.
+
+---
+
+### Phase 1 — Repository, Local Development, and Continuous Integration
+
+#### P1-T01 — Create and protect the private monorepo
+
+**Description:** Create `microdrama-platform`, add the agreed directory structure, ownership rules, issue/PR templates, contribution guide, and branch protection.
+
+**Objective:** Provide one auditable home for backend, mobile, infrastructure, and documentation.
+
+**Dependencies:** P0-T04.
+
+**Acceptance criteria:**
+
+- [ ] Repository is private, default branch is protected, and pull requests require passing checks.
+- [ ] `sources/`, real media, environment files, keys, and credentials are ignored.
+- [ ] README explains setup, architecture, and common commands.
+
+**Validation and integration tests:**
+
+- [ ] Fresh clone on a clean machine reaches the documented bootstrap checkpoint.
+- [ ] A deliberate secret-pattern test is blocked by scanning without committing a real secret.
+
+#### P1-T02 — Bootstrap backend and local PostgreSQL
+
+**Description:** Create the Django project, settings split, health endpoints, local Compose database, and Python quality/test configuration.
+
+**Objective:** Produce a repeatable, production-shaped backend foundation.
+
+**Dependencies:** P1-T01.
+
+**Acceptance criteria:**
+
+- [ ] Django starts locally from documented commands and connects to PostgreSQL.
+- [ ] Settings fail fast when required production configuration is absent.
+- [ ] Live and readiness endpoints distinguish process health from database readiness.
+
+**Validation and integration tests:**
+
+- [ ] Ruff, type check, migration check, and pytest pass.
+- [ ] Readiness returns success with PostgreSQL available and failure when it is unavailable.
+
+#### P1-T03 — Bootstrap Expo mobile application
+
+**Description:** Create the strict TypeScript Expo app with Expo Router, development-build configuration, environment handling, linting, tests, and a minimal API health screen.
+
+**Objective:** Prove mobile-to-local-backend connectivity early.
+
+**Dependencies:** P1-T01, P1-T02.
+
+**Acceptance criteria:**
+
+- [ ] App runs in an Android development build and is structured by feature.
+- [ ] Environment selection is explicit and no secret is embedded in the JavaScript bundle.
+- [ ] A screen displays backend availability using the typed client layer.
+
+**Validation and integration tests:**
+
+- [ ] Type check, lint, Jest, and Expo configuration validation pass.
+- [ ] Android emulator calls the local health endpoint successfully; document iOS equivalent.
+
+#### P1-T04 — Establish OpenAPI contract and generated client
+
+**Description:** Generate the REST schema from Django and generate a TypeScript client package consumed by mobile.
+
+**Objective:** Detect backend/mobile contract drift automatically.
+
+**Dependencies:** P1-T02, P1-T03.
+
+**Acceptance criteria:**
+
+- [ ] Error envelope, pagination, auth, and public ID conventions are represented in OpenAPI.
+- [ ] Generated client is reproducible and not manually edited.
+- [ ] CI fails when generated artifacts differ from the schema.
+
+**Validation and integration tests:**
+
+- [ ] Contract generation produces no diff on a clean checkout.
+- [ ] Mobile health call compiles and passes against a running backend.
+
+#### P1-T05 — Build baseline CI workflows
+
+**Description:** Add path-aware GitHub Actions for backend, mobile, schema generation, container build, and dependency/security checks.
+
+**Objective:** Make every pull request independently verifiable.
+
+**Dependencies:** P1-T02, P1-T03, P1-T04.
+
+**Acceptance criteria:**
+
+- [ ] Backend CI runs lint, types, migration drift, unit/integration tests, and coverage.
+- [ ] Mobile CI runs lint, types, unit tests, config validation, and a production JavaScript bundle check.
+- [ ] Container build and OpenAPI drift checks run without cloud credentials.
+
+**Validation and integration tests:**
+
+- [ ] A known failing test blocks merge in a temporary branch.
+- [ ] A documentation-only change avoids unnecessary expensive jobs while required checks remain valid.
+
+### Checkpoint 1 — Engineering foundation
+
+- [ ] A new developer can clone, bootstrap, run API and mobile, and execute all checks.
+- [ ] Mobile calls Django locally through a generated client.
+- [ ] Pull requests cannot merge with a failing required check.
+
+---
+
+### Phase 2 — Identity, Catalog, and First Playable Vertical Slice
+
+#### P2-T01 — Integrate Firebase Authentication with Django
+
+**Description:** Implement mobile email/password auth first, Firebase ID-token attachment, Django token verification, and idempotent profile creation. Add Apple/Google providers after the base flow works.
+
+**Objective:** Establish trusted identity without building an auth system.
+
+**Dependencies:** P1-T04, P1-T05.
+
+**Acceptance criteria:**
+
+- [ ] Anonymous catalog use works; protected endpoints require a valid token.
+- [ ] Django maps Firebase UID to one local profile and never trusts client-supplied user IDs.
+- [ ] Token expiry/revocation paths produce consistent unauthorized responses.
+
+**Validation and integration tests:**
+
+- [ ] Unit tests cover missing, malformed, expired, and valid tokens with emulator/mocked verification.
+- [ ] Device signs up, calls `/v1/me`, signs out, signs in again, and receives the same profile.
+
+#### P2-T02 — Implement account lifecycle, consent, and deletion
+
+**Description:** Add locale/country/consent state, profile API, logout behavior, data export request placeholder, and a verifiable deletion workflow spanning Django and Firebase.
+
+**Objective:** Provide privacy-safe account control from the beginning.
+
+**Dependencies:** P2-T01, P0-T03.
+
+**Acceptance criteria:**
+
+- [ ] User can initiate deletion in-app with reauthentication where required.
+- [ ] Personal profile and push identifiers are deleted or irreversibly anonymized; financial audit records retain only legally necessary pseudonymous fields.
+- [ ] Deletion is idempotent and has an auditable status.
+
+**Validation and integration tests:**
+
+- [ ] Integration test creates an account with progress/entitlements, deletes it, and verifies inaccessible/anonymized data.
+- [ ] Repeating the deletion command does not recreate or corrupt the account.
+
+#### P2-T03 — Implement catalog, rights, localization, and Django Admin
+
+**Description:** Add Series, Season, Episode, Genre, ContentRight, localized text, publication state, artwork, and usable admin screens with validations and filters.
+
+**Objective:** Let staff manage a rights-aware catalog without a custom web product.
+
+**Dependencies:** P1-T02, P0-T02.
+
+**Acceptance criteria:**
+
+- [ ] Admin supports ordered episodes, inline rights visibility, draft/published states, and search/filtering.
+- [ ] Rights and publication validation prevent invalid windows and missing required metadata.
+- [ ] API returns only content eligible for request territory, platform, language, and time.
+
+**Validation and integration tests:**
+
+- [ ] Model/admin tests cover invalid rights, duplicate ordering, and publish restrictions.
+- [ ] Seed two territories and verify each API client sees only its eligible title.
+
+#### P2-T04 — Build home catalog and series-detail mobile screens
+
+**Description:** Implement editorial rails, loading/error/empty states, series cards, detail page, episode list, and locked/free indicators.
+
+**Objective:** Deliver the discovery path from app open to an episode selection.
+
+**Dependencies:** P2-T03, P1-T04.
+
+**Acceptance criteria:**
+
+- [ ] Home and detail screens work anonymously and respect localization.
+- [ ] Images are responsive, cached appropriately, accessible, and have fallbacks.
+- [ ] UI never infers entitlement solely from episode number; it displays API access state.
+
+**Validation and integration tests:**
+
+- [ ] Component tests cover loading, error, empty, published, and locked states.
+- [ ] Maestro opens the app, selects a series, and selects a free episode against seeded staging/local data.
+
+#### P2-T05 — Prove the GCP video pipeline
+
+**Description:** Build a spike that uploads a test vertical master to a private source bucket, transcodes HLS renditions, places outputs in a private delivery bucket, and plays them through Cloud CDN signed access.
+
+**Objective:** Retire the highest technical and cost risk before building the full player.
+
+**Dependencies:** P0-T02, P0-T04, P1-T03.
+
+**Acceptance criteria:**
+
+- [ ] 9:16 test media produces 360p/540p/720p HLS and thumbnails with correct rotation, audio, duration, and captions.
+- [ ] Android and iOS development builds play adaptive HLS through expiring signed access.
+- [ ] Unsigned, expired, and direct-origin access fail; cost per source minute is recorded.
+
+**Validation and integration tests:**
+
+- [ ] Test on constrained and normal networks; capture startup time, switching, rebuffering, seek, and background/foreground behavior.
+- [ ] If requirements fail, complete an ADR comparing a managed video/DRM provider before continuing.
+
+#### P2-T06 — Implement production media ingestion workflow
+
+**Description:** Add MediaAsset state machine, checksum/deduplication, signed staff upload, Transcoder job submission/status reconciliation, caption validation, thumbnail output, and admin retry/takedown controls.
+
+**Objective:** Make ingestion repeatable, auditable, and safe for licensed media.
+
+**Dependencies:** P2-T03, P2-T05.
+
+**Acceptance criteria:**
+
+- [ ] States cover pending upload, uploaded, processing, ready, failed, blocked, and removed.
+- [ ] Duplicate callbacks/retries are idempotent and failures expose safe admin diagnostics.
+- [ ] An episode cannot publish until a ready media asset and valid rights exist.
+
+**Validation and integration tests:**
+
+- [ ] Integration test runs a short fixture through upload → job → ready using a provider fake and a staging smoke test with GCP.
+- [ ] Corrupt upload, checksum mismatch, failed job, retry, and takedown paths pass.
+
+#### P2-T07 — Implement entitlement-aware playback authorization
+
+**Description:** Create the server policy evaluator and playback authorization endpoint that checks publication, rights, territory, auth, subscription, episode entitlement, and free policy before signing playback access.
+
+**Objective:** Centralize content authorization and keep storage private.
+
+**Dependencies:** P2-T01, P2-T03, P2-T06.
+
+**Acceptance criteria:**
+
+- [ ] Response grants only eligible playback and otherwise returns machine-readable lock reasons/offers.
+- [ ] Signed access is short-lived, HTTPS-only, and never persisted in analytics or logs.
+- [ ] Authorization decisions are consistent under concurrent requests and clock boundaries.
+
+**Validation and integration tests:**
+
+- [ ] Decision-table tests cover free, entitled, subscribed, expired rights, wrong territory, unpublished, takedown, and anonymous cases.
+- [ ] Integration test confirms a granted URL plays and the same path fails after expiry or rights removal.
+
+#### P2-T08 — Build vertical player, progress, and autoplay
+
+**Description:** Implement the full-screen 9:16 player, controls, captions, next episode, resume progress, progress heartbeats, completion, error recovery, and accessibility.
+
+**Objective:** Deliver the core viewing loop before monetization complexity.
+
+**Dependencies:** P2-T04, P2-T07.
+
+**Acceptance criteria:**
+
+- [ ] Playback handles buffering, interruption, background/foreground, seek, orientation lock, and next-episode transition.
+- [ ] Progress writes are throttled and idempotent; completion is server-recorded.
+- [ ] Player exposes safe error states and does not reveal signed URLs.
+
+**Validation and integration tests:**
+
+- [ ] Unit tests cover progress thresholds and resume logic.
+- [ ] Maestro watches a free episode, resumes near the saved position on a second session, completes it, and advances to the next episode.
+
+### Checkpoint 2 — First playable product
+
+- [ ] Staff can ingest and publish a rights-valid test series.
+- [ ] Anonymous user discovers and watches free episodes end to end.
+- [ ] Signed playback, territory restrictions, progress, and takedown are verified.
+- [ ] Playback performance baseline and cost per watch-hour are recorded.
+
+---
+
+### Phase 3 — Coins, Subscriptions, and Rewarded Ads
+
+#### P3-T01 — Implement access-policy and offer configuration
+
+**Description:** Model per-series/episode access methods, default coin prices, free count, subscription eligibility, ad availability, and remote-config keys with safe server defaults.
+
+**Objective:** Change monetization without app releases while keeping the server authoritative.
+
+**Dependencies:** P2-T07, P0-T03.
+
+**Acceptance criteria:**
+
+- [ ] `/offers/{episode}` returns only currently legal/available methods with display metadata.
+- [ ] Invalid combinations are rejected in admin and server defaults work if Remote Config is unavailable.
+- [ ] Published policy changes are auditable.
+
+**Validation and integration tests:**
+
+- [ ] Decision-table tests cover all method combinations and failure fallback.
+- [ ] Changing free count/coin price in staging updates the lock screen without an app release and cannot bypass server checks.
+
+#### P3-T02 — Implement immutable coin wallet and atomic episode unlock
+
+**Description:** Build Wallet, immutable CoinLedgerEntry, balance calculation, idempotent debit command, and permanent episode entitlement grant in one transaction.
+
+**Objective:** Prevent double spend and make virtual currency auditable.
+
+**Dependencies:** P3-T01, P2-T01.
+
+**Acceptance criteria:**
+
+- [ ] Balance changes only through ledger entries; entries cannot be edited/deleted through normal admin.
+- [ ] Debit and entitlement grant are atomic with row locking and idempotency.
+- [ ] Insufficient balance, duplicate request, and price-change races return deterministic outcomes.
+
+**Validation and integration tests:**
+
+- [ ] Concurrent test submits duplicate and competing unlocks; no negative balance or duplicate charge occurs.
+- [ ] Ledger reconciliation equals wallet balance and each successful debit maps to one entitlement.
+
+#### P3-T03 — Configure store products and RevenueCat environments
+
+**Description:** Define non-production and production product IDs, coin-pack consumables, subscription group/entitlement, offerings, webhook credentials, and product catalog ownership.
+
+**Objective:** Align Apple, Google, RevenueCat, backend, analytics, and UI identifiers.
+
+**Dependencies:** P0-T03, P3-T01.
+
+**Acceptance criteria:**
+
+- [ ] Product matrix states type, price tier, currency behavior, entitlement effect, and environment.
+- [ ] Sandbox/test products are visible through RevenueCat in both platform builds.
+- [ ] Secrets are environment-specific and stored outside source control.
+
+**Validation and integration tests:**
+
+- [ ] Automated configuration check detects missing/unknown product IDs.
+- [ ] Sandbox device fetches offerings from Apple and Google paths and displays store-localized prices.
+
+#### P3-T04 — Implement RevenueCat webhook ingestion and subscription state
+
+**Description:** Verify RevenueCat webhooks, store raw-event references safely, process idempotently, map customer identity, and maintain subscription state including renewal, grace, billing retry, cancellation, expiry, refund, and transfer.
+
+**Objective:** Make server access reflect store lifecycle rather than client claims.
+
+**Dependencies:** P3-T03, P2-T01.
+
+**Acceptance criteria:**
+
+- [ ] Webhook authenticity, replay protection, idempotency, and unknown-user quarantine exist.
+- [ ] Subscription state changes are auditable and playback evaluator consumes them.
+- [ ] Out-of-order and duplicate events converge to the correct current state.
+
+**Validation and integration tests:**
+
+- [ ] Replay recorded sandbox lifecycle events in different orders and verify final state.
+- [ ] Active subscription authorizes a locked episode; expiry/refund removes subscription access but preserves separately unlocked episodes.
+
+#### P3-T05 — Implement mobile subscription purchase and restore
+
+**Description:** Build a transparent subscription paywall using store-localized products, purchase handling, restore/sync, manage-subscription link, and resilient pending/error states.
+
+**Objective:** Allow compliant all-access subscription purchase on both stores.
+
+**Dependencies:** P3-T04, P2-T08.
+
+**Acceptance criteria:**
+
+- [ ] Paywall clearly shows price, period, renewal, trial conditions, terms, privacy, and restore.
+- [ ] Client waits for validated entitlement state and handles cancellation/pending/failure without false access.
+- [ ] Same authenticated account restores eligible access on another device.
+
+**Validation and integration tests:**
+
+- [ ] Apple sandbox and Google license-tester purchase, renewal/expiry simulation, cancellation, and restore are executed.
+- [ ] Maestro opens a locked episode, subscribes in test mode, synchronizes, and plays it.
+
+#### P3-T06 — Implement coin-pack purchase fulfillment
+
+**Description:** Purchase consumable coin packs through RevenueCat/store billing, credit the Django ledger from verified provider events, and handle retries/refunds according to the approved policy.
+
+**Objective:** Sell coins without trusting the device or double-crediting transactions.
+
+**Dependencies:** P3-T02, P3-T03, P3-T04.
+
+**Acceptance criteria:**
+
+- [ ] One verified store transaction creates at most one ledger credit.
+- [ ] Client cannot choose the credited amount; backend maps known product ID to coins.
+- [ ] Pending, cancelled, duplicate, delayed webhook, refund, and account-transfer cases are defined.
+
+**Validation and integration tests:**
+
+- [ ] Replay the same purchase/webhook repeatedly and confirm one credit.
+- [ ] Sandbox purchase credits coins, coin unlock debits them, app reinstall restores server balance after login.
+
+#### P3-T07 — Implement rewarded-ad intent and verified reward grant
+
+**Description:** Create a server reward intent bound to user/episode, show an AdMob rewarded ad with custom data, verify server-side callbacks, and grant one idempotent episode entitlement.
+
+**Objective:** Monetize non-payers without allowing fabricated client rewards.
+
+**Dependencies:** P3-T01, P2-T08.
+
+**Acceptance criteria:**
+
+- [ ] User explicitly opts in and sees the exact reward before the ad starts.
+- [ ] Production grant requires a valid, unused, unexpired intent and authentic provider callback; client callback only updates UI optimistically/polls status.
+- [ ] Duplicate, mismatched, expired, and forged callbacks cannot grant access.
+
+**Validation and integration tests:**
+
+- [ ] Use AdMob test units in non-production and verify no live-ad traffic is generated.
+- [ ] End-to-end test creates intent, completes test ad, observes verified entitlement, and plays; security tests replay and forge callbacks.
+
+#### P3-T08 — Build unified locked-episode offer sheet
+
+**Description:** Present available subscription, coin, and rewarded-ad options from the API, including balance, loading, accessibility, errors, and post-success transition to playback.
+
+**Objective:** Create one coherent monetization surface suitable for experimentation.
+
+**Dependencies:** P3-T05, P3-T06, P3-T07.
+
+**Acceptance criteria:**
+
+- [ ] Only server-authorized methods appear and store price strings are not hand-built.
+- [ ] Repeated taps cannot create duplicate purchases, debits, or reward intents.
+- [ ] Every success refreshes authoritative wallet/entitlement state before playback.
+
+**Validation and integration tests:**
+
+- [ ] Component tests cover every offer combination, unavailable ads, insufficient coins, pending purchase, offline, and success.
+- [ ] Maestro validates ad unlock, coin unlock, and subscription paths from the same locked episode.
+
+#### P3-T09 — Add commerce reconciliation and support tools
+
+**Description:** Add scheduled reconciliation, quarantined-event review, safe admin views, compensating adjustments, and a user-facing purchase support identifier.
+
+**Objective:** Operate real money and rewards without direct database edits.
+
+**Dependencies:** P3-T04, P3-T06, P3-T07.
+
+**Acceptance criteria:**
+
+- [ ] Reconciliation detects provider/ledger/subscription mismatches without silently changing money.
+- [ ] Authorized support staff can inspect history and create reasoned compensating entries, never edit history.
+- [ ] Every action is audit logged with actor and reason.
+
+**Validation and integration tests:**
+
+- [ ] Seed missing, duplicate, delayed, refunded, and quarantined events; reconciliation reports expected cases.
+- [ ] Role tests prove normal staff cannot issue adjustments or view sensitive provider payloads.
+
+### Checkpoint 3 — Monetization integrity
+
+- [ ] All three unlock paths work on real test devices and converge on server entitlements.
+- [ ] Concurrency, replay, out-of-order webhook, refund, restore, and expiry tests pass.
+- [ ] No mobile request can directly set balance, subscription state, or entitlement.
+- [ ] Store-policy checklist and review notes are updated from the implemented UI.
+
+---
+
+### Phase 4 — Analytics, Attribution, Experimentation, and Retention
+
+#### P4-T01 — Implement analytics governance and event SDK
+
+**Description:** Publish event dictionary, property schemas, ownership, retention, consent rules, and a typed mobile/backend analytics wrapper with deterministic event IDs.
+
+**Objective:** Produce decision-grade events instead of inconsistent ad hoc tracking.
+
+**Dependencies:** P2-T08, P3-T08, P0-T03.
+
+**Acceptance criteria:**
+
+- [ ] Canonical events in Section 6 have definitions, trigger timing, required properties, and data classification.
+- [ ] Debug validation rejects unknown events/properties and production strips prohibited sensitive values.
+- [ ] Anonymous-to-authenticated identity linking is documented and consent-aware.
+
+**Validation and integration tests:**
+
+- [ ] Analytics contract tests validate representative events against schemas.
+- [ ] Execute free, ad, coin, and subscription journeys and verify one correctly ordered event trail per journey in Firebase DebugView.
+
+#### P4-T02 — Link Firebase data to BigQuery and build metric models
+
+**Description:** Export Analytics/Crashlytics/Remote Config data, ingest server commerce/ad facts, and create version-controlled SQL models for funnels, retention, LTV, revenue, and playback quality.
+
+**Objective:** Join behavior and authoritative financial outcomes in one analysis layer.
+
+**Dependencies:** P4-T01, P3-T09.
+
+**Acceptance criteria:**
+
+- [ ] Dataset location, retention, partitioning, access, and cost controls are documented.
+- [ ] Revenue models use verified server facts; client purchase events are diagnostic only.
+- [ ] Definitions exist for net revenue, payer, active subscriber, ad revenue, CAC, LTV, and contribution.
+
+**Validation and integration tests:**
+
+- [ ] Seed a synthetic cohort with known outcomes and verify every metric exactly.
+- [ ] Cost guardrails include partition filters, query limits, and budget alerts.
+
+#### P4-T03 — Build launch dashboards and data-quality monitors
+
+**Description:** Create Looker Studio dashboards for acquisition, content funnel, monetization, retention, playback, and experiment results; add freshness/volume/uniqueness monitors.
+
+**Objective:** Make product and unit-economics decisions observable daily.
+
+**Dependencies:** P4-T02.
+
+**Acceptance criteria:**
+
+- [ ] Dashboard filters include date, country, platform, app version, campaign, creative, series, episode, and experiment.
+- [ ] Revenue and entitlement dashboards trace to authoritative records.
+- [ ] Alerts detect missing exports, event collapse/spikes, duplicate transaction IDs, and broken funnels.
+
+**Validation and integration tests:**
+
+- [ ] Compare dashboard totals with database/provider samples for a controlled day.
+- [ ] Stop a synthetic data feed and verify freshness alert reaches the documented channel.
+
+#### P4-T04 — Implement Remote Config and experiment safety layer
+
+**Description:** Integrate fetched/activated Remote Config with typed defaults, exposure logging, kill switches, minimum app versions, and server validation for financially material parameters.
+
+**Objective:** Run experiments without creating unsafe or client-authoritative behavior.
+
+**Dependencies:** P3-T01, P4-T01.
+
+**Acceptance criteria:**
+
+- [ ] App has last-known-good/default behavior when Firebase is unavailable or values are invalid.
+- [ ] Experiment exposure logs once at actual use, not merely at config fetch.
+- [ ] Server enforces allowed ranges and current price/access policy.
+
+**Validation and integration tests:**
+
+- [ ] Test malformed config, offline start, variant persistence, kill switch, and incompatible app version.
+- [ ] Attempt client tampering with coin price/free count and confirm server rejects the bypass.
+
+#### P4-T05 — Create experiment operating procedure and first experiments
+
+**Description:** Define hypothesis template, primary metric, guardrails, sample-size check, duration, exposure, segmentation, stopping rules, and decision record. Queue free-episode count, offer order, coin price, and paywall copy experiments.
+
+**Objective:** Turn experimentation into a disciplined product process.
+
+**Dependencies:** P4-T03, P4-T04.
+
+**Acceptance criteria:**
+
+- [ ] Every experiment has one primary decision metric and retention/playback/refund guardrails.
+- [ ] Overlapping experiments with interacting parameters are prevented or explicitly designed.
+- [ ] Results include practical effect size and cohort economics, not significance alone.
+
+**Validation and integration tests:**
+
+- [ ] Run an A/A or internal-only experiment to validate assignment and exposure joins.
+- [ ] Reproduce experiment totals between Firebase and BigQuery within an explained tolerance.
+
+#### P4-T06 — Implement campaign attribution and deferred deep linking baseline
+
+**Description:** Capture install/referrer/deep-link campaign parameters, preserve first and last touch, and route users to the advertised series while respecting privacy choices and platform attribution frameworks.
+
+**Objective:** Connect creative spend to content consumption and revenue.
+
+**Dependencies:** P4-T01, P2-T04.
+
+**Acceptance criteria:**
+
+- [ ] Campaign/ad set/creative identifiers persist with documented attribution windows.
+- [ ] Deep link opens the correct eligible series or a safe fallback after install/login.
+- [ ] iOS privacy prompts and Android referrer handling follow current platform/policy requirements.
+
+**Validation and integration tests:**
+
+- [ ] Test direct, organic, and campaign links across installed, fresh-install, logged-out, and unavailable-content cases.
+- [ ] Synthetic campaign joins through to verified purchase/reward and cohort LTV.
+
+#### P4-T07 — Decide and integrate an MMP at the paid-acquisition gate
+
+**Description:** Before material ad spend, compare native attribution with Adjust/AppsFlyer or another approved MMP on required networks, SKAN/AdAttributionKit, fraud controls, cost, privacy, raw export, and BigQuery integration.
+
+**Objective:** Buy reliable attribution only when its value exceeds cost and native limitations.
+
+**Dependencies:** P4-T03, P4-T06.
+
+**Acceptance criteria:**
+
+- [ ] Decision memo defines the spend/ambiguity threshold that triggers adoption.
+- [ ] If adopted, SDK is consent-gated, data-minimized, and mapped to canonical campaign dimensions.
+- [ ] Network and MMP totals have a documented reconciliation method.
+
+**Validation and integration tests:**
+
+- [ ] Run controlled test campaigns with known links and compare attribution sources.
+- [ ] Verify opt-out behavior and that deletion requests propagate where contractually required.
+
+#### P4-T08 — Implement push notifications and lifecycle campaigns
+
+**Description:** Add permission education, FCM/APNs token management, preferences, deep links, delivery/open analytics, quiet hours, and initial transactional/editorial campaigns.
+
+**Objective:** Improve retention without spam or privacy violations.
+
+**Dependencies:** P2-T01, P4-T01, P4-T06.
+
+**Acceptance criteria:**
+
+- [ ] Prompt occurs contextually; denial does not block the app.
+- [ ] Tokens rotate, deduplicate, detach on logout/deletion, and are never shared between accounts.
+- [ ] Campaigns respect preferences, locale, territory, content availability, and frequency caps.
+
+**Validation and integration tests:**
+
+- [ ] Test opt-in/out, token rotation, multi-device, logout/login, deletion, deep link, and expired content.
+- [ ] Send staging notification to a controlled cohort and verify delivery/open events and correct routing.
+
+### Checkpoint 4 — Data-driven growth loop
+
+- [ ] End-to-end campaign → series → episode → monetization → LTV path is queryable.
+- [ ] Metrics reconcile to authoritative transactions/rewards.
+- [ ] A/A assignment, deep links, and data-quality alerts pass.
+- [ ] First real experiment has an approved hypothesis and guardrails.
+
+---
+
+### Phase 5 — Production Infrastructure, Security, and Observability
+
+#### P5-T01 — Provision staging infrastructure as code
+
+**Description:** Define staging Cloud Run, Artifact Registry, Storage buckets, CDN/load balancer, Transcoder permissions, Tasks/Scheduler, Secret Manager, DNS, budgets, and least-privilege IAM with OpenTofu/Terraform.
+
+**Objective:** Create a reproducible environment without console-only drift.
+
+**Dependencies:** P2-T05, P1-T05.
+
+**Acceptance criteria:**
+
+- [ ] Plan is reviewable and apply is repeatable with remote encrypted state.
+- [ ] Source/output buckets are private, public access prevention is enforced, and lifecycle/CORS rules are minimal.
+- [ ] Budget alerts and labels identify product, environment, owner, and cost center.
+
+**Validation and integration tests:**
+
+- [ ] Apply to an empty staging project, run smoke tests, and run a second plan with no unexpected diff.
+- [ ] IAM negative tests prove app/runtime identities cannot administer unrelated resources.
+
+#### P5-T02 — Containerize and harden Django deployment
+
+**Description:** Build a small non-root container, static-file handling for Admin, migrations release step, connection pooling strategy, timeouts, concurrency, and zero-downtime-compatible startup.
+
+**Objective:** Run Django safely and economically on Cloud Run.
+
+**Dependencies:** P5-T01, P1-T02.
+
+**Acceptance criteria:**
+
+- [ ] Image is deterministic, non-root, scanned, and contains no build secrets.
+- [ ] Migrations are serialized and separate from request startup.
+- [ ] Readiness prevents traffic before dependencies and migrations are ready.
+
+**Validation and integration tests:**
+
+- [ ] Container integration tests exercise Admin/API, static assets, shutdown, and database connection recovery.
+- [ ] Deploy a backward-compatible migration and rollback application revision without schema corruption.
+
+#### P5-T03 — Implement secure CI/CD with workload identity
+
+**Description:** Authenticate GitHub Actions to GCP using OIDC Workload Identity Federation, deploy immutable images to staging automatically, and require approval for production.
+
+**Objective:** Make deployments repeatable without long-lived cloud keys.
+
+**Dependencies:** P5-T01, P5-T02.
+
+**Acceptance criteria:**
+
+- [ ] Trust is restricted to the exact repository/branch/environment and least-privilege deploy identity.
+- [ ] Staging deploy runs migrations, smoke tests, and records image digest/commit.
+- [ ] Production has approval, concurrency lock, rollback command, and deployment audit trail.
+
+**Validation and integration tests:**
+
+- [ ] Untrusted branch/fork cannot obtain deploy credentials.
+- [ ] Deploy a staging revision, fail a smoke test intentionally, and verify traffic does not promote.
+
+#### P5-T04 — Establish secrets, configuration, and key rotation
+
+**Description:** Inventory secrets and signing keys, store them in Secret Manager/provider vaults, document owners/rotation, and prevent secrets in logs, images, analytics, or EAS updates.
+
+**Objective:** Reduce credential compromise risk and support incident response.
+
+**Dependencies:** P5-T01, P5-T03.
+
+**Acceptance criteria:**
+
+- [ ] Each environment has distinct database, Firebase, RevenueCat, AdMob, CDN, and Django secrets.
+- [ ] Runtime identities can access only needed secret versions.
+- [ ] Rotation supports overlap where external callbacks/signing require it.
+
+**Validation and integration tests:**
+
+- [ ] Rotate a staging key/secret without downtime and revoke the old value.
+- [ ] Secret scanning tests detect representative fake patterns and logs remain redacted.
+
+#### P5-T05 — Implement application security baseline
+
+**Description:** Apply OWASP ASVS/MASVS-informed controls: secure storage, TLS, validation, authorization, rate limiting, CORS/CSRF, admin hardening, App Check signals, dependency scanning, and abuse controls.
+
+**Objective:** Protect accounts, licensed content, commerce, and operational interfaces.
+
+**Dependencies:** P3-T09, P5-T04.
+
+**Acceptance criteria:**
+
+- [ ] Mobile tokens use platform secure storage and are absent from logs/backups where controllable.
+- [ ] Admin has MFA/SSO-compatible access, restricted exposure, session security, and role separation.
+- [ ] Rate/abuse controls cover auth, playback authorization, progress, unlock, reward, and webhook endpoints.
+
+**Validation and integration tests:**
+
+- [ ] Authorization matrix and OWASP checklist are executed against staging.
+- [ ] Automated tests cover IDOR, replay, mass assignment, injection, rate limits, CSRF on Admin, and webhook forgery.
+
+#### P5-T06 — Add backend and mobile observability
+
+**Description:** Configure structured correlated logs, metrics, traces, errors/crashes, performance spans, uptime checks, dashboards, and alerts with privacy-safe context.
+
+**Objective:** Detect and diagnose failures before they erase revenue or trust.
+
+**Dependencies:** P5-T02, P4-T01.
+
+**Acceptance criteria:**
+
+- [ ] Correlation ID links mobile/API errors without exposing tokens or signed URLs.
+- [ ] Dashboards cover API latency/error, DB saturation, tasks, webhooks, transcoding, CDN, playback, app crashes, and commerce mismatch.
+- [ ] Alerts have severity, owner, actionable threshold, and runbook link.
+
+**Validation and integration tests:**
+
+- [ ] Trigger controlled API error, mobile crash, failed webhook, and playback failure; verify capture and redaction.
+- [ ] Uptime and business-critical synthetic checks alert and recover through the documented path.
+
+#### P5-T07 — Create backups, recovery, and incident runbooks
+
+**Description:** Define backup/restore, media durability, RPO/RTO, incident roles, rollback, compromised key, payment mismatch, takedown, and provider outage procedures.
+
+**Objective:** Make failures recoverable by a small team.
+
+**Dependencies:** P5-T04, P5-T06.
+
+**Acceptance criteria:**
+
+- [ ] Production database plan includes automated backups and point-in-time recovery appropriate to launch risk.
+- [ ] Runbooks cover API outage, database issue, CDN/video failure, auth outage, purchase/reward discrepancy, rights takedown, and data incident.
+- [ ] Provider dependencies and fallback user messaging are documented.
+
+**Validation and integration tests:**
+
+- [ ] Restore a staging backup into an isolated environment and reconcile ledger/entitlements.
+- [ ] Run one tabletop incident and one rollback drill; record time, gaps, and actions.
+
+#### P5-T08 — Provision production with data-residency and cost gates
+
+**Description:** Apply the reviewed infrastructure to production, upgrade the database from free tier, configure domain/TLS, quotas, budgets, retention, and operational access.
+
+**Objective:** Create a launchable environment with backups and predictable blast radius.
+
+**Dependencies:** P5-T01 through P5-T07.
+
+**Acceptance criteria:**
+
+- [ ] Production is isolated from staging with separate credentials, projects, data, and media.
+- [ ] Region choices match launch market, latency, rights, privacy, and provider constraints.
+- [ ] Cost alerts, quota alerts, backup/PITR, audit logs, and break-glass access are enabled.
+
+**Validation and integration tests:**
+
+- [ ] Full production smoke test uses non-licensed test content and test accounts only.
+- [ ] Security, recovery, observability, and cost-control checklists are signed off.
+
+### Checkpoint 5 — Operational readiness
+
+- [ ] Staging and production are reproducible from code.
+- [ ] CI/CD uses short-lived identity and tested rollback.
+- [ ] Security test, restore drill, incident exercise, alert exercise, and cost review pass.
+- [ ] Production database is not on a pausing/no-backup hobby configuration.
+
+---
+
+### Phase 6 — Mobile Quality, Beta, and Store Launch
+
+#### P6-T01 — Complete mobile design system, accessibility, and localization
+
+**Description:** Standardize typography, color, spacing, safe areas, motion, skeletons, errors, accessibility, locale formatting, translated strings, and RTL readiness.
+
+**Objective:** Deliver a coherent product that can expand across markets.
+
+**Dependencies:** P3-T08, P4-T08.
+
+**Acceptance criteria:**
+
+- [ ] Core screens meet WCAG-informed contrast/touch-target expectations and support dynamic text/screen readers where practical for video UI.
+- [ ] No user-facing string or price is hard-coded outside localization/store data.
+- [ ] Long translations and small supported screens do not block primary actions.
+
+**Validation and integration tests:**
+
+- [ ] Run automated accessibility checks plus manual TalkBack and VoiceOver passes on core journeys.
+- [ ] Screenshot tests cover launch locales, long strings, and representative device sizes.
+
+#### P6-T02 — Harden offline, degraded, and update behavior
+
+**Description:** Define cached catalog behavior, offline messaging, retries, maintenance mode, forced/minimum version, API compatibility, and EAS Update runtime-version policy.
+
+**Objective:** Fail gracefully under real mobile conditions.
+
+**Dependencies:** P4-T04, P5-T06.
+
+**Acceptance criteria:**
+
+- [ ] No purchase/debit/reward action is presented as successful without server confirmation.
+- [ ] Last-known catalog can render with clear offline state; playback and monetization fail safely.
+- [ ] Kill switch and minimum-version path do not trap users without store guidance.
+
+**Validation and integration tests:**
+
+- [ ] Test airplane mode and network loss during playback, purchase, unlock, auth, progress, and config fetch.
+- [ ] Verify compatible EAS update applies and incompatible runtime update is rejected.
+
+#### P6-T03 — Build full regression and device matrix
+
+**Description:** Define supported OS/device/network matrix and automate critical paths in Maestro, with manual coverage for store dialogs, ads, captions, accessibility, and background behavior.
+
+**Objective:** Make releases repeatable across the riskiest combinations.
+
+**Dependencies:** All MVP feature tasks.
+
+**Acceptance criteria:**
+
+- [ ] Automated suite covers anonymous free viewing, auth, progress, each unlock method, restore, subscription expiry, push deep link, and deletion.
+- [ ] Matrix includes low/mid/high Android, supported iPhones, poor network, and current/oldest supported OS.
+- [ ] Flaky tests have owners and cannot silently pass via unlimited retries.
+
+**Validation and integration tests:**
+
+- [ ] Release candidate passes the full suite twice from clean app state.
+- [ ] Run exploratory session focused on money, entitlements, privacy, and playback interruptions.
+
+#### P6-T04 — Prepare store listings, privacy declarations, and review package
+
+**Description:** Create store metadata, screenshots, preview, age rating, privacy labels/data safety, support/privacy URLs, IAP descriptions, review notes, and test account/content.
+
+**Objective:** Submit a transparent, reviewable product.
+
+**Dependencies:** P0-T03, P6-T01, P6-T03.
+
+**Acceptance criteria:**
+
+- [ ] Listings disclose in-app purchases/subscriptions and match actual functionality/prices.
+- [ ] Privacy declarations match SDK/data inventory and consent behavior.
+- [ ] Reviewer can access representative free, locked, ad, coin, and subscription flows with provided instructions.
+
+**Validation and integration tests:**
+
+- [ ] Independent reviewer follows the submission package without developer assistance.
+- [ ] Compare binary SDK inventory, network observations, and data map to store declarations.
+
+#### P6-T05 — Run closed beta and resolve launch blockers
+
+**Description:** Distribute through TestFlight and Google Play closed testing, recruit representative users, monitor quality/funnels, and triage findings by severity.
+
+**Objective:** Validate the complete system with real devices before paid acquisition.
+
+**Dependencies:** P5-T08, P6-T03, P6-T04.
+
+**Acceptance criteria:**
+
+- [ ] Beta has agreed minimum devices/users and includes both stores.
+- [ ] No open severity-1/2 issue, commerce mismatch, rights leak, or unexplained critical funnel break remains.
+- [ ] Playback, crash-free use, monetization, retention baseline, and support burden are reviewed.
+
+**Validation and integration tests:**
+
+- [ ] Reconcile every beta store transaction/reward with server records.
+- [ ] Repeat regression and rollback drill on the final release candidate.
+
+#### P6-T06 — Launch with controlled rollout and daily command center
+
+**Description:** Submit and release gradually by platform/market, monitor technical and business guardrails, and hold daily go/hold/rollback reviews during the first launch window.
+
+**Objective:** Limit blast radius while establishing real unit-economics data.
+
+**Dependencies:** P6-T05, Checkpoint 5.
+
+**Acceptance criteria:**
+
+- [ ] Rollout stages, owners, halt thresholds, support coverage, and rollback options are documented.
+- [ ] Rights availability, prices, products, ads, dashboards, alerts, and budgets are checked immediately before release.
+- [ ] Paid acquisition begins with capped experiments and traceable creative IDs.
+
+**Validation and integration tests:**
+
+- [ ] Production synthetic journey verifies catalog, free playback, lock, and non-financial health after each rollout stage.
+- [ ] First purchases/rewards are manually reconciled and first campaign cohort is traceable end to end.
+
+### Checkpoint 6 — MVP launched
+
+- [ ] Both apps are approved and released in the chosen market.
+- [ ] Licensed catalog is available only within contractual rights.
+- [ ] Daily contribution, quality, and funnel reporting is operating.
+- [ ] Rollout decisions follow documented technical and business guardrails.
+
+---
+
+### Phase 7 — Post-MVP Optimization and Scale Gates
+
+#### P7-T01 — Operate the content and growth cadence
+
+**Description:** Establish weekly catalog, creative, cohort, experiment, and rights reviews; prioritize by expected contribution impact.
+
+**Objective:** Make the platform a learning system, not a feature factory.
+
+**Dependencies:** P6-T06.
+
+**Acceptance criteria:**
+
+- [ ] Each series and campaign has a continue/iterate/stop decision with evidence.
+- [ ] Experiment backlog is ranked by reach, impact, confidence, effort, and guardrail risk.
+- [ ] Rights expiries and takedowns have proactive alerts and owners.
+
+**Validation and integration tests:**
+
+- [ ] Audit one monthly decision back to reproducible queries and experiment records.
+- [ ] Simulate upcoming rights expiry and verify catalog/playback/push suppression.
+
+#### P7-T02 — Add rule-based personalization and search only when justified
+
+**Description:** Introduce editorial/rule-based ranking, continue-watching, genre rails, and simple PostgreSQL search after catalog size and user behavior justify them.
+
+**Objective:** Improve discovery without premature ML/search infrastructure.
+
+**Dependencies:** P7-T01.
+
+**Acceptance criteria:**
+
+- [ ] Baseline and target metrics are defined before implementation.
+- [ ] Ranking remains explainable, territory-safe, and has a fallback.
+- [ ] No separate search service is added until PostgreSQL measurements show need.
+
+**Validation and integration tests:**
+
+- [ ] Offline evaluation and A/B test compare against editorial baseline.
+- [ ] Rights-ineligible or unpublished items never appear in results/recommendations.
+
+#### P7-T03 — Execute infrastructure scale gates
+
+**Description:** Use measured saturation/cost to decide on database upgrade/migration, cache, read replicas, CDN/provider negotiation, async worker separation, and API scaling.
+
+**Objective:** Scale only proven bottlenecks.
+
+**Dependencies:** P5-T06, P7-T01.
+
+**Acceptance criteria:**
+
+- [ ] Each change has measurement, threshold, expected benefit, rollback, and cost impact.
+- [ ] Standard PostgreSQL compatibility and modular boundaries are preserved.
+- [ ] Load test represents real playback-authorization, catalog, progress, and webhook traffic.
+
+**Validation and integration tests:**
+
+- [ ] Run current and 10× load profiles; document bottleneck and headroom.
+- [ ] Disaster-recovery and reconciliation tests pass after infrastructure changes.
+
+#### P7-T04 — Add owned-content production workflow
+
+**Description:** After profitable content patterns emerge, extend rights/provenance metadata for commissioned or AI-assisted originals, production assets, approvals, disclosures, and licensing.
+
+**Objective:** Improve margin and build owned IP using validated demand.
+
+**Dependencies:** Sustained evidence from P7-T01, legal approval.
+
+**Acceptance criteria:**
+
+- [ ] Greenlight uses cohort evidence and a production budget/recoup model.
+- [ ] IP ownership, contributor releases, model/tool licenses, likeness/voice rights, provenance, and disclosure requirements are recorded.
+- [ ] Originals use the same ingestion, quality, localization, and analytics pipeline.
+
+**Validation and integration tests:**
+
+- [ ] Rights audit traces every production component to an approved source/license.
+- [ ] Pilot original publishes and reports through the same end-to-end metrics without special-case code.
+
+---
+
+### Phase 8 — Future Consumer Web Client (Not MVP)
+
+The backend is intentionally client-neutral. Do not start this phase until mobile product-market evidence, business priority, and store/payment policy review justify it.
+
+#### P8-T01 — Approve web-client business and policy model
+
+**Description:** Decide whether web is a marketing surface, authenticated reader/streaming client, or full commerce client; review cross-platform entitlement and store-linking rules by market.
+
+**Objective:** Avoid accidentally undermining mobile compliance or economics.
+
+**Dependencies:** P7-T01 and current legal/store review.
+
+**Acceptance criteria:**
+
+- [ ] Web goals, markets, SEO needs, payment model, entitlement portability, and support implications are approved.
+- [ ] Mobile messaging about web purchases is separately policy-approved by storefront/region.
+- [ ] Threat and video-compatibility review is complete.
+
+**Validation and integration tests:**
+
+- [ ] Written journey covers web purchase → mobile access and mobile purchase → web access, including refunds/expiry.
+- [ ] Financial model includes payment fees, taxes, fraud, support, and cannibalization.
+
+#### P8-T02 — Create web application in the monorepo
+
+**Description:** Add `web/` using Next.js/React TypeScript, generated API client, Firebase Auth, design tokens, and HLS playback; reuse API contracts, not mobile UI code.
+
+**Objective:** Add an independently deployable consumer web client without splitting repositories.
+
+**Dependencies:** P8-T01, stable API contract.
+
+**Acceptance criteria:**
+
+- [ ] Web consumes existing versioned REST API and server entitlements.
+- [ ] CDN authorization supports browser-safe signed access and CORS.
+- [ ] Web has separate build/deploy pipeline and does not affect mobile releases.
+
+**Validation and integration tests:**
+
+- [ ] Cross-client contract suite passes for catalog, auth, playback, progress, and entitlements.
+- [ ] Supported browsers play HLS/fallback correctly and rights/takedown restrictions match mobile.
+
+#### P8-T03 — Add web payments and unified entitlement reconciliation
+
+**Description:** If approved, integrate Stripe or an appropriate web payment provider, tax handling, fraud controls, webhooks, subscription lifecycle, and cross-platform entitlement mapping.
+
+**Objective:** Monetize web while preserving one auditable access model.
+
+**Dependencies:** P8-T01, P8-T02.
+
+**Acceptance criteria:**
+
+- [ ] Web payment facts are idempotently recorded and mapped to the same subscription/entitlement policy.
+- [ ] Store and web subscriptions have defined precedence, duplicate-subscription prevention, refund, cancellation, and support rules.
+- [ ] Tax, invoices, chargebacks, SCA, privacy, and terms are implemented for launch markets.
+
+**Validation and integration tests:**
+
+- [ ] Provider test lifecycle covers success, SCA, renewal, failure, refund, dispute, cancellation, and replay.
+- [ ] Same account receives correct access on web/iOS/Android after every lifecycle event.
+
+---
+
+## 8. Cross-Cutting Test Strategy
+
+### Test pyramid
+
+- **Backend unit tests:** domain policy, rights, ledger, webhook ordering, reward verification, analytics schemas.
+- **Backend integration tests:** PostgreSQL transactions/locks, API auth, migrations, tasks, provider adapters.
+- **Mobile unit/component tests:** state, rendering, analytics triggers, paywall branches, offline/error handling.
+- **Contract tests:** generated OpenAPI client against Django and provider webhook fixtures.
+- **Device E2E:** Maestro on Android and iOS development/release candidates.
+- **Cloud smoke tests:** real staging Firebase, Supabase, Cloud Run, GCS/CDN/Transcoder, RevenueCat sandbox, and AdMob test ads.
+- **Security tests:** authorization matrix, webhook forgery/replay, rate limits, dependency/container scans, OWASP checklist.
+- **Performance tests:** API load, playback authorization latency, catalog response, database concurrency, HLS startup/rebuffer.
+- **Recovery tests:** database restore, deploy rollback, key rotation, provider event replay/reconciliation.
+
+### Required release regression journeys
+
+1. Anonymous install → campaign deep link → series → free episode → progress/resume.
+2. Sign up at locked episode → continue same journey.
+3. Rewarded ad → verified entitlement → playback.
+4. Coin pack purchase → verified credit → atomic debit → playback.
+5. Subscription purchase → server sync → catalog access → expiry/refund behavior.
+6. Restore on second device.
+7. Offline/network-loss cases during every monetization path.
+8. Push opens eligible series/episode; expired content falls back safely.
+9. Account deletion removes/anonymizes data and detaches tokens.
+10. Rights takedown immediately removes catalog/playback access.
+
+### Test data rules
+
+- Use generated users and short self-owned test videos in automated/staging tests.
+- Never copy production personal data into staging.
+- Keep licensed masters out of Git, fixtures, screenshots, and public test builds.
+- Provider payload fixtures must be redacted and immutable.
+
+---
+
+## 9. Security, Privacy, and Abuse Checklist
+
+- TLS everywhere; HSTS on public web endpoints.
+- Firebase ID token verified on server; authorization is object-level and server-side.
+- No direct mobile access to PostgreSQL or private media buckets.
+- Short-lived CDN authorization, private origins, key rotation, and safe cache rules.
+- Secure token storage; no tokens/receipts/signed URLs in logs or analytics.
+- Idempotency and replay protection for all money/reward actions.
+- Immutable ledger, compensating corrections, transaction uniqueness, and reconciliation.
+- Webhook authenticity verification, body-size limits, timeouts, quarantine, and audit trail.
+- Rate limiting and anomaly detection for auth, playback tokens, ads, unlocks, progress, and purchases.
+- Admin least privilege, MFA, audit logs, protected access, and no shared accounts.
+- Secret Manager/provider vaults; no long-lived GCP keys in CI.
+- Dependency updates, lockfiles, SBOM/container scanning, secret scanning, SAST, and patch cadence.
+- Privacy data inventory, minimization, consent, retention, export/deletion, processor agreements, and SDK review.
+- Age rating and content warnings match catalog and acquisition creatives.
+- Fraud/abuse signals may block rewards or require review but must not silently confiscate purchased coins.
+- Incident and takedown channels are staffed for the launch window.
+
+---
+
+## 10. CI/CD and Branching Policy
+
+- Trunk-based development with short-lived branches and pull requests.
+- Conventional commit or equivalent consistent change descriptions.
+- Required checks: backend, mobile, contract drift, container, security, and relevant infrastructure plan.
+- Every merge to main deploys staging after checks.
+- Production deploy uses a tagged/release commit, environment approval, immutable image digest, migration gate, smoke test, and progressive traffic.
+- Database migrations follow expand/migrate/contract; destructive contract steps are separate releases.
+- EAS Update only ships changes compatible with the build's runtime version; native dependency/config changes require a new binary.
+- Rollbacks reverse application traffic first. Never blindly reverse a destructive migration.
+
+---
+
+## 11. Environment and Configuration Matrix
+
+Use three logical environments:
+
+- **Local:** Docker PostgreSQL, Firebase emulators/mocks where practical, provider fakes, test video.
+- **Staging:** isolated real cloud integrations, RevenueCat sandbox/store testers, AdMob test units, non-licensed media.
+- **Production:** isolated paid database, real products/ad units, licensed media, strict access and audit.
+
+Configuration categories:
+
+- Public mobile build configuration: API base URL, Firebase public app config, environment name, non-secret product/ad identifiers.
+- Backend secrets: Django key, database URL, Firebase server credentials or workload identity, webhook auth, CDN signing material.
+- CI deploy identity: short-lived Workload Identity Federation only.
+- EAS credentials/signing: managed through EAS/Apple/Google systems, never `.env`.
+
+Include `.env.example` with names and descriptions but no usable values.
+
+---
+
+## 12. Risks and Mitigations
+
+| Risk | Impact | Mitigation / decision gate |
+|---|---|---|
+| Content license does not permit mobile territory, ads, clips, or required protection | Critical | Rights checklist and publish-time enforcement; DRM gate before ingestion |
+| LTV does not exceed CAC | Critical | Small catalog, capped acquisition, fast cohort/experiment loop, explicit stop criteria |
+| CDN egress destroys contribution margin | High | Watch-hour cost model, adaptive bitrates, caching, regional measurement, provider negotiation/abstraction |
+| Store rejection or policy change | High | Store billing by default, transparent disclosures, policy matrix reviewed before every submission |
+| Fraudulent coin/reward grants | High | Server ledger, verified webhooks/SSV, idempotency, replay protection, anomaly detection |
+| Free database pauses or lacks recovery | High | Free only for development/early staging; paid production with backups/PITR |
+| Expo native-module incompatibility | High | Development-build spike for video, Firebase, RevenueCat, and AdMob before UI expansion |
+| Attribution is too weak for growth decisions | High | Canonical campaign IDs and BigQuery first; MMP gate before material spend |
+| Analytics numbers conflict | High | Server financial facts, metric contracts, synthetic cohorts, reconciliation/data-quality alerts |
+| Signed URLs are shared | Medium | Short TTL/prefix access, private origin, abuse monitoring; DRM/provider if contracts or leakage demand it |
+| Webhooks arrive late/out of order | High | Immutable events, idempotent state reducers, reconciliation, quarantine, support tooling |
+| Small team operational overload | High | Managed services, modular monolith, runbooks, alerts with owners, no premature infrastructure |
+| Privacy/SDK overcollection | High | Data inventory, consent, minimization, SDK review, deletion propagation, store declaration audit |
+| Vendor lock-in | Medium | Standard PostgreSQL, provider adapters, OpenAPI, exportable analytics, ADR thresholds |
+| Catalog is too small for retention | Medium | Validate acquisition/monetization first, then expand only evidence-backed genres |
+
+---
+
+## 13. Decisions Required Before Coding or Launch
+
+Resolve these through P0 tasks; they are intentionally not guessed:
+
+- Product/app name, visual brand, and repository organization owner.
+- First launch country, language(s), currency, and legal entity.
+- Age rating and allowed content categories.
+- Exact content license terms and whether DRM is mandatory.
+- Initial series and free-episode baseline.
+- Coin pack sizes, episode prices, subscription period/price, and trial choice.
+- Whether one rewarded ad permanently unlocks one episode or grants coins; this plan defaults to episode unlock.
+- Guest-to-account conversion point.
+- Data residency and retention requirements.
+- Initial acquisition budget and MMP adoption threshold.
+- Support and incident-response owners.
+
+---
+
+## 14. Suggested First 12 Implementation Moves
+
+After approvals, execute in this order:
+
+1. P0-T01 — Approve brief and launch market.
+2. P0-T02 — Validate rights/media package.
+3. P0-T03 — Approve compliance matrix.
+4. P0-T04 — Lock ADRs and cost model.
+5. P1-T01 — Create/protect repository.
+6. P1-T02 — Bootstrap Django/PostgreSQL.
+7. P1-T03 — Bootstrap Expo development build.
+8. P1-T04 — Establish OpenAPI/generated client.
+9. P1-T05 — Establish CI.
+10. P2-T05 — Run video pipeline proof-of-concept early.
+11. P2-T01/P2-T03 — Build identity and rights-aware catalog in parallel only after contracts are stable.
+12. P2-T04/P2-T07/P2-T08 — Complete discovery-to-free-play vertical slice.
+
+Do not start coins, subscriptions, or ads until Checkpoint 2 passes.
+
+---
+
+## 15. Reference Links and Assumption Notes
+
+These are primary sources used to validate changeable decisions. Recheck them at implementation and release time.
+
+- Supabase pricing and free-plan limits: https://supabase.com/pricing
+- Google Cloud Run pricing/free tier: https://cloud.google.com/run/pricing
+- Google Cloud Storage pricing/free tier: https://cloud.google.com/storage/pricing
+- Google Cloud CDN pricing: https://cloud.google.com/cdn/pricing
+- Google Transcoder API overview and pricing: https://cloud.google.com/transcoder/docs and https://cloud.google.com/transcoder/pricing
+- Cloud CDN signed access: https://cloud.google.com/cdn/docs/authenticate-content
+- Firebase pricing: https://firebase.google.com/pricing
+- Firebase Authentication: https://firebase.google.com/docs/auth
+- Firebase A/B Testing: https://firebase.google.com/docs/ab-testing
+- Firebase to BigQuery export: https://firebase.google.com/docs/projects/bigquery-export
+- BigQuery free usage/sandbox: https://cloud.google.com/bigquery/docs/sandbox
+- Expo development builds: https://docs.expo.dev/develop/development-builds/introduction/
+- RevenueCat with Expo: https://www.revenuecat.com/docs/getting-started/installation/expo
+- Apple App Review Guidelines: https://developer.apple.com/app-store/review/guidelines/
+- Google Play payments policy: https://support.google.com/googleplay/android-developer/answer/9858738
+- AdMob rewarded ads and server-side verification entry point: https://developers.google.com/admob/ios/rewarded
+- GCP Workload Identity Federation for deployment pipelines: https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines
+- OWASP Mobile Application Security/MASVS: https://owasp.org/www-project-mobile-app-security/ and https://mas.owasp.org/MASVS/
+
+### Current cost/policy assumptions reviewed on 2026-08-23
+
+- Supabase Free is appropriate for prototypes but can pause after inactivity and lacks production-grade backup/SLA features; public production should be paid.
+- Cloud Run has an always-free allowance, but network and dependent services can still incur costs.
+- Cloud Storage has limited free usage in specified US regions; Cloud CDN is usage-priced.
+- Transcoder is pay-per-output-minute and each rendition affects cost.
+- Firebase Analytics, A/B Testing, Crashlytics, and several engagement tools have no-cost allowances, but quotas/pricing can change; Remote Config pricing changes begin in September 2026.
+- Apple and Google generally require their purchase systems for in-app digital content and virtual currency, subject to evolving regional programs and legal exceptions. The conservative default is store billing.
+- RevenueCat and AdMob require native modules, so Expo development builds are required.
+- Rewarded ads are user-initiated exchanges for a stated reward; production rewards should use provider verification and idempotent server grants.
+
+---
+
+## 16. Final MVP Completion Checklist
+
+- [ ] Product, rights, policy, architecture, and cost decisions approved.
+- [ ] Private protected monorepo and full CI operational.
+- [ ] Rights-aware catalog and Django Admin operational.
+- [ ] Firebase auth and account deletion operational.
+- [ ] Private GCP HLS pipeline and signed playback operational.
+- [ ] Vertical player, progress, and free episode journey operational.
+- [ ] Coin ledger/unlock, store coin packs, subscription, restore, and rewarded ad operational.
+- [ ] All commerce/reward paths are server-verified, idempotent, reconciled, and supportable.
+- [ ] Analytics, BigQuery models, dashboards, attribution baseline, experiments, and push operational.
+- [ ] Staging/production IaC, secure CI/CD, backups, observability, security controls, and runbooks operational.
+- [ ] Accessibility, localization, regression matrix, beta, and store compliance complete.
+- [ ] Licensed launch catalog and campaign creatives pass rights review.
+- [ ] Controlled rollout and daily unit-economics review are ready.
+
+When every item above is satisfied, the platform is an MVP suitable for real-market validation. It is not yet a studio, distributor, consumer web service, or mature recommendation platform; those expansions depend on evidence from the mobile acquisition and monetization loop.
