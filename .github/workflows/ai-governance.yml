@@ -1,0 +1,45 @@
+name: AI governance
+
+on:
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - "ai/**"
+      - ".codex/**"
+      - ".cursor/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/labels.yml"
+      - ".github/pull_request_template.md"
+      - ".github/workflows/ai-governance.yml"
+      - "docs/AI_DEVELOPMENT.md"
+      - "scripts/validate_ai_governance.py"
+  push:
+    branches:
+      - main
+    paths:
+      - "AGENTS.md"
+      - "ai/**"
+      - ".codex/**"
+      - ".cursor/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/labels.yml"
+      - ".github/pull_request_template.md"
+      - ".github/workflows/ai-governance.yml"
+      - "docs/AI_DEVELOPMENT.md"
+      - "scripts/validate_ai_governance.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate agent contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate AI governance files
+        run: python scripts/validate_ai_governance.py

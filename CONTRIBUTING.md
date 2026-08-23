@@ -9,6 +9,7 @@
 
 ## Branch and pull-request workflow
 
+- AI-driven changes must follow `AGENTS.md` and `ai/workflows/development-loop.md`, including independent reviewer and verifier contexts.
 - Use a short-lived branch from `main`.
 - Name branches by task and purpose, for example `p1-t02/backend-bootstrap`.
 - One pull request should normally satisfy one plan task or a clearly explained subtask.
@@ -46,4 +47,4 @@ Use generated, redacted, or self-owned fixtures. When a private resource is requ
 - Documentation and environment examples are current.
 - No secrets or confidential/licensed material are present.
 
-Project-specific commands will be added as backend/mobile scaffolding lands. Until then, validation for documentation changes is Markdown/link/structure review plus repository secret checks.
+Validate AI governance changes with `python scripts/validate_ai_governance.py`. Use the area-specific commands in `AGENTS.md`; an unavailable required command is a blocker, not a pass.

@@ -1,0 +1,12 @@
+- name: ai-ready
+  color: "1D76DB"
+  description: Approved and ready for AI implementation
+- name: ai-in-progress
+  color: "FBCA04"
+  description: AI implementation is in progress
+- name: ai-review
+  color: "D4C5F9"
+  description: Independent AI review and fix loop is active
+- name: ai-verified
+  color: "0E8A16"
+  description: Independent verification and required checks passed

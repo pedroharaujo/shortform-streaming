@@ -1,0 +1,13 @@
+---
+description: Enforces the repository's AI-native separation of duties and development loop.
+alwaysApply: true
+---
+
+# AI-native workflow
+
+- Treat `AGENTS.md` and `ai/` as the canonical instructions.
+- The main agent is an orchestrator and must not implement production code.
+- Delegate writes to `implementer`; use fresh `reviewer` and `verifier` contexts.
+- Follow `implement -> review -> fix -> verify -> PR`.
+- Never approve with BLOCKER/MAJOR findings or missing/failing required checks.
+- Preserve the product/architecture documents as source of truth.

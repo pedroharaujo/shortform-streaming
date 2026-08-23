@@ -3,6 +3,7 @@ description: Track one verifiable task or subtask from the implementation plan.
 title: "[PLAN-ID] "
 labels:
   - implementation
+  - ai-ready
 body:
   - type: input
     id: plan_id
@@ -60,3 +61,17 @@ body:
       description: Cover security, privacy, rights, money, data, cost, and recovery where applicable.
     validations:
       required: true
+  - type: checkboxes
+    id: ai_ready_gate
+    attributes:
+      label: AI-ready gate
+      description: All boxes must be true before keeping the ai-ready label.
+      options:
+        - label: Acceptance criteria are observable and bounded.
+          required: true
+        - label: Dependencies and relevant decision-register entries are resolved.
+          required: true
+        - label: Required source documents and validation commands are identified.
+          required: true
+        - label: No unapproved legal, rights, market, price, or budget decision is required.
+          required: true

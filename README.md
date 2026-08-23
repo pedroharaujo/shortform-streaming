@@ -17,6 +17,7 @@ Implementation has started with Phase 0 product, rights, compliance, architectur
 - [Store and privacy compliance matrix](./docs/product/STORE_COMPLIANCE_MATRIX.md)
 - [Unit-cost model](./docs/product/COST_MODEL.md)
 - [Architecture decision records](./docs/adr/)
+- [AI-native development workflow](./docs/AI_DEVELOPMENT.md)
 
 ## Repository safety
 
