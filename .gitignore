@@ -2,19 +2,25 @@
 .env
 .env.*
 !.env.example
+credentials/
+secrets/
 *.pem
 *.key
+*.p8
 *.p12
+*.pfx
 *.mobileprovision
 google-services.json
 GoogleService-Info.plist
 service-account*.json
 
 # Licensed/confidential material
+sources/
 media/
 licensed-media/
 contracts/
 private/
+provider-payloads/
 *.mp4
 *.mov
 *.mkv
@@ -68,3 +74,4 @@ Thumbs.db
 .tmp/
 tmp/
 artifacts/
+graphify-out/
