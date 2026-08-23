@@ -26,7 +26,19 @@ Verify and record evidence that:
 - Actions are limited to required read permissions by default;
 - private vulnerability reporting replaces the temporary disclosure route before public beta.
 
-The committed scanner is a fast local and CI backstop. GitHub secret scanning and push protection remain required because they cover additional credential providers and pushes that never reach the normal pull-request workflow.
+The committed scanner is a fast local and CI backstop. The workflow checks out complete history and scans the exact base-to-head range supplied by each pull-request or push event, so a credential cannot be hidden by deleting it in a later commit. Workflow Actions are pinned to verified full commit SHAs and run with read-only repository permission and a ten-minute timeout.
+
+Before pushing, run:
+
+```shell
+git fetch origin main
+python scripts/scan_secrets.py --history-range origin/main..HEAD
+python scripts/check_repository_foundation.py
+```
+
+Do not use a shallow checkout for the history check. The scanner fails closed for missing revisions, symlinks, non-text content, prohibited delivery media, and files above 2 MiB. Any future generated/self-owned media fixture requires a narrow path allowlist plus provenance and a regression test; `git add --force` is not an exception.
+
+GitHub secret scanning and push protection remain required because they cover additional credential providers and pushes that never reach the normal pull-request workflow.
 
 ## Evidence and recovery
 

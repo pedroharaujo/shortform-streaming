@@ -54,6 +54,15 @@ python scripts/validate_ai_governance.py
 git diff --check
 ```
 
+Before pushing a branch, scan every blob introduced since the branch point, including files that were added and later removed:
+
+```shell
+git fetch origin main
+python scripts/scan_secrets.py --history-range origin/main..HEAD
+```
+
+History scanning requires a complete, non-shallow checkout and fails closed when either endpoint is unavailable. CI fetches complete history and supplies the exact pull-request or push range automatically. An all-zero base is treated as an initial branch and scans every commit reachable from its head.
+
 The future `pnpm check`, backend, mobile, contract, and infrastructure commands become available only when their corresponding bootstrap tasks commit the required manifests and lockfiles. An unavailable required check is a blocker, never a pass.
 
 ## Project status
@@ -79,6 +88,8 @@ The approved geographic scope is not final launch clearance. Territorial content
 
 This repository is public. Never commit secrets, real `.env` files, licensed video or artwork, confidential contracts/rates, provider payloads, production data, personal data, store credentials, or signing material.
 
-Keep private inputs under an ignored location such as `sources/`, `licensed-media/`, `contracts/`, `credentials/`, or `private/`. The repository safety gate scans tracked and non-ignored local files and reports only the rule and location of a suspected secret, never its value.
+Keep private inputs under an ignored location such as `sources/`, `licensed-media/`, `contracts/`, `credentials/`, or `private/`. Ignore rules are only the first barrier: the repository gate also rejects prohibited tracked delivery media, even after `git add --force`.
+
+The scanner reports only a rule and repository-relative location, never the detected value. It accepts UTF-8 and BOM-marked UTF-16 text, rejects symlinks and unsupported/binary encodings, and fails closed above the explicit 2 MiB per-file limit. P1-T01 has no media-fixture allowlist; a later task must document provenance and add a narrow generated/self-owned fixture prefix before committing any test media.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md), [SECURITY.md](./SECURITY.md), and the [repository controls runbook](./docs/runbooks/repository-controls.md) before making changes.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import unittest
 from pathlib import Path
@@ -36,6 +37,12 @@ IGNORED_PRIVATE_PATHS = (
     "private/customer.csv",
     "provider-payloads/webhook.json",
     "sample.mp4",
+    "episode.MP4",
+    "trailer.WEBM",
+    "audio.WAV",
+    "captions.SRT",
+    "launch-poster.JPG",
+    "media/segment.TS",
     "signing-key.p8",
     "service-account-production.json",
 )
@@ -55,6 +62,28 @@ class RepositoryFoundationTests(unittest.TestCase):
                     check=False,
                 )
                 self.assertEqual(result.returncode, 0)
+
+    def test_typescript_source_is_not_ignored_as_mpeg_ts_media(self) -> None:
+        result = subprocess.run(
+            ["git", "check-ignore", "--no-index", "--quiet", "mobile/src/example.ts"],
+            cwd=ROOT,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 1)
+
+    def test_repository_workflow_is_pinned_and_fetches_history(self) -> None:
+        workflow = (ROOT / ".github/workflows/repository-safety.yml").read_text(
+            encoding="utf-8"
+        )
+        for action in ("actions/checkout", "actions/setup-python"):
+            with self.subTest(action=action):
+                self.assertRegex(
+                    workflow,
+                    rf"uses: {re.escape(action)}@[0-9a-f]{{40}} # v[0-9]",
+                )
+        self.assertIn("fetch-depth: 0", workflow)
+        self.assertIn("timeout-minutes: 10", workflow)
+        self.assertIn("SECRET_SCAN_HISTORY_RANGE", workflow)
 
     def test_bootstrap_command_is_documented(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
