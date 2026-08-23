@@ -3,7 +3,15 @@
 **Plan task:** P0-T04  
 **Status:** Formula baseline; provider quotes, catalog terms, prices, and acquisition budget are pending
 
-The business should be evaluated by acquired cohort, not by aggregate revenue. Keep provider pricing inputs versioned with an effective date and source link; do not hard-code volatile prices into application logic.
+The business should be evaluated by acquired cohort, not by aggregate revenue. EUR is the company reporting currency. Keep provider pricing inputs versioned with an effective date and source link; do not hard-code volatile prices into application logic.
+
+## Currency and settlement rules
+
+- A customer's billing currency is the localized currency supplied by the active App Store or Google Play storefront. It is independent of the app's English interface language.
+- Preserve every financial fact in its original currency and original amount.
+- Convert original amounts to EUR for company reporting using a documented exchange-rate source, rate, and effective timestamp.
+- Target EUR store settlement by configuring an eligible Apple bank account and Google payments profile/bank account. Do not assume the app can choose payout currency at transaction time.
+- Treat coins as non-cash virtual units. A coin balance is not a monetary currency balance and is never converted to EUR for the user.
 
 ## Core formulas
 
@@ -59,11 +67,11 @@ contribution_LTV_to_CAC
 | Category | Input | Unit | Source/owner |
 |---|---|---|---|
 | Cohort | Country, platform, campaign, creative, series, experiment, install date | dimension | Analytics/growth |
-| Acquisition | Spend, attributed installs/users | currency, count | Ad network/MMP |
-| Store | Product, gross proceeds, commissions, taxes, refunds | currency | Store/RevenueCat/finance |
+| Acquisition | Spend, attributed installs/users | original currency, EUR, count | Ad network/MMP |
+| Store | Product, gross proceeds, commissions, taxes, refunds | customer/store currency, settlement currency, EUR | Store/RevenueCat/finance |
 | Subscription | Starts, renewals, churn, grace, expiry | count/rate | RevenueCat/backend |
-| Coins | Packs sold, credits, debits, outstanding balance | count/coins/currency | Backend ledger |
-| Ads | Verified impressions, eCPM/net revenue | count/currency | AdMob |
+| Coins | Packs sold, credits, debits, outstanding balance | count/coins plus purchase currency/EUR | Backend ledger |
+| Ads | Verified impressions, eCPM/net revenue | count/original currency/EUR | AdMob |
 | Viewing | Starts, completed minutes, rendition mix, watch hours | count/minutes | Analytics/player |
 | Video processing | Source minutes × each output rendition price | minutes/currency | GCP billing |
 | Storage | Source, HLS, artwork, versioned/backup GB-month | GB-month | GCP billing |
@@ -107,9 +115,9 @@ Create at least three scenarios before P0-T04 is complete:
 - Acquisition spend:
 - Contribution/user:
 
-### Controlled market launch
+### Controlled storefront launch
 
-Use the same fields with the approved budget, expected store/platform mix, and first real provider quotes.
+Use the same fields with the approved budget, expected country/storefront/platform mix, customer-currency mix, EUR settlement assumptions, and first real provider quotes.
 
 ### 10× scale
 
@@ -143,5 +151,7 @@ Apply measured behavior rather than assuming linear payer conversion. Identify t
 - BigQuery: https://cloud.google.com/bigquery/pricing
 - Firebase: https://firebase.google.com/pricing
 - RevenueCat: https://www.revenuecat.com/pricing
+- Apple storefront pricing and proceeds: https://developer.apple.com/help/app-store-connect/manage-app-pricing/set-a-price/ and https://developer.apple.com/help/app-store-connect/getting-paid/view-payments-and-proceeds
+- Google Play local currencies and payouts: https://support.google.com/googleplay/android-developer/answer/1169947?hl=en
 
-Record the effective date and currency conversion source when numerical inputs are added.
+Record the original amount/currency, converted EUR amount, exchange rate, rate source, and effective timestamp when numerical inputs are added.

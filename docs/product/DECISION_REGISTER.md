@@ -4,8 +4,8 @@ This register distinguishes working assumptions from approved decisions. An impl
 
 | ID | Decision | Proposed value | Status | Owner | Required by |
 |---|---|---|---|---|---|
-| D-001 | First launch market | Brazil | Proposed | Founder | P0-T01 completion |
-| D-002 | Primary locale/currency | `pt-BR` / BRL | Proposed; follows D-001 | Founder | P0-T01 completion |
+| D-001 | Distribution countries/storefronts | TBD | Decision required | Founder + legal/growth | P0-T01 completion |
+| D-002 | Product interface language | English (`en`) | Approved 2026-08-23 | Founder | Now |
 | D-003 | Provisional age direction | 16+ | Proposed; catalog-dependent | Founder + content/legal | Store submission |
 | D-004 | Initial catalog | 5–10 non-exclusive licensed series | Proposed | Founder + content | Content ingestion |
 | D-005 | Guest boundary | Browse/watch free episodes anonymously; login before monetized unlock | Proposed | Founder | Auth UX implementation |
@@ -23,7 +23,9 @@ This register distinguishes working assumptions from approved decisions. An impl
 | D-017 | Acquisition validation budget | TBD | Decision required | Founder | Before paid acquisition |
 | D-018 | MMP adoption threshold | TBD based on spend and attribution ambiguity | Decision required | Founder + growth | P4-T07 |
 | D-019 | DRM requirement | No custom DRM unless contract requires it | Pending first license package | Content/legal | Before media ingestion |
-| D-020 | Data residency/retention | Follow launch market and provider constraints | Decision required | Legal + engineering | Production provisioning |
+| D-020 | Data residency/retention | Follow approved distribution countries and provider constraints | Decision required | Legal + engineering | Production provisioning |
+| D-021 | Customer billing currency | Storefront-localized currency and store-provided price strings | Approved 2026-08-23 | Founder | Mobile commerce implementation |
+| D-022 | Company reporting and desired settlement currency | EUR; validate Apple bank-account currency and Google payments-profile/bank eligibility | Business target approved 2026-08-23; setup validation required | Founder + finance | Production commerce setup |
 
 ## Decision protocol
 

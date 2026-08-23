@@ -6,7 +6,7 @@ The MVP consists of a Django REST backend/Django Admin and one React Native/Expo
 
 ## Project status
 
-Implementation has started with Phase 0 product, rights, compliance, architecture, and cost gates. Brazil/`pt-BR` is a proposed first-market assumption and is not approved until recorded in the decision register.
+Implementation has started with Phase 0 product, rights, compliance, architecture, and cost gates. The MVP interface language is English. Customer prices are localized by each user's App Store or Google Play storefront, while EUR is the company's base reporting currency and desired store-settlement currency. Distribution countries and payment-profile eligibility still require approval.
 
 ## Source of truth
 

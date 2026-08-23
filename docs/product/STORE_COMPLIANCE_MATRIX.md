@@ -14,7 +14,8 @@ This document is an implementation checklist, not legal advice. Policies and reg
 | Coin lifecycle | Purchased coins do not expire, transfer, cash out, or operate outside this product. | Terms/UI review and ledger reconciliation. |
 | Episode unlock | Debit and entitlement grant occur atomically on the server. | Concurrency, idempotency, insufficient-balance, and price-race tests. |
 | Restore/sync | Restore restorable purchases and resynchronize subscription state; server balance persists after reinstall/login. | Apple sandbox and Google license-tester device matrix. |
-| Price display | Render store-localized price and period; do not construct currency strings manually. | Compare UI with store sheet for every product/market. |
+| Price display | Render the store-provided localized price and period for the active storefront; do not infer currency from app language or construct monetary strings manually. | Compare UI with the native store purchase sheet using test accounts in at least two currencies on each platform. |
+| Developer settlement | Use EUR as the finance reporting currency and desired payout currency. Configure a EUR-denominated bank account in App Store Connect and a EUR-compatible Google payments profile/bank account where the registered entity is eligible. | Finance records account country, legal entity, payments-profile currency, bank currency, verification evidence, fees, and first sandbox/production reconciliation. |
 | Subscription disclosure | Show price, billing period, renewal, trial/intro terms, benefits, privacy, terms, cancel/manage, and restore before purchase. | Independent review using store submission package. |
 | External checkout links | Do not include by default. Add only after a current storefront/region-specific policy and legal review. | Storefront matrix and review notes. |
 | Refund/chargeback | Provider lifecycle changes server state; purchased-coin correction policy uses auditable compensating entries. | Replayed provider fixtures and support runbook. |
@@ -22,7 +23,11 @@ This document is an implementation checklist, not legal advice. Policies and reg
 Primary references:
 
 - Apple App Review Guidelines: https://developer.apple.com/app-store/review/guidelines/
+- Apple storefront pricing: https://developer.apple.com/help/app-store-connect/manage-app-pricing/set-a-price/
+- Apple banking and proceeds: https://developer.apple.com/help/app-store-connect/manage-banking-information/enter-banking-information/ and https://developer.apple.com/help/app-store-connect/getting-paid/view-payments-and-proceeds
 - Google Play payments policy: https://support.google.com/googleplay/android-developer/answer/9858738
+- Google Play local currencies and payouts: https://support.google.com/googleplay/android-developer/answer/1169947?hl=en
+- Google Play merchant bank requirements: https://support.google.com/googleplay/android-developer/answer/7161440?hl=en
 - RevenueCat Expo integration: https://www.revenuecat.com/docs/getting-started/installation/expo
 
 ## Rewarded advertising
@@ -50,7 +55,7 @@ Primary reference: https://developers.google.com/admob/ios/rewarded
 
 ## Privacy and data protection baseline
 
-The final law set follows the approved market. With Brazil proposed, implement an LGPD baseline and preserve GDPR-ready controls for likely European expansion.
+The app interface is English, but language and payout currency do not determine legal jurisdiction. The final law set follows the company's legal entity, distribution countries, users, data flows, and providers. Implement a GDPR-ready baseline now, then add and approve each storefront's jurisdiction-specific requirements before enabling distribution there.
 
 - Maintain a data inventory: field/event, purpose, lawful basis/consent, processor, region, retention, access roles, deletion behavior.
 - Minimize identifiers and avoid email, tokens, receipts, signed media URLs, exact IP, or contract references in analytics.
@@ -74,7 +79,8 @@ The final law set follows the approved market. With Brazil proposed, implement a
 
 ## Required approvals before P0-T03 completion
 
-- [ ] Launch market is approved.
+- [ ] Distribution countries/storefronts are approved.
+- [ ] Finance confirms that the registered store accounts and bank configuration can settle proceeds in EUR.
 - [ ] Legal/privacy owner reviews the relevant jurisdiction row set.
 - [ ] Content rating owner approves provisional rating method.
 - [ ] Finance/tax owner approves merchant, tax, refund, and revenue-recognition treatment.
