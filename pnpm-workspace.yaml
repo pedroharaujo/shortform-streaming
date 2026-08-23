@@ -1,0 +1,13 @@
+packages:
+  - mobile
+  - packages/*
+
+# React Native and Expo autolinking resolve native modules through a hoisted
+# layout; Expo documents this setting for pnpm monorepos.
+nodeLinker: hoisted
+
+# Install scripts are denied by default. Every entry below is an explicit,
+# justified exception and must stay minimal.
+allowBuilds:
+  # Native path resolver used by the ESLint import plugin in eslint-config-expo.
+  unrs-resolver: true

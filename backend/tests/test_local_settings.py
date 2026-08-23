@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 @pytest.mark.parametrize(
     ("override", "expected"),
     (
-        (None, "localhost,127.0.0.1,[::1]"),
+        (None, "localhost,127.0.0.1,10.0.2.2,[::1]"),
         ("api.local.test, 10.0.2.2", "api.local.test,10.0.2.2"),
     ),
 )

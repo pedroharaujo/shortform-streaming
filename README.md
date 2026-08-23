@@ -38,6 +38,10 @@ process-only. Readiness performs a bounded `SELECT 1` and returns HTTP 503 with 
 non-sensitive payload `{"status":"unavailable"}` if PostgreSQL cannot be reached.
 Stop local services without deleting their named data volume with `docker compose down`.
 
+Local Django accepts `10.0.2.2` as a host so an Android emulator can reach this server
+through that alias. Keep `runserver` on `127.0.0.1:8000`; the emulator still maps
+`10.0.2.2` to the host loopback.
+
 Run the dependency-free repository safety gate separately:
 
 ```shell
@@ -55,13 +59,13 @@ mobile (Expo) ---- HTTPS ---- backend (Django/DRF) ---- PostgreSQL
 ```
 
 - `backend/` contains the Django/DRF modular monolith, split settings, and backend tests.
-- `mobile/` is reserved for the Expo/React Native application (P1-T03).
+- `mobile/` contains the Expo/React Native development-client application (P1-T03).
 - `packages/api-client/` will contain the OpenAPI-generated TypeScript client (P1-T04).
 - `infra/` holds environment and reusable infrastructure definitions when provisioning begins.
 - `docs/` contains product decisions, ADRs, contracts, analytics references, and runbooks.
 - `scripts/` and `tests/repository/` contain repository-wide deterministic checks.
 
-Later tasks add the domain applications, generated API client, mobile app, and cloud infrastructure.
+Later tasks add the domain applications, generated API client, and cloud infrastructure.
 
 ## Common commands
 
@@ -79,7 +83,38 @@ pnpm backend:check
 
 Run the current repository-wide aggregate gate with `pnpm check`.
 
-Or run them independently:
+## Local mobile bootstrap
+
+P1-T03 provides a strict TypeScript Expo app with Expo Router, an Android/iOS
+development-build configuration (not Expo Go), and a screen that probes
+`/health/live` and `/health/ready`. Details, including the emulator sequence, are in
+[mobile/README.md](./mobile/README.md).
+
+`EXPO_PUBLIC_*` values are compiled into the public JavaScript bundle. Never place a
+secret, key, token, or credential in `EXPO_PUBLIC_API_ENVIRONMENT` or
+`EXPO_PUBLIC_API_BASE_URL`. Copy those two names from `.env.example` into
+`mobile/.env` (gitignored). Both are required; the app does not default an environment.
+
+Use `http://10.0.2.2:8000` as `EXPO_PUBLIC_API_BASE_URL` on the Android emulator and
+`http://127.0.0.1:8000` on the iOS simulator.
+
+From the repository root (`export PATH="$HOME/.local/bin:$PATH"` if `pnpm` is the
+corepack shim):
+
+```shell
+pnpm install
+pnpm mobile:lint
+pnpm mobile:format:check
+pnpm mobile:typecheck
+pnpm mobile:test
+pnpm mobile:config:check
+```
+
+The first Android development client is `pnpm --filter @shortform/mobile android`
+with the emulator already running. P1-T03 did **not** execute that emulator path;
+record it as an **omission**, not a pass.
+
+Run backend checks independently:
 
 ```shell
 pnpm backend:lint
@@ -113,9 +148,9 @@ python scripts/scan_secrets.py --history-range origin/main..HEAD
 
 History scanning requires a complete, non-shallow checkout and fails closed when either endpoint is unavailable. CI fetches complete history and supplies the exact pull-request or push range automatically. An all-zero base is treated as an initial branch and scans every commit reachable from its head.
 
-Mobile, contract, and infrastructure commands become available only when their owning
-bootstrap tasks commit working implementations. An unavailable required check is a
-blocker, never a pass.
+Contract and infrastructure commands become available only when their owning bootstrap
+tasks commit working implementations. An unavailable required check is a blocker, never
+a pass.
 
 ## Production configuration
 

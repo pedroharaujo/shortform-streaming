@@ -62,6 +62,9 @@ node_modules/
 .expo-shared/
 web-build/
 coverage/
+expo-env.d.ts
+.metro-health-check*
+.eas-build-*/
 *.[jJ][kK][sS]
 *.[kK][eE][yY][sS][tT][oO][rR][eE]
 
