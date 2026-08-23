@@ -4,19 +4,45 @@ Public monorepo for a mobile-first vertical microdrama streaming platform.
 
 The MVP consists of a Django REST backend/Django Admin and one React Native/Expo application for iOS and Android. A consumer web client is explicitly post-MVP.
 
-## Bootstrap checkpoint
+## Local backend bootstrap
 
-P1-T01 establishes the repository layout and its local/CI safety gate. It does not yet bootstrap a runnable Django service, Expo application, database, or cloud infrastructure; those are separate tasks starting with P1-T02 and P1-T03.
-
-A fresh clone reaches the current checkpoint with only Git and Python 3.11 or newer:
+P1-T02 provides a runnable Django 5.2 LTS backend and local PostgreSQL. Install Git,
+Python 3.12–3.14, [uv](https://docs.astral.sh/uv/), pnpm, and Docker with Compose, then
+run:
 
 ```shell
 git clone https://github.com/pedroharaujo/shortform-streaming.git
 cd shortform-streaming
-python scripts/check_repository_foundation.py
+uv sync --locked
+docker compose up -d --wait postgres
+uv run python backend/manage.py migrate
+uv run python backend/manage.py runserver 127.0.0.1:8000
 ```
 
-The command succeeds only when the repository structure, ignore rules, secret scan, scanner regression tests, and AI governance contracts pass. It installs nothing and does not require provider accounts, credentials, licensed media, Node.js, Docker, or cloud access.
+The local settings use the safe development defaults shown in `.env.example`; copying
+that file is optional. The local container uses PostgreSQL's passwordless `trust` mode,
+but its port is bound only to `127.0.0.1`, never every host interface. Do not reuse this
+authentication mode outside local development. If port 5432 is occupied, choose another
+loopback port in a local `.env`, update `DATABASE_URL` to match, and add
+`--env-file .env` immediately after `uv run` in the Django commands below.
+
+Confirm the service in another terminal:
+
+```shell
+curl http://127.0.0.1:8000/health/live
+curl http://127.0.0.1:8000/health/ready
+```
+
+Both return `{"status":"ok"}` with HTTP 200 while PostgreSQL is available. Liveness is
+process-only. Readiness performs a bounded `SELECT 1` and returns HTTP 503 with the
+non-sensitive payload `{"status":"unavailable"}` if PostgreSQL cannot be reached.
+Stop local services without deleting their named data volume with `docker compose down`.
+
+Run the dependency-free repository safety gate separately:
+
+```shell
+python scripts/check_repository_foundation.py
+```
 
 ## Architecture and repository layout
 
@@ -28,16 +54,40 @@ mobile (Expo) ---- HTTPS ---- backend (Django/DRF) ---- PostgreSQL
       +---- mobile providers         +---- private media authorization
 ```
 
-- `backend/` is reserved for the Django/DRF modular monolith and backend tests (P1-T02).
+- `backend/` contains the Django/DRF modular monolith, split settings, and backend tests.
 - `mobile/` is reserved for the Expo/React Native application (P1-T03).
 - `packages/api-client/` will contain the OpenAPI-generated TypeScript client (P1-T04).
 - `infra/` holds environment and reusable infrastructure definitions when provisioning begins.
 - `docs/` contains product decisions, ADRs, contracts, analytics references, and runbooks.
 - `scripts/` and `tests/repository/` contain repository-wide deterministic checks.
 
-Empty runtime scaffolds such as `manage.py`, `package.json`, `compose.yaml`, and infrastructure state are intentionally absent until their owning plan tasks add working implementations and tests.
+Later tasks add the domain applications, generated API client, mobile app, and cloud infrastructure.
 
 ## Common commands
+
+Install exactly the dependency versions committed in `uv.lock`:
+
+```shell
+uv sync --locked
+```
+
+Run all backend checks (PostgreSQL must be running for the test suite):
+
+```shell
+pnpm backend:check
+```
+
+Run the current repository-wide aggregate gate with `pnpm check`.
+
+Or run them independently:
+
+```shell
+pnpm backend:lint
+pnpm backend:format:check
+pnpm backend:typecheck
+pnpm backend:migrations:check
+pnpm backend:test
+```
 
 Run the complete repository-foundation gate:
 
@@ -63,7 +113,24 @@ python scripts/scan_secrets.py --history-range origin/main..HEAD
 
 History scanning requires a complete, non-shallow checkout and fails closed when either endpoint is unavailable. CI fetches complete history and supplies the exact pull-request or push range automatically. An all-zero base is treated as an initial branch and scans every commit reachable from its head.
 
-The future `pnpm check`, backend, mobile, contract, and infrastructure commands become available only when their corresponding bootstrap tasks commit the required manifests and lockfiles. An unavailable required check is a blocker, never a pass.
+Mobile, contract, and infrastructure commands become available only when their owning
+bootstrap tasks commit working implementations. An unavailable required check is a
+blocker, never a pass.
+
+## Production configuration
+
+Start production entry points with `DJANGO_SETTINGS_MODULE=config.settings.production`.
+Production settings fail immediately unless all of these values are non-empty:
+
+- `DJANGO_SECRET_KEY`: a strong, externally managed secret;
+- `DJANGO_ALLOWED_HOSTS`: comma-separated API hostnames;
+- `DATABASE_URL`: a standard PostgreSQL connection URL.
+
+`DATABASE_CONNECT_TIMEOUT` defaults to two seconds so readiness does not hang on an
+unreachable database and accepts only an integer from 1 through 10. SQLite, MySQL, and
+other database engines are rejected in every environment. Production enables HTTPS
+redirect, secure cookies, proxy HTTPS handling, HSTS, and related Django deployment
+protections. Do not reuse the local example values or commit a populated `.env`.
 
 ## Project status
 

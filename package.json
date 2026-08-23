@@ -1,0 +1,15 @@
+{
+  "name": "shortform-streaming",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "check": "python scripts/check_repository_foundation.py && pnpm backend:check",
+    "backend:lint": "uv run ruff check backend",
+    "backend:format:check": "uv run ruff format --check backend",
+    "backend:typecheck": "uv run mypy backend",
+    "backend:migrations:check": "uv run python backend/manage.py makemigrations --check --dry-run",
+    "backend:test": "uv run pytest backend/tests",
+    "backend:check": "pnpm backend:lint && pnpm backend:format:check && pnpm backend:typecheck && pnpm backend:migrations:check && pnpm backend:test"
+  }
+}

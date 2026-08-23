@@ -1,3 +1,6 @@
 # Backend application boundary
 
-P1-T02 will establish the modular Django application pattern here. Later plan tasks own the `accounts`, `catalog`, `playback`, `entitlements`, `commerce`, `advertising`, `experiments`, and `notifications` bounded applications; they must not be pre-created as empty runtime modules.
+`health` is the infrastructure health application created by P1-T02. Later plan tasks own
+the `accounts`, `catalog`, `playback`, `entitlements`, `commerce`, `advertising`,
+`experiments`, and `notifications` bounded applications; they are intentionally not
+pre-created as empty runtime modules.

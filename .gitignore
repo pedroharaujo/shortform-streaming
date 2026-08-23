@@ -91,3 +91,4 @@ Thumbs.db
 tmp/
 artifacts/
 graphify-out/
+.pnpm-store/

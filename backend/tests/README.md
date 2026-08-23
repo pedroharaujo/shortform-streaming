@@ -1,3 +1,6 @@
-# Backend test placeholder
+# Backend tests
 
-P1-T02 owns the backend test configuration and first health/readiness tests in this directory. Repository-level tests live under `tests/repository/`.
+Pytest is configured in the root `pyproject.toml`. The health tests prove liveness does not
+touch the database, readiness succeeds against PostgreSQL, database failures are returned
+as a non-sensitive HTTP 503, and production configuration fails fast. Repository-level
+tests remain under `tests/repository/`.
