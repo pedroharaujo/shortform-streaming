@@ -1,0 +1,9 @@
+# Default owner until team-specific ownership is introduced.
+* @pedroharaujo
+
+# High-risk product and implementation decisions.
+/MICRODRAMA_IMPLEMENTATION_PLAN.md @pedroharaujo
+/docs/product/ @pedroharaujo
+/docs/adr/ @pedroharaujo
+/infra/ @pedroharaujo
+/.github/ @pedroharaujo

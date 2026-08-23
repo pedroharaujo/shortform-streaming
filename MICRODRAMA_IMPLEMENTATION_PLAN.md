@@ -91,6 +91,10 @@ The product is viable when selected acquired cohorts can achieve projected contr
 
 ### Default access and monetization rules
 
+- The MVP user interface and all default product copy are in English.
+- Distribution countries/storefronts remain a launch decision; product language does not determine store availability.
+- Customer prices and billing periods come from store-localized product metadata for the active App Store or Google Play storefront. The app never infers currency from language or builds monetary strings manually.
+- EUR is the company's base reporting currency and desired settlement currency. Production setup must validate the Apple bank-account currency and Google payments-profile/bank eligibility for EUR payouts.
 - The number of free episodes is configurable per series and experiment cohort; a reasonable seed is the first 3–5 episodes.
 - A free episode requires no login.
 - At a locked episode, the server returns the allowed unlock methods and localized offer metadata.
@@ -130,7 +134,7 @@ Core product metrics:
 - Playback start time, rebuffer ratio, completion rate, and playback error rate.
 - CAC and LTV/CAC by creative, campaign, country, series, and experiment variant.
 
-Launch gates should be set after the first test market is chosen. Do not invent universal thresholds before baseline data exists.
+Launch gates should be set after the first controlled distribution countries/storefronts are chosen. Do not invent universal thresholds before baseline data exists.
 
 ---
 
@@ -154,7 +158,7 @@ Install stable supported releases and commit lockfiles. Avoid pinning this plann
 
 ### Accounts required before beta
 
-- Private GitHub repository.
+- Public GitHub repository.
 - Google Cloud billing account and separate staging/production projects.
 - Firebase staging/production projects.
 - Supabase organization and database projects.
@@ -285,7 +289,7 @@ iOS / Android ---- HTTPS ---- Cloud Run: Django API/Admin
 ### Proposed monorepo
 
 ```text
-microdrama-platform/
+shortform-streaming/
 ├── backend/
 │   ├── config/
 │   ├── apps/
@@ -427,9 +431,9 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 ### Phase 0 — Product, Rights, and Delivery Foundations
 
-#### P0-T01 — Approve MVP product brief and launch market
+#### P0-T01 — Approve MVP product brief and launch configuration
 
-**Description:** Convert this plan into an approved one-page brief naming the first country, primary language, target audience, content rating, catalog size, and success/stop criteria.
+**Description:** Convert this plan into an approved one-page brief recording the English product language, distribution countries/storefronts, customer-localized pricing, EUR reporting/settlement target, legal entity, target audience, content rating, catalog size, and success/stop criteria.
 
 **Objective:** Prevent architecture and store work from proceeding with unresolved product assumptions.
 
@@ -437,7 +441,9 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 **Acceptance criteria:**
 
-- [ ] One launch market and currency are selected.
+- [x] English is approved as the MVP product language.
+- [x] Storefront-localized customer prices and EUR reporting/desired settlement are approved.
+- [ ] Distribution countries/storefronts, legal entity, and EUR-compatible store payment profiles/bank configuration are approved.
 - [ ] MVP inclusions/exclusions and monetization defaults are approved.
 - [ ] KPI definitions, experiment guardrails, budget ceiling, and stop/go review date are documented.
 
@@ -467,7 +473,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 #### P0-T03 — Create product policy and store-compliance matrix
 
-**Description:** Map coins, subscriptions, rewarded ads, account deletion, privacy, consent, and age rating to Apple, Google Play, AdMob, GDPR/UK GDPR, and launch-market requirements.
+**Description:** Map coins, subscriptions, storefront-localized customer pricing, EUR settlement, rewarded ads, account deletion, privacy, consent, and age rating to Apple, Google Play, AdMob, GDPR/UK GDPR, and approved distribution-country requirements.
 
 **Objective:** Avoid building monetization flows that stores or regulators reject.
 
@@ -505,7 +511,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 ### Checkpoint 0 — Product feasibility
 
-- [ ] Launch market, rights checklist, policy matrix, and cost model are approved.
+- [ ] Launch configuration, rights checklist, policy matrix, and cost model are approved.
 - [ ] A sample content package can meet the proposed ingestion contract.
 - [ ] Any mandatory DRM requirement is known before the video proof-of-concept.
 
@@ -513,9 +519,9 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 ### Phase 1 — Repository, Local Development, and Continuous Integration
 
-#### P1-T01 — Create and protect the private monorepo
+#### P1-T01 — Create and protect the public monorepo
 
-**Description:** Create `microdrama-platform`, add the agreed directory structure, ownership rules, issue/PR templates, contribution guide, and branch protection.
+**Description:** Create `shortform-streaming`, add the agreed directory structure, ownership rules, issue/PR templates, contribution guide, and branch protection.
 
 **Objective:** Provide one auditable home for backend, mobile, infrastructure, and documentation.
 
@@ -523,7 +529,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 **Acceptance criteria:**
 
-- [ ] Repository is private, default branch is protected, and pull requests require passing checks.
+- [ ] Repository is public, the default branch is protected, and pull requests require passing checks.
 - [ ] `sources/`, real media, environment files, keys, and credentials are ignored.
 - [ ] README explains setup, architecture, and common commands.
 
@@ -829,14 +835,14 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 **Acceptance criteria:**
 
-- [ ] Product matrix states type, price tier, currency behavior, entitlement effect, and environment.
+- [ ] Product matrix states type, base price tier, store-localized customer currency behavior, EUR settlement/reconciliation behavior, entitlement effect, and environment.
 - [ ] Sandbox/test products are visible through RevenueCat in both platform builds.
 - [ ] Secrets are environment-specific and stored outside source control.
 
 **Validation and integration tests:**
 
 - [ ] Automated configuration check detects missing/unknown product IDs.
-- [ ] Sandbox device fetches offerings from Apple and Google paths and displays store-localized prices.
+- [ ] Sandbox devices fetch offerings from Apple and Google paths and display store-provided localized prices for test accounts in at least two currencies per platform; the app and backend never construct the price string.
 
 #### P3-T04 — Implement RevenueCat webhook ingestion and subscription state
 
@@ -1270,7 +1276,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 **Acceptance criteria:**
 
 - [ ] Production is isolated from staging with separate credentials, projects, data, and media.
-- [ ] Region choices match launch market, latency, rights, privacy, and provider constraints.
+- [ ] Region choices match approved distribution countries, latency, rights, privacy, and provider constraints.
 - [ ] Cost alerts, quota alerts, backup/PITR, audit logs, and break-glass access are enabled.
 
 **Validation and integration tests:**
@@ -1546,7 +1552,7 @@ The backend is intentionally client-neutral. Do not start this phase until mobil
 
 - [ ] Web payment facts are idempotently recorded and mapped to the same subscription/entitlement policy.
 - [ ] Store and web subscriptions have defined precedence, duplicate-subscription prevention, refund, cancellation, and support rules.
-- [ ] Tax, invoices, chargebacks, SCA, privacy, and terms are implemented for launch markets.
+- [ ] Tax, invoices, chargebacks, SCA, privacy, and terms are implemented for approved distribution countries.
 
 **Validation and integration tests:**
 
@@ -1671,7 +1677,8 @@ Include `.env.example` with names and descriptions but no usable values.
 Resolve these through P0 tasks; they are intentionally not guessed:
 
 - Product/app name, visual brand, and repository organization owner.
-- First launch country, language(s), currency, and legal entity.
+- Distribution countries/storefronts, legal entity, and store-account countries.
+- Confirmation that the Apple bank-account currency and Google payments profile/bank configuration can settle in EUR.
 - Age rating and allowed content categories.
 - Exact content license terms and whether DRM is mandatory.
 - Initial series and free-episode baseline.
@@ -1682,13 +1689,19 @@ Resolve these through P0 tasks; they are intentionally not guessed:
 - Initial acquisition budget and MMP adoption threshold.
 - Support and incident-response owners.
 
+Already approved by the founder:
+
+- The MVP user interface is in English.
+- Customer monetary prices use the localized currency and price string supplied by the active App Store or Google Play storefront.
+- EUR is the company reporting currency and desired payout currency; actual settlement depends on eligible store-account, payments-profile, legal-entity, and bank configuration.
+
 ---
 
 ## 14. Suggested First 12 Implementation Moves
 
 After approvals, execute in this order:
 
-1. P0-T01 — Approve brief and launch market.
+1. P0-T01 — Approve brief and launch configuration.
 2. P0-T02 — Validate rights/media package.
 3. P0-T03 — Approve compliance matrix.
 4. P0-T04 — Lock ADRs and cost model.
@@ -1723,7 +1736,11 @@ These are primary sources used to validate changeable decisions. Recheck them at
 - Expo development builds: https://docs.expo.dev/develop/development-builds/introduction/
 - RevenueCat with Expo: https://www.revenuecat.com/docs/getting-started/installation/expo
 - Apple App Review Guidelines: https://developer.apple.com/app-store/review/guidelines/
+- Apple storefront pricing: https://developer.apple.com/help/app-store-connect/manage-app-pricing/set-a-price/
+- Apple banking and proceeds: https://developer.apple.com/help/app-store-connect/manage-banking-information/enter-banking-information/ and https://developer.apple.com/help/app-store-connect/getting-paid/view-payments-and-proceeds
 - Google Play payments policy: https://support.google.com/googleplay/android-developer/answer/9858738
+- Google Play local-currency pricing and payments-profile settlement: https://support.google.com/googleplay/android-developer/answer/1169947?hl=en
+- Google Play merchant bank requirements: https://support.google.com/googleplay/android-developer/answer/7161440?hl=en
 - AdMob rewarded ads and server-side verification entry point: https://developers.google.com/admob/ios/rewarded
 - GCP Workload Identity Federation for deployment pipelines: https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines
 - OWASP Mobile Application Security/MASVS: https://owasp.org/www-project-mobile-app-security/ and https://mas.owasp.org/MASVS/
@@ -1736,6 +1753,7 @@ These are primary sources used to validate changeable decisions. Recheck them at
 - Transcoder is pay-per-output-minute and each rendition affects cost.
 - Firebase Analytics, A/B Testing, Crashlytics, and several engagement tools have no-cost allowances, but quotas/pricing can change; Remote Config pricing changes begin in September 2026.
 - Apple and Google generally require their purchase systems for in-app digital content and virtual currency, subject to evolving regional programs and legal exceptions. The conservative default is store billing.
+- Customer price currency and developer payout currency are separate: storefronts localize customer prices, while Apple pays in the configured bank-account currency and Google pays in the payments-profile currency. The business target is EUR settlement, subject to account and bank eligibility.
 - RevenueCat and AdMob require native modules, so Expo development builds are required.
 - Rewarded ads are user-initiated exchanges for a stated reward; production rewards should use provider verification and idempotent server grants.
 
@@ -1744,7 +1762,7 @@ These are primary sources used to validate changeable decisions. Recheck them at
 ## 16. Final MVP Completion Checklist
 
 - [ ] Product, rights, policy, architecture, and cost decisions approved.
-- [ ] Private protected monorepo and full CI operational.
+- [ ] Public protected monorepo and full CI operational, with no secrets, licensed media, or confidential contracts committed.
 - [ ] Rights-aware catalog and Django Admin operational.
 - [ ] Firebase auth and account deletion operational.
 - [ ] Private GCP HLS pipeline and signed playback operational.

@@ -1,0 +1,157 @@
+# MVP Unit-Cost and Contribution Model
+
+**Plan task:** P0-T04  
+**Status:** Formula baseline; provider quotes, catalog terms, prices, and acquisition budget are pending
+
+The business should be evaluated by acquired cohort, not by aggregate revenue. EUR is the company reporting currency. Keep provider pricing inputs versioned with an effective date and source link; do not hard-code volatile prices into application logic.
+
+## Currency and settlement rules
+
+- A customer's billing currency is the localized currency supplied by the active App Store or Google Play storefront. It is independent of the app's English interface language.
+- Preserve every financial fact in its original currency and original amount.
+- Convert original amounts to EUR for company reporting using a documented exchange-rate source, rate, and effective timestamp.
+- Target EUR store settlement by configuring an eligible Apple bank account and Google payments profile/bank account. Do not assume the app can choose payout currency at transaction time.
+- Treat coins as non-cash virtual units. A coin balance is not a monetary currency balance and is never converted to EUR for the user.
+
+## Core formulas
+
+```text
+gross_store_revenue
+  = subscription_sales + coin_pack_sales
+
+net_store_revenue
+  = gross_store_revenue
+  - store_commissions
+  - indirect_taxes_withheld_or_due
+  - refunds_and_chargebacks
+
+net_ad_revenue
+  = verified_rewarded_ad_revenue
+  - ad_mediation_fees_not_already_net
+
+content_cost
+  = minimum_guarantee_amortization
+  + contractual_revenue_share
+  + localization_and_delivery_cost
+
+variable_infrastructure
+  = video_transcoding
+  + video_storage
+  + CDN_delivery
+  + API_and_background_compute
+  + database_variable_cost
+  + analytics_and_observability_variable_cost
+  + transactional_notifications
+  + payment_or_MMP_variable_fees
+
+cohort_contribution
+  = net_store_revenue
+  + net_ad_revenue
+  - content_cost
+  - variable_infrastructure
+  - acquisition_spend
+  - variable_support_and_fraud_loss
+
+cohort_CAC = acquisition_spend / attributed_new_users
+
+cohort_contribution_LTV_per_user
+  = projected_lifetime_cohort_contribution_before_acquisition
+  / attributed_new_users
+
+contribution_LTV_to_CAC
+  = cohort_contribution_LTV_per_user / cohort_CAC
+```
+
+## Required input sheet
+
+| Category | Input | Unit | Source/owner |
+|---|---|---|---|
+| Cohort | Country, platform, campaign, creative, series, experiment, install date | dimension | Analytics/growth |
+| Acquisition | Spend, attributed installs/users | original currency, EUR, count | Ad network/MMP |
+| Store | Product, gross proceeds, commissions, taxes, refunds | customer/store currency, settlement currency, EUR | Store/RevenueCat/finance |
+| Subscription | Starts, renewals, churn, grace, expiry | count/rate | RevenueCat/backend |
+| Coins | Packs sold, credits, debits, outstanding balance | count/coins plus purchase currency/EUR | Backend ledger |
+| Ads | Verified impressions, eCPM/net revenue | count/original currency/EUR | AdMob |
+| Viewing | Starts, completed minutes, rendition mix, watch hours | count/minutes | Analytics/player |
+| Video processing | Source minutes × each output rendition price | minutes/currency | GCP billing |
+| Storage | Source, HLS, artwork, versioned/backup GB-month | GB-month | GCP billing |
+| Delivery | CDN cache egress, fill, requests by destination | GB/requests/currency | GCP billing |
+| Application | Cloud Run CPU/RAM/requests/egress | usage/currency | GCP billing |
+| Database | Plan, compute, storage, egress, backups | usage/currency | Supabase/GCP billing |
+| Data | Firebase/BigQuery/observability/MMP usage | usage/currency | Provider billing |
+| Content | MG amortization, revenue share, localization | currency | Contract/finance |
+| Support/fraud | Refund handling, goodwill, invalid traffic, abuse loss | currency | Support/risk |
+
+## Video-specific model
+
+```text
+transcoder_cost_per_source_minute
+  = sum(price_per_output_minute_for_each_rendition)
+
+average_delivered_GB_per_watch_hour
+  = sum(rendition_share * rendition_average_bitrate_Mbps) * 3600 / 8 / 1024
+
+CDN_cost_per_watch_hour
+  = average_delivered_GB_per_watch_hour * destination_CDN_rate
+  + cache_fill_share
+  + request_cost_per_watch_hour
+```
+
+Measure actual bitrate and rendition selection. Do not estimate all viewing at the highest rendition.
+
+## Scenario template
+
+Create at least three scenarios before P0-T04 is complete:
+
+### Small closed beta
+
+- Acquired users:
+- Catalog source minutes:
+- Watch hours/user:
+- Payer conversion and average net payer revenue:
+- Rewarded ads/user and net eCPM:
+- Content cost:
+- Expected monthly variable infrastructure:
+- Acquisition spend:
+- Contribution/user:
+
+### Controlled storefront launch
+
+Use the same fields with the approved budget, expected country/storefront/platform mix, customer-currency mix, EUR settlement assumptions, and first real provider quotes.
+
+### 10× scale
+
+Apply measured behavior rather than assuming linear payer conversion. Identify the first provider, quota, database, observability, and support thresholds that change price or architecture.
+
+## Cost controls
+
+- Separate GCP staging and production projects with budgets and labels.
+- Alert at forecast and actual budget percentages before automatic interruption would damage users.
+- Keep production database on a non-pausing plan with backups; do not optimize away recovery.
+- Set storage lifecycle rules for rejected sources and superseded renditions only after rights/retention review.
+- Partition BigQuery models and require partition filters.
+- Track CDN cost per watch hour and variable infrastructure per active user weekly.
+- Treat MMP and managed DRM/video platforms as business decisions with adoption thresholds, not default dependencies.
+
+## Reconsideration gates
+
+- **Supabase → Cloud SQL/other PostgreSQL:** measured connection, recovery, region, compliance, support, or price requirement exceeds the current plan.
+- **GCP video → managed video/DRM provider:** rights require certified DRM, operational burden exceeds team capacity, playback reliability misses guardrails, or total cost is better at measured volume.
+- **No cache → cache:** database/query measurements show repeated hot reads and the invalidation design is defined.
+- **Native attribution → MMP:** campaign ambiguity or fraud risk prevents reliable LTV/CAC decisions at the approved spend.
+- **Modular monolith → separated service:** a bounded workload has independent scaling/failure/compliance needs proven by measurements.
+
+## Sources to refresh
+
+- Supabase: https://supabase.com/pricing
+- Cloud Run: https://cloud.google.com/run/pricing
+- Cloud Storage: https://cloud.google.com/storage/pricing
+- Cloud CDN: https://cloud.google.com/cdn/pricing
+- Transcoder API: https://cloud.google.com/transcoder/pricing
+- BigQuery: https://cloud.google.com/bigquery/pricing
+- Firebase: https://firebase.google.com/pricing
+- RevenueCat: https://www.revenuecat.com/pricing
+- Apple storefront pricing and proceeds: https://developer.apple.com/help/app-store-connect/manage-app-pricing/set-a-price/ and https://developer.apple.com/help/app-store-connect/getting-paid/view-payments-and-proceeds
+- Google Play local currencies and payouts: https://support.google.com/googleplay/android-developer/answer/1169947?hl=en
+
+Record the original amount/currency, converted EUR amount, exchange rate, rate source, and effective timestamp when numerical inputs are added.
