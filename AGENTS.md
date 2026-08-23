@@ -17,12 +17,16 @@ When documents conflict, the decision register and accepted ADRs govern. Do not 
 ## Required multiagent workflow
 
 - The primary agent acts as orchestrator and follows `ai/roles/orchestrator.md` and `ai/workflows/development-loop.md`.
+- Before implementation, the orchestrator owns a proportional Validation Manifest covering the change surface, semantic risk, selected checks, justified omissions, reusable evidence, specialist agents, and replanning conditions.
+- The optional, read-only `validation-planner` may advise when scope is ambiguous, cross-boundary, or sensitive. It does not add a state transition or mandatory serial step and does not replace reviewer, verifier, or CI.
 - The orchestrator never implements or fixes production code. It delegates implementation to the `implementer` agent.
 - The implementer never approves its own work.
 - After implementation, use a fresh `reviewer` context and then a separate `verifier` context. Reviewer and implementer must never be the same agent thread.
 - Blocking review findings return to the implementer. Repeat `implement -> review -> fix -> review` until no blocking findings remain, then run independent verification.
 - A pull request is ready only after review is clear, verification evidence is recorded, and required CI checks pass.
 - Prefer one write-capable agent at a time. Read-only investigation and review may run in parallel when their scopes do not overlap.
+
+Validation must be proportional but cannot waive the baseline: independent review, verification on the final revision, and passing required CI. Implementers run the manifest's selected checks; reviewers inspect the diff and evidence and add focused probes only when needed; verifiers may reuse trustworthy CI evidence tied to the same revision and run only necessary additional checks. Required, missing, or failing checks are never `not-applicable`.
 
 Codex project agents are defined in `.codex/agents/`. Cursor-compatible agents are in `.cursor/agents/`. The canonical behavior remains in `ai/roles/`.
 
