@@ -1,9 +1,13 @@
 # Content Rights and Media Delivery Checklist
 
 **Plan task:** P0-T02  
-**Status:** Draft for content/legal review
+**Status:** Public-release gate; not required for development with approved test media
 
-No series may be marked publishable until every mandatory item is recorded and the source contract is referenced outside the public repository. Store contracts, confidential rates, licensed masters, and personal data only in approved private systems.
+No commercial, staging, or production series may be marked publishable until every mandatory item is recorded and the source contract is referenced outside the public repository. Isolated local tests may exercise publication state with synthetic rights metadata and approved test media. Store contracts, confidential rates, licensed masters, and personal data belong only in approved private systems.
+
+Architecture, catalog, ingestion, and playback development must use only short self-owned, generated, or purpose-made test media with recorded provenance. No real licensed media is required during development, and none may enter staging or production until this checklist and the applicable territorial rights review pass.
+
+Decision D-019 applies only before licensed-media ingestion or production video-provider selection/configuration. Its pending status does not block local fixtures, self-owned/generated test media, provider fakes, or a non-production video proof-of-concept.
 
 ## Rights package
 

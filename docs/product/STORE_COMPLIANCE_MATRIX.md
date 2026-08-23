@@ -1,7 +1,7 @@
 # Store, Advertising, and Privacy Compliance Matrix
 
 **Plan task:** P0-T03  
-**Status:** Engineering baseline; requires legal/store review before beta and every submission
+**Status:** Public-release engineering baseline; does not block Phase 1 and requires legal/store review before beta and every submission
 
 This document is an implementation checklist, not legal advice. Policies and regional programs change. Recheck primary sources at release time.
 
@@ -55,7 +55,7 @@ Primary reference: https://developers.google.com/admob/ios/rewarded
 
 ## Privacy and data protection baseline
 
-The app interface is English, but language and payout currency do not determine legal jurisdiction. The final law set follows the company's legal entity, distribution countries, users, data flows, and providers. Implement a GDPR-ready baseline now, then add and approve each storefront's jurisdiction-specific requirements before enabling distribution there.
+The MVP app interface and initial microdrama catalog are in English. The intended legal-entity country is France, and decision D-001 defines the founder-approved scope of 21 EU countries using EUR. Language and common currency do not remove national consumer, tax, age-rating, accessibility, or language obligations. The final law set follows the incorporated legal entity, enabled distribution countries, users, data flows, and providers. Implement a GDPR-ready baseline now, then add and approve each storefront's jurisdiction-specific requirements before enabling distribution there.
 
 - Maintain a data inventory: field/event, purpose, lawful basis/consent, processor, region, retention, access roles, deletion behavior.
 - Minimize identifiers and avoid email, tokens, receipts, signed media URLs, exact IP, or contract references in analytics.
@@ -79,7 +79,7 @@ The app interface is English, but language and payout currency do not determine 
 
 ## Required approvals before P0-T03 completion
 
-- [ ] Distribution countries/storefronts are approved.
+- [x] Distribution countries/storefront scope is founder-approved; per-market rights and legal/language launch gates remain open.
 - [ ] Finance confirms that the registered store accounts and bank configuration can settle proceeds in EUR.
 - [ ] Legal/privacy owner reviews the relevant jurisdiction row set.
 - [ ] Content rating owner approves provisional rating method.
