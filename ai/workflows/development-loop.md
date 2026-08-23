@@ -16,7 +16,7 @@ Classify the semantic impact at the highest applicable level; never classify onl
 - `R0`: documentation or process only, without executable or configuration behavior change.
 - `R1`: isolated module behavior with bounded consumers and no sensitive trigger.
 - `R2`: API, database, schema, migration, generated contract/client, shared configuration, or cross-boundary integration.
-- `R3`: authentication, authorization, secrets, privacy, rights, commerce, payments, entitlements, infrastructure, destructive migrations, or data deletion.
+- `R3`: authentication, authorization, security controls or trust boundaries, secrets, privacy, rights, commerce, payments, entitlements, dependencies or supply-chain integrity, infrastructure, destructive migrations, or data deletion.
 
 The manifest records:
 
@@ -25,7 +25,7 @@ The manifest records:
 - risk level `R0`-`R3`, triggers, and rationale;
 - every check or manual observation as `required`, `selected`, or `not-applicable`, with the command/observation and reason;
 - core agents and any specialized reviews;
-- omitted suites/platforms/reviews and their justification;
+- omissions only for checks, suites, platforms, or reviews reasonably expected from the change surface, applicable risk triggers, the `AGENTS.md` validation matrix, or required CI; related omissions with the same reason may be grouped;
 - any reused evidence with result, commit SHA, environment, configuration, review scope, run/time reference, and expiration condition;
 - escalation and replanning conditions for scope growth, new consumers/boundaries, higher risk, material fixes, drift, stale evidence, or failure.
 

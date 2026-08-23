@@ -22,6 +22,133 @@ def read(relative: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def markdown_section(content: str, heading: str, location: str) -> str:
+    match = re.search(
+        rf"^## {re.escape(heading)}\s*$\n(?P<body>.*?)(?=^## |\Z)",
+        content,
+        re.MULTILINE | re.DOTALL,
+    )
+    if not match:
+        raise AssertionError(f"{location} is missing the {heading} section")
+    return match.group("body")
+
+
+def normalized(content: str) -> str:
+    return re.sub(r"[-\s]+", " ", content.casefold())
+
+
+def validate_manifest_ownership(
+    orchestrator: str, planner: str, loop: str
+) -> None:
+    sections = (
+        (
+            "orchestrator Procedure",
+            markdown_section(orchestrator, "Procedure", "orchestrator contract"),
+        ),
+        (
+            "validation planner Invocation",
+            markdown_section(planner, "Invocation", "validation planner contract"),
+        ),
+        (
+            "workflow Validation planning",
+            markdown_section(loop, "Validation planning", "development workflow"),
+        ),
+    )
+    planner_invocation = sections[1][1]
+    planner_ownership = re.compile(
+        r"\b(?:validation[ -]planner|planner)\b.{0,100}"
+        r"\b(?:owns?|accountable|responsible)\b",
+        re.IGNORECASE | re.DOTALL,
+    )
+    if planner_ownership.search(planner_invocation):
+        raise AssertionError("validation planner must not own the Validation Manifest")
+
+    responsibility = re.compile(
+        r"(?:\borchestrator\b (?:owns|produces|prepares) (?:the )?"
+        r"validation manifest\b|"
+        r"\borchestrator\b (?:remains |is )?(?:accountable|responsible) "
+        r"for (?:the )?(?:validation )?manifest\b|"
+        r"\bvalidation manifest\b (?:is )?(?:owned|produced|prepared) by "
+        r"(?:the )?orchestrator\b)",
+        re.IGNORECASE,
+    )
+    for location, section in sections:
+        if not responsibility.search(normalized(section)):
+            raise AssertionError(
+                f"{location} must keep the orchestrator responsible for the "
+                "Validation Manifest"
+            )
+
+
+def validate_semantic_classification(planner: str, loop: str) -> None:
+    sections = (
+        (
+            "validation planner Hard boundaries",
+            markdown_section(planner, "Hard boundaries", "validation planner contract"),
+        ),
+        (
+            "workflow Validation planning",
+            markdown_section(loop, "Validation planning", "development workflow"),
+        ),
+    )
+    path_only_prohibition = re.compile(
+        r"(?:\b(?:never|cannot|must not|may not|do not)\b.{0,100}"
+        r"\bclassif(?:y|ication)\b.{0,140}\b(?:file extension|path)\b|"
+        r"\bclassif(?:y|ication)\b.{0,100}"
+        r"\b(?:cannot|must not|may not|does not)\b.{0,140}"
+        r"\b(?:file extension|path)\b)",
+        re.IGNORECASE | re.DOTALL,
+    )
+    semantic_terms = (
+        "semantic impact",
+        "intended behavior",
+        "affected consumers",
+        "data flow",
+        "failure impact",
+    )
+    for location, section in sections:
+        folded = section.casefold()
+        if not any(term in folded for term in semantic_terms) or not (
+            path_only_prohibition.search(section)
+        ):
+            raise AssertionError(
+                f"{location} must classify semantic risk and prohibit "
+                "classification from path or extension alone"
+            )
+
+
+def validate_omission_scope(planner: str, loop: str, pr: str) -> None:
+    sections = (
+        (
+            "validation planner Validation Manifest",
+            markdown_section(
+                planner, "Validation Manifest", "validation planner contract"
+            ),
+        ),
+        (
+            "workflow Validation planning",
+            markdown_section(loop, "Validation planning", "development workflow"),
+        ),
+        (
+            "PR template Validation Manifest",
+            markdown_section(pr, "Validation Manifest", "PR template"),
+        ),
+    )
+    concepts = (
+        ("expected omission scope", ("expected",)),
+        ("change surface", ("change surface", "surface")),
+        ("risk triggers", ("risk triggers", "triggers")),
+        ("AGENTS.md validation matrix", ("agents.md",)),
+        ("required CI", ("required ci", "ci")),
+        ("grouping by shared reason", ("grouped", "group")),
+    )
+    for location, section in sections:
+        folded = normalized(section)
+        for concept, alternatives in concepts:
+            if not any(alternative in folded for alternative in alternatives):
+                raise AssertionError(f"{location} is missing {concept}")
+
+
 def validate_codex_agents() -> None:
     config = tomllib.loads(read(".codex/config.toml"))
     maximum = config.get("agents", {}).get("max_concurrent_threads_per_session", 0)
@@ -76,10 +203,12 @@ def validate_contracts() -> None:
     labels = read(".github/labels.yml")
     issue = read(".github/ISSUE_TEMPLATE/implementation-task.yml")
     pr = read(".github/pull_request_template.md")
-    planner = read("ai/roles/validation-planner.md")
+    pr_manifest = markdown_section(pr, "Validation Manifest", "PR template")
+    role_contracts = {role: read(f"ai/roles/{role}.md") for role in ROLES}
+    orchestrator = role_contracts["orchestrator"]
+    planner = role_contracts["validation-planner"]
 
     for role in ROLES:
-        read(f"ai/roles/{role}.md")
         if role not in agents:
             raise AssertionError(f"AGENTS.md does not reference {role}")
 
@@ -91,7 +220,6 @@ def validate_contracts() -> None:
         "optional",
         "read-only",
         "does not create a state transition or serial gate",
-        "never classify from file extension or path alone",
         "scope",
         "intended behavior",
         "affected consumers",
@@ -109,24 +237,38 @@ def validate_contracts() -> None:
         if token.lower() not in planner.lower():
             raise AssertionError(f"validation planner contract is missing {token}")
 
+    validate_manifest_ownership(orchestrator, planner, loop)
+    validate_semantic_classification(planner, loop)
+    validate_omission_scope(planner, loop, pr)
+
     for level in ("R0", "R1", "R2", "R3"):
-        if level not in planner or level not in loop or level not in pr:
+        if level not in planner or level not in loop or level not in pr_manifest:
             raise AssertionError(f"validation risk level {level} is not documented everywhere")
 
+    planner_risk = normalized(
+        markdown_section(planner, "Risk classification", "validation planner contract")
+    )
+    workflow_planning = normalized(
+        markdown_section(loop, "Validation planning", "development workflow")
+    )
     for trigger in (
         "authentication",
         "authorization",
+        "security controls",
+        "trust boundaries",
         "secrets",
         "privacy",
         "rights",
         "commerce",
         "payments",
         "entitlements",
+        "dependencies",
+        "supply chain",
         "infrastructure",
         "destructive migrations",
         "data deletion",
     ):
-        if trigger not in planner.lower() or trigger not in loop.lower():
+        if trigger not in planner_risk or trigger not in workflow_planning:
             raise AssertionError(f"R3 trigger {trigger} is missing")
 
     if "implement -> review -> fix -> verify -> PR" not in loop:
@@ -169,21 +311,22 @@ def validate_contracts() -> None:
         if token not in pr:
             raise AssertionError(f"PR template is missing {token}")
     for token in (
-        "Validation Manifest",
+        "Base revision:",
         "scope",
         "behavior",
         "consumers/boundaries",
         "required",
         "selected",
         "not-applicable",
-        "justified omissions",
+        "justified",
+        "omissions",
         "SHA",
         "environment/configuration",
         "review scope",
         "expiration",
         "Escalation/replanning",
     ):
-        if token not in pr:
+        if token not in pr_manifest:
             raise AssertionError(f"PR template Validation Manifest is missing {token}")
 
 
