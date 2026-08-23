@@ -41,6 +41,24 @@ def git(repository: Path, *arguments: str) -> str:
     return result.stdout.strip()
 
 
+def git_bytes(
+    repository: Path,
+    *arguments: str,
+    content: bytes | None = None,
+) -> bytes:
+    result = subprocess.run(
+        ["git", *arguments],
+        cwd=repository,
+        input=content,
+        check=False,
+        capture_output=True,
+        timeout=20,
+    )
+    if result.returncode:
+        raise AssertionError(result.stderr.decode("utf-8", errors="replace"))
+    return result.stdout.strip()
+
+
 @contextmanager
 def temporary_repository() -> Iterator[tuple[Path, Path]]:
     TEMP_PARENT.mkdir(parents=True, exist_ok=True)
@@ -114,6 +132,42 @@ class SecretScannerIntegrationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("github-token", result.stderr)
         self.assert_redacted(result, generated_pattern)
+
+    def test_encrypted_pkcs8_private_key_header_is_blocked_and_redacted(self) -> None:
+        with temporary_repository() as (_, repository):
+            generated_header = (
+                "-----BEGIN " + "ENCRYPTED " + "PRIVATE KEY" + "-----"
+            )
+            fixture = repository / "encrypted-key.txt"
+            fixture.write_text(generated_header, encoding="utf-8")
+
+            result = self.run_scanner(repository, "encrypted-key.txt")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("private-key", result.stderr)
+        self.assert_redacted(result, generated_header)
+
+    def test_quoted_assigned_secrets_may_start_with_punctuation(self) -> None:
+        assignments = (
+            ("PASSWORD", '"', "!"),
+            ("SECRET", "'", "$"),
+            ("TOKEN", '"', ":"),
+            ("API_KEY", "'", "@"),
+        )
+        for field, quote, punctuation in assignments:
+            with self.subTest(field=field), temporary_repository() as (_, repository):
+                generated_value = punctuation + (field.casefold() * 8)
+                fixture = repository / "assigned.txt"
+                fixture.write_text(
+                    f"{field}={quote}{generated_value}{quote}\n",
+                    encoding="utf-8",
+                )
+
+                result = self.run_scanner(repository, "assigned.txt")
+
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("assigned-secret", result.stderr)
+                self.assert_redacted(result, generated_value)
 
     def test_utf16_little_and_big_endian_are_decoded_and_scanned(self) -> None:
         for byte_order, bom in (
@@ -211,7 +265,11 @@ class SecretScannerIntegrationTests(unittest.TestCase):
             leak.write_text(generated_pattern, encoding="utf-8")
             git(repository, "add", "temporary.txt")
             git(repository, "commit", "--quiet", "-m", "introduce fixture")
-            leak.unlink()
+            renamed_leak = repository / "renamed temporary file.txt"
+            leak.rename(renamed_leak)
+            git(repository, "add", "--all")
+            git(repository, "commit", "--quiet", "-m", "rename fixture")
+            renamed_leak.unlink()
             git(repository, "add", "--update")
             git(repository, "commit", "--quiet", "-m", "remove fixture")
             head = git(repository, "rev-parse", "HEAD")
@@ -228,6 +286,73 @@ class SecretScannerIntegrationTests(unittest.TestCase):
             self.assertIn("history:", scan_result.stderr)
             self.assertIn("github-token", scan_result.stderr)
             self.assert_redacted(scan_result, generated_pattern)
+
+    def test_history_paths_are_literal_bytes_not_git_pathspecs(self) -> None:
+        magic_paths = (
+            b":(literal)credential.txt",
+            b":(glob)match-*.txt",
+            b":(exclude)match-one.txt",
+            b":!match-two.txt",
+            b"meta[ab]*?.txt",
+            b"path with spaces.txt",
+            b"match-one.txt",
+            b"match-two.txt",
+        )
+        with temporary_repository() as (_, repository):
+            (repository / "safe.txt").write_text("safe\n", encoding="utf-8")
+            git(repository, "add", "safe.txt")
+            git(repository, "commit", "--quiet", "-m", "base")
+            base = git(repository, "rev-parse", "HEAD")
+            base_tree = git(repository, "rev-parse", "HEAD^{tree}")
+            tree_records = git_bytes(repository, "ls-tree", "-z", base_tree)
+
+            generated_values: list[str] = []
+            for index, path in enumerate(magic_paths):
+                generated_value = "gh" + "p_" + (chr(ord("d") + index) * 36)
+                generated_values.append(generated_value)
+                object_id = git_bytes(
+                    repository,
+                    "hash-object",
+                    "-w",
+                    "--stdin",
+                    content=generated_value.encode("utf-8"),
+                )
+                tree_records += b"100644 blob " + object_id + b"\t" + path + b"\0"
+
+            leak_tree = git_bytes(
+                repository, "mktree", "-z", content=tree_records
+            ).decode("ascii")
+            leak_commit = git(
+                repository,
+                "commit-tree",
+                leak_tree,
+                "-p",
+                base,
+                "-m",
+                "introduce magic paths",
+            )
+            head = git(
+                repository,
+                "commit-tree",
+                base_tree,
+                "-p",
+                leak_commit,
+                "-m",
+                "remove magic paths",
+            )
+            git(repository, "update-ref", "HEAD", head)
+
+            result = self.run_scanner(
+                repository, "--history-range", f"{base}..{head}"
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(f"{len(magic_paths)} introduced history blobs", result.stderr)
+        self.assertEqual(result.stderr.count("[github-token]"), len(magic_paths))
+        for path in magic_paths:
+            self.assertIn(path.decode("ascii"), result.stderr)
+        for generated_value in generated_values:
+            self.assert_redacted(result, generated_value)
 
     def test_shallow_history_scan_fails_closed(self) -> None:
         with temporary_repository() as (container, repository):
@@ -253,6 +378,24 @@ class SecretScannerIntegrationTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 2)
         self.assertIn("non-shallow checkout", result.stderr)
+
+    def test_nested_domain_directory_names_are_not_private_root_holding_dirs(self) -> None:
+        with temporary_repository() as (_, repository):
+            paths = (
+                "backend/apps/media/models.py",
+                "backend/apps/licensed-media/models.py",
+                "backend/apps/contracts/models.py",
+                "backend/apps/private/config.py",
+                "backend/apps/sources/service.ts",
+            )
+            for relative_path in paths:
+                fixture = repository / relative_path
+                fixture.parent.mkdir(parents=True, exist_ok=True)
+                fixture.write_text("safe source\n", encoding="utf-8")
+
+            result = self.run_scanner(repository)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_forced_prohibited_media_is_rejected_case_insensitively(self) -> None:
         with temporary_repository() as (_, repository):

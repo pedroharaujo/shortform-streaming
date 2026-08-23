@@ -30,7 +30,8 @@ RULES = (
     Rule(
         "private-key",
         re.compile(
-            r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----"
+            r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?"
+            r"PRIVATE KEY(?: BLOCK)?-----"
         ),
     ),
     Rule("aws-access-key-id", re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b")),
@@ -55,7 +56,8 @@ RULES = (
         re.compile(
             r"(?i)\b(?:api[_-]?key|access[_-]?key|client[_-]?secret|password|"
             r"passwd|secret(?:[_-]?key)?|token)"
-            r"\s*[:=]\s*[\"']?(?P<value>[0-9A-Za-z/+_.=-]{20,})"
+            r"\s*[:=]\s*(?:(?P<quote>[\"'])(?P<quoted_value>[^\"'\r\n]{8,})"
+            r"(?P=quote)|(?P<bare_value>[0-9A-Za-z/+_.=-]{20,}))"
         ),
     ),
 )
@@ -74,7 +76,7 @@ CANONICAL_PLACEHOLDERS = frozenset(
 SAFE_NON_SECRET_LITERALS = frozenset({"replace-with-provider-value"})
 EXAMPLE_FILE_NAMES = frozenset({".env.example", "env.example"})
 
-PRIVATE_PATH_PARTS = frozenset(
+PRIVATE_ROOT_DIRECTORIES = frozenset(
     {"contracts", "licensed-media", "media", "private", "provider-payloads", "sources"}
 )
 VIDEO_EXTENSIONS = frozenset({".avi", ".m3u8", ".mkv", ".mov", ".mp4", ".webm"})
@@ -93,6 +95,13 @@ class Finding:
     label: str
     line: int
     rule: str
+
+
+@dataclass(frozen=True)
+class HistoryEntry:
+    mode: str
+    object_id: str
+    path: bytes
 
 
 class ScanConfigurationError(RuntimeError):
@@ -217,7 +226,8 @@ def is_example_file(label: str) -> bool:
 
 
 def is_placeholder(match: re.Match[str], label: str) -> bool:
-    value = match.groupdict().get("value")
+    groups = match.groupdict()
+    value = groups.get("quoted_value") or groups.get("bare_value")
     if not value:
         return False
     normalized = value.casefold()
@@ -242,11 +252,9 @@ def is_prohibited_media(label: str) -> bool:
     suffix = path.suffix.casefold()
     stem = path.stem.casefold()
 
-    if any(part in PRIVATE_PATH_PARTS for part in parts):
+    if parts and parts[0] in PRIVATE_ROOT_DIRECTORIES:
         return True
     if suffix in VIDEO_EXTENSIONS | AUDIO_EXTENSIONS | SUBTITLE_EXTENSIONS:
-        return True
-    if suffix == ".ts" and any(part in PRIVATE_PATH_PARTS for part in parts):
         return True
     return suffix in POSTER_EXTENSIONS and any(marker in stem for marker in POSTER_MARKERS)
 
@@ -346,7 +354,7 @@ def introduced_commits(root: Path, history_range: str) -> list[str]:
     return [line for line in output.decode("ascii").splitlines() if line]
 
 
-def changed_paths(root: Path, commit: str) -> list[str]:
+def changed_entries(root: Path, commit: str) -> list[HistoryEntry]:
     output = run_git(
         root,
         [
@@ -354,7 +362,7 @@ def changed_paths(root: Path, commit: str) -> list[str]:
             "--root",
             "-m",
             "--no-commit-id",
-            "--name-only",
+            "--raw",
             "--no-renames",
             "-r",
             "-z",
@@ -362,52 +370,67 @@ def changed_paths(root: Path, commit: str) -> list[str]:
             "--",
         ],
     )
-    return sorted(
-        {
-            path
-            for path in output.decode("utf-8", errors="surrogateescape").split("\0")
-            if path
-        }
+    tokens = output.split(b"\0")
+    if not tokens or tokens[-1] or len(tokens) % 2 != 1:
+        raise ScanConfigurationError("Git returned invalid raw history data")
+
+    entries: set[HistoryEntry] = set()
+    for index in range(0, len(tokens) - 1, 2):
+        metadata = tokens[index]
+        path = tokens[index + 1]
+        if not metadata.startswith(b":") or not path:
+            raise ScanConfigurationError("Git returned invalid raw history data")
+        fields = metadata[1:].split()
+        if len(fields) != 5:
+            raise ScanConfigurationError("Git returned invalid raw history metadata")
+        _, new_mode, _, new_object_id, status_value = fields
+        if status_value[:1] in {b"C", b"R"}:
+            raise ScanConfigurationError("Git unexpectedly enabled rename path parsing")
+        if new_mode == b"000000" and ZERO_OBJECT_ID.fullmatch(
+            new_object_id.decode("ascii", errors="strict")
+        ):
+            continue
+        if not re.fullmatch(rb"[0-9a-f]{40,64}", new_object_id):
+            raise ScanConfigurationError("Git returned an invalid history object ID")
+        entries.add(
+            HistoryEntry(
+                new_mode.decode("ascii", errors="strict"),
+                new_object_id.decode("ascii", errors="strict"),
+                path,
+            )
+        )
+    return sorted(entries, key=lambda entry: (entry.path, entry.object_id, entry.mode))
+
+
+def safe_history_path(path: bytes) -> str:
+    decoded = path.decode("utf-8", errors="backslashreplace")
+    return "".join(
+        character
+        if character >= " " and character != "\x7f"
+        else f"\\x{ord(character):02x}"
+        for character in decoded
     )
-
-
-def tree_entry(root: Path, commit: str, path: str) -> tuple[str, str] | None:
-    output = run_git(root, ["ls-tree", "-z", commit, "--", path])
-    if not output:
-        return None
-    header, separator, _ = output.partition(b"\t")
-    if not separator:
-        raise ScanConfigurationError("Git returned an invalid tree entry")
-    fields = header.decode("ascii", errors="strict").split()
-    if len(fields) != 3:
-        raise ScanConfigurationError("Git returned an invalid tree entry")
-    mode, object_type, object_id = fields
-    if object_type != "blob":
-        return mode, ""
-    return mode, object_id
 
 
 def scan_history(root: Path, history_range: str) -> tuple[list[Finding], int]:
     findings: list[Finding] = []
     blob_count = 0
     for commit in introduced_commits(root, history_range):
-        for path in changed_paths(root, commit):
-            entry = tree_entry(root, commit, path)
-            if entry is None:
-                continue
-            mode, object_id = entry
+        for entry in changed_entries(root, commit):
+            path = safe_history_path(entry.path)
             label = f"history:{commit[:12]}:{PurePosixPath(path).as_posix()}"
-            if mode == "120000":
+            if entry.mode == "120000":
                 findings.append(Finding(label, 0, "symlink"))
                 continue
-            if not object_id or not mode.startswith("100"):
+            if not entry.mode.startswith("100"):
                 findings.append(Finding(label, 0, "unsupported-file-type"))
                 continue
+            blob_count += 1
             if is_prohibited_media(path):
                 findings.append(Finding(label, 0, "prohibited-media"))
                 continue
 
-            size_output = run_git(root, ["cat-file", "-s", object_id])
+            size_output = run_git(root, ["cat-file", "-s", entry.object_id])
             try:
                 size = int(size_output.decode("ascii").strip())
             except ValueError as error:
@@ -416,11 +439,10 @@ def scan_history(root: Path, history_range: str) -> tuple[list[Finding], int]:
                 findings.append(Finding(label, 0, "oversized-file"))
                 continue
 
-            data = run_git(root, ["cat-file", "blob", object_id])
+            data = run_git(root, ["cat-file", "blob", entry.object_id])
             if len(data) != size:
                 raise ScanConfigurationError("Git returned an incomplete blob")
             findings.extend(scan_bytes(data, label))
-            blob_count += 1
     return findings, blob_count
 
 
@@ -467,6 +489,11 @@ def main() -> int:
 
     if findings:
         print("Repository safety violations detected; values are redacted:", file=sys.stderr)
+        print(
+            f"Scan evaluated {len(candidates)} current files and "
+            f"{history_blob_count} introduced history blobs.",
+            file=sys.stderr,
+        )
         for finding in findings:
             location = f"{finding.label}:{finding.line}" if finding.line else finding.label
             print(f"- {location} [{finding.rule}]", file=sys.stderr)

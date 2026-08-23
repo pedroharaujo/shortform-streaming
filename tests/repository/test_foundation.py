@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 REQUIRED_PATHS = (
     ".github/dependabot.yml",
+    ".github/workflows/ai-governance.yml",
     ".github/workflows/repository-safety.yml",
     "backend/apps/README.md",
     "backend/config/README.md",
@@ -44,7 +45,22 @@ IGNORED_PRIVATE_PATHS = (
     "launch-poster.JPG",
     "media/segment.TS",
     "signing-key.p8",
+    "signing-key.P8",
+    "signing-key.PEM",
+    "signing-key.PFX",
+    "signing-key.P12",
+    "signing-key.KEY",
+    "android-signing.JKS",
+    "android-signing.KEYSTORE",
     "service-account-production.json",
+)
+
+TRACKABLE_NESTED_PATHS = (
+    "backend/apps/media/models.py",
+    "backend/apps/licensed-media/models.py",
+    "backend/apps/contracts/models.py",
+    "backend/apps/private/config.py",
+    "backend/apps/sources/service.ts",
 )
 
 
@@ -57,7 +73,15 @@ class RepositoryFoundationTests(unittest.TestCase):
         for relative_path in IGNORED_PRIVATE_PATHS:
             with self.subTest(path=relative_path):
                 result = subprocess.run(
-                    ["git", "check-ignore", "--no-index", "--quiet", relative_path],
+                    [
+                        "git",
+                        "-c",
+                        "core.ignoreCase=false",
+                        "check-ignore",
+                        "--no-index",
+                        "--quiet",
+                        relative_path,
+                    ],
                     cwd=ROOT,
                     check=False,
                 )
@@ -71,19 +95,43 @@ class RepositoryFoundationTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 1)
 
-    def test_repository_workflow_is_pinned_and_fetches_history(self) -> None:
-        workflow = (ROOT / ".github/workflows/repository-safety.yml").read_text(
-            encoding="utf-8"
-        )
-        for action in ("actions/checkout", "actions/setup-python"):
-            with self.subTest(action=action):
-                self.assertRegex(
-                    workflow,
-                    rf"uses: {re.escape(action)}@[0-9a-f]{{40}} # v[0-9]",
+    def test_nested_domain_directories_are_not_ignored(self) -> None:
+        for relative_path in TRACKABLE_NESTED_PATHS:
+            with self.subTest(path=relative_path):
+                result = subprocess.run(
+                    [
+                        "git",
+                        "-c",
+                        "core.ignoreCase=false",
+                        "check-ignore",
+                        "--no-index",
+                        "--quiet",
+                        relative_path,
+                    ],
+                    cwd=ROOT,
+                    check=False,
                 )
-        self.assertIn("fetch-depth: 0", workflow)
-        self.assertIn("timeout-minutes: 10", workflow)
-        self.assertIn("SECRET_SCAN_HISTORY_RANGE", workflow)
+                self.assertEqual(result.returncode, 1)
+
+    def test_repository_workflows_are_pinned_and_least_privilege(self) -> None:
+        workflows = {
+            name: (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
+            for name in ("ai-governance.yml", "repository-safety.yml")
+        }
+        for name, workflow in workflows.items():
+            for action in ("actions/checkout", "actions/setup-python"):
+                with self.subTest(workflow=name, action=action):
+                    self.assertRegex(
+                        workflow,
+                        rf"uses: {re.escape(action)}@[0-9a-f]{{40}} # v[0-9]",
+                    )
+            self.assertIn("permissions:\n  contents: read", workflow)
+            self.assertIn("persist-credentials: false", workflow)
+            self.assertIn("timeout-minutes: 10", workflow)
+
+        safety = workflows["repository-safety.yml"]
+        self.assertIn("fetch-depth: 0", safety)
+        self.assertIn("SECRET_SCAN_HISTORY_RANGE", safety)
 
     def test_bootstrap_command_is_documented(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

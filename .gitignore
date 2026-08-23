@@ -2,25 +2,25 @@
 .env
 .env.*
 !.env.example
-credentials/
-secrets/
-*.pem
-*.key
-*.p8
-*.p12
-*.pfx
-*.mobileprovision
+/credentials/
+/secrets/
+*.[pP][eE][mM]
+*.[kK][eE][yY]
+*.[pP]8
+*.[pP]12
+*.[pP][fF][xX]
+*.[mM][oO][bB][iI][lL][eE][pP][rR][oO][vV][iI][sS][iI][oO][nN]
 google-services.json
 GoogleService-Info.plist
 service-account*.json
 
 # Licensed/confidential material
-sources/
-media/
-licensed-media/
-contracts/
-private/
-provider-payloads/
+/sources/
+/media/
+/licensed-media/
+/contracts/
+/private/
+/provider-payloads/
 *.[mM][pP]4
 *.[mM][oO][vV]
 *.[mM][kK][vV]
@@ -62,8 +62,8 @@ node_modules/
 .expo-shared/
 web-build/
 coverage/
-*.jks
-*.keystore
+*.[jJ][kK][sS]
+*.[kK][eE][yY][sS][tT][oO][rR][eE]
 
 # Generated native projects (Expo CNG; revisit if native folders are intentionally committed)
 mobile/android/
