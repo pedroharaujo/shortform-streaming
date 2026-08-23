@@ -37,6 +37,21 @@ def normalized(content: str) -> str:
     return re.sub(r"[-\s]+", " ", content.casefold())
 
 
+def risk_entry(content: str, level: str, location: str) -> str:
+    patterns = (
+        rf"^\|\s*`{re.escape(level)}`\s*\|\s*(?P<body>.*?)\s*\|\s*$",
+        rf"^-\s*`{re.escape(level)}`\s*:\s*(?P<body>.+)$",
+    )
+    matches = [
+        match.group("body")
+        for pattern in patterns
+        if (match := re.search(pattern, content, re.MULTILINE))
+    ]
+    if len(matches) != 1:
+        raise AssertionError(f"{location} must define exactly one {level} entry")
+    return matches[0]
+
+
 def validate_manifest_ownership(
     orchestrator: str, planner: str, loop: str
 ) -> None:
@@ -56,9 +71,12 @@ def validate_manifest_ownership(
     )
     planner_invocation = sections[1][1]
     planner_ownership = re.compile(
-        r"\b(?:validation[ -]planner|planner)\b.{0,100}"
-        r"\b(?:owns?|accountable|responsible)\b",
-        re.IGNORECASE | re.DOTALL,
+        r"(?:\b(?:the )?(?:validation )?planner (?:owns|"
+        r"is (?:accountable|responsible) for) (?:the )?"
+        r"(?:validation )?manifest\b|"
+        r"\b(?:validation )?manifest (?:is )?owned by (?:the )?"
+        r"(?:validation )?planner\b)",
+        re.IGNORECASE,
     )
     if planner_ownership.search(planner_invocation):
         raise AssertionError("validation planner must not own the Validation Manifest")
@@ -91,13 +109,40 @@ def validate_semantic_classification(planner: str, loop: str) -> None:
             markdown_section(loop, "Validation planning", "development workflow"),
         ),
     )
-    path_only_prohibition = re.compile(
-        r"(?:\b(?:never|cannot|must not|may not|do not)\b.{0,100}"
-        r"\bclassif(?:y|ication)\b.{0,140}\b(?:file extension|path)\b|"
-        r"\bclassif(?:y|ication)\b.{0,100}"
-        r"\b(?:cannot|must not|may not|does not)\b.{0,140}"
-        r"\b(?:file extension|path)\b)",
-        re.IGNORECASE | re.DOTALL,
+    direct_prohibition = re.compile(
+        r"\b(?:never|do not|must not|cannot|may not)\s+classify\b"
+        r"(?:[^.\n]{0,60}\b(?:only|solely|primarily)\b"
+        r"[^.\n]{0,100}\b(?:from|by|based on)\b"
+        r"[^.\n]{0,80}\b(?:file extensions?|paths?)\b|"
+        r"[^.\n]{0,60}\b(?:from|by|based on)\b"
+        r"[^.\n]{0,80}\b(?:file extensions?|paths?)\b"
+        r"[^.\n]{0,30}\balone\b)",
+        re.IGNORECASE,
+    )
+    passive_prohibition = re.compile(
+        r"\b(?:risk )?classification\b[^.\n]{0,50}"
+        r"\b(?:must not|cannot|may not)\b[^.\n]{0,60}"
+        r"\bbased (?:only|solely|primarily) on\b[^.\n]{0,80}"
+        r"\b(?:file extensions?|paths?)\b",
+        re.IGNORECASE,
+    )
+    primary_classifier = re.compile(
+        r"(?:\bclassif(?:y|ication)\b[^.\n]{0,60}"
+        r"\b(?:primary|primarily|sole|solely|only|alone|first)\b"
+        r"[^.\n]{0,80}\b(?:from|by|based on)\b[^.\n]{0,80}"
+        r"\b(?:file extensions?|paths?)\b|"
+        r"\bclassif(?:y|ication)\b[^.\n]{0,60}"
+        r"\b(?:from|by|based on)\b[^.\n]{0,80}"
+        r"\b(?:file extensions?|paths?)\b[^.\n]{0,40}"
+        r"\b(?:primary|primarily|sole|solely|only|alone|first)\b|"
+        r"\b(?:file extensions?|paths?)\b[^.\n]{0,60}"
+        r"\b(?:primary|sole|only)\b[^.\n]{0,30}"
+        r"\b(?:classifier|basis|criterion|input|signal)\b)",
+        re.IGNORECASE,
+    )
+    direct_negation = re.compile(
+        r"\b(?:never|do not|must not|cannot|may not)\s+classify\b",
+        re.IGNORECASE,
     )
     semantic_terms = (
         "semantic impact",
@@ -108,8 +153,20 @@ def validate_semantic_classification(planner: str, loop: str) -> None:
     )
     for location, section in sections:
         folded = section.casefold()
-        if not any(term in folded for term in semantic_terms) or not (
-            path_only_prohibition.search(section)
+        statements = re.split(r"(?<=[.;!?])\s+|\n+", section)
+        path_first = any(
+            primary_classifier.search(statement)
+            and not direct_negation.search(statement)
+            and not passive_prohibition.search(statement)
+            for statement in statements
+        )
+        has_prohibition = direct_prohibition.search(
+            section
+        ) or passive_prohibition.search(section)
+        if (
+            not any(term in folded for term in semantic_terms)
+            or not has_prohibition
+            or path_first
         ):
             raise AssertionError(
                 f"{location} must classify semantic risk and prohibit "
@@ -241,15 +298,23 @@ def validate_contracts() -> None:
     validate_semantic_classification(planner, loop)
     validate_omission_scope(planner, loop, pr)
 
-    for level in ("R0", "R1", "R2", "R3"):
-        if level not in planner or level not in loop or level not in pr_manifest:
-            raise AssertionError(f"validation risk level {level} is not documented everywhere")
-
-    planner_risk = normalized(
-        markdown_section(planner, "Risk classification", "validation planner contract")
+    planner_risk = markdown_section(
+        planner, "Risk classification", "validation planner contract"
     )
-    workflow_planning = normalized(
-        markdown_section(loop, "Validation planning", "development workflow")
+    workflow_planning = markdown_section(
+        loop, "Validation planning", "development workflow"
+    )
+    for level in ("R0", "R1", "R2", "R3"):
+        risk_entry(planner_risk, level, "validation planner risk classification")
+        risk_entry(workflow_planning, level, "workflow validation planning")
+        if level not in pr_manifest:
+            raise AssertionError(f"validation risk level {level} is missing from PR template")
+
+    planner_r3 = normalized(
+        risk_entry(planner_risk, "R3", "validation planner risk classification")
+    )
+    workflow_r3 = normalized(
+        risk_entry(workflow_planning, "R3", "workflow validation planning")
     )
     for trigger in (
         "authentication",
@@ -268,7 +333,7 @@ def validate_contracts() -> None:
         "destructive migrations",
         "data deletion",
     ):
-        if trigger not in planner_risk or trigger not in workflow_planning:
+        if trigger not in planner_r3 or trigger not in workflow_r3:
             raise AssertionError(f"R3 trigger {trigger} is missing")
 
     if "implement -> review -> fix -> verify -> PR" not in loop:
