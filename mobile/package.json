@@ -1,0 +1,38 @@
+{
+  "name": "@shortform/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --ci",
+    "config:check": "node scripts/check-expo-config.mjs"
+  },
+  "dependencies": {
+    "expo": "57.0.15",
+    "expo-constants": "~57.0.13",
+    "expo-router": "~57.0.15",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.2"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "29.5.14",
+    "@types/react": "~19.2.18",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "jest": "~29.7.0",
+    "jest-expo": "~57.0.4",
+    "prettier": "^3.9.6",
+    "react-test-renderer": "^19.2.8",
+    "typescript": "~6.0.3"
+  }
+}

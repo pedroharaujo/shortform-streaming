@@ -1,0 +1,6 @@
+.expo/
+android/
+coverage/
+dist/
+ios/
+node_modules/
