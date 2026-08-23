@@ -14,6 +14,15 @@ Describe the user/business outcome and the smallest implementation used to achie
 
 - [ ] Copy each applicable criterion from the plan/task and record the result.
 
+## Validation Manifest
+
+- Owner: orchestrator / optional `validation-planner` consultation:
+- Change surface (scope, behavior, consumers/boundaries) and risk (`R0` / `R1` / `R2` / `R3`) with triggers:
+- Checks/observations: `required`; `selected`; `not-applicable` with reasons:
+- Specialized agents/reviews and justified omissions:
+- Reused evidence (result, SHA, environment/configuration, review scope, run/time, expiration):
+- Escalation/replanning conditions:
+
 ## Validation evidence
 
 - Automated tests:
