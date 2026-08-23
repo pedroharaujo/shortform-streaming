@@ -73,9 +73,9 @@ contribution_LTV_to_CAC
 | Coins | Packs sold, credits, debits, outstanding balance | count/coins plus purchase currency/EUR | Backend ledger |
 | Ads | Verified impressions, eCPM/net revenue | count/original currency/EUR | AdMob |
 | Viewing | Starts, completed minutes, rendition mix, watch hours | count/minutes | Analytics/player |
-| Video processing | Source minutes × each output rendition price | minutes/currency | GCP billing |
-| Storage | Source, HLS, artwork, versioned/backup GB-month | GB-month | GCP billing |
-| Delivery | CDN cache egress, fill, requests by destination | GB/requests/currency | GCP billing |
+| Video processing | Source minutes × each output rendition price, or included in managed-video plan | minutes/currency | Bunny Stream / GCP billing |
+| Storage | Source, HLS, artwork, versioned/backup GB-month | GB-month | Bunny Stream / GCP billing |
+| Delivery | CDN cache egress, fill, requests by destination | GB/requests/currency | Bunny Stream / GCP billing |
 | Application | Cloud Run CPU/RAM/requests/egress | usage/currency | GCP billing |
 | Database | Plan, compute, storage, egress, backups | usage/currency | Supabase/GCP billing |
 | Data | Firebase/BigQuery/observability/MMP usage | usage/currency | Provider billing |
@@ -136,7 +136,7 @@ Apply measured behavior rather than assuming linear payer conversion. Identify t
 ## Reconsideration gates
 
 - **Supabase → Cloud SQL/other PostgreSQL:** measured connection, recovery, region, compliance, support, or price requirement exceeds the current plan.
-- **GCP video → managed video/DRM provider:** rights require certified DRM, operational burden exceeds team capacity, playback reliability misses guardrails, or total cost is better at measured volume.
+- **Bunny Stream → GCP Cloud CDN (documented fallback) or DRM vendor:** P2-T05 fails on Bunny, rights require certified DRM Bunny cannot satisfy, operational/residency/support constraints fail, playback reliability misses guardrails, or GCP/other measured total cost is better at volume.
 - **No cache → cache:** database/query measurements show repeated hot reads and the invalidation design is defined.
 - **Native attribution → MMP:** campaign ambiguity or fraud risk prevents reliable LTV/CAC decisions at the approved spend.
 - **Modular monolith → separated service:** a bounded workload has independent scaling/failure/compliance needs proven by measurements.
@@ -146,6 +146,7 @@ Apply measured behavior rather than assuming linear payer conversion. Identify t
 - Supabase: https://supabase.com/pricing
 - Cloud Run: https://cloud.google.com/run/pricing
 - Cloud Storage: https://cloud.google.com/storage/pricing
+- Bunny Stream: https://bunny.net/pricing/
 - Cloud CDN: https://cloud.google.com/cdn/pricing
 - Transcoder API: https://cloud.google.com/transcoder/pricing
 - BigQuery: https://cloud.google.com/bigquery/pricing

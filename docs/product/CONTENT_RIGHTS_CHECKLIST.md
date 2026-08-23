@@ -42,7 +42,7 @@ Decision D-019 applies only before licensed-media ingestion or production video-
 - [ ] Required age rating, warnings, censorship edits, and prohibited territories are known.
 - [ ] Music, voice, likeness, trademarks, locations, stock assets, AI tools/models, and generated content have valid commercial rights.
 - [ ] Required attribution, copyright notice, watermark, geoblocking, concurrency, DRM, or forensic watermarking is specified.
-- [ ] The planned signed-HLS protection is accepted, or the contract explicitly requires a DRM/provider decision before ingestion.
+- [ ] Bunny Stream tokenized HLS is accepted, or the contract explicitly requires certified DRM / a different provider before ingestion.
 - [ ] Privacy/personality rights and child-performer requirements are satisfied where applicable.
 
 ### Operations and takedown
