@@ -2,25 +2,47 @@
 .env
 .env.*
 !.env.example
-*.pem
-*.key
-*.p12
-*.mobileprovision
+/credentials/
+/secrets/
+*.[pP][eE][mM]
+*.[kK][eE][yY]
+*.[pP]8
+*.[pP]12
+*.[pP][fF][xX]
+*.[mM][oO][bB][iI][lL][eE][pP][rR][oO][vV][iI][sS][iI][oO][nN]
 google-services.json
 GoogleService-Info.plist
 service-account*.json
 
 # Licensed/confidential material
-media/
-licensed-media/
-contracts/
-private/
-*.mp4
-*.mov
-*.mkv
-*.m3u8
-*.ts
-*.vtt
+/sources/
+/media/
+/licensed-media/
+/contracts/
+/private/
+/provider-payloads/
+*.[mM][pP]4
+*.[mM][oO][vV]
+*.[mM][kK][vV]
+*.[wW][eE][bB][mM]
+*.[aA][vV][iI]
+*.[mM]3[uU]8
+*.[mM][pP]3
+*.[aA][aA][cC]
+*.[mM]4[aA]
+*.[wW][aA][vV]
+*.[fF][lL][aA][cC]
+*.[oO][gG][gG]
+*.[vV][tT][tT]
+*.[sS][rR][tT]
+*.[aA][sS][sS]
+*.[sS][sS][aA]
+*.[tT][tT][mM][lL]
+*[pP][oO][sS][tT][eE][rR]*.[jJ][pP][gG]
+*[pP][oO][sS][tT][eE][rR]*.[jJ][pP][eE][gG]
+*[pP][oO][sS][tT][eE][rR]*.[pP][nN][gG]
+*[pP][oO][sS][tT][eE][rR]*.[wW][eE][bB][pP]
+*[pP][oO][sS][tT][eE][rR]*.[aA][vV][iI][fF]
 
 # Python
 __pycache__/
@@ -40,8 +62,8 @@ node_modules/
 .expo-shared/
 web-build/
 coverage/
-*.jks
-*.keystore
+*.[jJ][kK][sS]
+*.[kK][eE][yY][sS][tT][oO][rR][eE]
 
 # Generated native projects (Expo CNG; revisit if native folders are intentionally committed)
 mobile/android/
@@ -68,3 +90,4 @@ Thumbs.db
 .tmp/
 tmp/
 artifacts/
+graphify-out/

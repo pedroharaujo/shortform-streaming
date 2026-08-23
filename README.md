@@ -4,6 +4,67 @@ Public monorepo for a mobile-first vertical microdrama streaming platform.
 
 The MVP consists of a Django REST backend/Django Admin and one React Native/Expo application for iOS and Android. A consumer web client is explicitly post-MVP.
 
+## Bootstrap checkpoint
+
+P1-T01 establishes the repository layout and its local/CI safety gate. It does not yet bootstrap a runnable Django service, Expo application, database, or cloud infrastructure; those are separate tasks starting with P1-T02 and P1-T03.
+
+A fresh clone reaches the current checkpoint with only Git and Python 3.11 or newer:
+
+```shell
+git clone https://github.com/pedroharaujo/shortform-streaming.git
+cd shortform-streaming
+python scripts/check_repository_foundation.py
+```
+
+The command succeeds only when the repository structure, ignore rules, secret scan, scanner regression tests, and AI governance contracts pass. It installs nothing and does not require provider accounts, credentials, licensed media, Node.js, Docker, or cloud access.
+
+## Architecture and repository layout
+
+The target is a modular monorepo with independently deployable backend, mobile, and infrastructure layers:
+
+```text
+mobile (Expo) ---- HTTPS ---- backend (Django/DRF) ---- PostgreSQL
+      |                              |
+      +---- mobile providers         +---- private media authorization
+```
+
+- `backend/` is reserved for the Django/DRF modular monolith and backend tests (P1-T02).
+- `mobile/` is reserved for the Expo/React Native application (P1-T03).
+- `packages/api-client/` will contain the OpenAPI-generated TypeScript client (P1-T04).
+- `infra/` holds environment and reusable infrastructure definitions when provisioning begins.
+- `docs/` contains product decisions, ADRs, contracts, analytics references, and runbooks.
+- `scripts/` and `tests/repository/` contain repository-wide deterministic checks.
+
+Empty runtime scaffolds such as `manage.py`, `package.json`, `compose.yaml`, and infrastructure state are intentionally absent until their owning plan tasks add working implementations and tests.
+
+## Common commands
+
+Run the complete repository-foundation gate:
+
+```shell
+python scripts/check_repository_foundation.py
+```
+
+Run its components independently:
+
+```shell
+python scripts/scan_secrets.py
+python -m unittest discover -s tests/repository -p "test_*.py"
+python scripts/validate_ai_governance.py
+git diff --check
+```
+
+Before pushing a branch, scan every blob introduced since the branch point, including files that were added and later removed:
+
+```shell
+git fetch origin main
+python scripts/scan_secrets.py --history-range origin/main..HEAD
+```
+
+History scanning requires a complete, non-shallow checkout and fails closed when either endpoint is unavailable. CI fetches complete history and supplies the exact pull-request or push range automatically. An all-zero base is treated as an initial branch and scans every commit reachable from its head.
+
+The future `pnpm check`, backend, mobile, contract, and infrastructure commands become available only when their corresponding bootstrap tasks commit the required manifests and lockfiles. An unavailable required check is a blocker, never a pass.
+
 ## Project status
 
 Implementation has started with Phase 0 product, rights, compliance, architecture, and cost gates. The founder-approved MVP launch scope is the 21 EU countries using EUR listed canonically in decision D-001. The MVP interface and initial microdrama catalog are in English. Customer prices remain localized strings supplied by each user's App Store or Google Play storefront, while EUR is the company's base reporting currency and desired store-settlement currency.
@@ -27,4 +88,8 @@ The approved geographic scope is not final launch clearance. Territorial content
 
 This repository is public. Never commit secrets, real `.env` files, licensed video or artwork, confidential contracts/rates, provider payloads, production data, personal data, store credentials, or signing material.
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) and [SECURITY.md](./SECURITY.md) before making changes.
+Keep private inputs under a root holding location such as `/sources/`, `/licensed-media/`, `/contracts/`, `/credentials/`, or `/private/`. These names are anchored to the repository root so legitimate nested source modules such as `backend/apps/media/` remain trackable. Ignore rules are only the first barrier: the repository gate also rejects prohibited tracked delivery media, even after `git add --force`.
+
+The scanner reports only a rule and repository-relative location, never the detected value. It accepts UTF-8 and BOM-marked UTF-16 text, rejects symlinks and unsupported/binary encodings, and fails closed above the explicit 2 MiB per-file limit. P1-T01 has no media-fixture allowlist; a later task must document provenance and add a narrow generated/self-owned fixture prefix before committing any test media.
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md), [SECURITY.md](./SECURITY.md), and the [repository controls runbook](./docs/runbooks/repository-controls.md) before making changes.
