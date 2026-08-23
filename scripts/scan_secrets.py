@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import codecs
-import hashlib
 import os
 import re
 import stat
@@ -35,16 +34,16 @@ RULES = (
             r"PRIVATE KEY(?: BLOCK)?-----"
         ),
     ),
-    Rule("aws-access-key-id", re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b")),
-    Rule("github-token", re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{36,255}\b")),
+    Rule("aws-access-key-id", re.compile(r"(?:AKIA|ASIA)[A-Z0-9]{16}")),
+    Rule("github-token", re.compile(r"gh[pousr]_[A-Za-z0-9_]{36,255}")),
     Rule(
         "github-fine-grained-token",
-        re.compile(r"\bgithub_pat_[A-Za-z0-9_]{70,255}\b"),
+        re.compile(r"github_pat_[A-Za-z0-9_]{70,255}"),
     ),
-    Rule("google-api-key", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
-    Rule("stripe-live-key", re.compile(r"\b[rs]k_live_[0-9A-Za-z]{16,}\b")),
-    Rule("slack-token", re.compile(r"\bxox[baprs]-[0-9A-Za-z-]{20,}\b")),
-    Rule("npm-token", re.compile(r"\bnpm_[0-9A-Za-z]{36,}\b")),
+    Rule("google-api-key", re.compile(r"AIza[0-9A-Za-z_-]{35}")),
+    Rule("stripe-live-key", re.compile(r"[rs]k_live_[0-9A-Za-z]{16,}")),
+    Rule("slack-token", re.compile(r"xox[baprs]-[0-9A-Za-z-]{20,}")),
+    Rule("npm-token", re.compile(r"npm_[0-9A-Za-z]{36,}")),
     Rule(
         "database-url-with-password",
         re.compile(
@@ -54,9 +53,15 @@ RULES = (
     ),
 )
 
-SECRET_ASSIGNMENT_KEYS = frozenset(
-    {"accesskey", "apikey", "clientsecret", "password", "passwd", "secret", "secretkey", "token"}
+SENSITIVE_KEY_COMPONENTS = frozenset({"password", "passwd", "pwd", "secret", "token"})
+SENSITIVE_KEY_PHRASES = (
+    ("api", "key"),
+    ("access", "key"),
+    ("private", "key"),
+    ("signing", "key"),
+    ("service", "role", "key"),
 )
+NON_SECRET_REFERENCE_COMPONENTS = frozenset({"id", "identifier", "name", "type"})
 ASSIGNMENT_PREFIX = re.compile(
     r"(?i)(?<![A-Za-z0-9_-])"
     r"(?:\"(?P<double_key>[A-Za-z][A-Za-z0-9_-]*)\"|"
@@ -173,11 +178,9 @@ def sanitize_path_text(value: str) -> str:
     )
 
 
-def path_identity(value: str, raw_bytes: bytes | None = None) -> PathIdentity:
-    encoded = raw_bytes if raw_bytes is not None else value.encode("utf-8", "surrogatepass")
+def path_identity(value: str) -> PathIdentity:
     if text_contains_secret(value):
-        digest = hashlib.sha256(encoded).hexdigest()[:12]
-        return PathIdentity(value, f"<redacted-path:{digest}>", True)
+        return PathIdentity(value, "<redacted-path>", True)
     return PathIdentity(value, sanitize_path_text(value), False)
 
 
@@ -275,13 +278,41 @@ def is_placeholder_value(value: str, label: str) -> bool:
     return is_example_file(label) and normalized in CANONICAL_PLACEHOLDERS
 
 
-def normalized_assignment_key(match: re.Match[str]) -> str:
+def assignment_key_components(match: re.Match[str]) -> tuple[str, ...]:
     key = (
         match.group("double_key")
         or match.group("single_key")
         or match.group("bare_key")
     )
-    return key.replace("_", "").replace("-", "").casefold()
+    separated = re.sub(r"(?<=[A-Z])(?=[A-Z][a-z])", "_", key)
+    separated = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", separated)
+    return tuple(
+        component.casefold()
+        for component in re.split(r"[_-]+", separated)
+        if component
+    )
+
+
+def is_sensitive_assignment_key(match: re.Match[str]) -> bool:
+    components = assignment_key_components(match)
+    for index, component in enumerate(components):
+        followed_by_reference = (
+            index + 1 < len(components)
+            and components[index + 1] in NON_SECRET_REFERENCE_COMPONENTS
+        )
+        if component in SENSITIVE_KEY_COMPONENTS and not followed_by_reference:
+            return True
+
+    for phrase in SENSITIVE_KEY_PHRASES:
+        for start in range(len(components) - len(phrase) + 1):
+            end = start + len(phrase)
+            followed_by_reference = (
+                end < len(components)
+                and components[end] in NON_SECRET_REFERENCE_COMPONENTS
+            )
+            if components[start:end] == phrase and not followed_by_reference:
+                return True
+    return False
 
 
 def parse_quoted_value(line: str, start: int, quote: str) -> tuple[str, int] | None:
@@ -313,7 +344,7 @@ def parse_bare_value(line: str, start: int) -> tuple[str, int] | None:
 def assigned_secret_values(line: str) -> list[str]:
     values: list[str] = []
     for match in ASSIGNMENT_PREFIX.finditer(line):
-        if normalized_assignment_key(match) not in SECRET_ASSIGNMENT_KEYS:
+        if not is_sensitive_assignment_key(match):
             continue
         start = match.end()
         if start >= len(line):
@@ -511,7 +542,7 @@ def changed_entries(root: Path, commit: str) -> list[HistoryEntry]:
 
 def history_path_identity(path: bytes) -> PathIdentity:
     decoded = path.decode("utf-8", errors="backslashreplace")
-    return path_identity(decoded, path)
+    return path_identity(decoded)
 
 
 def scan_history(root: Path, history_range: str) -> tuple[list[Finding], int]:

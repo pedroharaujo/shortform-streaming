@@ -133,44 +133,49 @@ class SecretScannerIntegrationTests(unittest.TestCase):
         self.assertIn("github-token", result.stderr)
         self.assert_redacted(result, generated_pattern)
 
-    def test_current_secret_paths_are_hashed_before_media_or_content_findings(self) -> None:
+    def test_prefixed_provider_tokens_in_current_paths_are_opaque(self) -> None:
         with temporary_repository() as (_, repository):
-            text_token = "gh" + "p_" + ("x" * 36)
-            media_token = "gh" + "p_" + ("y" * 36)
-            paths = (
-                repository / f"note-{text_token}.txt",
-                repository / f"{media_token}.MP4",
-            )
+            prefixes = (("dash", "-"), ("underscore", "_"), ("alphanumeric", "A"))
+            tokens: list[str] = []
+            paths: list[Path] = []
+            for prefix_index, (name, prefix) in enumerate(prefixes):
+                for extension_index, extension in enumerate((".txt", ".MP4")):
+                    character = chr(ord("k") + (prefix_index * 2) + extension_index)
+                    token = "gh" + "p_" + (character * 36)
+                    tokens.append(token)
+                    paths.append(repository / f"{name}{prefix}{token}{extension}")
             for fixture in paths:
                 fixture.write_text("safe content\n", encoding="utf-8")
             git(repository, "add", "--force", *(path.name for path in paths))
 
             result = self.run_scanner(repository)
-            repeated = self.run_scanner(repository)
 
         self.assertEqual(result.returncode, 1)
-        self.assertEqual(result.stderr, repeated.stderr)
         self.assertEqual(result.stderr.count("[secret-in-path]"), len(paths))
         self.assertNotIn("prohibited-media", result.stderr)
-        self.assertIn("<redacted-path:", result.stderr)
-        for token, path in zip((text_token, media_token), paths, strict=True):
+        self.assertEqual(result.stderr.count("<redacted-path>"), len(paths))
+        self.assertNotIn("<redacted-path:", result.stderr)
+        for token, path in zip(tokens, paths, strict=True):
             self.assert_redacted(result, token)
             self.assertNotIn(path.name, result.stdout)
             self.assertNotIn(path.name, result.stderr)
 
-    def test_removed_history_secret_paths_are_hashed_and_redacted(self) -> None:
+    def test_prefixed_provider_tokens_in_removed_history_paths_are_opaque(self) -> None:
         with temporary_repository() as (_, repository):
             (repository / "safe.txt").write_text("safe\n", encoding="utf-8")
             git(repository, "add", "safe.txt")
             git(repository, "commit", "--quiet", "-m", "base")
             base = git(repository, "rev-parse", "HEAD")
 
-            text_token = "gh" + "p_" + ("u" * 36)
-            media_token = "gh" + "p_" + ("v" * 36)
-            paths = (
-                repository / f"note-{text_token}.txt",
-                repository / f"{media_token}.MP4",
-            )
+            prefixes = (("dash", "-"), ("underscore", "_"), ("alphanumeric", "B"))
+            tokens: list[str] = []
+            paths: list[Path] = []
+            for prefix_index, (name, prefix) in enumerate(prefixes):
+                for extension_index, extension in enumerate((".txt", ".MP4")):
+                    character = chr(ord("r") + (prefix_index * 2) + extension_index)
+                    token = "gh" + "p_" + (character * 36)
+                    tokens.append(token)
+                    paths.append(repository / f"{name}{prefix}{token}{extension}")
             for fixture in paths:
                 fixture.write_text("safe content\n", encoding="utf-8")
             git(repository, "add", "--force", *(path.name for path in paths))
@@ -187,13 +192,50 @@ class SecretScannerIntegrationTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1)
         self.assertEqual(result.stderr.count("[secret-in-path]"), len(paths))
-        self.assertIn("2 introduced history blobs", result.stderr)
+        self.assertIn(f"{len(paths)} introduced history blobs", result.stderr)
         self.assertNotIn("prohibited-media", result.stderr)
         self.assertIn("history:", result.stderr)
-        for token, path in zip((text_token, media_token), paths, strict=True):
+        self.assertEqual(result.stderr.count("<redacted-path>"), len(paths))
+        self.assertNotIn("<redacted-path:", result.stderr)
+        for token, path in zip(tokens, paths, strict=True):
             self.assert_redacted(result, token)
             self.assertNotIn(path.name, result.stdout)
             self.assertNotIn(path.name, result.stderr)
+
+    def test_prefixed_provider_tokens_are_detected_in_current_and_history_content(
+        self,
+    ) -> None:
+        with temporary_repository() as (_, repository):
+            (repository / "safe.txt").write_text("safe\n", encoding="utf-8")
+            git(repository, "add", "safe.txt")
+            git(repository, "commit", "--quiet", "-m", "base")
+            base = git(repository, "rev-parse", "HEAD")
+
+            tokens = [
+                "gh" + "p_" + (character * 36) for character in ("d", "e", "f")
+            ]
+            fixture = repository / "provider-content.txt"
+            fixture.write_text(
+                "\n".join(prefix + token for prefix, token in zip("-_C", tokens))
+                + "\n",
+                encoding="utf-8",
+            )
+            current = self.run_scanner(repository, fixture.name)
+            git(repository, "add", fixture.name)
+            git(repository, "commit", "--quiet", "-m", "introduce provider tokens")
+            fixture.unlink()
+            git(repository, "add", "--update")
+            git(repository, "commit", "--quiet", "-m", "remove provider tokens")
+            head = git(repository, "rev-parse", "HEAD")
+            history = self.run_scanner(
+                repository, "--history-range", f"{base}..{head}"
+            )
+
+        for result in (current, history):
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.stderr.count("[github-token]"), len(tokens))
+            for token in tokens:
+                self.assert_redacted(result, token)
 
     def test_missing_secret_path_error_is_sanitized(self) -> None:
         with temporary_repository() as (_, repository):
@@ -203,7 +245,8 @@ class SecretScannerIntegrationTests(unittest.TestCase):
             result = self.run_scanner(repository, relative_path)
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("<redacted-path:", result.stderr)
+        self.assertIn("<redacted-path>", result.stderr)
+        self.assertNotIn("<redacted-path:", result.stderr)
         self.assertNotIn(relative_path, result.stdout)
         self.assertNotIn(relative_path, result.stderr)
         self.assert_redacted(result, generated_token)
@@ -260,6 +303,73 @@ class SecretScannerIntegrationTests(unittest.TestCase):
         self.assertEqual(result.stderr.count("[assigned-secret]"), len(lines))
         for generated_value in values:
             self.assert_redacted(result, generated_value)
+
+    def test_assignment_keys_are_classified_by_structural_components(self) -> None:
+        sensitive_keys = (
+            "AWS_SECRET_ACCESS_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "REFRESH_TOKEN",
+            "DJANGO_SECRET_KEY",
+            "databasePassword",
+            "legacyPasswd",
+            "adminPwd",
+            "privateKey",
+            "signingKey",
+            "apiKey",
+            "accessKey",
+            "backupApiKeyValue",
+            "primarySigningKeyMaterial",
+        )
+        safe_identifier_keys = (
+            "PUBLIC_KEY",
+            "AWS_ACCESS_KEY_ID",
+            "SUPABASE_PROJECT_ID",
+            "signingKeyId",
+            "apiKeyName",
+            "refreshTokenId",
+            "secretName",
+        )
+        sensitive_values = [
+            "!" + (chr(ord("a") + index) * 24)
+            for index in range(len(sensitive_keys))
+        ]
+        safe_values = [
+            "public-identifier-" + str(index) for index in range(len(safe_identifier_keys))
+        ]
+        with temporary_repository() as (_, repository):
+            sensitive_fixture = repository / "sensitive-assignments.json"
+            sensitive_fixture.write_text(
+                "\n".join(
+                    f'"{key}": "{value}"'
+                    for key, value in zip(
+                        sensitive_keys, sensitive_values, strict=True
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            safe_fixture = repository / "public-identifiers.json"
+            safe_fixture.write_text(
+                "\n".join(
+                    f'"{key}": "{value}"'
+                    for key, value in zip(
+                        safe_identifier_keys, safe_values, strict=True
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            rejected = self.run_scanner(repository, sensitive_fixture.name)
+            allowed = self.run_scanner(repository, safe_fixture.name)
+
+        self.assertEqual(rejected.returncode, 1)
+        self.assertEqual(
+            rejected.stderr.count("[assigned-secret]"), len(sensitive_keys)
+        )
+        for value in sensitive_values:
+            self.assert_redacted(rejected, value)
+        self.assertEqual(allowed.returncode, 0, allowed.stderr)
 
     def test_utf16_little_and_big_endian_are_decoded_and_scanned(self) -> None:
         for byte_order, bom in (
