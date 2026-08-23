@@ -92,8 +92,8 @@ The product is viable when selected acquired cohorts can achieve projected contr
 ### Default access and monetization rules
 
 - The MVP user interface and all default product copy are in English.
-- Distribution countries/storefronts remain a launch decision; product language does not determine store availability.
-- Customer prices and billing periods come from store-localized product metadata for the active App Store or Google Play storefront. The app never infers currency from language or builds monetary strings manually.
+- Decision D-001 canonically enumerates the founder-approved MVP distribution scope: 21 EU countries using EUR. Each storefront remains gated by territorial rights and local legal/language requirements.
+- Customer prices and billing periods come from store-localized product metadata for the active App Store or Google Play storefront. The app never infers currency from language or builds monetary strings manually. Although every approved MVP market uses EUR, localized price presentation, VAT treatment, and national requirements can still vary.
 - EUR is the company's base reporting currency and desired settlement currency. Production setup must validate the Apple bank-account currency and Google payments-profile/bank eligibility for EUR payouts.
 - The number of free episodes is configurable per series and experiment cohort; a reasonable seed is the first 3–5 episodes.
 - A free episode requires no login.
@@ -109,6 +109,7 @@ The product is viable when selected acquired cohorts can achieve projected contr
 
 ### Content and rights decisions
 
+- The initial catalog consists of English-language microdramas.
 - Launch with licensed, non-exclusive content where possible.
 - Every series must record licensor, territories, platforms, languages, start/end dates, exclusivity, revenue-share rules, takedown status, and source-contract reference.
 - The API must hide expired, out-of-territory, unpublished, or takedown content.
@@ -429,13 +430,18 @@ Never send email, auth token, signed video URL, full IP address, payment receipt
 
 The sequence below is dependency-ordered and keeps high-risk proofs early. Estimates should be added only after one engineer has completed the first vertical slice and calibrated velocity.
 
+Two decision classes apply throughout the roadmap:
+
+- **Required for architecture/coding:** must be approved before implementing the affected behavior. The accepted technical ADR baseline is sufficient to begin Phase 1 now.
+- **Required before public release:** company registration and organization-account details, banking/payout verification, final rights/legal review, store configuration, and launch approvals may be completed later, but public production activation/traffic promotion, storefront distribution, licensed-media publication, and real commerce/advertising remain disabled until they pass. Isolated production-candidate provisioning and test-data validation may proceed earlier under P5-T08.
+
 ### Phase 0 — Product, Rights, and Delivery Foundations
 
 #### P0-T01 — Approve MVP product brief and launch configuration
 
-**Description:** Convert this plan into an approved one-page brief recording the English product language, distribution countries/storefronts, customer-localized pricing, EUR reporting/settlement target, legal entity, target audience, content rating, catalog size, and success/stop criteria.
+**Description:** Maintain one brief that separates the approved development baseline from Public Release Readiness decisions covering distribution, customer-localized pricing, EUR reporting/settlement, legal entity and registration details, target audience, content rating, catalog, and success/stop criteria.
 
-**Objective:** Prevent architecture and store work from proceeding with unresolved product assumptions.
+**Objective:** Allow approved architecture and bootstrap work to proceed while preventing release or real monetization with unresolved legal, rights, financial, or store requirements.
 
 **Dependencies:** None.
 
@@ -443,7 +449,9 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 - [x] English is approved as the MVP product language.
 - [x] Storefront-localized customer prices and EUR reporting/desired settlement are approved.
-- [ ] Distribution countries/storefronts, legal entity, and EUR-compatible store payment profiles/bank configuration are approved.
+- [x] Decision D-001 approves 21 EU/EUR countries as the MVP distribution scope, and D-024 records France as the intended legal-entity country.
+- [x] Phase 1 may start with local/emulated/fake services, generated test data, and self-owned/generated test media without real credentials.
+- [ ] Before public release, the French entity's legal name/form, incorporation, registered address, D-U-N-S where required, organization accounts, and EUR-compatible payment/bank configuration are approved and verified.
 - [ ] MVP inclusions/exclusions and monetization defaults are approved.
 - [ ] KPI definitions, experiment guardrails, budget ceiling, and stop/go review date are documented.
 
@@ -454,11 +462,11 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 #### P0-T02 — Complete content-rights and media-requirements checklist
 
-**Description:** Define the contractual metadata and technical delivery package required from each licensor.
+**Description:** Define the contractual metadata and technical delivery package required from each future licensor. Development uses only self-owned, generated, or purpose-made test media and does not require a commercial license package.
 
 **Objective:** Ensure every published asset is legally and technically distributable.
 
-**Dependencies:** P0-T01.
+**Dependencies:** Approved decisions D-001, D-002, and D-023. Remaining P0-T01 Public Release Readiness items are not dependencies.
 
 **Acceptance criteria:**
 
@@ -473,11 +481,11 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 #### P0-T03 — Create product policy and store-compliance matrix
 
-**Description:** Map coins, subscriptions, storefront-localized customer pricing, EUR settlement, rewarded ads, account deletion, privacy, consent, and age rating to Apple, Google Play, AdMob, GDPR/UK GDPR, and approved distribution-country requirements.
+**Description:** Map coins, subscriptions, storefront-localized customer pricing, EUR settlement, rewarded ads, account deletion, privacy, consent, and age rating to Apple, Google Play, AdMob, GDPR, and the national requirements of the 21 approved MVP markets. UK GDPR review is a gate for a future United Kingdom expansion and is outside MVP scope.
 
 **Objective:** Avoid building monetization flows that stores or regulators reject.
 
-**Dependencies:** P0-T01.
+**Dependencies:** Approved decisions D-001, D-002, D-021, and the approved business target in D-022. Proposed monetization decisions D-005 through D-009 may be assessed but must be approved before their affected behavior is implemented.
 
 **Acceptance criteria:**
 
@@ -496,11 +504,12 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 **Objective:** Make technical tradeoffs and contribution economics explicit.
 
-**Dependencies:** P0-T01, P0-T02.
+**Dependencies:** Accepted technical decisions D-010 through D-013, D-015, and D-016, plus approved pricing/reporting decisions D-021/D-022. D-014 is not a dependency: P0-T04 records its GCP path as a reversible ADR hypothesis and a provisional cost baseline for P2-T05 to validate or supersede. P0-T01, P0-T02, and P0-T03 may proceed in parallel.
 
 **Acceptance criteria:**
 
 - [ ] ADRs exist for monorepo, modular monolith, Firebase Auth, Supabase PostgreSQL, GCP video, RevenueCat, and Firebase analytics/experimentation.
+- [ ] The video ADR labels D-014 conditional and reversible; completing P0-T04 requires a provider boundary and provisional cost assumptions, not proof that D-014 is accepted.
 - [ ] Cost sheet supports minutes watched, renditions, egress, MAU, purchases, and ad revenue inputs.
 - [ ] Thresholds for reconsidering Supabase, CDN, transcoder, and MMP are documented.
 
@@ -509,11 +518,13 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 - [ ] Model one small beta, target launch, and 10× scenario.
 - [ ] Confirm infrastructure variable cost flows into cohort contribution margin.
 
-### Checkpoint 0 — Product feasibility
+### Checkpoint 0 — Public-release feasibility (not a Phase 1 gate)
 
 - [ ] Launch configuration, rights checklist, policy matrix, and cost model are approved.
 - [ ] A sample content package can meet the proposed ingestion contract.
-- [ ] Any mandatory DRM requirement is known before the video proof-of-concept.
+- [ ] Any mandatory DRM requirement for licensed release content is known before licensed-media ingestion or production provider selection/configuration; D-019 does not block local fixtures or the self-owned/generated test-media proof-of-concept.
+
+Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory before licensed media, production configuration, or public release.
 
 ---
 
@@ -525,7 +536,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 **Objective:** Provide one auditable home for backend, mobile, infrastructure, and documentation.
 
-**Dependencies:** P0-T04.
+**Dependencies:** None. Accepted architecture decisions D-010 through D-013 provide the bootstrap baseline; unfinished legal/entity/store work and P0 cost/right refinements are not dependencies.
 
 **Acceptance criteria:**
 
@@ -668,7 +679,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 **Objective:** Let staff manage a rights-aware catalog without a custom web product.
 
-**Dependencies:** P1-T02, P0-T02.
+**Dependencies:** P1-T02. Implement and test the rights-aware model with generated metadata and self-owned/generated test media; P0-T02 is required before real licensed media is admitted.
 
 **Acceptance criteria:**
 
@@ -706,7 +717,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 **Objective:** Retire the highest technical and cost risk before building the full player.
 
-**Dependencies:** P0-T02, P0-T04, P1-T03.
+**Dependencies:** P1-T03 plus the reversible provider-boundary ADR and provisional video-cost baseline produced by P0-T04. P2-T05 validates or supersedes D-014; it does not depend on D-014 being accepted. Use only self-owned, generated, or purpose-made test media; commercial licensing is not a proof-of-concept dependency.
 
 **Acceptance criteria:**
 
@@ -721,7 +732,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 #### P2-T06 — Implement production media ingestion workflow
 
-**Description:** Add MediaAsset state machine, checksum/deduplication, signed staff upload, Transcoder job submission/status reconciliation, caption validation, thumbnail output, and admin retry/takedown controls.
+**Description:** Add MediaAsset state machine, checksum/deduplication, signed staff upload, Transcoder job submission/status reconciliation, caption validation, thumbnail output, and admin retry/takedown controls. Develop with provider fakes and self-owned/generated test media; real licensed media is admitted only after P0-T02 review.
 
 **Objective:** Make ingestion repeatable, auditable, and safe for licensed media.
 
@@ -735,7 +746,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 
 **Validation and integration tests:**
 
-- [ ] Integration test runs a short fixture through upload → job → ready using a provider fake and a staging smoke test with GCP.
+- [ ] Integration test runs a short self-owned/generated fixture through upload → job → ready using a provider fake and a non-production smoke test with GCP; no real provider credential is required for local checks.
 - [ ] Corrupt upload, checksum mismatch, failed job, retry, and takedown paths pass.
 
 #### P2-T07 — Implement entitlement-aware playback authorization
@@ -1265,24 +1276,27 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 - [ ] Restore a staging backup into an isolated environment and reconcile ledger/entitlements.
 - [ ] Run one tabletop incident and one rollback drill; record time, gaps, and actions.
 
-#### P5-T08 — Provision production with data-residency and cost gates
+#### P5-T08 — Provision isolated production-candidate infrastructure
 
-**Description:** Apply the reviewed infrastructure to production, upgrade the database from free tier, configure domain/TLS, quotas, budgets, retention, and operational access.
+**Description:** Apply the reviewed infrastructure to an isolated production-candidate environment, upgrade the database from free tier, and configure domain/TLS, quotas, budgets, retention, and operational access. Provisioning and validation use generated test data and non-licensed test media only.
 
-**Objective:** Create a launchable environment with backups and predictable blast radius.
+**Objective:** Validate a launchable environment with backups and predictable blast radius without prematurely activating public production.
 
 **Dependencies:** P5-T01 through P5-T07.
 
 **Acceptance criteria:**
 
 - [ ] Production is isolated from staging with separate credentials, projects, data, and media.
-- [ ] Region choices match approved distribution countries, latency, rights, privacy, and provider constraints.
+- [ ] Candidate region choices are documented against D-001, latency, rights, privacy, and provider constraints; D-020 approval is required before public activation.
 - [ ] Cost alerts, quota alerts, backup/PITR, audit logs, and break-glass access are enabled.
+- [ ] Before Public Release Clearance, the environment cannot receive public traffic and contains no live store products/ad units, licensed media, production user data, or commercial organization/payout credentials.
 
 **Validation and integration tests:**
 
-- [ ] Full production smoke test uses non-licensed test content and test accounts only.
+- [ ] Full production-candidate smoke test uses non-licensed test content and test accounts only, with public ingress and commercial integrations disabled.
 - [ ] Security, recovery, observability, and cost-control checklists are signed off.
+
+**Public activation dependency:** P6-T05A Public Release Clearance. Infrastructure may be provisioned and validated in isolation before that task; traffic promotion and commercial configuration may not.
 
 ### Checkpoint 5 — Operational readiness
 
@@ -1382,6 +1396,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 **Acceptance criteria:**
 
 - [ ] Beta has agreed minimum devices/users and includes both stores.
+- [ ] Beta uses sandbox/test products and test ad units only; no live commercial product, ad, payout, or acquisition configuration is enabled.
 - [ ] No open severity-1/2 issue, commerce mismatch, rights leak, or unexplained critical funnel break remains.
 - [ ] Playback, crash-free use, monetization, retention baseline, and support burden are reviewed.
 
@@ -1390,19 +1405,40 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 - [ ] Reconcile every beta store transaction/reward with server records.
 - [ ] Repeat regression and rollback drill on the final release candidate.
 
+#### P6-T05A — Obtain Public Release Clearance
+
+**Description:** Assemble one signed release record proving product, rights, policy, cost, entity, financial, store, privacy, security, and launch decisions are complete for the exact binary, catalog, configuration, and markets to be released.
+
+**Objective:** Provide one auditable hard gate between isolated validation and public distribution or real commercial activity.
+
+**Dependencies:** P0-T01, P0-T02, P0-T03, P0-T04, P5-T08, P6-T04, and P6-T05; every release-applicable Decision Register entry must be approved, including D-017 before any paid acquisition, D-020 before public production activation, and D-025 before organization/store/payout activation.
+
+**Acceptance criteria:**
+
+- [ ] P0-T01 through P0-T04 have current owner approvals and evidence for the release candidate; no proposal is silently treated as approval.
+- [ ] The exact catalog passes territorial rights/provenance, DRM/protection, age/content, and promotional-use review for every enabled D-001 market.
+- [ ] GDPR/privacy-by-design, consent, account deletion, security, accessibility, store policy/declarations, national legal/language requirements, support, incident response, and rollback checks pass.
+- [ ] The French entity and required registration/organization data are verified; Apple/Google accounts, products, tax, bank, payout, EUR reconciliation, and real ad configuration are approved for activation.
+- [ ] D-017 defines the paid-acquisition ceiling and D-020 defines approved production data residency/retention; all other decisions applicable to the release are Approved rather than Proposed or Decision required.
+
+**Validation and integration tests:**
+
+- [ ] An independent reviewer traces every clearance item to dated evidence, named owner, release revision, enabled market list, and rollback/expiry condition.
+- [ ] A release dry run with test accounts and non-licensed test media proves that public traffic, real products/ads, paid acquisition, and licensed-media publication remain disabled until the clearance approval is recorded.
+
 #### P6-T06 — Launch with controlled rollout and daily command center
 
 **Description:** Submit and release gradually by platform/market, monitor technical and business guardrails, and hold daily go/hold/rollback reviews during the first launch window.
 
 **Objective:** Limit blast radius while establishing real unit-economics data.
 
-**Dependencies:** P6-T05, Checkpoint 5.
+**Dependencies:** P6-T05, Checkpoint 5, and P6-T05A Public Release Clearance. D-017 must be Approved before any paid-acquisition campaign is enabled.
 
 **Acceptance criteria:**
 
 - [ ] Rollout stages, owners, halt thresholds, support coverage, and rollback options are documented.
 - [ ] Rights availability, prices, products, ads, dashboards, alerts, and budgets are checked immediately before release.
-- [ ] Paid acquisition begins with capped experiments and traceable creative IDs.
+- [ ] Paid acquisition begins only within the D-017 approved cap, using traceable creative IDs.
 
 **Validation and integration tests:**
 
@@ -1590,9 +1626,9 @@ The backend is intentionally client-neutral. Do not start this phase until mobil
 
 ### Test data rules
 
-- Use generated users and short self-owned test videos in automated/staging tests.
+- Use generated users and short self-owned, generated, or purpose-made test videos in automated/local/staging tests; record provenance and permitted test use.
 - Never copy production personal data into staging.
-- Keep licensed masters out of Git, fixtures, screenshots, and public test builds.
+- Real licensed media is not required for development. Keep licensed masters out of Git, fixtures, screenshots, and public test builds, and do not admit them to staging or production before rights review.
 - Provider payload fixtures must be redacted and immutable.
 
 ---
@@ -1635,7 +1671,7 @@ The backend is intentionally client-neutral. Do not start this phase until mobil
 
 Use three logical environments:
 
-- **Local:** Docker PostgreSQL, Firebase emulators/mocks where practical, provider fakes, test video.
+- **Local:** Docker PostgreSQL, Firebase emulators/mocks where practical, provider fakes, and self-owned/generated test video. Local bootstrap and its automated checks require no real cloud, store, advertising, payout, or organization-account credentials.
 - **Staging:** isolated real cloud integrations, RevenueCat sandbox/store testers, AdMob test units, non-licensed media.
 - **Production:** isolated paid database, real products/ad units, licensed media, strict access and audit.
 
@@ -1672,26 +1708,36 @@ Include `.env.example` with names and descriptions but no usable values.
 
 ---
 
-## 13. Decisions Required Before Coding or Launch
+## 13. Decisions Required for Coding vs. Public Release
 
-Resolve these through P0 tasks; they are intentionally not guessed:
+### Required before coding the affected behavior
 
-- Product/app name, visual brand, and repository organization owner.
-- Distribution countries/storefronts, legal entity, and store-account countries.
-- Confirmation that the Apple bank-account currency and Google payments profile/bank configuration can settle in EUR.
-- Age rating and allowed content categories.
-- Exact content license terms and whether DRM is mandatory.
-- Initial series and free-episode baseline.
-- Coin pack sizes, episode prices, subscription period/price, and trial choice.
-- Whether one rewarded ad permanently unlocks one episode or grants coins; this plan defaults to episode unlock.
-- Guest-to-account conversion point.
-- Data residency and retention requirements.
-- Initial acquisition budget and MMP adoption threshold.
-- Support and incident-response owners.
+These do not all block Phase 1. Resolve each before implementing the feature that depends on it:
+
+- Product/app name, visual brand, and repository organization owner before final branded UI/assets.
+- Initial series/free-episode baseline and guest-to-account conversion point before their catalog/auth UX behavior.
+- Coin pack sizes, episode prices, subscription period/price, trial choice, and rewarded-ad grant model before real monetization integration.
+- Data residency and retention behavior before production-shaped retention/deletion automation.
+- Technical DRM/provider choice if the proof-of-concept or a future contract requires it.
+
+### Required before public release
+
+These are deferred from the Phase 1 coding path but remain hard release gates:
+
+- French entity legal name and form, incorporation, registered address, D-U-N-S where required, tax/organization enrollment data, and store-account countries.
+- Verified Apple bank-account currency and Google payments profile/bank configuration for EUR settlement.
+- Per-market territorial rights, GDPR/privacy review, national legal/language requirements, age rating, allowed content categories, store declarations, and consent behavior for the 21 approved launch countries.
+- Final license terms, commercial-media provenance, protection/DRM obligations, and approval of every title before it enters staging or production.
+- Initial acquisition budget, MMP adoption threshold, support owners, incident-response owners, launch guardrails, and stop/go review date.
+
+No public production activation/traffic promotion, storefront distribution, licensed-media publication, paid acquisition, real purchase/subscription, or real advertising may be enabled until every applicable Public Release Readiness gate is approved and verified. Isolated production-candidate provisioning and test-data validation remain permitted under P5-T08.
 
 Already approved by the founder:
 
 - The MVP user interface is in English.
+- The initial catalog consists of English-language microdramas.
+- Decision D-001 defines the approved MVP distribution scope of 21 EU countries using EUR.
+- France is the intended legal-entity country; incorporation and legal/finance validation remain pending.
 - Customer monetary prices use the localized currency and price string supplied by the active App Store or Google Play storefront.
 - EUR is the company reporting currency and desired payout currency; actual settlement depends on eligible store-account, payments-profile, legal-entity, and bank configuration.
 
@@ -1699,20 +1745,20 @@ Already approved by the founder:
 
 ## 14. Suggested First 12 Implementation Moves
 
-After approvals, execute in this order:
+The accepted technical baseline permits this sequence now; Public Release Readiness work continues in parallel:
 
-1. P0-T01 — Approve brief and launch configuration.
-2. P0-T02 — Validate rights/media package.
-3. P0-T03 — Approve compliance matrix.
-4. P0-T04 — Lock ADRs and cost model.
-5. P1-T01 — Create/protect repository.
-6. P1-T02 — Bootstrap Django/PostgreSQL.
-7. P1-T03 — Bootstrap Expo development build.
-8. P1-T04 — Establish OpenAPI/generated client.
-9. P1-T05 — Establish CI.
-10. P2-T05 — Run video pipeline proof-of-concept early.
-11. P2-T01/P2-T03 — Build identity and rights-aware catalog in parallel only after contracts are stable.
-12. P2-T04/P2-T07/P2-T08 — Complete discovery-to-free-play vertical slice.
+1. P1-T01 (S) — Complete/protect the repository and safety rules.
+2. P1-T02 (M) — Bootstrap local Django/PostgreSQL and health checks.
+3. P1-T03 (M) — Bootstrap the Expo development build against the local API.
+4. P1-T04 (M) — Establish OpenAPI and the generated client.
+5. P1-T05 (M) — Establish credential-free baseline CI.
+6. P0-T02/P0-T03/P0-T04 (S–M each) — Continue rights, compliance, ADR, and cost readiness in parallel; do not block Phase 1 on company/store registration data.
+7. P2-T03 (M) — Build the rights-aware catalog using generated metadata and self-owned/generated test media.
+8. P2-T04 (M) — Build anonymous home/detail screens against local seeded data.
+9. P2-T05 (M) — Test the video-provider boundary and HLS path using only approved test media.
+10. P2-T01 (M) — Add identity with emulator/mocked verification while preserving anonymous catalog access.
+11. P2-T06/P2-T07 (M each) — Exercise ingestion and playback authorization with provider fakes and non-production credentials only where a smoke test requires them.
+12. P2-T08 (M) — Complete anonymous discovery-to-free-play, progress, resume, and autoplay.
 
 Do not start coins, subscriptions, or ads until Checkpoint 2 passes.
 
@@ -1759,9 +1805,12 @@ These are primary sources used to validate changeable decisions. Recheck them at
 
 ---
 
-## 16. Final MVP Completion Checklist
+## 16. Public Release Readiness and Final MVP Completion Checklist
+
+This is a hard publication gate, not a prerequisite for Phase 1 or isolated production-candidate validation. Until every applicable item is independently verified, production-candidate environments remain isolated and must not enable public traffic, storefront distribution, licensed media, paid acquisition, real purchases/subscriptions, or real advertising.
 
 - [ ] Product, rights, policy, architecture, and cost decisions approved.
+- [ ] P6-T05A Public Release Clearance is independently approved for the exact revision, catalog, markets, and production configuration.
 - [ ] Public protected monorepo and full CI operational, with no secrets, licensed media, or confidential contracts committed.
 - [ ] Rights-aware catalog and Django Admin operational.
 - [ ] Firebase auth and account deletion operational.
