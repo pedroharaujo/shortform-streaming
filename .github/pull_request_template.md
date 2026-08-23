@@ -1,6 +1,8 @@
 ## Plan task
 
 - Task ID:
+- Issue:
+- AI state: `ai-review` / `ai-verified`
 - Objective:
 - Dependencies satisfied:
 
@@ -19,6 +21,19 @@ Describe the user/business outcome and the smallest implementation used to achie
 - Manual checks:
 - Commands run:
 - Screenshots/log/query evidence (redacted):
+- Tested revision:
+
+## Independent agent gates
+
+- Implementer agent/thread:
+- Reviewer agent/thread:
+- Reviewer result: `APPROVE` / `CHANGES_REQUESTED`
+- Blocking findings remaining:
+- Verifier agent/thread:
+- Verifier result: `VERIFIED` / `FAILED` / `BLOCKED`
+- [ ] Implementer, reviewer, and verifier used separate contexts.
+- [ ] The final reviewed revision is the revision that was verified.
+- [ ] Required CI checks pass.
 
 ## Risk review
 
