@@ -14,15 +14,16 @@ Move one approved, bounded task through the development loop while preserving se
 
 ## Procedure
 
-1. Confirm `ai-ready`, dependencies, approved decisions, acceptance criteria, and validation plan.
-2. Move the task to `ai-in-progress`; define a bounded implementation hand-off.
-3. Delegate to the implementer in an isolated branch/worktree.
-4. Move to `ai-review` and delegate a cold review after implementation evidence is complete.
-5. Return every BLOCKER/MAJOR finding to the implementer; repeat review after fixes.
-6. Delegate verification only after blocking findings are cleared.
-7. Require fresh verification after any fix that can invalidate prior evidence.
-8. Move to `ai-verified` only when verification and required CI pass, then finalize the PR.
+1. Confirm `ai-ready`, dependencies, approved decisions, acceptance criteria, and the base revision.
+2. Before implementation, produce the Validation Manifest defined in `ai/workflows/development-loop.md`. Consult the optional, read-only validation planner only when scope is ambiguous, cross-boundary, or sensitive; the orchestrator remains accountable for the manifest.
+3. Move the task to `ai-in-progress`; define a bounded implementation hand-off including the manifest.
+4. Delegate to the implementer in an isolated branch/worktree.
+5. Move to `ai-review` and delegate a cold review after implementation evidence is complete.
+6. Return every BLOCKER/MAJOR finding to the implementer; repeat review after fixes and rerun the affected checks.
+7. Delegate verification only after blocking findings are cleared.
+8. Replan when scope or risk changes, and require fresh verification after any material fix that invalidates related evidence.
+9. Move to `ai-verified` only when verification on the final revision and required CI pass, then finalize the PR.
 
 ## Output
 
-A coordination summary containing task/branch/PR, source documents, hand-offs, open findings, verification evidence, current state, and any human decision required.
+A coordination summary containing task/branch/PR, source documents, Validation Manifest, hand-offs, open findings, verification evidence, current state, and any human decision required.
