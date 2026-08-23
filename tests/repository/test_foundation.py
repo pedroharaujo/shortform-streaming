@@ -61,6 +61,8 @@ TRACKABLE_NESTED_PATHS = (
     "backend/apps/contracts/models.py",
     "backend/apps/private/config.py",
     "backend/apps/sources/service.ts",
+    "backend/apps/credentials/provider.py",
+    "backend/apps/secrets/service.py",
 )
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import codecs
+import hashlib
 import os
 import re
 import stat
@@ -51,16 +52,21 @@ RULES = (
             r"[^\s:/@]+:[^\s/@]{8,}@"
         ),
     ),
-    Rule(
-        "assigned-secret",
-        re.compile(
-            r"(?i)\b(?:api[_-]?key|access[_-]?key|client[_-]?secret|password|"
-            r"passwd|secret(?:[_-]?key)?|token)"
-            r"\s*[:=]\s*(?:(?P<quote>[\"'])(?P<quoted_value>[^\"'\r\n]{8,})"
-            r"(?P=quote)|(?P<bare_value>[0-9A-Za-z/+_.=-]{20,}))"
-        ),
-    ),
 )
+
+SECRET_ASSIGNMENT_KEYS = frozenset(
+    {"accesskey", "apikey", "clientsecret", "password", "passwd", "secret", "secretkey", "token"}
+)
+ASSIGNMENT_PREFIX = re.compile(
+    r"(?i)(?<![A-Za-z0-9_-])"
+    r"(?:\"(?P<double_key>[A-Za-z][A-Za-z0-9_-]*)\"|"
+    r"'(?P<single_key>[A-Za-z][A-Za-z0-9_-]*)'|"
+    r"(?P<bare_key>[A-Za-z][A-Za-z0-9_-]*))"
+    r"\s*[:=/]\s*"
+)
+MIN_QUOTED_SECRET_LENGTH = 8
+MIN_BARE_SECRET_LENGTH = 20
+BARE_VALUE_DELIMITERS = frozenset(" \t\r\n#;,}])\"'\\")
 
 CANONICAL_PLACEHOLDERS = frozenset(
     {
@@ -77,7 +83,16 @@ SAFE_NON_SECRET_LITERALS = frozenset({"replace-with-provider-value"})
 EXAMPLE_FILE_NAMES = frozenset({".env.example", "env.example"})
 
 PRIVATE_ROOT_DIRECTORIES = frozenset(
-    {"contracts", "licensed-media", "media", "private", "provider-payloads", "sources"}
+    {
+        "contracts",
+        "credentials",
+        "licensed-media",
+        "media",
+        "private",
+        "provider-payloads",
+        "secrets",
+        "sources",
+    }
 )
 VIDEO_EXTENSIONS = frozenset({".avi", ".m3u8", ".mkv", ".mov", ".mp4", ".webm"})
 AUDIO_EXTENSIONS = frozenset({".aac", ".flac", ".m4a", ".mp3", ".ogg", ".wav"})
@@ -95,6 +110,13 @@ class Finding:
     label: str
     line: int
     rule: str
+
+
+@dataclass(frozen=True)
+class PathIdentity:
+    raw: str
+    label: str
+    contains_secret: bool
 
 
 @dataclass(frozen=True)
@@ -142,8 +164,29 @@ def lexical_path(root: Path, candidate: Path) -> Path:
     return absolute
 
 
-def relative_label(root: Path, path: Path) -> str:
+def sanitize_path_text(value: str) -> str:
+    return "".join(
+        character
+        if character >= " " and character != "\x7f"
+        else f"\\x{ord(character):02x}"
+        for character in value
+    )
+
+
+def path_identity(value: str, raw_bytes: bytes | None = None) -> PathIdentity:
+    encoded = raw_bytes if raw_bytes is not None else value.encode("utf-8", "surrogatepass")
+    if text_contains_secret(value):
+        digest = hashlib.sha256(encoded).hexdigest()[:12]
+        return PathIdentity(value, f"<redacted-path:{digest}>", True)
+    return PathIdentity(value, sanitize_path_text(value), False)
+
+
+def raw_relative_label(root: Path, path: Path) -> str:
     return Path(os.path.relpath(path, root)).as_posix()
+
+
+def relative_label(root: Path, path: Path) -> str:
+    return path_identity(raw_relative_label(root, path)).label
 
 
 def walk_without_following_links(root: Path, start: Path) -> list[Path]:
@@ -225,15 +268,74 @@ def is_example_file(label: str) -> bool:
     return name in EXAMPLE_FILE_NAMES or name.endswith(".example")
 
 
-def is_placeholder(match: re.Match[str], label: str) -> bool:
-    groups = match.groupdict()
-    value = groups.get("quoted_value") or groups.get("bare_value")
-    if not value:
-        return False
+def is_placeholder_value(value: str, label: str) -> bool:
     normalized = value.casefold()
     if normalized in SAFE_NON_SECRET_LITERALS:
         return True
     return is_example_file(label) and normalized in CANONICAL_PLACEHOLDERS
+
+
+def normalized_assignment_key(match: re.Match[str]) -> str:
+    key = (
+        match.group("double_key")
+        or match.group("single_key")
+        or match.group("bare_key")
+    )
+    return key.replace("_", "").replace("-", "").casefold()
+
+
+def parse_quoted_value(line: str, start: int, quote: str) -> tuple[str, int] | None:
+    escaped = False
+    for index in range(start + 1, len(line)):
+        character = line[index]
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\":
+            escaped = True
+            continue
+        if character == quote:
+            return line[start + 1 : index], index + 1
+    return None
+
+
+def parse_bare_value(line: str, start: int) -> tuple[str, int] | None:
+    end = start
+    while end < len(line):
+        if line[end] in BARE_VALUE_DELIMITERS or line.startswith("//", end):
+            break
+        end += 1
+    if end == start:
+        return None
+    return line[start:end], end
+
+
+def assigned_secret_values(line: str) -> list[str]:
+    values: list[str] = []
+    for match in ASSIGNMENT_PREFIX.finditer(line):
+        if normalized_assignment_key(match) not in SECRET_ASSIGNMENT_KEYS:
+            continue
+        start = match.end()
+        if start >= len(line):
+            continue
+        if line[start] in {"\"", "'"}:
+            parsed = parse_quoted_value(line, start, line[start])
+            minimum = MIN_QUOTED_SECRET_LENGTH
+        else:
+            parsed = parse_bare_value(line, start)
+            minimum = MIN_BARE_SECRET_LENGTH
+        if parsed is not None and len(parsed[0]) >= minimum:
+            values.append(parsed[0])
+    return values
+
+
+def text_contains_secret(text: str) -> bool:
+    if any(rule.pattern.search(text) for rule in RULES):
+        return True
+    return any(
+        not is_placeholder_value(value, "<path>")
+        for value in assigned_secret_values(text)
+    )
 
 
 def is_media_allowlisted(label: str) -> bool:
@@ -288,14 +390,19 @@ def scan_bytes(data: bytes, label: str) -> list[Finding]:
     findings: list[Finding] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
         for rule in RULES:
-            for match in rule.pattern.finditer(line):
-                if not is_placeholder(match, label):
-                    findings.append(Finding(label, line_number, rule.name))
+            for _ in rule.pattern.finditer(line):
+                findings.append(Finding(label, line_number, rule.name))
+        for value in assigned_secret_values(line):
+            if not is_placeholder_value(value, label):
+                findings.append(Finding(label, line_number, "assigned-secret"))
     return findings
 
 
 def scan_path(root: Path, path: Path) -> list[Finding]:
-    label = relative_label(root, path)
+    identity = path_identity(raw_relative_label(root, path))
+    label = identity.label
+    if identity.contains_secret:
+        return [Finding(label, 0, "secret-in-path")]
     try:
         metadata = path.lstat()
     except OSError as error:
@@ -402,14 +509,9 @@ def changed_entries(root: Path, commit: str) -> list[HistoryEntry]:
     return sorted(entries, key=lambda entry: (entry.path, entry.object_id, entry.mode))
 
 
-def safe_history_path(path: bytes) -> str:
+def history_path_identity(path: bytes) -> PathIdentity:
     decoded = path.decode("utf-8", errors="backslashreplace")
-    return "".join(
-        character
-        if character >= " " and character != "\x7f"
-        else f"\\x{ord(character):02x}"
-        for character in decoded
-    )
+    return path_identity(decoded, path)
 
 
 def scan_history(root: Path, history_range: str) -> tuple[list[Finding], int]:
@@ -417,8 +519,13 @@ def scan_history(root: Path, history_range: str) -> tuple[list[Finding], int]:
     blob_count = 0
     for commit in introduced_commits(root, history_range):
         for entry in changed_entries(root, commit):
-            path = safe_history_path(entry.path)
-            label = f"history:{commit[:12]}:{PurePosixPath(path).as_posix()}"
+            identity = history_path_identity(entry.path)
+            label = f"history:{commit[:12]}:{PurePosixPath(identity.label).as_posix()}"
+            if identity.contains_secret:
+                if entry.mode.startswith("100"):
+                    blob_count += 1
+                findings.append(Finding(label, 0, "secret-in-path"))
+                continue
             if entry.mode == "120000":
                 findings.append(Finding(label, 0, "symlink"))
                 continue
@@ -426,7 +533,7 @@ def scan_history(root: Path, history_range: str) -> tuple[list[Finding], int]:
                 findings.append(Finding(label, 0, "unsupported-file-type"))
                 continue
             blob_count += 1
-            if is_prohibited_media(path):
+            if is_prohibited_media(identity.raw):
                 findings.append(Finding(label, 0, "prohibited-media"))
                 continue
 
