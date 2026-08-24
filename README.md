@@ -123,17 +123,19 @@ Run the current repository-wide aggregate gate with `pnpm check` (includes `cont
 ## Local mobile bootstrap
 
 P1-T03 provides a strict TypeScript Expo app with Expo Router, an Android/iOS
-development-build configuration (not Expo Go), and a screen that probes
-`/health/live` and `/health/ready`. Details, including the emulator sequence, are in
-[mobile/README.md](./mobile/README.md).
+development-build configuration (not Expo Go), and a backend-availability screen.
+P2-T04 makes Home the launch route (`app/index.tsx`) and keeps health at `/health`.
+Details, including the emulator sequence, are in [mobile/README.md](./mobile/README.md).
 
 `EXPO_PUBLIC_*` values are compiled into the public JavaScript bundle. Never place a
-secret, key, token, or credential in `EXPO_PUBLIC_API_ENVIRONMENT` or
-`EXPO_PUBLIC_API_BASE_URL`. Copy those two names from `.env.example` into
-`mobile/.env` (gitignored). Both are required; the app does not default an environment.
+secret, key, token, or credential in `EXPO_PUBLIC_API_ENVIRONMENT`,
+`EXPO_PUBLIC_API_BASE_URL`, or `EXPO_PUBLIC_CATALOG_TERRITORY`. Copy those three
+names from `.env.example` into `mobile/.env` (gitignored). All three are required;
+the app does not default an environment or infer territory from device locale.
 
 Use `http://10.0.2.2:8000` as `EXPO_PUBLIC_API_BASE_URL` on the Android emulator and
-`http://127.0.0.1:8000` on the iOS simulator.
+`http://127.0.0.1:8000` on the iOS simulator. Set `EXPO_PUBLIC_CATALOG_TERRITORY=FR`
+for the synthetic FR-only Harbor Lights seed.
 
 From the repository root (`export PATH="$HOME/.local/bin:$PATH"` if `pnpm` is the
 corepack shim):

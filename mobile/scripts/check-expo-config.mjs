@@ -23,6 +23,7 @@ const EXPO_CLI = createRequire(import.meta.url).resolve('expo/bin/cli');
 const REQUIRED_ENVIRONMENT = {
   EXPO_PUBLIC_API_ENVIRONMENT: 'local',
   EXPO_PUBLIC_API_BASE_URL: 'http://10.0.2.2:8000',
+  EXPO_PUBLIC_CATALOG_TERRITORY: 'FR',
 };
 
 const SENSITIVE_NAME = new RegExp(
@@ -89,7 +90,8 @@ function checkResolvedConfiguration() {
   const api = resolved?.extra?.api;
   if (
     api?.environment !== 'local' ||
-    api?.baseUrl !== REQUIRED_ENVIRONMENT.EXPO_PUBLIC_API_BASE_URL
+    api?.baseUrl !== REQUIRED_ENVIRONMENT.EXPO_PUBLIC_API_BASE_URL ||
+    api?.catalogTerritory !== REQUIRED_ENVIRONMENT.EXPO_PUBLIC_CATALOG_TERRITORY
   ) {
     fail(`extra.api was not resolved from the environment: ${JSON.stringify(api)}`);
     return;
@@ -111,7 +113,8 @@ function checkResolvedConfiguration() {
   }
 
   process.stdout.write(
-    `Expo public config resolved for environment "${api.environment}" -> ${api.baseUrl}; ` +
+    `Expo public config resolved for environment "${api.environment}" -> ${api.baseUrl} ` +
+      `(catalog territory ${api.catalogTerritory}); ` +
       'no sensitive keys or credential-shaped values present.\n',
   );
 }
@@ -142,6 +145,44 @@ function checkInvalidEnvironmentFails() {
   process.stdout.write('Invalid environment name fails the Expo config as required.\n');
 }
 
+function checkMissingTerritoryFails() {
+  const result = runExpoConfig({
+    EXPO_PUBLIC_API_ENVIRONMENT: 'local',
+    EXPO_PUBLIC_API_BASE_URL: 'http://10.0.2.2:8000',
+  });
+  if (result.status === 0) {
+    fail('expo config succeeded without EXPO_PUBLIC_CATALOG_TERRITORY; it must fail loudly.');
+    return;
+  }
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
+  if (!output.includes('EXPO_PUBLIC_CATALOG_TERRITORY')) {
+    fail('missing-territory failure did not name EXPO_PUBLIC_CATALOG_TERRITORY.');
+    return;
+  }
+  process.stdout.write(
+    'Missing catalog territory configuration fails the Expo config as required.\n',
+  );
+}
+
+function checkInvalidTerritoryFails() {
+  const result = runExpoConfig({
+    ...REQUIRED_ENVIRONMENT,
+    EXPO_PUBLIC_CATALOG_TERRITORY: 'FRA',
+  });
+  if (result.status === 0) {
+    fail('expo config accepted a catalog territory that is not ISO 3166-1 alpha-2.');
+    return;
+  }
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
+  if (!output.includes('EXPO_PUBLIC_CATALOG_TERRITORY')) {
+    fail('invalid-territory failure did not name EXPO_PUBLIC_CATALOG_TERRITORY.');
+    return;
+  }
+  process.stdout.write('Invalid catalog territory fails the Expo config as required.\n');
+}
+
 checkResolvedConfiguration();
 checkMissingEnvironmentFails();
 checkInvalidEnvironmentFails();
+checkMissingTerritoryFails();
+checkInvalidTerritoryFails();

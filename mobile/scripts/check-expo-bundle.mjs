@@ -19,6 +19,7 @@ const EXPO_CLI = createRequire(import.meta.url).resolve('expo/bin/cli');
 const REQUIRED_ENVIRONMENT = {
   EXPO_PUBLIC_API_ENVIRONMENT: 'local',
   EXPO_PUBLIC_API_BASE_URL: 'http://10.0.2.2:8000',
+  EXPO_PUBLIC_CATALOG_TERRITORY: 'FR',
 };
 
 const BUNDLE_EXTENSIONS = new Set(['.js', '.hbc']);

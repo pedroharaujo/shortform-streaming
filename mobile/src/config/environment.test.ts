@@ -1,6 +1,7 @@
 import {
   API_BASE_URL_VARIABLE,
   API_ENVIRONMENT_VARIABLE,
+  CATALOG_TERRITORY_VARIABLE,
   EnvironmentConfigurationError,
   resolveApiConfiguration,
 } from './environment';
@@ -8,6 +9,7 @@ import {
 const localEnvironment = {
   [API_ENVIRONMENT_VARIABLE]: 'local',
   [API_BASE_URL_VARIABLE]: 'http://10.0.2.2:8000',
+  [CATALOG_TERRITORY_VARIABLE]: 'FR',
 };
 
 describe('resolveApiConfiguration', () => {
@@ -15,6 +17,7 @@ describe('resolveApiConfiguration', () => {
     expect(resolveApiConfiguration(localEnvironment)).toEqual({
       environment: 'local',
       baseUrl: 'http://10.0.2.2:8000',
+      catalogTerritory: 'FR',
     });
   });
 
@@ -23,13 +26,21 @@ describe('resolveApiConfiguration', () => {
       resolveApiConfiguration({
         [API_ENVIRONMENT_VARIABLE]: ' staging ',
         [API_BASE_URL_VARIABLE]: ' https://api.staging.example/ ',
+        [CATALOG_TERRITORY_VARIABLE]: ' fr ',
       }),
-    ).toEqual({ environment: 'staging', baseUrl: 'https://api.staging.example' });
+    ).toEqual({
+      environment: 'staging',
+      baseUrl: 'https://api.staging.example',
+      catalogTerritory: 'FR',
+    });
   });
 
   it('fails when the environment name is absent instead of defaulting', () => {
     expect(() =>
-      resolveApiConfiguration({ [API_BASE_URL_VARIABLE]: 'https://api.example' }),
+      resolveApiConfiguration({
+        [API_BASE_URL_VARIABLE]: 'https://api.example',
+        [CATALOG_TERRITORY_VARIABLE]: 'FR',
+      }),
     ).toThrow(EnvironmentConfigurationError);
   });
 
@@ -40,9 +51,12 @@ describe('resolveApiConfiguration', () => {
   });
 
   it('fails when the base URL is absent', () => {
-    expect(() => resolveApiConfiguration({ [API_ENVIRONMENT_VARIABLE]: 'local' })).toThrow(
-      new RegExp(API_BASE_URL_VARIABLE),
-    );
+    expect(() =>
+      resolveApiConfiguration({
+        [API_ENVIRONMENT_VARIABLE]: 'local',
+        [CATALOG_TERRITORY_VARIABLE]: 'FR',
+      }),
+    ).toThrow(new RegExp(API_BASE_URL_VARIABLE));
   });
 
   it('rejects an unknown environment name', () => {
@@ -71,6 +85,7 @@ describe('resolveApiConfiguration', () => {
       resolveApiConfiguration({
         [API_ENVIRONMENT_VARIABLE]: 'production',
         [API_BASE_URL_VARIABLE]: 'http://api.example',
+        [CATALOG_TERRITORY_VARIABLE]: 'FR',
       }),
     ).toThrow(/must use https/);
   });
@@ -91,6 +106,45 @@ describe('resolveApiConfiguration', () => {
         [API_BASE_URL_VARIABLE]: 'http://someone:hunter2@10.0.2.2:8000',
       }),
     ).toThrow(/must not embed credentials/);
+  });
+
+  it('fails when the catalog territory is absent instead of inferring locale', () => {
+    expect(() =>
+      resolveApiConfiguration({
+        [API_ENVIRONMENT_VARIABLE]: 'local',
+        [API_BASE_URL_VARIABLE]: 'http://10.0.2.2:8000',
+        LANG: 'fr_FR.UTF-8',
+        LC_ALL: 'fr_FR.UTF-8',
+        LOCALE: 'fr_FR',
+      }),
+    ).toThrow(new RegExp(CATALOG_TERRITORY_VARIABLE));
+  });
+
+  it('fails when the catalog territory is blank', () => {
+    expect(() =>
+      resolveApiConfiguration({ ...localEnvironment, [CATALOG_TERRITORY_VARIABLE]: '   ' }),
+    ).toThrow(/is required/);
+  });
+
+  it('rejects a catalog territory that is not ISO 3166-1 alpha-2', () => {
+    expect(() =>
+      resolveApiConfiguration({ ...localEnvironment, [CATALOG_TERRITORY_VARIABLE]: 'FRA' }),
+    ).toThrow(/ISO 3166-1 alpha-2/);
+  });
+
+  it('does not take catalog territory from locale-shaped environment variables', () => {
+    expect(
+      resolveApiConfiguration({
+        ...localEnvironment,
+        LANG: 'de_DE.UTF-8',
+        LC_ALL: 'de_DE.UTF-8',
+        LOCALE: 'DE',
+      }),
+    ).toEqual({
+      environment: 'local',
+      baseUrl: 'http://10.0.2.2:8000',
+      catalogTerritory: 'FR',
+    });
   });
 
   it('refuses to build when a secret-shaped EXPO_PUBLIC_ variable is present', () => {

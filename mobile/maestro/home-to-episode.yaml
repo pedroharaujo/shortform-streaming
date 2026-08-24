@@ -1,0 +1,18 @@
+# Local Maestro flow for P2-T04 anonymous discovery.
+# Not executed in CI. Requires a development build, a running local API, and
+# seeded synthetic catalog data (Harbor Lights in territory FR).
+appId: com.shortformstreaming.app
+---
+- launchApp
+- extendedWaitUntil:
+    visible: Home
+    timeout: 20000
+- tapOn: Harbor Lights
+- extendedWaitUntil:
+    visible: 'Harbor Lights · Episode 1'
+    timeout: 10000
+- tapOn: 'Harbor Lights · Episode 1'
+- extendedWaitUntil:
+    visible: 'Selected episode'
+    timeout: 10000
+- assertVisible: 'Harbor Lights · Episode 1'

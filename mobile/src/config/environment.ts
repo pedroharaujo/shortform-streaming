@@ -10,6 +10,7 @@ export {
   API_BASE_URL_VARIABLE,
   API_ENVIRONMENTS,
   API_ENVIRONMENT_VARIABLE,
+  CATALOG_TERRITORY_VARIABLE,
   EnvironmentConfigurationError,
   resolveApiConfiguration,
 } from '../../app.config';
