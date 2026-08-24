@@ -7,6 +7,7 @@ dependencies = [
     "dj-database-url>=2.3,<3",
     "django>=5.2,<5.3",
     "djangorestframework>=3.16,<3.17",
+    "drf-spectacular>=0.28,<1",
     "psycopg[binary]>=3.2,<3.3",
 ]
 
@@ -42,3 +43,7 @@ mypy_path = "backend"
 
 [tool.django-stubs]
 django_settings_module = "config.settings.local"
+
+[[tool.mypy.overrides]]
+module = ["drf_spectacular.*"]
+ignore_missing_imports = true

@@ -22,9 +22,13 @@
 
 - `architecture/shortform-streaming.drawio` — system map, monorepo layout, and MVP workflows (home, playback, login, payments, rewarded ads, ingestion, analytics). Open in draw.io / diagrams.net.
 
+## API
+
+- `api/README.md` — OpenAPI generation, shared conventions, and contract-check commands.
+- `api/openapi.yaml` — generated OpenAPI document (do not edit by hand).
+
 ## Future documentation locations
 
-- `api/` — generated schema guidance and API conventions.
 - `analytics/` — event dictionary, metric contracts, and experiment records.
 - `runbooks/` — deployments, incidents, recovery, payments, rewards, and takedowns.
 

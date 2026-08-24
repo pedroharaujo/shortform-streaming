@@ -60,12 +60,12 @@ mobile (Expo) ---- HTTPS ---- backend (Django/DRF) ---- PostgreSQL
 
 - `backend/` contains the Django/DRF modular monolith, split settings, and backend tests.
 - `mobile/` contains the Expo/React Native development-client application (P1-T03).
-- `packages/api-client/` will contain the OpenAPI-generated TypeScript client (P1-T04).
+- `packages/api-client/` contains the OpenAPI-generated TypeScript client (P1-T04).
 - `infra/` holds environment and reusable infrastructure definitions when provisioning begins.
 - `docs/` contains product decisions, ADRs, contracts, analytics references, and runbooks.
 - `scripts/` and `tests/repository/` contain repository-wide deterministic checks.
 
-Later tasks add the domain applications, generated API client, and cloud infrastructure.
+Later tasks add the domain applications and cloud infrastructure.
 
 ## Common commands
 
@@ -81,7 +81,14 @@ Run all backend checks (PostgreSQL must be running for the test suite):
 pnpm backend:check
 ```
 
-Run the current repository-wide aggregate gate with `pnpm check`.
+Regenerate the OpenAPI document and TypeScript client, then fail if git shows drift:
+
+```shell
+pnpm contract:generate
+pnpm contract:check
+```
+
+Run the current repository-wide aggregate gate with `pnpm check` (includes `contract:check`).
 
 ## Local mobile bootstrap
 

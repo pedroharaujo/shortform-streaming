@@ -7,7 +7,10 @@ from urllib.parse import urlsplit
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 
+from config import spectacular as spectacular_config
+
 BASE_DIR = Path(__file__).resolve().parents[2]
+SPECTACULAR_SETTINGS = spectacular_config.SPECTACULAR_SETTINGS
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 DEBUG = False
@@ -17,6 +20,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "rest_framework",
+    "drf_spectacular",
     "apps.health",
 ]
 
@@ -67,4 +71,5 @@ TIME_ZONE = "UTC"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }

@@ -1,8 +1,9 @@
 /**
- * Hand-written request/response types for the backend health endpoints.
+ * Mobile probe outcomes for backend health endpoints.
  *
- * TEMPORARY: P1-T04 replaces this module with the OpenAPI-generated client in
- * `packages/api-client`. Do not grow this surface beyond the health probes.
+ * HTTP paths and JSON bodies come from `@shortform/api-client`. These types
+ * describe client-side mapping (timeout, unreachable, unknown JSON) that is
+ * not part of the OpenAPI document.
  */
 
 /** Response body of `GET /health/live` and `GET /health/ready`. */
