@@ -29,5 +29,24 @@ this command):
 uv run python backend/manage.py seed_catalog
 ```
 
-Later plan tasks own `accounts`, `playback`, `entitlements`, `commerce`,
-`advertising`, `experiments`, and `notifications`.
+`playback` is the video-provider and authorize bounded application created by
+P2-T05. Django never serves video bytes. Anonymous clients request a short-lived
+opaque HLS URL from:
+
+- `POST /v1/playback/{episode_id}/authorize`
+
+The same catalog context headers are required. Unknown, ineligible, or unmapped
+episodes return HTTP 404 `ErrorEnvelope`, never 403. An unset or disabled
+`VideoProvider` returns HTTP 503 `ErrorEnvelope` and never mints unsigned access.
+Local settings default to `VIDEO_PROVIDER=fake`. Production rejects `fake`.
+
+Later plan tasks own `accounts`, `entitlements`, `commerce`, `advertising`,
+`experiments`, and `notifications`. P2-T06 owns MediaAsset ingestion; this app
+maps spike episodes through `PLAYBACK_SPIKE_ASSETS` only.
+
+Generate 9:16 test media and submit it to Bunny Stream (requires non-production
+credentials; missing credentials are not a Bunny failure):
+
+```shell
+uv run python backend/manage.py spike_bunny_playback
+```

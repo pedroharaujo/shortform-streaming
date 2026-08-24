@@ -99,9 +99,16 @@ BEARER_SCHEME: dict[str, object] = {
 }
 
 HEALTH_PATHS = ("/health/live", "/health/ready")
-# Anonymous catalog (P2-T03). Keep these unauthenticated even if a later task
-# sets a global Firebase security requirement.
-UNAUTHENTICATED_PATH_PREFIXES = ("/health/", "/v1/catalog/", "/v1/series/", "/v1/episodes/")
+# Anonymous catalog (P2-T03) and playback authorize (P2-T05, free spike).
+# Keep these unauthenticated even if a later task sets a global Firebase
+# security requirement.
+UNAUTHENTICATED_PATH_PREFIXES = (
+    "/health/",
+    "/v1/catalog/",
+    "/v1/series/",
+    "/v1/episodes/",
+    "/v1/playback/",
+)
 
 
 def inject_shared_components(
@@ -141,10 +148,11 @@ SPECTACULAR_SETTINGS: dict[str, object] = {
         "HTTP API for the Shortform Streaming MVP. This document is generated from Django; "
         "do not edit docs/api/openapi.yaml by hand. Shared conventions (error envelope, "
         "cursor pagination, opaque public IDs, and Firebase ID-token bearer auth) are "
-        "documented as components. Health probes and anonymous catalog reads are "
-        "unauthenticated. Catalog operations require explicit X-Territory, X-Platform, "
-        "and X-Language headers; those values are never inferred from Accept-Language. "
-        "Firebase token verification is not implemented in this task."
+        "documented as components. Health probes, anonymous catalog reads, and anonymous "
+        "playback authorize are unauthenticated. Catalog and playback operations require "
+        "explicit X-Territory, X-Platform, and X-Language headers; those values are never "
+        "inferred from Accept-Language. Firebase token verification is not implemented in "
+        "this task. Django never serves video bytes."
     ),
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,

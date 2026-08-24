@@ -25,6 +25,7 @@ _SAFE_DEFAULT_MESSAGES: dict[int, str] = {
     status.HTTP_405_METHOD_NOT_ALLOWED: "Method not allowed.",
     status.HTTP_429_TOO_MANY_REQUESTS: "Too many requests.",
     status.HTTP_500_INTERNAL_SERVER_ERROR: "An internal error occurred.",
+    status.HTTP_503_SERVICE_UNAVAILABLE: "The service is temporarily unavailable.",
 }
 
 

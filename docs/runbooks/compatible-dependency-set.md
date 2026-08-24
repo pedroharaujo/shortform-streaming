@@ -26,7 +26,7 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 | Mobile runtime | `react` | 19.2.3 |
 | Mobile runtime | `react-native` | 0.86.2 |
 | Mobile runtime | `react-native-safe-area-context` | ~5.7.0 |
-| Mobile runtime | `react-native-screens` | ~4.26.0 |
+| Mobile runtime | `expo-video` | ~57.0.2 |
 | Mobile tooling | `eslint` | ^9.39.5 (9.x only) |
 | Mobile tooling | `eslint-config-expo` | ~57.0.1 |
 | Mobile tooling | `typescript` | ~6.0.3 |
@@ -64,6 +64,7 @@ Ignore rules live in `.github/dependabot.yml`. They block only known-incompatibl
 - `@types/jest` `>=30.0.0` — keep types on the Jest 29 line
 - `react-native-screens` `>=4.27.0` — expo-doctor expects `~4.26.0` (SDK 57 table); Dependabot PR #38 is an expected failure
 - `react-native-safe-area-context` `>=5.8.0` — expo-doctor expects `~5.7.0` (SDK 57 table); Dependabot PR #39 is an expected failure
+- `expo-video` `>=58.0.0` — stay on the Expo SDK 57 table; do not jump to Expo 58
 
 **uv**
 

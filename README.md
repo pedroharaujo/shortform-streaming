@@ -45,7 +45,14 @@ optional synthetic FR/DE titles (generated metadata only):
 ```shell
 uv run python backend/manage.py createsuperuser
 uv run python backend/manage.py seed_catalog
+uv run python backend/manage.py spike_bunny_playback
 ```
+
+`spike_bunny_playback` generates 9:16 test media and uploads it through
+`VideoProvider`. It no-ops with a clear error when `VIDEO_PROVIDER` is `fake` or
+Bunny credentials are missing (that is not a Bunny failure). See
+[docs/runbooks/playback-spike.md](./docs/runbooks/playback-spike.md). Never
+commit keys or paste signed URLs.
 
 Anonymous catalog reads require explicit `X-Territory` (ISO 3166-1 alpha-2),
 `X-Platform` (`ios` or `android`), and `X-Language` (ISO 639-1, MVP `en`) headers.
