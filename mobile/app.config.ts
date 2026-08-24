@@ -24,10 +24,14 @@ export type ApiEnvironment = (typeof API_ENVIRONMENTS)[number];
 export interface ApiConfiguration {
   readonly environment: ApiEnvironment;
   readonly baseUrl: string;
+  readonly catalogTerritory: string;
 }
 
 export const API_ENVIRONMENT_VARIABLE = 'EXPO_PUBLIC_API_ENVIRONMENT';
 export const API_BASE_URL_VARIABLE = 'EXPO_PUBLIC_API_BASE_URL';
+export const CATALOG_TERRITORY_VARIABLE = 'EXPO_PUBLIC_CATALOG_TERRITORY';
+
+const ISO_3166_1_ALPHA_2 = /^[A-Za-z]{2}$/;
 
 export class EnvironmentConfigurationError extends Error {
   constructor(message: string) {
@@ -93,6 +97,16 @@ function parseBaseUrl(rawValue: string, environment: ApiEnvironment): string {
   return parsed.origin + parsed.pathname.replace(/\/+$/, '');
 }
 
+function parseCatalogTerritory(rawValue: string): string {
+  if (!ISO_3166_1_ALPHA_2.test(rawValue)) {
+    throw new EnvironmentConfigurationError(
+      `${CATALOG_TERRITORY_VARIABLE} must be ISO 3166-1 alpha-2, for example FR. ` +
+        'It is never inferred from device locale or Accept-Language.',
+    );
+  }
+  return rawValue.toUpperCase();
+}
+
 /**
  * Reject any `EXPO_PUBLIC_*` variable whose name suggests a secret, because
  * every such value is inlined into the client bundle.
@@ -126,8 +140,9 @@ export function resolveApiConfiguration(
   }
 
   const baseUrl = parseBaseUrl(requireValue(source, API_BASE_URL_VARIABLE), rawEnvironment);
+  const catalogTerritory = parseCatalogTerritory(requireValue(source, CATALOG_TERRITORY_VARIABLE));
 
-  return { environment: rawEnvironment, baseUrl };
+  return { environment: rawEnvironment, baseUrl, catalogTerritory };
 }
 
 export default ({ config }: ConfigContext): ExpoConfig => {

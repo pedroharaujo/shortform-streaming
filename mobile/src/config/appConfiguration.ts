@@ -30,7 +30,11 @@ export function readApiConfiguration(extra: ExtraShape | null | undefined): ApiC
     );
   }
 
-  const { environment, baseUrl } = candidate as { environment?: unknown; baseUrl?: unknown };
+  const { environment, baseUrl, catalogTerritory } = candidate as {
+    environment?: unknown;
+    baseUrl?: unknown;
+    catalogTerritory?: unknown;
+  };
   if (!isApiEnvironment(environment)) {
     throw new EnvironmentConfigurationError(
       `Expo manifest extra.api.environment must be one of ${API_ENVIRONMENTS.join(', ')}.`,
@@ -41,8 +45,13 @@ export function readApiConfiguration(extra: ExtraShape | null | undefined): ApiC
       'Expo manifest extra.api.baseUrl must be a non-empty absolute URL.',
     );
   }
+  if (typeof catalogTerritory !== 'string' || !/^[A-Z]{2}$/.test(catalogTerritory)) {
+    throw new EnvironmentConfigurationError(
+      'Expo manifest extra.api.catalogTerritory must be ISO 3166-1 alpha-2, for example FR.',
+    );
+  }
 
-  return { environment, baseUrl };
+  return { environment, baseUrl, catalogTerritory };
 }
 
 export function getApiConfiguration(): ApiConfiguration {

@@ -7,6 +7,7 @@ import { BackendHealthScreen } from './BackendHealthScreen';
 const configuration: ApiConfiguration = {
   environment: 'local',
   baseUrl: 'http://10.0.2.2:8000',
+  catalogTerritory: 'FR',
 };
 
 function stubClient(snapshot: BackendHealthSnapshot, onProbeAll?: () => void): HealthClient {

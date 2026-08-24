@@ -1,16 +1,30 @@
+import { router } from 'expo-router';
 import type { JSX } from 'react';
 import { useMemo } from 'react';
+import { Platform } from 'react-native';
 
-import { createHealthClient } from '../src/api/health/healthClient';
+import { createCatalogClient } from '../src/api/catalog/catalogClient';
+import { resolveCatalogPlatform } from '../src/api/catalog/catalogPlatform';
 import { getApiConfiguration } from '../src/config/appConfiguration';
-import { BackendHealthScreen } from '../src/features/health/BackendHealthScreen';
+import { HomeCatalogScreen } from '../src/features/catalog/HomeCatalogScreen';
 
-export default function HealthRoute(): JSX.Element {
+export default function HomeRoute(): JSX.Element {
   const configuration = useMemo(() => getApiConfiguration(), []);
   const client = useMemo(
-    () => createHealthClient({ baseUrl: configuration.baseUrl }),
-    [configuration.baseUrl],
+    () =>
+      createCatalogClient({
+        baseUrl: configuration.baseUrl,
+        territory: configuration.catalogTerritory,
+        platform: resolveCatalogPlatform(Platform.OS),
+      }),
+    [configuration.baseUrl, configuration.catalogTerritory],
   );
 
-  return <BackendHealthScreen client={client} configuration={configuration} />;
+  return (
+    <HomeCatalogScreen
+      client={client}
+      onOpenHealth={() => router.push('/health')}
+      onSelectSeries={(seriesId) => router.push(`/series/${seriesId}`)}
+    />
+  );
 }
