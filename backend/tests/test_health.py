@@ -35,3 +35,7 @@ def test_ready_fails_safely_without_database(client: Client) -> None:
 
     assert response.status_code == 503
     assert response.json() == {"status": "unavailable"}
+
+
+def test_p1_t05_probe_known_failure() -> None:
+    raise AssertionError("P1-T05 probe: this failure should turn Application CI red")
