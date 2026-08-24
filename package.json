@@ -14,12 +14,14 @@
     "backend:typecheck": "uv run mypy backend",
     "backend:migrations:check": "uv run python backend/manage.py makemigrations --check --dry-run",
     "backend:test": "uv run pytest backend/tests",
+    "backend:test:coverage": "uv run pytest backend/tests --cov=apps --cov=config --cov-report=term-missing",
     "backend:check": "pnpm backend:lint && pnpm backend:format:check && pnpm backend:typecheck && pnpm backend:migrations:check && pnpm backend:test",
     "mobile:lint": "pnpm --filter @shortform/mobile lint",
     "mobile:format:check": "pnpm --filter @shortform/mobile format:check",
     "mobile:typecheck": "pnpm --filter @shortform/mobile typecheck",
     "mobile:test": "pnpm --filter @shortform/mobile test",
     "mobile:config:check": "pnpm --filter @shortform/mobile config:check",
+    "mobile:bundle:check": "pnpm --filter @shortform/mobile bundle:check",
     "mobile:check": "pnpm mobile:lint && pnpm mobile:format:check && pnpm mobile:typecheck && pnpm mobile:test && pnpm mobile:config:check"
   }
 }

@@ -1,0 +1,191 @@
+name: Application CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: application-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Path filter
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      container: ${{ steps.filter.outputs.container }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Classify changed paths
+        id: filter
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          CI_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: python scripts/ci_path_filters.py >> "$GITHUB_OUTPUT"
+
+  backend:
+    name: Backend
+    needs: changes
+    if: ${{ needs.changes.result == 'success' && needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://shortform@127.0.0.1:5432/shortform
+      DJANGO_SETTINGS_MODULE: config.settings.local
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_DB: shortform
+          POSTGRES_USER: shortform
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U shortform -d shortform"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+          --health-start-period 5s
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install Python dependencies
+        run: uv sync --locked
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint backend
+        run: pnpm backend:lint
+      - name: Check backend formatting
+        run: pnpm backend:format:check
+      - name: Typecheck backend
+        run: pnpm backend:typecheck
+      - name: Check backend migrations
+        run: pnpm backend:migrations:check
+      - name: Test backend with coverage
+        run: pnpm backend:test:coverage
+
+  mobile:
+    name: Mobile
+    needs: changes
+    if: ${{ needs.changes.result == 'success' && needs.changes.outputs.mobile == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_PUBLIC_API_ENVIRONMENT: local
+      EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:8000
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint mobile
+        run: pnpm mobile:lint
+      - name: Check mobile formatting
+        run: pnpm mobile:format:check
+      - name: Typecheck mobile
+        run: pnpm mobile:typecheck
+      - name: Test mobile
+        run: pnpm mobile:test
+      - name: Check Expo public config
+        run: pnpm mobile:config:check
+      - name: Export production JavaScript bundles
+        run: pnpm mobile:bundle:check
+
+  container:
+    name: Container
+    needs: changes
+    if: ${{ needs.changes.result == 'success' && needs.changes.outputs.container == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build backend image
+        run: docker build -f backend/Dockerfile -t shortform-backend:ci .
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+
+  application-ci:
+    name: Application CI
+    if: always()
+    needs:
+      - changes
+      - backend
+      - mobile
+      - container
+      - dependency-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail when a needed application job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "Application CI failed because a needed job failed or was cancelled."
+          echo "changes=${{ needs.changes.result }}"
+          echo "backend=${{ needs.backend.result }}"
+          echo "mobile=${{ needs.mobile.result }}"
+          echo "container=${{ needs.container.result }}"
+          echo "dependency-review=${{ needs.dependency-review.result }}"
+          exit 1
+      - name: Record successful application gate
+        run: |
+          echo "Application CI passed. Skipped path-filtered jobs do not fail this gate."
+          echo "changes=${{ needs.changes.result }}"
+          echo "backend=${{ needs.backend.result }}"
+          echo "mobile=${{ needs.mobile.result }}"
+          echo "container=${{ needs.container.result }}"
+          echo "dependency-review=${{ needs.dependency-review.result }}"

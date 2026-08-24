@@ -1,4 +1,5 @@
 .expo/
+.tmp/
 android/
 coverage/
 dist/

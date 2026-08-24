@@ -1,6 +1,6 @@
 # Repository Controls Runbook
 
-P1-T01 combines versioned controls with GitHub settings. The repository files create the `Repository safety` workflow and its `Repository foundation` check; the remote settings below must be configured and independently verified by the orchestrator or repository owner.
+P1-T01 combines versioned controls with GitHub settings. The repository files create the `Repository safety` workflow and its `Repository foundation` check, plus the always-reporting `Application CI` gate. The remote settings below must be configured and independently verified by the orchestrator or repository owner. GitHub rulesets are not mutated from this repository; a human applies the required-check names after merge.
 
 ## Required `main` ruleset
 
@@ -8,19 +8,21 @@ Configure a branch ruleset targeting the default branch, `main`, with:
 
 - pull requests required before merge;
 - all review conversations resolved;
-- the `Repository foundation` status check required and the branch required to be current before merge;
+- the `Repository foundation` and `Application CI` status checks required and the branch required to be current before merge;
 - branch deletion and force pushes blocked, including for administrators where GitHub permits;
 - no routinely usable bypass; any emergency role must be explicitly documented and limited to incident recovery.
 
 ### Solo-founder review mode
 
-While the repository has only one human collaborator capable of reviewing, configure required approving reviews to `0` and do not require a `CODEOWNERS` review. GitHub does not permit the pull-request author to approve their own pull request, so requiring either control in this state would make every merge depend on a routine bypass. Pull requests, an up-to-date branch, the `Repository foundation` check, resolved conversations, and the deletion and force-push protections remain mandatory.
+While the repository has only one human collaborator capable of reviewing, configure required approving reviews to `0` and do not require a `CODEOWNERS` review. GitHub does not permit the pull-request author to approve their own pull request, so requiring either control in this state would make every merge depend on a routine bypass. Pull requests, an up-to-date branch, the `Repository foundation` and `Application CI` checks, resolved conversations, and the deletion and force-push protections remain mandatory.
 
 Independent implementer, reviewer, and verifier agent records remain required development evidence. They do not count as, and must not be represented as, a human GitHub approval.
 
 As soon as a second trusted human reviewer is added, make the transition as one controlled change. First add that human or trusted team, with the repository access GitHub requires (including write access when required), to every applicable pattern in `CODEOWNERS`. Validate coverage, then confirm that a pull request from the founder and a pull request from the new collaborator would each have an independent, eligible human code owner and reviewer. Only after those checks pass, update the `main` ruleset to require at least one approving review, dismiss stale approvals after new commits, and require review from the applicable owner in `CODEOWNERS`. Do not enable a partial configuration that would leave either author without an eligible independent reviewer. This transition is also a mandatory gate before operating as a team or starting beta, when either milestone is applicable; reviewer capacity must be resolved first.
 
 Do not make the path-filtered `AI governance` workflow a required check by itself: GitHub may not create that check for unrelated changes. The always-running `Repository foundation` check executes the same governance validator on every pull request.
+
+Do not require path-filtered job names such as `Backend`, `Mobile`, `Container`, `Path filter`, or `Dependency review`. GitHub skips those jobs when the pull request does not touch matching paths, and a missing required check blocks merge indefinitely. Require the always-reporting `Application CI` job instead: it runs with `if: always()`, succeeds when expensive jobs are skipped, and fails if a needed job failed or was cancelled. `OpenAPI contract` is separately always-on and required-check-safe, but it is not a substitute for `Application CI`.
 
 ## Required repository security settings
 
