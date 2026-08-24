@@ -21,7 +21,9 @@ updates:
   # JavaScript: Expo SDK 57 table (RN 0.86, React 19.2.3, ESLint 9, Expo 57,
   # jest ~29.7). eslint-config-expo 57 crashes on ESLint 10 (expo/expo#46717).
   # TypeScript 7 is ignored until Expo SDK accepts it. Expo SDK 57 / jest-expo
-  # 57 expect Jest 29; ignore jest / @types/jest 30+. Ignore only
+  # 57 expect Jest 29; ignore jest / @types/jest 30+. Expo-pinned navigation
+  # packages (react-native-screens ~4.26.x, react-native-safe-area-context
+  # ~5.7.x) are ignored above their SDK table lines. Ignore only
   # known-incompatible majors; patch/minor and security updates on the
   # compatible line still open.
   - package-ecosystem: npm
@@ -54,6 +56,10 @@ updates:
         versions: [">=30.0.0"]
       - dependency-name: "@types/jest"
         versions: [">=30.0.0"]
+      - dependency-name: react-native-screens
+        versions: [">=4.27.0"]
+      - dependency-name: react-native-safe-area-context
+        versions: [">=5.8.0"]
   # Docker: requires-python is >=3.12,<3.15; keep the 3.14 image line.
   - package-ecosystem: docker
     directory: /backend

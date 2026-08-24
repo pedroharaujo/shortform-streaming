@@ -221,6 +221,8 @@ class RepositoryFoundationTests(unittest.TestCase):
             "typescript": ">=7.0.0",
             "jest": ">=30.0.0",
             "@types/jest": ">=30.0.0",
+            "react-native-screens": ">=4.27.0",
+            "react-native-safe-area-context": ">=5.8.0",
         }
         for name, version in npm_expected.items():
             with self.subTest(ecosystem="npm", dependency=name):
