@@ -38,6 +38,24 @@ process-only. Readiness performs a bounded `SELECT 1` and returns HTTP 503 with 
 non-sensitive payload `{"status":"unavailable"}` if PostgreSQL cannot be reached.
 Stop local services without deleting their named data volume with `docker compose down`.
 
+Staff catalog management uses Django Admin at `http://127.0.0.1:8000/admin/` (local
+`DEBUG` + `runserver`; production collectstatic is P5-T02). Create a staff user and
+optional synthetic FR/DE titles (generated metadata only):
+
+```shell
+uv run python backend/manage.py createsuperuser
+uv run python backend/manage.py seed_catalog
+```
+
+Anonymous catalog reads require explicit `X-Territory` (ISO 3166-1 alpha-2),
+`X-Platform` (`ios` or `android`), and `X-Language` (ISO 639-1, MVP `en`) headers.
+Those values are never inferred from `Accept-Language`.
+
+```shell
+curl -sS -H "X-Territory: FR" -H "X-Platform: ios" -H "X-Language: en" \
+  http://127.0.0.1:8000/v1/catalog/home
+```
+
 Local Django accepts `10.0.2.2` as a host so an Android emulator can reach this server
 through that alias. Keep `runserver` on `127.0.0.1:8000`; the emulator still maps
 `10.0.2.2` to the host loopback.

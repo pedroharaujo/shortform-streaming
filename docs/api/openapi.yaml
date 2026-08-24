@@ -6,8 +6,10 @@ info:
   description: HTTP API for the Shortform Streaming MVP. This document is generated
     from Django; do not edit docs/api/openapi.yaml by hand. Shared conventions (error
     envelope, cursor pagination, opaque public IDs, and Firebase ID-token bearer auth)
-    are documented as components. Health probes are unauthenticated. Firebase token
-    verification is not implemented in this schema-only task.
+    are documented as components. Health probes and anonymous catalog reads are unauthenticated.
+    Catalog operations require explicit X-Territory, X-Platform, and X-Language headers;
+    those values are never inferred from Accept-Language. Firebase token verification
+    is not implemented in this task.
 paths:
   /health/live:
     get:
@@ -45,8 +47,310 @@ paths:
                 $ref: '#/components/schemas/HealthStatus'
           description: PostgreSQL is unreachable or the probe query failed.
       security: []
+  /v1/catalog/home:
+    get:
+      operationId: v1_catalog_home_retrieve
+      description: Small rails document of series eligible for the explicit request
+        territory, platform, language, and current time. Not a CursorPage. Catalog
+        is tiny; home is not paginated in P2-T03. Missing or malformed context headers
+        are 400. A well-formed context with no eligible titles is 200 with an empty
+        featured rail.
+      summary: Home catalog rails
+      parameters:
+      - in: header
+        name: X-Language
+        schema:
+          type: string
+        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
+          from Accept-Language.'
+        required: true
+      - in: header
+        name: X-Platform
+        schema:
+          type: string
+          enum:
+          - android
+          - ios
+        description: 'Client platform. Required. Values: ios, android.'
+        required: true
+      - in: header
+        name: X-Territory
+        schema:
+          type: string
+        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
+          inferred from Accept-Language or UI language.
+        required: true
+      tags:
+      - catalog
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogHome'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing or malformed catalog context headers.
+      security: []
+  /v1/episodes/{public_id}:
+    get:
+      operationId: v1_episodes_retrieve
+      description: Localized episode detail. The episode is eligible only when its
+        series is eligible and the episode is published within its optional window.
+        Ineligible ids return 404, never 403. Monetization lock state is omitted.
+      summary: Episode detail
+      parameters:
+      - in: header
+        name: X-Language
+        schema:
+          type: string
+        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
+          from Accept-Language.'
+        required: true
+      - in: header
+        name: X-Platform
+        schema:
+          type: string
+          enum:
+          - android
+          - ios
+        description: 'Client platform. Required. Values: ios, android.'
+        required: true
+      - in: header
+        name: X-Territory
+        schema:
+          type: string
+        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
+          inferred from Accept-Language or UI language.
+        required: true
+      - in: path
+        name: public_id
+        schema:
+          $ref: '#/components/schemas/PublicId'
+        description: Opaque public identifier. Sequential database integers are never
+          used as public IDs.
+        required: true
+      tags:
+      - catalog
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogEpisodeDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing or malformed catalog context headers.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or ineligible public id. Does not confirm whether the
+            id exists.
+      security: []
+  /v1/series/{public_id}:
+    get:
+      operationId: v1_series_retrieve
+      description: Localized series detail with ordered published episodes. Ineligible
+        or unpublished public ids return 404 ErrorEnvelope, never 403.
+      summary: Series detail
+      parameters:
+      - in: header
+        name: X-Language
+        schema:
+          type: string
+        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
+          from Accept-Language.'
+        required: true
+      - in: header
+        name: X-Platform
+        schema:
+          type: string
+          enum:
+          - android
+          - ios
+        description: 'Client platform. Required. Values: ios, android.'
+        required: true
+      - in: header
+        name: X-Territory
+        schema:
+          type: string
+        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
+          inferred from Accept-Language or UI language.
+        required: true
+      - in: path
+        name: public_id
+        schema:
+          $ref: '#/components/schemas/PublicId'
+        description: Opaque public identifier. Sequential database integers are never
+          used as public IDs.
+        required: true
+      tags:
+      - catalog
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogSeriesDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing or malformed catalog context headers.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or ineligible public id. Does not confirm whether the
+            id exists.
+      security: []
 components:
   schemas:
+    CatalogEpisodeDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        synopsis:
+          type: string
+        duration_seconds:
+          type: integer
+        order:
+          type: integer
+        series_id:
+          type: string
+        season_number:
+          type: integer
+      required:
+      - duration_seconds
+      - id
+      - order
+      - season_number
+      - series_id
+      - synopsis
+      - title
+    CatalogEpisodeSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Opaque episode public id.
+        order:
+          type: integer
+        duration_seconds:
+          type: integer
+        title:
+          type: string
+        synopsis:
+          type: string
+      required:
+      - duration_seconds
+      - id
+      - order
+      - synopsis
+      - title
+    CatalogHome:
+      type: object
+      properties:
+        rails:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogRail'
+      required:
+      - rails
+    CatalogRail:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogSeriesCard'
+      required:
+      - id
+      - series
+      - title
+    CatalogSeason:
+      type: object
+      properties:
+        number:
+          type: integer
+        episodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogEpisodeSummary'
+      required:
+      - episodes
+      - number
+    CatalogSeriesCard:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Opaque series public id.
+        title:
+          type: string
+        synopsis:
+          type: string
+        artwork_url:
+          type: string
+          nullable: true
+        original_language:
+          type: string
+      required:
+      - artwork_url
+      - id
+      - original_language
+      - synopsis
+      - title
+    CatalogSeriesDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        synopsis:
+          type: string
+        artwork_url:
+          type: string
+          nullable: true
+        original_language:
+          type: string
+        genres:
+          type: array
+          items:
+            type: string
+        seasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogSeason'
+      required:
+      - artwork_url
+      - genres
+      - id
+      - original_language
+      - seasons
+      - synopsis
+      - title
     CursorPage:
       type: object
       description: Cursor-paginated list envelope. `cursor` and `next` are opaque

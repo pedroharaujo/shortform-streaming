@@ -1,6 +1,33 @@
 # Backend application boundary
 
-`health` is the infrastructure health application created by P1-T02. Later plan tasks own
-the `accounts`, `catalog`, `playback`, `entitlements`, `commerce`, `advertising`,
-`experiments`, and `notifications` bounded applications; they are intentionally not
-pre-created as empty runtime modules.
+`health` is the infrastructure health application created by P1-T02.
+
+`catalog` is the rights-aware catalog bounded application created by P2-T03. Staff
+manage Series, Season, Episode, Genre, localized text, and ContentRight records in
+Django Admin (`/admin/`). Anonymous clients read eligible titles from:
+
+- `GET /v1/catalog/home`
+- `GET /v1/series/{public_id}`
+- `GET /v1/episodes/{public_id}`
+
+Every catalog read requires explicit `X-Territory` (ISO 3166-1 alpha-2),
+`X-Platform` (`ios` or `android`), and `X-Language` (ISO 639-1, MVP `en`) headers.
+Those values are never inferred from `Accept-Language`. Missing or malformed
+headers return HTTP 400 `ErrorEnvelope`. Ineligible or unpublished public ids
+return HTTP 404 `ErrorEnvelope`, never 403.
+
+Eligibility is fail-closed at request time: published, not taken down, current
+time inside the rights window (start inclusive, end exclusive), request territory
+on the allowlist and not on the denylist, request platform in the grant, and
+request language in the licensed original/subtitle/dub grant. Original language
+is metadata, not an implicit grant.
+
+Seed synthetic FR and DE titles (generated metadata only; tests do not depend on
+this command):
+
+```shell
+uv run python backend/manage.py seed_catalog
+```
+
+Later plan tasks own `accounts`, `playback`, `entitlements`, `commerce`,
+`advertising`, `experiments`, and `notifications`.

@@ -11,10 +11,12 @@ These shared shapes are published even while only health operations exist:
 | `ErrorEnvelope` / `FieldError` | Error `code`, safe `message`, `request_id` (correlation ID), optional `field_errors` |
 | `CursorPage` | Cursor pagination: opaque `cursor`, `next`, and `results` |
 | `PublicId` | Opaque public string identifier (never a sequential database integer) |
-| `FirebaseIdToken` | HTTP Bearer scheme for a Firebase ID token; **not** applied to health |
+| `FirebaseIdToken` | HTTP Bearer scheme for a Firebase ID token; **not** applied to health or anonymous catalog |
 | `HealthStatus` | `{ "status": "ok" \| "unavailable" }` for `/health/live` and `/health/ready` |
 
-Health probes stay unauthenticated. Firebase token verification is a later task.
+Health probes stay unauthenticated. Anonymous catalog reads (`GET /v1/catalog/home`, `GET /v1/series/{public_id}`, `GET /v1/episodes/{public_id}`) are also unauthenticated and require explicit `X-Territory`, `X-Platform`, and `X-Language` headers. Those headers are never inferred from `Accept-Language`. Missing or malformed headers are HTTP 400 `ErrorEnvelope`. Ineligible public ids are HTTP 404 `ErrorEnvelope`. Firebase token verification is a later task.
+
+Home is a small rails document, not a `CursorPage`.
 
 ## Regeneration
 
