@@ -62,6 +62,8 @@ Ignore rules live in `.github/dependabot.yml`. They block only known-incompatibl
 - `typescript` `>=7.0.0`
 - `jest` `>=30.0.0` — Expo SDK 57 / jest-expo 57 expect Jest 29
 - `@types/jest` `>=30.0.0` — keep types on the Jest 29 line
+- `react-native-screens` `>=4.27.0` — expo-doctor expects `~4.26.0` (SDK 57 table); Dependabot PR #38 is an expected failure
+- `react-native-safe-area-context` `>=5.8.0` — expo-doctor expects `~5.7.0` (SDK 57 table); Dependabot PR #39 is an expected failure
 
 **uv**
 
