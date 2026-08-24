@@ -201,6 +201,37 @@ class RepositoryFoundationTests(unittest.TestCase):
                 self.assertIn(f"package-ecosystem: {ecosystem}", dependabot)
         self.assertIn("directory: /backend", dependabot)
 
+    def test_dependabot_ignores_incompatible_majors(self) -> None:
+        dependabot = (ROOT / ".github/dependabot.yml").read_text(encoding="utf-8")
+        npm = self._dependabot_ignored_ranges(dependabot, "npm")
+        uv = self._dependabot_ignored_ranges(dependabot, "uv")
+        docker = self._dependabot_ignored_ranges(dependabot, "docker")
+
+        npm_expected = {
+            "react-native": ">=0.87.0",
+            "eslint": ">=10.0.0",
+            "react": ">19.2.3",
+            "react-test-renderer": ">19.2.3",
+            "expo": ">=58.0.0",
+            "expo-router": ">=58.0.0",
+            "expo-constants": ">=58.0.0",
+            "jest-expo": ">=58.0.0",
+            "eslint-config-expo": ">=58.0.0",
+            "typescript": ">=7.0.0",
+        }
+        for name, version in npm_expected.items():
+            with self.subTest(ecosystem="npm", dependency=name):
+                self.assertIn(name, npm)
+                self.assertIn(version, npm[name])
+
+        for name, version in (("django", ">=6.2"), ("django-stubs", ">=6.2")):
+            with self.subTest(ecosystem="uv", dependency=name):
+                self.assertIn(name, uv)
+                self.assertIn(version, uv[name])
+
+        self.assertIn("python", docker)
+        self.assertIn(">=3.15", docker["python"])
+
     def test_backend_dockerfile_is_secret_free_build_smoke(self) -> None:
         dockerfile = (ROOT / "backend/Dockerfile").read_text(encoding="utf-8")
         self.assertIn("uv sync --locked", dockerfile)
@@ -208,6 +239,27 @@ class RepositoryFoundationTests(unittest.TestCase):
         self.assertNotIn("DATABASE_URL", dockerfile)
         self.assertNotIn("config.settings.production", dockerfile)
         self.assertNotIn("docker push", dockerfile)
+
+    def _dependabot_ecosystem_block(self, config: str, ecosystem: str) -> str:
+        matches = list(re.finditer(r"(?m)^  - package-ecosystem: (\S+)\s*$", config))
+        self.assertTrue(matches, "dependabot.yml has no package-ecosystem entries")
+        for index, match in enumerate(matches):
+            if match.group(1) == ecosystem:
+                end = matches[index + 1].start() if index + 1 < len(matches) else len(config)
+                return config[match.start() : end]
+        self.fail(f"missing package-ecosystem: {ecosystem}")
+        return ""
+
+    def _dependabot_ignored_ranges(self, config: str, ecosystem: str) -> dict[str, list[str]]:
+        block = self._dependabot_ecosystem_block(config, ecosystem)
+        ignores: dict[str, list[str]] = {}
+        for match in re.finditer(
+            r'dependency-name:\s*["\']?([^"\'\s]+)["\']?\s*\n\s*versions:\s*\[([^\]]+)\]',
+            block,
+        ):
+            versions = [item.strip().strip("\"'") for item in match.group(2).split(",") if item.strip()]
+            ignores[match.group(1)] = versions
+        return ignores
 
     def _assert_every_action_is_pinned(self, workflow: str) -> None:
         for line in workflow.splitlines():

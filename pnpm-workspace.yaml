@@ -6,8 +6,41 @@ packages:
 # layout; Expo documents this setting for pnpm monorepos.
 nodeLinker: hoisted
 
+# Expo SDK 57 compatibility: transitives must not pull RN 0.87 or React 19.2.8.
+# @react-native/metro-config is an optional peer of RN 0.86; without an override
+# pnpm resolves it to latest 0.87 and pulls the 0.87 metro toolchain.
+overrides:
+  react: "19.2.3"
+  react-native: "0.86.2"
+  react-test-renderer: "19.2.3"
+  "@react-native/metro-config": "0.86.2"
+
 # Install scripts are denied by default. Every entry below is an explicit,
 # justified exception and must stay minimal.
 allowBuilds:
   # Native path resolver used by the ESLint import plugin in eslint-config-expo.
   unrs-resolver: true
+
+# pnpm 11 defaults minimumReleaseAge to 24h. Expo SDK 57.0.16 and its
+# matching 57.x packages were published 2026-08-24, inside that window.
+# Exclude only these exact versions so frozen CI installs succeed without
+# disabling the age gate for other packages.
+minimumReleaseAgeExclude:
+  - '@expo/cli@57.0.18'
+  - '@expo/config-plugins@57.0.9'
+  - '@expo/config@57.0.9'
+  - '@expo/fingerprint@0.20.10'
+  - '@expo/image-utils@0.11.5'
+  - '@expo/metro-config@57.0.10'
+  - '@expo/metro-file-map@57.0.2'
+  - '@expo/prebuild-config@57.0.14'
+  - '@expo/require-utils@57.0.5'
+  - babel-preset-expo@57.0.8
+  - expo-asset@57.0.14
+  - expo-constants@57.0.14
+  - expo-modules-autolinking@57.0.11
+  - expo-modules-core@57.0.13
+  - expo@57.0.16
+  - '@expo/metro-runtime@57.0.13'
+  - '@expo/ui@57.0.13'
+  - expo-router@57.0.16
