@@ -35,7 +35,7 @@ Codex project agents are defined in `.codex/agents/`. Cursor-compatible agents a
 - Every change must reference a GitHub issue or an explicit plan task ID.
 - Required issue states are documented in `ai/STATES.md`: `ai-ready`, `ai-in-progress`, `ai-review`, and `ai-verified`.
 - Do not start a task marked blocked or one whose dependencies/decisions are unresolved.
-- Use a short-lived branch or isolated worktree; never implement directly on `main`.
+- Use a short-lived isolated branch in the existing checkout; never implement directly on `main`. Do not create extra git worktrees.
 - Keep one task per pull request unless the issue explicitly justifies a split or grouping.
 
 ## Validation commands

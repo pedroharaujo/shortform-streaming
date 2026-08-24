@@ -17,7 +17,7 @@ Move one approved, bounded task through the development loop while preserving se
 1. Confirm `ai-ready`, dependencies, approved decisions, acceptance criteria, and the base revision.
 2. Before implementation, produce the Validation Manifest defined in `ai/workflows/development-loop.md`. Consult the optional, read-only validation planner only when scope is ambiguous, cross-boundary, or sensitive; the orchestrator remains accountable for the manifest.
 3. Move the task to `ai-in-progress`; define a bounded implementation hand-off including the manifest.
-4. Delegate to the implementer in an isolated branch/worktree.
+4. Delegate to the implementer on a short-lived isolated branch in the existing checkout. Do not create extra git worktrees.
 5. Move to `ai-review` and delegate a cold review after implementation evidence is complete.
 6. Return every BLOCKER/MAJOR finding to the implementer; repeat review after fixes and rerun the affected checks.
 7. Delegate verification only after blocking findings are cleared.

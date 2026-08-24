@@ -7,7 +7,7 @@ Codex is the primary environment. Cursor uses the same canonical contracts throu
 1. Create an issue with `.github/ISSUE_TEMPLATE/implementation-task.yml`.
 2. Fill the plan ID, dependencies/decisions, acceptance criteria, validation, and risks.
 3. Apply `ai-ready` only after its entry gate in `ai/STATES.md` is satisfied.
-4. Start from `main` in an isolated branch/worktree named from the plan task.
+4. Start from `main` on an isolated branch named from the plan task, in the existing checkout. Do not create extra git worktrees.
 
 ## Codex (primary)
 
@@ -32,7 +32,7 @@ Use the optional `validation-planner` only for ambiguous, cross-boundary, or sen
 
 ## Cursor (compatible)
 
-Project agents are in `.cursor/agents/`, with an always-applied pointer in `.cursor/rules/ai-native-workflow.mdc`. Ask the main Cursor agent to act as orchestrator and explicitly delegate to `implementer`, `reviewer`, and `verifier`; it may consult `validation-planner` under the same optional triggers. Use separate/background agents or worktrees so review contexts do not inherit implementation reasoning.
+Project agents are in `.cursor/agents/`, with an always-applied pointer in `.cursor/rules/ai-native-workflow.mdc`. Ask the main Cursor agent to act as orchestrator and explicitly delegate to `implementer`, `reviewer`, and `verifier`; it may consult `validation-planner` under the same optional triggers. Use separate/background agents so review contexts do not inherit implementation reasoning.
 
 Cursor Bugbot guidance is in `.cursor/BUGBOT.md`; Bugbot is an additional reviewer, never a replacement for verifier evidence or required checks.
 
