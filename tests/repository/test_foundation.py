@@ -25,6 +25,7 @@ REQUIRED_PATHS = (
     "docs/api/README.md",
     "docs/analytics/README.md",
     "docs/runbooks/repository-controls.md",
+    "docs/runbooks/compatible-dependency-set.md",
     "scripts/check_repository_foundation.py",
     "scripts/scan_secrets.py",
     "tests/repository/test_secret_scanner.py",
@@ -218,6 +219,8 @@ class RepositoryFoundationTests(unittest.TestCase):
             "jest-expo": ">=58.0.0",
             "eslint-config-expo": ">=58.0.0",
             "typescript": ">=7.0.0",
+            "jest": ">=30.0.0",
+            "@types/jest": ">=30.0.0",
         }
         for name, version in npm_expected.items():
             with self.subTest(ecosystem="npm", dependency=name):
