@@ -27,9 +27,14 @@
 - `api/README.md` — OpenAPI generation, shared conventions, and contract-check commands.
 - `api/openapi.yaml` — generated OpenAPI document (do not edit by hand).
 
+## Runbooks
+
+- `runbooks/repository-controls.md` — required `main` ruleset, security settings, and P1-T01 evidence/recovery.
+- `runbooks/compatible-dependency-set.md` — Expo SDK 57 / Django 6.1 compatible versions and Dependabot ignore policy (P1-T05A).
+
 ## Future documentation locations
 
-- `analytics/` — event dictionary, metric contracts, and experiment records.
-- `runbooks/` — deployments, incidents, recovery, payments, rewards, and takedowns.
+- `analytics/` — event dictionary, metric contracts, and experiment records. `analytics/README.md` is a placeholder until those tasks begin.
+- Additional runbooks for deployments, incidents, recovery, payments, rewards, and takedowns.
 
 Create these directories only when the corresponding implementation task produces real content; avoid empty placeholders.

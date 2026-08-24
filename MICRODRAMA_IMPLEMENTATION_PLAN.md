@@ -623,6 +623,25 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 - [ ] A known failing test blocks merge in a temporary branch.
 - [ ] A documentation-only change avoids unnecessary expensive jobs while required checks remain valid.
 
+#### P1-T05A — Align Dependabot drift to latest compatible versions
+
+**Description:** Follow-up to P1-T05. Restore the Expo SDK 57 and Django 6.1 mutually compatible dependency set after overlapping Dependabot merges, add ignore rules for known-incompatible majors, and restore Jest 29 after Dependabot PR #35 bumped Jest 30 (incompatible with jest-expo 57 / expo-doctor). Record the compatible set in `docs/runbooks/compatible-dependency-set.md`. Do not rewrite ADR 0002.
+
+**Objective:** Land one compatible set, keep Application CI Mobile green, and stop Dependabot from immediately reopening Expo/RN/ESLint/Jest-incompatible bumps.
+
+**Dependencies:** P1-T05.
+
+**Acceptance criteria:**
+
+- [ ] Manifests and lockfiles describe the Expo SDK 57 table (RN 0.86.x, React 19.2.3, ESLint 9.x, TypeScript 6.x, jest ~29.7 / @types/jest 29.5.14).
+- [ ] Django 6.1 with matching stubs; CI and Docker Python 3.14.
+- [ ] Dependabot ignores prevent immediate reopen of incompatible majors, including jest and @types/jest >=30.
+- [ ] The compatible set is recorded in `docs/runbooks/compatible-dependency-set.md`. ADR 0002 is not rewritten.
+
+**Validation and integration tests:**
+
+- [ ] Frozen lock install, repository foundation, expo-doctor, and mobile lint/types/tests/config/bundle checks pass.
+
 ### Checkpoint 1 — Engineering foundation
 
 - [ ] A new developer can clone, bootstrap, run API and mobile, and execute all checks.

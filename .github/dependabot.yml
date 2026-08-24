@@ -18,10 +18,12 @@ updates:
         versions: [">=6.2"]
       - dependency-name: django-stubs
         versions: [">=6.2"]
-  # JavaScript: Expo SDK 57 table (RN 0.86, React 19.2.3, ESLint 9, Expo 57).
-  # eslint-config-expo 57 crashes on ESLint 10 (expo/expo#46717). TypeScript 7
-  # is ignored until Expo SDK accepts it. Ignore only known-incompatible
-  # majors; patch/minor and security updates on the compatible line still open.
+  # JavaScript: Expo SDK 57 table (RN 0.86, React 19.2.3, ESLint 9, Expo 57,
+  # jest ~29.7). eslint-config-expo 57 crashes on ESLint 10 (expo/expo#46717).
+  # TypeScript 7 is ignored until Expo SDK accepts it. Expo SDK 57 / jest-expo
+  # 57 expect Jest 29; ignore jest / @types/jest 30+. Ignore only
+  # known-incompatible majors; patch/minor and security updates on the
+  # compatible line still open.
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -48,6 +50,10 @@ updates:
         versions: [">=58.0.0"]
       - dependency-name: typescript
         versions: [">=7.0.0"]
+      - dependency-name: jest
+        versions: [">=30.0.0"]
+      - dependency-name: "@types/jest"
+        versions: [">=30.0.0"]
   # Docker: requires-python is >=3.12,<3.15; keep the 3.14 image line.
   - package-ecosystem: docker
     directory: /backend
