@@ -14,6 +14,7 @@
     "config:check": "node scripts/check-expo-config.mjs"
   },
   "dependencies": {
+    "@shortform/api-client": "workspace:*",
     "expo": "57.0.15",
     "expo-constants": "~57.0.13",
     "expo-router": "~57.0.15",

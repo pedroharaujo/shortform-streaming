@@ -3,16 +3,40 @@ import { createHealthClient } from './healthClient';
 const BASE_URL = 'http://10.0.2.2:8000';
 
 function jsonResponse(body: unknown, status: number): Response {
-  return {
-    ok: status >= 200 && status < 300,
+  return new Response(JSON.stringify(body), {
     status,
-    json: async () => body,
-  } as unknown as Response;
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+  });
+}
+
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    return input.url;
+  }
+  return String(input);
+}
+
+function abortSignal(input: unknown, init?: { signal?: AbortSignal }): AbortSignal | undefined {
+  if (init?.signal !== undefined) {
+    return init.signal;
+  }
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    return input.signal;
+  }
+  return undefined;
 }
 
 describe('createHealthClient', () => {
   it('requests the documented health paths', async () => {
-    const performRequest = jest.fn(async () => jsonResponse({ status: 'ok' }, 200));
+    const performRequest = jest.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse({ status: 'ok' }, 200),
+    );
     const client = createHealthClient({
       baseUrl: BASE_URL,
       fetchImplementation: performRequest as unknown as typeof fetch,
@@ -20,7 +44,7 @@ describe('createHealthClient', () => {
 
     await client.probeAll();
 
-    const requested = performRequest.mock.calls.map((call) => (call as unknown as [string])[0]);
+    const requested = performRequest.mock.calls.map(([input]) => requestUrl(input));
     expect(requested).toEqual(
       expect.arrayContaining([`${BASE_URL}/health/live`, `${BASE_URL}/health/ready`]),
     );
@@ -73,9 +97,9 @@ describe('createHealthClient', () => {
     const client = createHealthClient({
       baseUrl: BASE_URL,
       timeoutMs: 1,
-      fetchImplementation: ((_input: unknown, init?: { signal?: AbortSignal }) =>
+      fetchImplementation: ((input: unknown, init?: { signal?: AbortSignal }) =>
         new Promise((_resolve, reject) => {
-          init?.signal?.addEventListener('abort', () => {
+          abortSignal(input, init)?.addEventListener('abort', () => {
             const error = new Error('aborted');
             error.name = 'AbortError';
             reject(error);
@@ -94,13 +118,10 @@ describe('createHealthClient', () => {
     const client = createHealthClient({
       baseUrl: BASE_URL,
       fetchImplementation: (async () =>
-        ({
-          ok: true,
+        new Response('not-json', {
           status: 200,
-          json: async () => {
-            throw new SyntaxError('Unexpected token');
-          },
-        }) as unknown as Response) as typeof fetch,
+          headers: { 'Content-Type': 'application/json' },
+        })) as typeof fetch,
     });
 
     await expect(client.probe('liveness')).resolves.toEqual({

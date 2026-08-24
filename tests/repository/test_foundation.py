@@ -118,7 +118,7 @@ class RepositoryFoundationTests(unittest.TestCase):
     def test_repository_workflows_are_pinned_and_least_privilege(self) -> None:
         workflows = {
             name: (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
-            for name in ("ai-governance.yml", "repository-safety.yml")
+            for name in ("ai-governance.yml", "repository-safety.yml", "api-contract.yml")
         }
         for name, workflow in workflows.items():
             for action in ("actions/checkout", "actions/setup-python"):
@@ -130,6 +130,17 @@ class RepositoryFoundationTests(unittest.TestCase):
             self.assertIn("permissions:\n  contents: read", workflow)
             self.assertIn("persist-credentials: false", workflow)
             self.assertIn("timeout-minutes: 10", workflow)
+
+        contract = workflows["api-contract.yml"]
+        for action in ("actions/setup-node", "astral-sh/setup-uv"):
+            with self.subTest(workflow="api-contract.yml", action=action):
+                self.assertRegex(
+                    contract,
+                    rf"uses: {re.escape(action)}@[0-9a-f]{{40}} # v[0-9]",
+                )
+        self.assertIn("uv sync --locked", contract)
+        self.assertIn("pnpm install --frozen-lockfile", contract)
+        self.assertIn("pnpm contract:check", contract)
 
         safety = workflows["repository-safety.yml"]
         self.assertIn("fetch-depth: 0", safety)

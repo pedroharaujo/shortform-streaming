@@ -1,10 +1,13 @@
 /**
- * Minimal typed client for the backend health endpoints.
+ * Health probes mapped through the generated OpenAPI client.
  *
- * TEMPORARY: P1-T04 introduces the OpenAPI-generated client in
- * `packages/api-client` and this module is deleted at that point. It exists now
- * only to prove mobile-to-backend connectivity (plan task P1-T03).
+ * Probe outcomes (timeout, unreachable, unknown JSON) are mobile-specific and
+ * are not part of the OpenAPI document. HTTP paths and success/error bodies
+ * come from `@shortform/api-client`.
  */
+
+import { createApiClient } from '@shortform/api-client';
+import type { paths } from '@shortform/api-client';
 
 import type {
   BackendHealthSnapshot,
@@ -14,7 +17,7 @@ import type {
   HealthResponseBody,
 } from './types';
 
-const PROBE_PATHS: Readonly<Record<HealthProbeName, string>> = {
+const PROBE_PATHS: Readonly<Record<HealthProbeName, keyof paths>> = {
   liveness: '/health/live',
   readiness: '/health/ready',
 };
@@ -48,27 +51,36 @@ function describeFailure(error: unknown): string {
   return 'network request failed';
 }
 
+function parseStatus(rawBody: string): string {
+  try {
+    return readStatus(JSON.parse(rawBody) as unknown);
+  } catch {
+    return UNKNOWN_STATUS;
+  }
+}
+
 export function createHealthClient(options: HealthClientOptions): HealthClient {
   const { baseUrl, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  const performRequest = options.fetchImplementation ?? fetch;
+  const api = createApiClient({
+    baseUrl,
+    ...(options.fetchImplementation === undefined ? {} : { fetch: options.fetchImplementation }),
+  });
 
   async function probe(name: HealthProbeName): Promise<HealthProbeResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await performRequest(`${baseUrl}${PROBE_PATHS[name]}`, {
-        method: 'GET',
+      const { data, error, response } = await api.GET(PROBE_PATHS[name], {
         headers: { Accept: 'application/json' },
+        parseAs: 'text',
         signal: controller.signal,
       });
 
-      let status = UNKNOWN_STATUS;
-      try {
-        status = readStatus(await response.json());
-      } catch {
-        status = UNKNOWN_STATUS;
-      }
+      const status =
+        typeof data === 'string' || typeof error === 'string'
+          ? parseStatus(typeof data === 'string' ? data : (error as string))
+          : readStatus(data ?? error);
 
       if (!response.ok) {
         return { outcome: 'unavailable', probe: name, httpStatus: response.status, status };

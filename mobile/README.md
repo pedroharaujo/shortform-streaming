@@ -29,14 +29,15 @@ Local Django already allows `10.0.2.2` so the Android emulator `Host` header is 
 ```text
 mobile/
   app/                 Expo Router routes (`app/index.tsx` is the health screen)
-  src/api/health/      Temporary typed client for `/health/live` and `/health/ready`
+  src/api/health/      Thin health wrapper over `@shortform/api-client`
   src/config/          Environment selection and manifest reads
   src/features/health/ Backend availability screen
   scripts/             Expo public-config check
   app.config.ts        Expo config and the single environment resolver
 ```
 
-`src/api/health` is deleted when P1-T04 lands the generated OpenAPI client.
+`src/api/health` maps generated OpenAPI calls onto probe outcomes (timeout, 503, network
+failure, invalid JSON). Do not expand it into a second handwritten HTTP client.
 
 ## Commands
 

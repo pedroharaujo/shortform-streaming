@@ -4,7 +4,11 @@
   "private": true,
   "packageManager": "pnpm@11.19.0",
   "scripts": {
-    "check": "python scripts/check_repository_foundation.py && pnpm backend:check && pnpm mobile:check",
+    "check": "python scripts/check_repository_foundation.py && pnpm backend:check && pnpm contract:check && pnpm mobile:check",
+    "contract:generate:schema": "uv run python scripts/generate_openapi.py",
+    "contract:generate:client": "pnpm --filter @shortform/api-client generate",
+    "contract:generate": "pnpm contract:generate:schema && pnpm contract:generate:client",
+    "contract:check": "pnpm contract:generate && uv run python scripts/check_generated_api_contract.py",
     "backend:lint": "uv run ruff check backend",
     "backend:format:check": "uv run ruff format --check backend",
     "backend:typecheck": "uv run mypy backend",
