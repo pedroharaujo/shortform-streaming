@@ -1,4 +1,6 @@
-import { render, waitFor } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
+import { fireEvent, render } from '@testing-library/react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import type {
   CatalogClient,
@@ -17,6 +19,19 @@ const harborEpisode: CatalogEpisodeDetail = {
   season_number: 1,
 };
 
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 0, left: 0, right: 0, bottom: 0 },
+};
+
+function renderEpisodeScreen(ui: ReactElement) {
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <SafeAreaProvider initialMetrics={safeAreaMetrics}>{children}</SafeAreaProvider>
+    ),
+  });
+}
+
 function stubEpisodeClient(episode: CatalogRequestOutcome<CatalogEpisodeDetail>): CatalogClient {
   return {
     getHome: async () => ({ outcome: 'ok', data: { rails: [] } }),
@@ -30,9 +45,66 @@ function stubEpisodeClient(episode: CatalogRequestOutcome<CatalogEpisodeDetail>)
   };
 }
 
+function expectNoFreeOrLockedBadges(view: Awaited<ReturnType<typeof renderEpisodeScreen>>): void {
+  expect(view.queryAllByText('Free')).toHaveLength(0);
+  expect(view.queryAllByText('Locked')).toHaveLength(0);
+  expect(view.queryAllByText(/^Free$/i)).toHaveLength(0);
+  expect(view.queryAllByText(/^Locked$/i)).toHaveLength(0);
+}
+
 describe('EpisodeSelectedScreen', () => {
+  it('shows a loading state before the episode resolves', async () => {
+    const pending: CatalogClient = {
+      getHome: () => new Promise(() => {}),
+      getSeries: () => new Promise(() => {}),
+      getEpisode: () => new Promise(() => {}),
+    };
+
+    const view = await renderEpisodeScreen(
+      <EpisodeSelectedScreen client={pending} episodeId="ep_harbor_1" onBack={() => {}} />,
+    );
+
+    expect(view.getByTestId('episode-selected-loading')).toBeTruthy();
+    expect(view.getByLabelText('Loading episode')).toBeTruthy();
+    expect(view.queryByTestId('episode-selected')).toBeNull();
+  });
+
+  it('shows an error and retries the episode request', async () => {
+    let calls = 0;
+    const client: CatalogClient = {
+      getHome: async () => ({ outcome: 'ok', data: { rails: [] } }),
+      getSeries: async () => ({
+        outcome: 'not-found',
+        httpStatus: 404,
+        code: 'not_found',
+        message: 'Resource not found.',
+      }),
+      getEpisode: async () => {
+        calls += 1;
+        return {
+          outcome: 'error',
+          httpStatus: 400,
+          code: 'invalid_request_context',
+          message: 'Catalog context is invalid.',
+        };
+      },
+    };
+
+    const view = await renderEpisodeScreen(
+      <EpisodeSelectedScreen client={client} episodeId="ep_harbor_1" onBack={() => {}} />,
+    );
+
+    expect(await view.findByTestId('episode-selected-error')).toBeTruthy();
+    expect(view.getByText('Catalog context is invalid.')).toBeTruthy();
+    expect(calls).toBe(1);
+
+    await fireEvent.press(view.getByTestId('episode-selected-retry'));
+    expect(await view.findByTestId('episode-selected-error')).toBeTruthy();
+    expect(calls).toBe(2);
+  });
+
   it('shows the selected listed episode without playback', async () => {
-    const view = await render(
+    const view = await renderEpisodeScreen(
       <EpisodeSelectedScreen
         client={stubEpisodeClient({ outcome: 'ok', data: harborEpisode })}
         episodeId="ep_harbor_1"
@@ -40,16 +112,15 @@ describe('EpisodeSelectedScreen', () => {
       />,
     );
 
-    await waitFor(() => expect(view.getByTestId('episode-selected')).toBeTruthy());
+    expect(await view.findByTestId('episode-selected')).toBeTruthy();
     expect(view.getByText('Selected episode')).toBeTruthy();
     expect(view.getByText('Harbor Lights · Episode 1')).toBeTruthy();
     expect(view.getByText('Synthetic episode synopsis.')).toBeTruthy();
-    expect(view.queryByText(/free/i)).toBeNull();
-    expect(view.queryByText(/locked/i)).toBeNull();
+    expectNoFreeOrLockedBadges(view);
   });
 
   it('shows not-found for an ineligible episode, not a locked state', async () => {
-    const view = await render(
+    const view = await renderEpisodeScreen(
       <EpisodeSelectedScreen
         client={stubEpisodeClient({
           outcome: 'not-found',
@@ -62,8 +133,9 @@ describe('EpisodeSelectedScreen', () => {
       />,
     );
 
-    await waitFor(() => expect(view.getByTestId('episode-selected-not-found')).toBeTruthy());
+    expect(await view.findByTestId('episode-selected-not-found')).toBeTruthy();
     expect(view.getByText('This episode is not available.')).toBeTruthy();
-    expect(view.queryByText(/locked/i)).toBeNull();
+    expectNoFreeOrLockedBadges(view);
+    expect(view.queryByTestId('episode-selected')).toBeNull();
   });
 });

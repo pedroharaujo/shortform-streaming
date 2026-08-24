@@ -90,9 +90,9 @@ export function SeriesDetailScreen({
       ) : null}
 
       {state.phase === 'loaded' ? (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} testID="series-detail-loaded">
           <CatalogArtwork size="hero" title={state.series.title} uri={state.series.artwork_url} />
-          <Text accessibilityRole="header" style={styles.title}>
+          <Text accessibilityRole="header" style={styles.title} testID="series-detail-title">
             {state.series.title}
           </Text>
           <Text style={styles.synopsis}>{state.series.synopsis}</Text>

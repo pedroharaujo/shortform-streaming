@@ -1,4 +1,6 @@
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
+import { fireEvent, render } from '@testing-library/react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import type {
   CatalogClient,
@@ -37,6 +39,19 @@ const harborLightsDetail: CatalogSeriesDetail = {
   ],
 };
 
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 0, left: 0, right: 0, bottom: 0 },
+};
+
+function renderSeriesScreen(ui: ReactElement) {
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <SafeAreaProvider initialMetrics={safeAreaMetrics}>{children}</SafeAreaProvider>
+    ),
+  });
+}
+
 function stubSeriesClient(series: CatalogRequestOutcome<CatalogSeriesDetail>): CatalogClient {
   return {
     getHome: async () => ({ outcome: 'ok', data: { rails: [] } }),
@@ -50,14 +65,77 @@ function stubSeriesClient(series: CatalogRequestOutcome<CatalogSeriesDetail>): C
   };
 }
 
+function expectNoFreeOrLockedBadges(view: Awaited<ReturnType<typeof renderSeriesScreen>>): void {
+  expect(view.queryAllByText('Free')).toHaveLength(0);
+  expect(view.queryAllByText('Locked')).toHaveLength(0);
+  expect(view.queryAllByText(/^Free$/i)).toHaveLength(0);
+  expect(view.queryAllByText(/^Locked$/i)).toHaveLength(0);
+}
+
 describe('SeriesDetailScreen', () => {
-  afterEach(async () => {
-    await cleanup();
+  it('shows a loading state before the series resolves', async () => {
+    const pending: CatalogClient = {
+      getHome: () => new Promise(() => {}),
+      getSeries: () => new Promise(() => {}),
+      getEpisode: () => new Promise(() => {}),
+    };
+
+    const view = await renderSeriesScreen(
+      <SeriesDetailScreen
+        client={pending}
+        onBack={() => {}}
+        onSelectEpisode={() => {}}
+        seriesId="ser_harbor"
+      />,
+    );
+
+    expect(view.getByTestId('series-detail-loading')).toBeTruthy();
+    expect(view.getByLabelText('Loading series')).toBeTruthy();
+    expect(view.queryByTestId('series-detail-loaded')).toBeNull();
+  });
+
+  it('shows an error and retries the series request', async () => {
+    let calls = 0;
+    const client: CatalogClient = {
+      getHome: async () => ({ outcome: 'ok', data: { rails: [] } }),
+      getSeries: async () => {
+        calls += 1;
+        return {
+          outcome: 'error',
+          httpStatus: 400,
+          code: 'invalid_request_context',
+          message: 'Catalog context is invalid.',
+        };
+      },
+      getEpisode: async () => ({
+        outcome: 'not-found',
+        httpStatus: 404,
+        code: 'not_found',
+        message: 'Resource not found.',
+      }),
+    };
+
+    const view = await renderSeriesScreen(
+      <SeriesDetailScreen
+        client={client}
+        onBack={() => {}}
+        onSelectEpisode={() => {}}
+        seriesId="ser_harbor"
+      />,
+    );
+
+    expect(await view.findByTestId('series-detail-error')).toBeTruthy();
+    expect(view.getByText('Catalog context is invalid.')).toBeTruthy();
+    expect(calls).toBe(1);
+
+    await fireEvent.press(view.getByTestId('series-detail-retry'));
+    expect(await view.findByTestId('series-detail-error')).toBeTruthy();
+    expect(calls).toBe(2);
   });
 
   it('renders published seasons and listed episodes without lock or free inference', async () => {
     const onSelectEpisode = jest.fn();
-    const view = await render(
+    const view = await renderSeriesScreen(
       <SeriesDetailScreen
         client={stubSeriesClient({ outcome: 'ok', data: harborLightsDetail })}
         onBack={() => {}}
@@ -66,19 +144,17 @@ describe('SeriesDetailScreen', () => {
       />,
     );
 
-    await waitFor(() => expect(view.getByText('Harbor Lights')).toBeTruthy());
+    expect(await view.findByTestId('series-detail-loaded')).toBeTruthy();
+    expect(view.getByTestId('series-detail-title')).toHaveTextContent('Harbor Lights');
     expect(
       view.getByText('Synthetic FR-only English microdrama for local catalog tests.'),
     ).toBeTruthy();
-    expect(view.getByText('Season 1')).toBeTruthy();
+    expect(view.getByTestId('series-season-1')).toBeTruthy();
     expect(view.getByText('Harbor Lights · Episode 1')).toBeTruthy();
     expect(view.getByText('Harbor Lights · Episode 6')).toBeTruthy();
     expect(view.getByTestId('episode-row-ep_harbor_1')).toBeTruthy();
     expect(view.getByTestId('episode-row-ep_harbor_6')).toBeTruthy();
-    expect(view.queryByText(/^Free$/i)).toBeNull();
-    expect(view.queryByText(/^Locked$/i)).toBeNull();
-    expect(view.queryByText(/free/i)).toBeNull();
-    expect(view.queryByText(/locked/i)).toBeNull();
+    expectNoFreeOrLockedBadges(view);
 
     await fireEvent.press(view.getByTestId('episode-row-ep_harbor_1'));
     await fireEvent.press(view.getByTestId('episode-row-ep_harbor_6'));
@@ -87,7 +163,7 @@ describe('SeriesDetailScreen', () => {
   });
 
   it('shows not-found for an ineligible series, not a locked state', async () => {
-    const view = await render(
+    const view = await renderSeriesScreen(
       <SeriesDetailScreen
         client={stubSeriesClient({
           outcome: 'not-found',
@@ -103,7 +179,8 @@ describe('SeriesDetailScreen', () => {
 
     expect(await view.findByTestId('series-detail-not-found')).toBeTruthy();
     expect(view.getByText('This title is not available.')).toBeTruthy();
-    expect(view.queryByText(/locked/i)).toBeNull();
+    expectNoFreeOrLockedBadges(view);
     expect(view.queryByTestId('episode-row-ep_harbor_1')).toBeNull();
+    expect(view.queryByTestId('series-detail-loaded')).toBeNull();
   });
 });
