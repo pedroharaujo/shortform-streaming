@@ -3,7 +3,7 @@
 # Build must succeed without production secrets: this file never imports
 # production Django settings and never bakes credentials into layers.
 
-FROM python:3.13-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /bin/uv
 
@@ -17,7 +17,7 @@ RUN uv sync --locked --no-dev --no-install-project
 
 COPY backend ./backend
 
-FROM python:3.13-slim-bookworm AS runtime
+FROM python:3.14-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
