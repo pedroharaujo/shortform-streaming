@@ -3,7 +3,7 @@ description = "Implements a bounded approved task with tests and evidence; handl
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Read AGENTS.md and ai/roles/implementer.md, then the assigned task and only its relevant source documents.
-Work only in the assigned branch/worktree. Preserve unrelated changes.
+Work only in the assigned branch in the existing checkout. Preserve unrelated changes. Do not create extra git worktrees.
 Implement the smallest complete change, tests, contracts, and documentation required by the acceptance criteria.
 Run affected checks and return exact results. Never approve or mark your own work verified.
 """

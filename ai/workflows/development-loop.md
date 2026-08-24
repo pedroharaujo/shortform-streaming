@@ -5,7 +5,7 @@
 - One issue or plan task with observable acceptance criteria.
 - Applicable dependencies and decision-register entries approved.
 - A proportional Validation Manifest and rollback/risk notes defined before implementation.
-- Cleanly identified base revision and isolated branch/worktree.
+- Cleanly identified base revision and isolated branch in the existing checkout.
 
 ## Validation planning
 
@@ -57,7 +57,7 @@ The required order is **implement -> review -> fix -> verify -> PR**. `fix` and 
 
 ## Hand-off contracts
 
-- Orchestrator to implementer: task/plan ID, branch/worktree, objective, out-of-scope items, criteria, source documents, and the Validation Manifest with checks and risks.
+- Orchestrator to implementer: task/plan ID, branch, objective, out-of-scope items, criteria, source documents, and the Validation Manifest with checks and risks.
 - Implementer to reviewer: final diff/revision, criteria mapping, commands/results, limitations, migrations/contracts/docs, deployment, and rollback notes.
 - Reviewer to implementer/orchestrator: prioritized findings with location, evidence, impact, safe direction, and `APPROVE` or `CHANGES_REQUESTED`.
 - Verifier to orchestrator: tested revision, criterion evidence, exact commands/results, limitations, and `VERIFIED`, `FAILED`, or `BLOCKED`.
