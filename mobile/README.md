@@ -50,8 +50,11 @@ pnpm mobile:format:check
 pnpm mobile:typecheck
 pnpm mobile:test
 pnpm mobile:config:check
+pnpm mobile:bundle:check
 pnpm mobile:check
 ```
+
+`pnpm mobile:bundle:check` exports production Android and iOS JavaScript bundles. Native compile, Gradle, Xcode, and EAS are out of scope for this check.
 
 Package scripts (same checks, plus the development client):
 

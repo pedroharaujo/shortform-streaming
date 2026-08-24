@@ -48,3 +48,5 @@ Use generated, redacted, or self-owned fixtures. When a private resource is requ
 - No secrets or confidential/licensed material are present.
 
 Validate AI governance changes with `python scripts/validate_ai_governance.py`. Use the area-specific commands in `AGENTS.md`; an unavailable required command is a blocker, not a pass.
+
+Pull requests run always-on `Repository foundation` and `OpenAPI contract` checks plus the path-aware `Application CI` gate. Do not treat skipped `Backend`, `Mobile`, or `Container` jobs as missing required checks; the human ruleset should require the always-reporting `Application CI` job name documented in `docs/runbooks/repository-controls.md`. Extra local commands include `pnpm backend:test:coverage`, `pnpm mobile:bundle:check`, and `docker build -f backend/Dockerfile -t shortform-backend:ci .`.

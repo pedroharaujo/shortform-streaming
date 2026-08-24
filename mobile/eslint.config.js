@@ -6,7 +6,7 @@ module.exports = [
   ...expoConfig,
   prettierConfig,
   {
-    ignores: ['.expo/**', 'coverage/**', 'dist/**', 'node_modules/**'],
+    ignores: ['.expo/**', '.tmp/**', 'coverage/**', 'dist/**', 'node_modules/**'],
   },
   {
     rules: {

@@ -81,6 +81,18 @@ Run all backend checks (PostgreSQL must be running for the test suite):
 pnpm backend:check
 ```
 
+CI collects a coverage report without a failing floor. Reproduce that locally with:
+
+```shell
+pnpm backend:test:coverage
+```
+
+Build the backend CI smoke image (no registry login or push; P5-T02 owns hardening):
+
+```shell
+docker build -f backend/Dockerfile -t shortform-backend:ci .
+```
+
 Regenerate the OpenAPI document and TypeScript client, then fail if git shows drift:
 
 ```shell
@@ -115,7 +127,10 @@ pnpm mobile:format:check
 pnpm mobile:typecheck
 pnpm mobile:test
 pnpm mobile:config:check
+pnpm mobile:bundle:check
 ```
+
+`pnpm mobile:bundle:check` runs `expo export` for Android and iOS JavaScript bundles using the same public `EXPO_PUBLIC_*` fixtures as the config check. It does not compile native apps or invoke EAS.
 
 The first Android development client is `pnpm --filter @shortform/mobile android`
 with the emulator already running. P1-T03 did **not** execute that emulator path;
