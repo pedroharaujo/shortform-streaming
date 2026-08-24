@@ -5,18 +5,55 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+  # Python: stay on Django 6.1 with matching stubs. Ignore 6.2+ until a human
+  # upgrades CI, stubs, and the compatibility policy together. Patch/minor and
+  # security updates on 6.1.x still open.
   - package-ecosystem: uv
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: django
+        versions: [">=6.2"]
+      - dependency-name: django-stubs
+        versions: [">=6.2"]
+  # JavaScript: Expo SDK 57 table (RN 0.86, React 19.2.3, ESLint 9, Expo 57).
+  # eslint-config-expo 57 crashes on ESLint 10 (expo/expo#46717). TypeScript 7
+  # is ignored until Expo SDK accepts it. Ignore only known-incompatible
+  # majors; patch/minor and security updates on the compatible line still open.
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: react-native
+        versions: [">=0.87.0"]
+      - dependency-name: eslint
+        versions: [">=10.0.0"]
+      - dependency-name: react
+        versions: [">19.2.3"]
+      - dependency-name: react-test-renderer
+        versions: [">19.2.3"]
+      - dependency-name: expo
+        versions: [">=58.0.0"]
+      - dependency-name: expo-router
+        versions: [">=58.0.0"]
+      - dependency-name: expo-constants
+        versions: [">=58.0.0"]
+      - dependency-name: jest-expo
+        versions: [">=58.0.0"]
+      - dependency-name: eslint-config-expo
+        versions: [">=58.0.0"]
+      - dependency-name: typescript
+        versions: [">=7.0.0"]
+  # Docker: requires-python is >=3.12,<3.15; keep the 3.14 image line.
   - package-ecosystem: docker
     directory: /backend
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: python
+        versions: [">=3.15"]

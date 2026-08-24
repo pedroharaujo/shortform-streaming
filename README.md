@@ -6,7 +6,7 @@ The MVP consists of a Django REST backend/Django Admin and one React Native/Expo
 
 ## Local backend bootstrap
 
-P1-T02 provides a runnable Django 5.2 LTS backend and local PostgreSQL. Install Git,
+P1-T02 provides a runnable Django 6.1 backend and local PostgreSQL. Install Git,
 Python 3.12–3.14, [uv](https://docs.astral.sh/uv/), pnpm, and Docker with Compose, then
 run:
 
