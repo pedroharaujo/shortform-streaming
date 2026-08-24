@@ -44,10 +44,116 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/catalog/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Home catalog rails
+         * @description Small rails document of series eligible for the explicit request territory, platform, language, and current time. Not a CursorPage. Catalog is tiny; home is not paginated in P2-T03. Missing or malformed context headers are 400. A well-formed context with no eligible titles is 200 with an empty featured rail.
+         */
+        get: operations["v1_catalog_home_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/episodes/{public_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Episode detail
+         * @description Localized episode detail. The episode is eligible only when its series is eligible and the episode is published within its optional window. Ineligible ids return 404, never 403. Monetization lock state is omitted.
+         */
+        get: operations["v1_episodes_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/series/{public_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Series detail
+         * @description Localized series detail with ordered published episodes. Ineligible or unpublished public ids return 404 ErrorEnvelope, never 403.
+         */
+        get: operations["v1_series_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        CatalogEpisodeDetail: {
+            id: string;
+            title: string;
+            synopsis: string;
+            duration_seconds: number;
+            order: number;
+            series_id: string;
+            season_number: number;
+        };
+        CatalogEpisodeSummary: {
+            /** @description Opaque episode public id. */
+            id: string;
+            order: number;
+            duration_seconds: number;
+            title: string;
+            synopsis: string;
+        };
+        CatalogHome: {
+            rails: components["schemas"]["CatalogRail"][];
+        };
+        CatalogRail: {
+            id: string;
+            title: string;
+            series: components["schemas"]["CatalogSeriesCard"][];
+        };
+        CatalogSeason: {
+            number: number;
+            episodes: components["schemas"]["CatalogEpisodeSummary"][];
+        };
+        CatalogSeriesCard: {
+            /** @description Opaque series public id. */
+            id: string;
+            title: string;
+            synopsis: string;
+            artwork_url: string | null;
+            original_language: string;
+        };
+        CatalogSeriesDetail: {
+            id: string;
+            title: string;
+            synopsis: string;
+            artwork_url: string | null;
+            original_language: string;
+            genres: string[];
+            seasons: components["schemas"]["CatalogSeason"][];
+        };
         /** @description Cursor-paginated list envelope. `cursor` and `next` are opaque strings, never numeric offsets. Concrete list operations replace `results` item types. */
         CursorPage: {
             /** @description Opaque cursor for the current page. */
@@ -151,6 +257,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthStatus"];
+                };
+            };
+        };
+    };
+    v1_catalog_home_retrieve: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
+                "X-Language": string;
+                /** @description Client platform. Required. Values: ios, android. */
+                "X-Platform": "android" | "ios";
+                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
+                "X-Territory": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogHome"];
+                };
+            };
+            /** @description Missing or malformed catalog context headers. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_episodes_retrieve: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
+                "X-Language": string;
+                /** @description Client platform. Required. Values: ios, android. */
+                "X-Platform": "android" | "ios";
+                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
+                "X-Territory": string;
+            };
+            path: {
+                /** @description Opaque public identifier. Sequential database integers are never used as public IDs. */
+                public_id: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogEpisodeDetail"];
+                };
+            };
+            /** @description Missing or malformed catalog context headers. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_series_retrieve: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
+                "X-Language": string;
+                /** @description Client platform. Required. Values: ios, android. */
+                "X-Platform": "android" | "ios";
+                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
+                "X-Territory": string;
+            };
+            path: {
+                /** @description Opaque public identifier. Sequential database integers are never used as public IDs. */
+                public_id: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogSeriesDetail"];
+                };
+            };
+            /** @description Missing or malformed catalog context headers. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };

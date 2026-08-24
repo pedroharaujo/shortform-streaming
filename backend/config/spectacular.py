@@ -99,6 +99,9 @@ BEARER_SCHEME: dict[str, object] = {
 }
 
 HEALTH_PATHS = ("/health/live", "/health/ready")
+# Anonymous catalog (P2-T03). Keep these unauthenticated even if a later task
+# sets a global Firebase security requirement.
+UNAUTHENTICATED_PATH_PREFIXES = ("/health/", "/v1/catalog/", "/v1/series/", "/v1/episodes/")
 
 
 def inject_shared_components(
@@ -117,10 +120,18 @@ def inject_shared_components(
     security_schemes.setdefault("FirebaseIdToken", BEARER_SCHEME)
 
     paths = result.get("paths", {})
-    for path in HEALTH_PATHS:
-        operation = paths.get(path, {}).get("get")
-        if isinstance(operation, dict):
-            operation["security"] = []
+    if isinstance(paths, dict):
+        for path, path_item in paths.items():
+            if not isinstance(path, str) or not isinstance(path_item, dict):
+                continue
+            if not any(
+                path == prefix[:-1] or path.startswith(prefix)
+                for prefix in UNAUTHENTICATED_PATH_PREFIXES
+            ):
+                continue
+            for operation in path_item.values():
+                if isinstance(operation, dict) and "responses" in operation:
+                    operation["security"] = []
     return result
 
 
@@ -130,8 +141,10 @@ SPECTACULAR_SETTINGS: dict[str, object] = {
         "HTTP API for the Shortform Streaming MVP. This document is generated from Django; "
         "do not edit docs/api/openapi.yaml by hand. Shared conventions (error envelope, "
         "cursor pagination, opaque public IDs, and Firebase ID-token bearer auth) are "
-        "documented as components. Health probes are unauthenticated. Firebase token "
-        "verification is not implemented in this schema-only task."
+        "documented as components. Health probes and anonymous catalog reads are "
+        "unauthenticated. Catalog operations require explicit X-Territory, X-Platform, "
+        "and X-Language headers; those values are never inferred from Accept-Language. "
+        "Firebase token verification is not implemented in this task."
     ),
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,

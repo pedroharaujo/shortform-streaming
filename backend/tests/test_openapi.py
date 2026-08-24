@@ -139,3 +139,44 @@ def _health_status_enum(schema: dict[str, Any]) -> set[str]:
         enum_values = schema["components"]["schemas"].get("StatusEnum", {}).get("enum")
     assert enum_values is not None
     return set(enum_values)
+
+
+def test_schema_documents_catalog_as_unauthenticated_with_error_envelope() -> None:
+    schema = build_schema()
+    paths = schema["paths"]
+    home = paths["/v1/catalog/home"]["get"]
+    series = paths["/v1/series/{public_id}"]["get"]
+    episode = paths["/v1/episodes/{public_id}"]["get"]
+
+    for operation in (home, series, episode):
+        assert operation.get("security") in ([], None) or operation["security"] == []
+        assert "400" in operation["responses"]
+        error_schema = _response_schema_ref(operation["responses"]["400"])
+        assert error_schema.endswith("/ErrorEnvelope")
+
+    assert "404" in series["responses"]
+    assert "404" in episode["responses"]
+    assert _response_schema_ref(series["responses"]["404"]).endswith("/ErrorEnvelope")
+    home_success = _response_schema_ref(home["responses"]["200"])
+    assert "CursorPage" not in home_success
+
+    path_item_params = paths["/v1/series/{public_id}"].get("parameters") or []
+    operation_params = series.get("parameters") or []
+    path_params = [
+        parameter
+        for parameter in [*path_item_params, *operation_params]
+        if parameter.get("in") == "path" or parameter.get("name") == "public_id"
+    ]
+    assert path_params
+    schema_ref = path_params[0].get("schema", {})
+    ref = schema_ref.get("$ref", "")
+    assert "PublicId" in ref or schema_ref.get("type") == "string"
+
+
+def _response_schema_ref(response: dict[str, Any]) -> str:
+    content = response.get("content", {}).get("application/json", {})
+    schema = content.get("schema", {})
+    ref = schema.get("$ref")
+    if isinstance(ref, str):
+        return ref
+    return str(schema)
