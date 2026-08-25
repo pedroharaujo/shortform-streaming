@@ -224,6 +224,8 @@ class RepositoryFoundationTests(unittest.TestCase):
             "react-native-screens": ">=4.27.0",
             "react-native-safe-area-context": ">=5.8.0",
             "expo-video": ">=58.0.0",
+            "react-native-worklets": ">=0.11.0",
+            "react-native-reanimated": ">=4.6.0",
         }
         for name, version in npm_expected.items():
             with self.subTest(ecosystem="npm", dependency=name):

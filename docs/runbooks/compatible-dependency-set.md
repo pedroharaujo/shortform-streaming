@@ -27,6 +27,8 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 | Mobile runtime | `react-native` | 0.86.2 |
 | Mobile runtime | `react-native-safe-area-context` | ~5.7.0 |
 | Mobile runtime | `expo-video` | ~57.0.2 |
+| Mobile runtime | `react-native-worklets` | 0.10.1 (workspace override; SDK 57 table) |
+| Mobile runtime | `react-native-reanimated` | 4.5.1 (workspace override; SDK 57 table) |
 | Mobile tooling | `eslint` | ^9.39.5 (9.x only) |
 | Mobile tooling | `eslint-config-expo` | ~57.0.1 |
 | Mobile tooling | `typescript` | ~6.0.3 |
@@ -42,7 +44,7 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 | Backend tooling | ruff | 0.16.4 |
 | CI / Docker | Python | 3.14 |
 
-`pnpm-workspace.yaml` overrides `react`, `react-native`, `react-test-renderer`, and `@react-native/metro-config` so transitives cannot pull RN 0.87 or React 19.2.8.
+`pnpm-workspace.yaml` overrides `react`, `react-native`, `react-test-renderer`, and `@react-native/metro-config` so transitives cannot pull RN 0.87 or React 19.2.8. It also overrides `react-native-worklets` to `0.10.1` and `react-native-reanimated` to `4.5.1`. Without those pins, Expo 57 transitives resolve worklets `0.12.1` and reanimated `4.6.0`. Worklets 0.12 renamed `WorkletRuntime::executeSync` to `runSync`; SDK 57 `expo-modules-core@57.0.13` still calls `executeSync`, so Android native compile fails (`WorkletJSCallInvoker.cpp`: no member named `executeSync`). This is expo/expo#49225. Reanimated 4.6.x requires worklets 0.12.x, so both packages must pin together. Do not patch `node_modules`. 0.10.x still exposes `executeSync`; Dependabot may open 0.10.x patches but not `>=0.11.0`.
 
 ## Dependabot ignore majors
 
@@ -65,6 +67,8 @@ Ignore rules live in `.github/dependabot.yml`. They block only known-incompatibl
 - `react-native-screens` `>=4.27.0` — expo-doctor expects `~4.26.0` (SDK 57 table); Dependabot PR #38 is an expected failure
 - `react-native-safe-area-context` `>=5.8.0` — expo-doctor expects `~5.7.0` (SDK 57 table); Dependabot PR #39 is an expected failure
 - `expo-video` `>=58.0.0` — stay on the Expo SDK 57 table; do not jump to Expo 58
+- `react-native-worklets` `>=0.11.0` — SDK 57 table is 0.10.1; 0.10.x still has `executeSync`. 0.12 renamed it to `runSync` and breaks `expo-modules-core` Android compile (expo/expo#49225). Ignore 0.11+ so Dependabot cannot leave the 0.10 line.
+- `react-native-reanimated` `>=4.6.0` — 4.6.x requires worklets 0.12.x; stay on 4.5.1 (SDK 57 table)
 
 **uv**
 

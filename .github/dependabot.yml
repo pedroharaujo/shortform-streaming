@@ -23,7 +23,9 @@ updates:
   # TypeScript 7 is ignored until Expo SDK accepts it. Expo SDK 57 / jest-expo
   # 57 expect Jest 29; ignore jest / @types/jest 30+. Expo-pinned navigation
   # packages (react-native-screens ~4.26.x, react-native-safe-area-context
-  # ~5.7.x) are ignored above their SDK table lines. Ignore only
+  # ~5.7.x) are ignored above their SDK table lines. Worklets 0.12 renamed
+  # executeSync → runSync; expo-modules-core 57 still calls executeSync
+  # (expo/expo#49225). Stay on worklets 0.10.x / reanimated 4.5.x. Ignore only
   # known-incompatible majors; patch/minor and security updates on the
   # compatible line still open.
   - package-ecosystem: npm
@@ -62,6 +64,10 @@ updates:
         versions: [">=5.8.0"]
       - dependency-name: expo-video
         versions: [">=58.0.0"]
+      - dependency-name: react-native-worklets
+        versions: [">=0.11.0"]
+      - dependency-name: react-native-reanimated
+        versions: [">=4.6.0"]
   # Docker: requires-python is >=3.12,<3.15; keep the 3.14 image line.
   - package-ecosystem: docker
     directory: /backend
