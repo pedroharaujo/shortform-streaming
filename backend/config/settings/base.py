@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "apps.health",
     "apps.catalog",
+    "apps.accounts",
 ]
 
 MIDDLEWARE = [
@@ -99,3 +100,8 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "config.exceptions.exception_handler",
 }
+
+# Identity: local/CI default is mock verification. Production settings force
+# firebase-admin and fail closed when a token cannot be verified.
+FIREBASE_AUTH_MODE = os.environ.get("FIREBASE_AUTH_MODE", "").strip().lower()
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "").strip()

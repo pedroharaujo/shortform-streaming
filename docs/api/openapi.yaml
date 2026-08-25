@@ -8,8 +8,8 @@ info:
     envelope, cursor pagination, opaque public IDs, and Firebase ID-token bearer auth)
     are documented as components. Health probes and anonymous catalog reads are unauthenticated.
     Catalog operations require explicit X-Territory, X-Platform, and X-Language headers;
-    those values are never inferred from Accept-Language. Firebase token verification
-    is not implemented in this task.
+    those values are never inferred from Accept-Language. GET /v1/me requires FirebaseIdToken;
+    missing or invalid tokens return 401 ErrorEnvelope. firebase_uid is never returned.
 paths:
   /health/live:
     get:
@@ -157,6 +157,32 @@ paths:
           description: Unknown or ineligible public id. Does not confirm whether the
             id exists.
       security: []
+  /v1/me:
+    get:
+      operationId: v1_me_retrieve
+      description: Return the local profile for the verified Firebase ID token. The
+        first successful call creates the profile. The same Firebase UID always maps
+        to one profile. Client-supplied user or profile identifiers are ignored. firebase_uid
+        is never returned.
+      summary: Current user profile
+      tags:
+      - accounts
+      security:
+      - FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserProfile'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
   /v1/series/{public_id}:
     get:
       operationId: v1_series_retrieve
@@ -351,6 +377,23 @@ components:
       - seasons
       - synopsis
       - title
+    CurrentUserProfile:
+      type: object
+      properties:
+        public_id:
+          type: string
+          description: Opaque profile public id. Sequential database integers are
+            never used.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - public_id
+      - updated_at
     CursorPage:
       type: object
       description: Cursor-paginated list envelope. `cursor` and `next` are opaque
@@ -451,5 +494,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Firebase Authentication ID token presented as an HTTP Bearer credential.
-        Health endpoints do not use this scheme. Token verification is implemented
-        in a later task.
+        Django verifies the token and maps the UID to one local profile. Health probes
+        and anonymous catalog reads do not use this scheme. Client-supplied user or
+        profile identifiers are ignored.

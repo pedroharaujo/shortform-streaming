@@ -29,5 +29,17 @@ this command):
 uv run python backend/manage.py seed_catalog
 ```
 
-Later plan tasks own `accounts`, `playback`, `entitlements`, `commerce`,
+`accounts` is the identity bounded application created by P2-T01. Django
+verifies Firebase ID tokens and owns `UserProfile` rows keyed by `firebase_uid`.
+The public API never returns `firebase_uid`. Clients call:
+
+- `GET /v1/me` (Firebase ID token required)
+
+Local and CI default to mock verification (`FIREBASE_AUTH_MODE=mock`, tokens
+shaped `mock.<uid>`). Production uses firebase-admin (`FIREBASE_AUTH_MODE=admin`)
+and fails closed when a token cannot be verified. Optional emulator host for
+admin-mode local work: `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`. Never commit
+service-account JSON.
+
+Later plan tasks own `playback`, `entitlements`, `commerce`,
 `advertising`, `experiments`, and `notifications`.

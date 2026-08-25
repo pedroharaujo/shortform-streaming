@@ -9,11 +9,17 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_ENVIRONMENT = ("DJANGO_SECRET_KEY", "DJANGO_ALLOWED_HOSTS", "DATABASE_URL")
-CONFIGURATION_ENVIRONMENT = (*REQUIRED_ENVIRONMENT, "DATABASE_CONNECT_TIMEOUT")
+CONFIGURATION_ENVIRONMENT = (
+    *REQUIRED_ENVIRONMENT,
+    "DATABASE_CONNECT_TIMEOUT",
+    "FIREBASE_AUTH_MODE",
+    "FIREBASE_PROJECT_ID",
+)
 IMPORT_VALID_ENVIRONMENT = {
     "DJANGO_SECRET_KEY": "replace-with-provider-value",
     "DJANGO_ALLOWED_HOSTS": "api.example.test",
     "DATABASE_URL": "postgresql://example@127.0.0.1:5432/example",
+    "FIREBASE_PROJECT_ID": "demo-shortform-local",
 }
 DEPLOY_VALID_SECRET = "".join(
     ("synthetic-check-only-", "9v!x2L#p7Q@m4Z-k8R_", "c5T+w3N-y6F$a1B%u0D")
@@ -89,6 +95,23 @@ def test_production_settings_reject_invalid_connect_timeout(connect_timeout: str
 
     assert result.returncode != 0
     assert "DATABASE_CONNECT_TIMEOUT" in result.stderr
+
+
+def test_production_settings_require_firebase_project_id() -> None:
+    environment = {
+        name: value
+        for name, value in IMPORT_VALID_ENVIRONMENT.items()
+        if name != "FIREBASE_PROJECT_ID"
+    }
+    result = run_settings_import(environment)
+    assert result.returncode != 0
+    assert "FIREBASE_PROJECT_ID" in result.stderr
+
+
+def test_production_settings_reject_mock_firebase_auth_mode() -> None:
+    result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "FIREBASE_AUTH_MODE": "mock"})
+    assert result.returncode != 0
+    assert "firebase-admin" in result.stderr
 
 
 def test_production_settings_accept_import_complete_postgresql_configuration() -> None:

@@ -10,6 +10,7 @@ export interface HomeCatalogScreenProps {
   readonly client: CatalogClient;
   readonly onSelectSeries: (seriesId: string) => void;
   readonly onOpenHealth: () => void;
+  readonly onOpenSignIn: () => void;
 }
 
 function SeriesCard({
@@ -40,6 +41,7 @@ export function HomeCatalogScreen({
   client,
   onSelectSeries,
   onOpenHealth,
+  onOpenSignIn,
 }: HomeCatalogScreenProps): JSX.Element {
   const { state, refresh } = useCatalogHome(client);
 
@@ -94,6 +96,15 @@ export function HomeCatalogScreen({
         </ScrollView>
       ) : null}
 
+      <Pressable
+        accessibilityLabel="Sign in"
+        accessibilityRole="button"
+        onPress={onOpenSignIn}
+        style={styles.healthLink}
+        testID="home-sign-in"
+      >
+        <Text style={styles.healthLinkLabel}>Sign in</Text>
+      </Pressable>
       <Pressable
         accessibilityLabel="Backend availability"
         accessibilityRole="button"

@@ -84,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current user profile
+         * @description Return the local profile for the verified Firebase ID token. The first successful call creates the profile. The same Firebase UID always maps to one profile. Client-supplied user or profile identifiers are ignored. firebase_uid is never returned.
+         */
+        get: operations["v1_me_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/series/{public_id}": {
         parameters: {
             query?: never;
@@ -153,6 +173,14 @@ export interface components {
             original_language: string;
             genres: string[];
             seasons: components["schemas"]["CatalogSeason"][];
+        };
+        CurrentUserProfile: {
+            /** @description Opaque profile public id. Sequential database integers are never used. */
+            public_id: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
         };
         /** @description Cursor-paginated list envelope. `cursor` and `next` are opaque strings, never numeric offsets. Concrete list operations replace `results` item types. */
         CursorPage: {
@@ -334,6 +362,34 @@ export interface operations {
             };
             /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_me_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUserProfile"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

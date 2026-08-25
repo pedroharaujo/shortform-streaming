@@ -16,6 +16,14 @@ from .base import *  # noqa: E402,F403
 ALLOWED_HOSTS = [
     host.strip() for host in os.environ["DJANGO_ALLOWED_HOSTS"].split(",") if host.strip()
 ]
+FIREBASE_AUTH_MODE = os.environ.get("FIREBASE_AUTH_MODE", "admin").strip().lower() or "admin"
+if FIREBASE_AUTH_MODE != "admin":
+    raise ImproperlyConfigured(
+        "Production Firebase verification must use firebase-admin (FIREBASE_AUTH_MODE=admin)."
+    )
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "").strip()
+if not FIREBASE_PROJECT_ID:
+    raise ImproperlyConfigured("FIREBASE_PROJECT_ID is required in production")
 if not ALLOWED_HOSTS:
     raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must contain at least one host")
 

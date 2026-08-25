@@ -24,6 +24,7 @@ export default function HomeRoute(): JSX.Element {
     <HomeCatalogScreen
       client={client}
       onOpenHealth={() => router.push('/health')}
+      onOpenSignIn={() => router.push('/sign-in')}
       onSelectSeries={(seriesId) => router.push(`/series/${seriesId}`)}
     />
   );

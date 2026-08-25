@@ -323,3 +323,29 @@ def test_accept_language_is_ignored(client: Client, freeze_catalog_clock: None) 
     )
     assert response.status_code == 200
     assert response.json()["rails"][0]["series"][0]["title"] == "Harbor Lights"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "authorization",
+    (None, "Bearer not-a-token", "Bearer mock.firebase-user-1"),
+)
+def test_catalog_stays_anonymous_with_or_without_bearer(
+    client: Client, freeze_catalog_clock: None, authorization: str | None
+) -> None:
+    del freeze_catalog_clock
+    series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    headers = _headers()
+    if authorization is not None:
+        headers["HTTP_AUTHORIZATION"] = authorization
+    home = client.get(HOME, **headers)
+    assert home.status_code == 200
+    assert home.json()["rails"][0]["series"][0]["id"] == series.public_id
+
+    series_response = client.get(f"/v1/series/{series.public_id}", **headers)
+    assert series_response.status_code == 200
+    assert series_response.json()["id"] == series.public_id
+
+    episode_response = client.get(f"/v1/episodes/{episode.public_id}", **headers)
+    assert episode_response.status_code == 200
+    assert episode_response.json()["id"] == episode.public_id

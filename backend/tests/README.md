@@ -5,7 +5,12 @@ The health tests prove liveness does not touch the database, readiness succeeds
 against PostgreSQL, database failures are returned as a non-sensitive HTTP 503, and
 production configuration fails fast. OpenAPI tests prove shared contract
 components, the Firebase bearer scheme, unauthenticated health and catalog
-operations, and that health JSON matches the `HealthStatus` schema.
+operations, authenticated `GET /v1/me`, and that health JSON matches the
+`HealthStatus` schema.
+
+Accounts tests under `backend/tests/accounts/` cover missing, malformed, expired,
+and revoked tokens, ignored client-supplied user IDs, idempotent and concurrent
+profile creation, and mock versus fail-closed admin verification.
 
 Catalog tests under `backend/tests/catalog/` cover rights-window and publish
 validation, duplicate episode order, Django Admin staff access versus anonymous

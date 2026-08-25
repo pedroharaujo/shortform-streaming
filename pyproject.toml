@@ -8,6 +8,7 @@ dependencies = [
     "django>=6.1,<6.2",
     "djangorestframework>=3.16,<3.19",
     "drf-spectacular>=0.28,<1",
+    "firebase-admin>=6.8,<8",
     "psycopg[binary]>=3.2,<3.4",
 ]
 
@@ -50,4 +51,8 @@ django_settings_module = "config.settings.local"
 
 [[tool.mypy.overrides]]
 module = ["drf_spectacular.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["firebase_admin", "firebase_admin.*"]
 ignore_missing_imports = true
