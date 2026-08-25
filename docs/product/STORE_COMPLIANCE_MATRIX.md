@@ -57,7 +57,7 @@ Primary reference: https://developers.google.com/admob/ios/rewarded
 
 The MVP app interface and initial microdrama catalog are in English. The intended legal-entity country is France, and decision D-001 defines the founder-approved scope of 21 EU countries using EUR. Language and common currency do not remove national consumer, tax, age-rating, accessibility, or language obligations. The final law set follows the incorporated legal entity, enabled distribution countries, users, data flows, and providers. Implement a GDPR-ready baseline now, then add and approve each storefront's jurisdiction-specific requirements before enabling distribution there.
 
-- Maintain a data inventory: field/event, purpose, lawful basis/consent, processor, region, retention, access roles, deletion behavior.
+- Maintain a data inventory: field/event, purpose, lawful basis/consent, processor, region, retention, access roles, deletion behavior. Engineering inventory: [`SDK_DATA_INVENTORY.md`](SDK_DATA_INVENTORY.md) (P0-T03 remaining engineering slice; not a P0-T03 completion record).
 - Minimize identifiers and avoid email, tokens, receipts, signed media URLs, exact IP, or contract references in analytics.
 - Separate authentication identity, operational logs, analytics identifiers, and financial audit records.
 - Provide clear privacy notice, terms, support contact, consent choices, and account deletion.
@@ -84,4 +84,4 @@ The MVP app interface and initial microdrama catalog are in English. The intende
 - [ ] Legal/privacy owner reviews the relevant jurisdiction row set.
 - [ ] Content rating owner approves provisional rating method.
 - [ ] Finance/tax owner approves merchant, tax, refund, and revenue-recognition treatment.
-- [ ] Engineering confirms all declarations match the planned SDK/data inventory.
+- [x] Engineering published [`SDK_DATA_INVENTORY.md`](SDK_DATA_INVENTORY.md) (2026-08-25). This checks the engineering inventory box only: the inventory exists and is labeled current-on-main / in-flight (not merged) / planned MVP. **P0-T03 is still incomplete** — finance EUR settlement, legal/privacy jurisdiction review, content rating, and finance/tax treatment remain open. Apple privacy labels and Google Data safety declarations are not confirmed until those reviews and a matching binary exist.
