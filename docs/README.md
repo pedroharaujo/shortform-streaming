@@ -6,6 +6,7 @@
 - `product/DECISION_REGISTER.md` — authoritative approval status.
 - `product/CONTENT_RIGHTS_CHECKLIST.md` — contractual and media gate.
 - `product/STORE_COMPLIANCE_MATRIX.md` — commerce, advertising, store, and privacy baseline.
+- `product/SDK_DATA_INVENTORY.md` — engineering SDK/data inventory for privacy labels and deletion (P0-T03 remaining slice; P0-T03 is not complete).
 - `product/COST_MODEL.md` — unit-cost and contribution formulas.
 
 ## Architecture decisions
