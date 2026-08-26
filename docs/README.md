@@ -2,7 +2,7 @@
 
 ## Product and delivery
 
-- `product/MVP_PRODUCT_BRIEF.md` — proposed MVP and decisions requiring approval.
+- `product/MVP_PRODUCT_BRIEF.md` — thinner MVP: 1 series, ads-only monetization; Public Release Readiness remains open.
 - `product/DECISION_REGISTER.md` — authoritative approval status.
 - `product/CONTENT_RIGHTS_CHECKLIST.md` — contractual and media gate.
 - `product/STORE_COMPLIANCE_MATRIX.md` — commerce, advertising, store, and privacy baseline.
@@ -21,7 +21,7 @@
 
 ## Architecture diagrams
 
-- `architecture/shortform-streaming.drawio` — system map, monorepo layout, and MVP workflows (home, playback, login, payments, rewarded ads, ingestion, analytics). Open in draw.io / diagrams.net.
+- `architecture/shortform-streaming.drawio` — system map, monorepo layout, and workflows (home, playback, login, rewarded ads, ingestion, analytics; store payments are P7). Open in draw.io / diagrams.net.
 
 ## API
 

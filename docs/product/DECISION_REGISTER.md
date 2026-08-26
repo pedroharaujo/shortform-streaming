@@ -10,19 +10,19 @@ This register distinguishes working assumptions from approved decisions. An impl
 | D-001 | Distribution countries/storefronts | The 21 EU Member States using EUR in 2026: Austria, Belgium, Bulgaria, Croatia, Cyprus, Estonia, Finland, France, Germany, Greece, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Portugal, Slovakia, Slovenia, and Spain | Founder scope approved 2026-08-23; each market remains gated by territorial rights and local legal/language review | Founder + legal/growth | P0-T01 completion and store launch |
 | D-002 | Product interface language | English (`en`) | Approved 2026-08-23 | Founder | Now |
 | D-003 | Provisional age direction | 16+ | Proposed; catalog-dependent | Founder + content/legal | Store submission |
-| D-004 | Initial catalog | 5–10 non-exclusive licensed series | Proposed | Founder + content | Content ingestion |
-| D-005 | Guest boundary | Browse/watch free episodes anonymously; login before monetized unlock | Proposed | Founder | Auth UX implementation |
-| D-006 | Initial free window | First five episodes | Proposed, experimentable | Founder/product | Offer configuration |
-| D-007 | Reward model | One verified ad permanently unlocks one episode | Proposed | Founder/product | Ad implementation |
-| D-008 | Coin policy | Store-purchased, non-expiring, non-transferable, no cash value | Proposed; policy review required | Founder + legal | IAP configuration |
-| D-009 | Subscription benefit | Eligible catalog access while active | Proposed | Founder/product | IAP configuration |
+| D-004 | Initial catalog | 1 licensed (or self-owned/generated test) series at launch; the catalog data model still supports N series | Founder approved 2026-08-27. Expansion after ads-only unit-economics validation. | Founder + content | Content ingestion |
+| D-005 | Guest boundary | Browse/watch free episodes anonymously; login required before monetized unlock (rewarded ad) | Founder approved 2026-08-27 | Founder | Auth UX implementation |
+| D-006 | Initial free window | First five episodes, hardcoded / admin-configured (not Remote Config / experiment cohorts in MVP) | Founder approved 2026-08-27; experimentable in P7 | Founder/product | Offer configuration |
+| D-007 | Reward model | One verified rewarded ad permanently unlocks one episode. This is the only MVP monetization path. | Founder approved 2026-08-27 | Founder/product | Ad implementation |
+| D-008 | Coin policy | Store-purchased, non-expiring, non-transferable, no cash value | Proposed; deferred 2026-08-27 (not MVP) | Founder + legal | P7 IAP |
+| D-009 | Subscription benefit | Eligible catalog access while active | Proposed; deferred 2026-08-27 (not MVP) | Founder/product | P7 IAP |
 | D-010 | Repository visibility | Public | Accepted by current repository state | Founder | Now |
 | D-011 | Backend architecture | Django/DRF modular monolith | Accepted in implementation plan | Engineering | Bootstrap |
 | D-012 | Database path | Supabase PostgreSQL for development/early staging; paid production database | Accepted in implementation plan | Engineering | Environment provisioning |
 | D-013 | Mobile platform services | Firebase Auth/Analytics/Remote Config/Crashlytics/FCM/App Check | Accepted in implementation plan | Engineering | Mobile bootstrap |
 | D-014 | Video path | Bunny Stream HLS + short-lived token access as default; GCP Cloud Storage → Transcoder → signed Cloud CDN as documented fallback | Accepted default 2026-08-24; P2-T05 on-device proof is Android under D-026 (Bunny still must be proven on a real Android development build; iOS play is deferred to the iOS ship pass); activate GCP Cloud CDN only if Bunny fails that spike, a license/residency/support constraint forbids it, or measured cost/reliability is worse; D-019 DRM may still require a DRM-capable provider | Engineering + content/legal | P2-T05 Android on-device outcome under D-026 before production video-provider configuration; D-019 before licensed-media ingestion |
-| D-015 | Mobile commerce | Apple/Google store billing through RevenueCat; Django ledger | Accepted subject to current regional policy review | Engineering + legal | Monetization |
-| D-016 | Analytics/experiments | Firebase → BigQuery → Looker Studio | Accepted in implementation plan | Product + engineering | Analytics phase |
+| D-015 | Mobile commerce | Apple/Google store billing through RevenueCat; Django ledger. MVP implementation deferred to P7; MVP commerce is AdMob only. | Accepted architecture; MVP deferred 2026-08-27 | Engineering + legal | P7 |
+| D-016 | Analytics/experiments | Accepted architecture: Firebase Analytics typed events (MVP); BigQuery export, Looker Studio models, and Remote Config A/B wait for P7 | Accepted architecture with MVP/P7 split 2026-08-27 | Product + engineering | MVP events now; warehouse/experiments P7 |
 | D-017 | Acquisition validation budget | TBD | Decision required | Founder | Before paid acquisition |
 | D-018 | MMP adoption threshold | TBD based on spend and attribution ambiguity | Decision required | Founder + growth | P4-T07 |
 | D-019 | DRM requirement | No custom DRM unless contract requires it | Pending first license package; does not block local fixtures or self-owned/generated test media | Content/legal | Before licensed-media ingestion or production video-provider selection/configuration |

@@ -1,7 +1,7 @@
 # MVP Unit-Cost and Contribution Model
 
 **Plan task:** P0-T04  
-**Status:** Formula baseline; provider quotes, catalog terms, prices, and acquisition budget are pending
+**Status:** Formula baseline; ads-first MVP validation (2026-08-27). Provider quotes, catalog terms, and acquisition budget are pending. Store, subscription, and RevenueCat inputs remain for **P7** scenarios.
 
 The business should be evaluated by acquired cohort, not by aggregate revenue. EUR is the company reporting currency. Keep provider pricing inputs versioned with an effective date and source link; do not hard-code volatile prices into application logic.
 
@@ -11,19 +11,21 @@ The business should be evaluated by acquired cohort, not by aggregate revenue. E
 - Preserve every financial fact in its original currency and original amount.
 - Convert original amounts to EUR for company reporting using a documented exchange-rate source, rate, and effective timestamp.
 - Target EUR store settlement by configuring an eligible Apple bank account and Google payments profile/bank account. Do not assume the app can choose payout currency at transaction time.
-- Treat coins as non-cash virtual units. A coin balance is not a monetary currency balance and is never converted to EUR for the user.
+- Treat coins as non-cash virtual units. A coin balance is not a monetary currency balance and is never converted to EUR for the user. Coins are a P7 input; ads-only MVP contribution uses verified ad revenue.
 
 ## Core formulas
 
 ```text
 gross_store_revenue
   = subscription_sales + coin_pack_sales
+  (P7 IAP; zero in ads-only MVP)
 
 net_store_revenue
   = gross_store_revenue
   - store_commissions
   - indirect_taxes_withheld_or_due
   - refunds_and_chargebacks
+  (P7 IAP; zero in ads-only MVP)
 
 net_ad_revenue
   = verified_rewarded_ad_revenue
@@ -68,9 +70,9 @@ contribution_LTV_to_CAC
 |---|---|---|---|
 | Cohort | Country, platform, campaign, creative, series, experiment, install date | dimension | Analytics/growth |
 | Acquisition | Spend, attributed installs/users | original currency, EUR, count | Ad network/MMP |
-| Store | Product, gross proceeds, commissions, taxes, refunds | customer/store currency, settlement currency, EUR | Store/RevenueCat/finance |
-| Subscription | Starts, renewals, churn, grace, expiry | count/rate | RevenueCat/backend |
-| Coins | Packs sold, credits, debits, outstanding balance | count/coins plus purchase currency/EUR | Backend ledger |
+| Store | Product, gross proceeds, commissions, taxes, refunds | customer/store currency, settlement currency, EUR | Store/RevenueCat/finance (**P7**) |
+| Subscription | Starts, renewals, churn, grace, expiry | count/rate | RevenueCat/backend (**P7**) |
+| Coins | Packs sold, credits, debits, outstanding balance | count/coins plus purchase currency/EUR | Backend ledger (**P7**) |
 | Ads | Verified impressions, eCPM/net revenue | count/original currency/EUR | AdMob |
 | Viewing | Starts, completed minutes, rendition mix, watch hours | count/minutes | Analytics/player |
 | Video processing | Source minutes × each output rendition price, or included in managed-video plan | minutes/currency | Bunny Stream / GCP billing |
@@ -108,7 +110,7 @@ Create at least three scenarios before P0-T04 is complete:
 - Acquired users:
 - Catalog source minutes:
 - Watch hours/user:
-- Payer conversion and average net payer revenue:
+- Payer conversion and average net payer revenue: (**P7** IAP scenario; ads-only MVP uses rewarded ads/user and net eCPM)
 - Rewarded ads/user and net eCPM:
 - Content cost:
 - Expected monthly variable infrastructure:

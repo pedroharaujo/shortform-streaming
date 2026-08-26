@@ -13,6 +13,10 @@ Use Firebase Authentication, Analytics, Remote Config, A/B Testing, Crashlytics,
 
 Django verifies Firebase ID tokens and owns profiles and authorization. The mobile app never selects a backend user ID. Firebase analytics is not a financial ledger.
 
+### MVP timing (2026-08-27)
+
+The ADR remains accepted. **MVP-facing:** Authentication, Analytics (typed events), Crashlytics, and App Check. **Deferred to P7:** Cloud Messaging (FCM) and Remote Config A/B Testing. Performance Monitoring may land with the MVP observability slice or wait for P7; it is not a launch blocker.
+
 ## Consequences
 
 - Provider configuration must be isolated by environment.
