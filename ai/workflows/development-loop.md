@@ -65,6 +65,7 @@ The required order is **implement -> review -> fix -> verify -> PR**. `fix` and 
 ## Stopping rules
 
 - Stop for a human decision when product/legal/rights/market/price/budget scope is unapproved or contradictory.
+- Engineering sequencing (smaller mergeable slice now, native SDK or provider wiring later) is an orchestrator decision when the approved architecture is unchanged; do not stop the loop to ask the founder.
 - Stop on suspected secret, personal data, licensed asset, or confidential information exposure.
 - After two failed fixes for the same finding, require a root-cause note and narrower plan before retrying.
 - Never merge automatically unless repository protections and the task explicitly authorize it.

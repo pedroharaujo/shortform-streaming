@@ -127,6 +127,31 @@ def test_mapped_ineligible_episode_is_404(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    "authorization",
+    (None, "Bearer not-a-token", "Bearer mock.firebase-user-1"),
+)
+def test_authorize_stays_anonymous_with_or_without_bearer(
+    client: Client,
+    freeze_catalog_clock: None,
+    fake_provider: FakeVideoProvider,
+    authorization: str | None,
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    asset_id = fake_provider.seed_ready_asset()
+    headers = _headers()
+    if authorization is not None:
+        headers["HTTP_AUTHORIZATION"] = authorization
+    with override_settings(PLAYBACK_SPIKE_ASSETS={episode.public_id: asset_id}):
+        response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **headers)
+    assert response.status_code == 200
+    assert response.status_code != 401
+    payload = response.json()
+    assert "playback_url" in payload
+
+
+@pytest.mark.django_db
 def test_success_returns_opaque_https_m3u8_not_on_django_origin(
     client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
 ) -> None:
