@@ -34,8 +34,10 @@ Missing credentials are **not** a Bunny failure and must not reopen D-014.
    hostname (for example `vz-….b-cdn.net`), and pull-zone token authentication
    key into a **local, untracked** environment. Leave production unset.
 2. Enable CDN token authentication on the library pull zone. Use directory /
-   path-style tokens so HLS segments inherit access. Configure allowed referrers
-   / block direct file access for hotlink denial.
+   path-style tokens so HLS segments inherit access. Leave Stream **Block Direct
+   URL File Access** **off** (required for native `expo-video`; a signed GET
+   with no Referer must succeed). Token auth still denies unsigned and expired
+   requests. Do not rely on hotlink / empty-referrer blocking for this spike.
 3. Set:
 
    ```text
@@ -58,8 +60,9 @@ Missing credentials are **not** a Bunny failure and must not reopen D-014.
    `redacted`).
 5. Map `PLAYBACK_SPIKE_ASSETS={"<episode_public_id>":"<asset_id>"}` in the local
    untracked env. Restart Django. Call authorize as above. Play in `expo-video`.
-6. Confirm unsigned, expired, and disallowed-referrer requests fail at the CDN.
-   Django remains the authorizer.
+6. Confirm unsigned and expired playlist GETs return **403**. Django remains
+   the authorizer. A signed GET with no Referer should return **200** when
+   Block Direct URL File Access is off.
 
 If Bunny is attempted and fails encode, tokens, hotlink, residency, or cost,
 record a GCP Cloud CDN fallback spike and update D-014. Do not treat absent
@@ -71,3 +74,30 @@ credentials as that failure.
 headers and plays the opaque HLS URL in `expo-video`. Bunny keys must never
 appear in `EXPO_PUBLIC_*`. Android is the required live play; iOS is deferred
 per D-026.
+
+## Live observation (non-production)
+
+Never paste signed URLs, token query values, or API keys.
+
+**Encode / authorize (2026-08-25).** Generated 9:16 clip, `spike_bunny_playback`:
+status ready; 1080×1920 portrait; 3.0s; audio yes; captions yes; thumbnails 3.
+Renditions 240p, 360p, 480p, 720p, 1080p (no 540p in this library’s default
+ladder; 360p and 720p present). Django `POST /v1/playback/.../authorize` with
+territory **FR** → **200** opaque HTTPS m3u8; **DE** → **404**. Unsigned
+playlist GET → **403**. Expired token GET → **403**. Signed GET with no Referer
+→ **200** after Stream **Block Direct URL File Access** was turned **off**
+(required for native `expo-video`). Hotlink / empty-referrer blocking was
+intentionally off; token auth still denies unsigned and expired requests.
+
+**Android (2026-08-26).** Pixel emulator, isolated `/playback-spike`, played the
+3s blue HLS in `expo-video` (not Bunny’s web player). The catalog
+episode-selected screen is **not** the player (P2-T08). Network: normal local.
+Startup to play succeeded. Constrained-network and rebuffer instrumentation
+were **not** run on a 3s clip. Seek and background/foreground were **not**
+separately timed.
+
+**D-026.** iOS device play is deferred to the iOS ship / TestFlight-quality
+pass. It is not a P2-T05 close-out gate and is not cancelled.
+
+Bunny did **not** fail; GCP Cloud CDN fallback was not activated; D-014 was
+not reopened.

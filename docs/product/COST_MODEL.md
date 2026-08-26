@@ -159,7 +159,14 @@ Record the original amount/currency, converted EUR amount, exchange rate, rate s
 
 ## P2-T05 Bunny Stream spike (public list prices)
 
-Live encode/delivery measurement was **not** run: non-production Bunny Stream credentials were not present in the implementer environment. Missing credentials are not a Bunny failure and do not reopen D-014.
+Live non-production Bunny Stream smoke ran **2026-08-25** (`spike_bunny_playback`, generated 9:16 clip, non-production library). Bunny did **not** fail; GCP Cloud CDN fallback was not activated; D-014 was not reopened.
+
+Observed encode (management-command status; no signed URLs recorded):
+
+- Status ready; **1080×1920** portrait; duration **3.0s**; audio yes; captions yes; thumbnails **3**.
+- Renditions: 240p, 360p, 480p, 720p, 1080p. This library’s default ladder has **no 540p**; 360p and 720p were present. Plan wording “360/540/720” is an example ABR ladder, not a failed spike.
+- Spike source minutes = 3/60 = **0.05 min**. Standard Stream encoding is included at **USD 0.00 / source minute**, so spike encode cost is **USD 0.00 / EUR 0.00**.
+- Stored GB and delivered GB were **not metered** from a Bunny billing export. They remain **absent as measured bytes**; do not invent GB. Public list prices below still apply for modeling. Implied encode cost per source minute is **USD 0.00**.
 
 Public sources (retrieved 2026-08-25):
 
@@ -175,7 +182,8 @@ EUR conversion uses the Frankfurter API (ECB reference rates): https://api.frank
 | Storage, Europe Frankfurt HDD | USD 0.01 / GB-month | EUR 0.0085734 / GB-month | 1 USD = 0.85734 EUR | https://docs.bunny.net/stream/pricing | 2026-08-25 |
 | CDN delivery, EU & North America, Standard | USD 0.010 / GB | EUR 0.0085734 / GB | 1 USD = 0.85734 EUR | https://docs.bunny.net/stream/pricing | 2026-08-25 |
 | Implied encode cost per source minute (standard ladder) | USD 0.00 | EUR 0.00 | n/a | Standard encoding is included; delivery is billed per GB watched | 2026-08-25 |
+| Spike-measured standard encode (0.05 source min, 3.0s clip) | USD 0.00 | EUR 0.00 | n/a | Live smoke 2026-08-25; included standard encoding | 2026-08-25 |
+| Spike-measured stored GB | absent (not metered) | absent | n/a | No billing-export byte count; do not invent GB | 2026-08-25 |
+| Spike-measured delivered GB | absent (not metered) | absent | n/a | No billing-export byte count; do not invent GB | 2026-08-25 |
 
 Premium encoding (not the intended default path for this spike): HD 1080p/720p is USD 0.050 per output minute per codec (EUR 0.042867). Standard encoding remains USD 0.00 per source minute.
-
-Spike-measured encode minutes, stored GB, and delivered GB are **absent** until a live Bunny smoke runs with non-production credentials.
