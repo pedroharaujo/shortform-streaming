@@ -7,6 +7,8 @@ import pytest
 from django.db import OperationalError
 from django.test import Client
 
+from apps.accounts.models import UserProfile
+
 
 def test_live_is_process_only(client: Client) -> None:
     with patch("apps.health.views.connections") as mocked_connections:
@@ -65,3 +67,4 @@ def test_ready_stays_anonymous_with_or_without_bearer(
     response = client.get("/health/ready", **headers)
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+    assert UserProfile.objects.count() == 0

@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 from django.test import Client
 
+from apps.accounts.models import UserProfile
 from apps.catalog.models import PublicationStatus
 from tests.catalog.builders import (
     DEFAULT_NOW,
@@ -349,3 +350,4 @@ def test_catalog_stays_anonymous_with_or_without_bearer(
     episode_response = client.get(f"/v1/episodes/{episode.public_id}", **headers)
     assert episode_response.status_code == 200
     assert episode_response.json()["id"] == episode.public_id
+    assert UserProfile.objects.count() == 0

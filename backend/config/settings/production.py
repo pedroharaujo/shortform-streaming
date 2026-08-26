@@ -24,6 +24,8 @@ if FIREBASE_AUTH_MODE != "admin":
 FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "").strip()
 if not FIREBASE_PROJECT_ID:
     raise ImproperlyConfigured("FIREBASE_PROJECT_ID is required in production")
+if os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "").strip():
+    raise ImproperlyConfigured("FIREBASE_AUTH_EMULATOR_HOST is not allowed in production.")
 if not ALLOWED_HOSTS:
     raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must contain at least one host")
 

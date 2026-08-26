@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import pytest
 from django.test import Client, override_settings
 
+from apps.accounts.models import UserProfile
 from apps.catalog.models import PublicationStatus
 from apps.playback.providers.factory import reset_provider_cache
 from apps.playback.providers.fake import FakeVideoProvider
@@ -149,6 +150,7 @@ def test_authorize_stays_anonymous_with_or_without_bearer(
     assert response.status_code != 401
     payload = response.json()
     assert "playback_url" in payload
+    assert UserProfile.objects.count() == 0
 
 
 @pytest.mark.django_db

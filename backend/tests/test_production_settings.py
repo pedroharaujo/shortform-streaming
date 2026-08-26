@@ -22,6 +22,7 @@ CONFIGURATION_ENVIRONMENT = (
     "DATABASE_CONNECT_TIMEOUT",
     "FIREBASE_AUTH_MODE",
     "FIREBASE_PROJECT_ID",
+    "FIREBASE_AUTH_EMULATOR_HOST",
     *PLAYBACK_ENVIRONMENT,
 )
 IMPORT_VALID_ENVIRONMENT = {
@@ -121,6 +122,14 @@ def test_production_settings_reject_mock_firebase_auth_mode() -> None:
     result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "FIREBASE_AUTH_MODE": "mock"})
     assert result.returncode != 0
     assert "firebase-admin" in result.stderr
+
+
+def test_production_settings_reject_firebase_auth_emulator_host() -> None:
+    result = run_settings_import(
+        {**IMPORT_VALID_ENVIRONMENT, "FIREBASE_AUTH_EMULATOR_HOST": "127.0.0.1:9099"}
+    )
+    assert result.returncode != 0
+    assert "FIREBASE_AUTH_EMULATOR_HOST" in result.stderr
 
 
 def test_production_settings_accept_import_complete_postgresql_configuration() -> None:
