@@ -24,6 +24,7 @@ curl -sS -X POST \
 
 Play the returned `playback_url` on the isolated mobile route `/playback-spike?episodeId=<id>`.
 Do not convert the catalog episode-selected screen into a player (P2-T08).
+Required live play is an Android development build (D-026). iOS device play is deferred to the iOS ship pass, not dropped from the product.
 
 ## Non-production Bunny Stream
 
@@ -68,4 +69,5 @@ credentials as that failure.
 
 `/playback-spike?episodeId=<episode_public_id>` calls authorize with catalog
 headers and plays the opaque HLS URL in `expo-video`. Bunny keys must never
-appear in `EXPO_PUBLIC_*`.
+appear in `EXPO_PUBLIC_*`. Android is the required live play; iOS is deferred
+per D-026.

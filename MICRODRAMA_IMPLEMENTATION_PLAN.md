@@ -730,7 +730,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 #### P2-T05 — Prove Bunny Stream playback (GCP Cloud CDN fallback)
 
-**Description:** Spike the default path: upload a test vertical master through the `VideoProvider` to Bunny Stream, encode ABR HLS, and play it on Android and iOS with a short-lived token. If Bunny fails this spike, a license/residency/support constraint forbids it, or measured cost/reliability is worse, spike the documented GCP fallback (private GCS → Transcoder → Cloud CDN signed access) before continuing.
+**Description:** Spike the default path: upload a test vertical master through the `VideoProvider` to Bunny Stream, encode ABR HLS, and play it on an Android development build with a short-lived token. iOS development-build play is deferred to D-026 (required before iOS public storefront / TestFlight-quality pass, not for this PR). If Bunny fails this spike, a license/residency/support constraint forbids it, or measured cost/reliability is worse, spike the documented GCP fallback (private GCS → Transcoder → Cloud CDN signed access) before continuing.
 
 **Objective:** Retire the highest technical and cost risk on the chosen default before building the full player.
 
@@ -739,13 +739,14 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 **Acceptance criteria:**
 
 - [ ] 9:16 test media produces 360p/540p/720p HLS and thumbnails with correct rotation, audio, duration, and captions on Bunny Stream.
-- [ ] Android and iOS development builds play adaptive HLS through expiring token access using `expo-video` (not Bunny’s web player).
+- [ ] An Android development build plays adaptive HLS through expiring token access using `expo-video` (not Bunny’s web player). iOS development-build play is deferred to D-026 and remains required before iOS ship; it is not N/A forever.
 - [ ] Unsigned, expired, and hotlink access fail; Django remains the authorizer; cost per source minute is recorded.
 - [ ] If Bunny fails, a GCP Cloud CDN fallback spike is recorded and D-014 is updated before player work continues.
 
 **Validation and integration tests:**
 
-- [ ] Test on constrained and normal networks; capture startup time, switching, rebuffering, seek, and background/foreground behavior.
+- [ ] Android device notes are required: constrained and normal networks, startup time, switching, rebuffering, seek, and background/foreground behavior.
+- [ ] iOS Maestro/device E2E remains a ship / iOS-pass item under D-026, not a P2-T05 close-out gate.
 - [ ] If Bunny cannot meet requirements, complete the GCP fallback spike (or a DRM-vendor ADR if D-019 applies) before continuing.
 
 #### P2-T06 — Implement production media ingestion workflow
