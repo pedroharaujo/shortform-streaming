@@ -158,7 +158,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     userInterfaceStyle: 'dark',
     android: { package: 'com.shortformstreaming.app' },
     ios: { bundleIdentifier: 'com.shortformstreaming.app', supportsTablet: false },
-    plugins: ['expo-router'],
+    plugins: ['expo-router', 'expo-video'],
     experiments: { typedRoutes: true },
     extra: { api },
   };

@@ -29,3 +29,25 @@ SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
+
+_video_provider = os.environ.get("VIDEO_PROVIDER", "").strip().lower()
+if _video_provider == "fake":
+    raise ImproperlyConfigured("VIDEO_PROVIDER=fake is not allowed in production")
+if _video_provider == "bunny":
+    missing_bunny = [
+        name
+        for name in (
+            "BUNNY_STREAM_LIBRARY_ID",
+            "BUNNY_STREAM_API_KEY",
+            "BUNNY_STREAM_CDN_HOSTNAME",
+            "BUNNY_STREAM_TOKEN_KEY",
+        )
+        if not os.environ.get(name, "").strip()
+    ]
+    if missing_bunny:
+        raise ImproperlyConfigured(
+            "Missing required Bunny Stream production environment variables: "
+            + ", ".join(missing_bunny)
+        )
+elif _video_provider:
+    raise ImproperlyConfigured("VIDEO_PROVIDER must be empty (disabled) or bunny in production")

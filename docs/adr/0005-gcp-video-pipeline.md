@@ -2,7 +2,7 @@
 
 - **Status:** Accepted default 2026-08-24; P2-T05 must prove Bunny Stream; first-license DRM (D-019) may still change the production provider
 - **Date:** 2026-08-23
-- **Updated:** 2026-08-24
+- **Updated:** 2026-08-26
 
 ## Context
 
@@ -22,7 +22,7 @@ Do not operate both pipelines in production at once. Do not put Bunny video IDs 
 
 - CDN/transcoding remain variable costs in cohort contribution; model Bunny on GB (and optional DRM add-on), not GCP load-balancer floor, unless the fallback is active.
 - Takedown is a Django action that must also delete or expire the asset at the active provider.
-- P2-T05 spikes Bunny Stream on device (9:16 HLS, tokens, seek, captions, expiry, cost per source minute). A GCP CDN spike is in-scope only if Bunny fails or D-019 requires a different provider.
+- P2-T05 spikes Bunny Stream on device (9:16 HLS, tokens, seek, captions, expiry, cost per source minute). P2-T05 on-device proof is Android per D-026; iOS native play is deferred to the iOS ship pass. A GCP CDN spike is in-scope only if Bunny fails or D-019 requires a different provider.
 - Extra vendor DPA/subprocessors apply for Bunny (EU company). Confirm region and processing terms before licensed media.
 
 ## Reconsider when

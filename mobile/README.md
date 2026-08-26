@@ -31,10 +31,13 @@ Local Django already allows `10.0.2.2` so the Android emulator `Host` header is 
 mobile/
   app/                 Expo Router routes (`app/index.tsx` is the home catalog)
   app/health.tsx       Backend availability screen (secondary route)
+  app/playback-spike.tsx Isolated HLS spike (not the catalog episode screen)
   src/api/catalog/     Thin catalog wrapper over `@shortform/api-client`
+  src/api/playback/    Thin playback authorize wrapper over `@shortform/api-client`
   src/api/health/      Thin health wrapper over `@shortform/api-client`
   src/config/          Environment selection and manifest reads
   src/features/catalog Home, series detail, and episode-selected screens
+  src/features/playback Isolated expo-video spike screen
   src/features/health/ Backend availability screen
   maestro/             Local Maestro flow (not a CI job)
   scripts/             Expo public-config check

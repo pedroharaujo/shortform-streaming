@@ -156,3 +156,34 @@ Apply measured behavior rather than assuming linear payer conversion. Identify t
 - Google Play local currencies and payouts: https://support.google.com/googleplay/android-developer/answer/1169947?hl=en
 
 Record the original amount/currency, converted EUR amount, exchange rate, rate source, and effective timestamp when numerical inputs are added.
+
+## P2-T05 Bunny Stream spike (public list prices)
+
+Live non-production Bunny Stream smoke ran **2026-08-25** (`spike_bunny_playback`, generated 9:16 clip, non-production library). Bunny did **not** fail; GCP Cloud CDN fallback was not activated; D-014 was not reopened.
+
+Observed encode (management-command status; no signed URLs recorded):
+
+- Status ready; **1080×1920** portrait; duration **3.0s**; audio yes; captions yes; thumbnails **3**.
+- Renditions: 240p, 360p, 480p, 720p, 1080p. This library’s default ladder has **no 540p**; 360p and 720p were present. Plan wording “360/540/720” is an example ABR ladder, not a failed spike.
+- Spike source minutes = 3/60 = **0.05 min**. Standard Stream encoding is included at **USD 0.00 / source minute**, so spike encode cost is **USD 0.00 / EUR 0.00**.
+- Stored GB and delivered GB were **not metered** from a Bunny billing export. They remain **absent as measured bytes**; do not invent GB. Public list prices below still apply for modeling. Implied encode cost per source minute is **USD 0.00**.
+
+Public sources (retrieved 2026-08-25):
+
+- Stream pricing: https://bunny.net/pricing/stream/
+- Stream pricing reference: https://docs.bunny.net/stream/pricing
+- CDN/platform pricing: https://bunny.net/pricing/
+
+EUR conversion uses the Frankfurter API (ECB reference rates): https://api.frankfurter.app/latest?from=USD&to=EUR — **1 USD = 0.85734 EUR** on **2026-08-24** (latest published working-day rate as of 2026-08-25).
+
+| Input | Original | EUR | Rate | Source | Timestamp |
+| --- | --- | --- | --- | --- | --- |
+| Standard encoding per source minute | USD 0.00 (included) | EUR 0.00 | 1 USD = 0.85734 EUR | https://docs.bunny.net/stream/pricing | 2026-08-25 |
+| Storage, Europe Frankfurt HDD | USD 0.01 / GB-month | EUR 0.0085734 / GB-month | 1 USD = 0.85734 EUR | https://docs.bunny.net/stream/pricing | 2026-08-25 |
+| CDN delivery, EU & North America, Standard | USD 0.010 / GB | EUR 0.0085734 / GB | 1 USD = 0.85734 EUR | https://docs.bunny.net/stream/pricing | 2026-08-25 |
+| Implied encode cost per source minute (standard ladder) | USD 0.00 | EUR 0.00 | n/a | Standard encoding is included; delivery is billed per GB watched | 2026-08-25 |
+| Spike-measured standard encode (0.05 source min, 3.0s clip) | USD 0.00 | EUR 0.00 | n/a | Live smoke 2026-08-25; included standard encoding | 2026-08-25 |
+| Spike-measured stored GB | absent (not metered) | absent | n/a | No billing-export byte count; do not invent GB | 2026-08-25 |
+| Spike-measured delivered GB | absent (not metered) | absent | n/a | No billing-export byte count; do not invent GB | 2026-08-25 |
+
+Premium encoding (not the intended default path for this spike): HD 1080p/720p is USD 0.050 per output minute per codec (EUR 0.042867). Standard encoding remains USD 0.00 per source minute.

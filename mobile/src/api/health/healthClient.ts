@@ -7,7 +7,6 @@
  */
 
 import { createApiClient } from '@shortform/api-client';
-import type { paths } from '@shortform/api-client';
 
 import type {
   BackendHealthSnapshot,
@@ -17,10 +16,10 @@ import type {
   HealthResponseBody,
 } from './types';
 
-const PROBE_PATHS: Readonly<Record<HealthProbeName, keyof paths>> = {
+const PROBE_PATHS = {
   liveness: '/health/live',
   readiness: '/health/ready',
-};
+} as const satisfies Record<HealthProbeName, '/health/live' | '/health/ready'>;
 
 const DEFAULT_TIMEOUT_MS = 5_000;
 const UNKNOWN_STATUS = 'unknown';

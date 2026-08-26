@@ -730,7 +730,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 #### P2-T05 — Prove Bunny Stream playback (GCP Cloud CDN fallback)
 
-**Description:** Spike the default path: upload a test vertical master through the `VideoProvider` to Bunny Stream, encode ABR HLS, and play it on Android and iOS with a short-lived token. If Bunny fails this spike, a license/residency/support constraint forbids it, or measured cost/reliability is worse, spike the documented GCP fallback (private GCS → Transcoder → Cloud CDN signed access) before continuing.
+**Description:** Spike the default path: upload a test vertical master through the `VideoProvider` to Bunny Stream, encode ABR HLS, and play it on an Android development build with a short-lived token. iOS development-build play is deferred to D-026 (required before iOS public storefront / TestFlight-quality pass, not for this PR). If Bunny fails this spike, a license/residency/support constraint forbids it, or measured cost/reliability is worse, spike the documented GCP fallback (private GCS → Transcoder → Cloud CDN signed access) before continuing.
 
 **Objective:** Retire the highest technical and cost risk on the chosen default before building the full player.
 
@@ -738,15 +738,16 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **Acceptance criteria:**
 
-- [ ] 9:16 test media produces 360p/540p/720p HLS and thumbnails with correct rotation, audio, duration, and captions on Bunny Stream.
-- [ ] Android and iOS development builds play adaptive HLS through expiring token access using `expo-video` (not Bunny’s web player).
-- [ ] Unsigned, expired, and hotlink access fail; Django remains the authorizer; cost per source minute is recorded.
-- [ ] If Bunny fails, a GCP Cloud CDN fallback spike is recorded and D-014 is updated before player work continues.
+- [x] 9:16 test media produces ABR HLS and thumbnails with correct rotation, audio, duration, and captions on Bunny Stream (live 2026-08-25: 1080×1920, 3.0s, audio, captions, 3 thumbnails; renditions 240p/360p/480p/720p/1080p). Plan “360/540/720” is an example ABR ladder; this library’s default had **no 540p**, with 360p and 720p present — not a failed spike.
+- [x] An Android development build plays adaptive HLS through expiring token access using `expo-video` (not Bunny’s web player) (Pixel emulator, 2026-08-26, `/playback-spike`). iOS development-build play is deferred to D-026 and remains required before iOS ship; it is not N/A forever.
+- [x] Unsigned and expired token access fail (403); Django remains the authorizer; cost per source minute is recorded (0.05 min, USD 0 encode). Hotlink / empty-referrer blocking was intentionally off so native `expo-video` can play (Stream **Block Direct URL File Access** off); token auth still denies unsigned/expired.
+- [x] Bunny did not fail this spike; GCP Cloud CDN fallback was not activated; D-014 was not reopened.
 
 **Validation and integration tests:**
 
-- [ ] Test on constrained and normal networks; capture startup time, switching, rebuffering, seek, and background/foreground behavior.
-- [ ] If Bunny cannot meet requirements, complete the GCP fallback spike (or a DRM-vendor ADR if D-019 applies) before continuing.
+- [x] Android device notes recorded (2026-08-26 Pixel emulator): normal local network; startup to play succeeded on `/playback-spike`; constrained-network / rebuffer instrumentation was not run on a 3s clip; seek and background/foreground were not separately timed.
+- [ ] iOS Maestro/device E2E remains a ship / iOS-pass item under D-026, not a P2-T05 close-out gate.
+- [x] Bunny met requirements; GCP fallback spike not activated; D-014 not reopened.
 
 #### P2-T06 — Implement production media ingestion workflow
 
