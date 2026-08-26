@@ -27,8 +27,18 @@ function localAuthEmulatorOrigin(): string {
   return Platform.OS === 'android' ? ANDROID_EMULATOR_AUTH_ORIGIN : HOST_LOOPBACK_AUTH_ORIGIN;
 }
 
+function isAttachedToExpectedAuthEmulator(): boolean {
+  const config = getAuth().emulatorConfig;
+  if (config === null) {
+    return false;
+  }
+  const origin = `${config.protocol}://${config.host}:${String(config.port ?? '')}`;
+  return origin === localAuthEmulatorOrigin();
+}
+
 function attachLocalAuthEmulator(): void {
-  if (emulatorAttached) {
+  if (emulatorAttached || isAttachedToExpectedAuthEmulator()) {
+    emulatorAttached = true;
     return;
   }
   if (getApiConfiguration().environment !== 'local') {
@@ -37,8 +47,7 @@ function attachLocalAuthEmulator(): void {
   try {
     connectAuthEmulator(getAuth(), localAuthEmulatorOrigin());
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : '';
-    if (!message.toLowerCase().includes('emulator')) {
+    if (!isAttachedToExpectedAuthEmulator()) {
       throw error;
     }
   }
