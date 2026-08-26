@@ -52,7 +52,12 @@ describe('HomeCatalogScreen', () => {
     };
 
     const view = await render(
-      <HomeCatalogScreen client={pending} onOpenHealth={() => {}} onSelectSeries={() => {}} />,
+      <HomeCatalogScreen
+        client={pending}
+        onOpenHealth={() => {}}
+        onOpenSignIn={() => {}}
+        onSelectSeries={() => {}}
+      />,
     );
 
     expect(view.getByTestId('home-loading')).toBeTruthy();
@@ -87,7 +92,12 @@ describe('HomeCatalogScreen', () => {
     };
 
     const view = await render(
-      <HomeCatalogScreen client={client} onOpenHealth={() => {}} onSelectSeries={() => {}} />,
+      <HomeCatalogScreen
+        client={client}
+        onOpenHealth={() => {}}
+        onOpenSignIn={() => {}}
+        onSelectSeries={() => {}}
+      />,
     );
 
     await waitFor(() => expect(view.getByTestId('home-error')).toBeTruthy());
@@ -103,6 +113,7 @@ describe('HomeCatalogScreen', () => {
       <HomeCatalogScreen
         client={stubClient({ outcome: 'ok', data: emptyHome })}
         onOpenHealth={() => {}}
+        onOpenSignIn={() => {}}
         onSelectSeries={() => {}}
       />,
     );
@@ -118,6 +129,7 @@ describe('HomeCatalogScreen', () => {
       <HomeCatalogScreen
         client={stubClient({ outcome: 'ok', data: harborLightsHome })}
         onOpenHealth={() => {}}
+        onOpenSignIn={() => {}}
         onSelectSeries={onSelectSeries}
       />,
     );

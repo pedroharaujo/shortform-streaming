@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import pytest
 from django.test import Client, override_settings
 
+from apps.accounts.models import UserProfile
 from apps.catalog.models import PublicationStatus
 from apps.playback.providers.factory import reset_provider_cache
 from apps.playback.providers.fake import FakeVideoProvider
@@ -124,6 +125,32 @@ def test_mapped_ineligible_episode_is_404(
     with override_settings(PLAYBACK_SPIKE_ASSETS={hidden.public_id: hidden_asset}):
         response = client.post(AUTHORIZE.format(episode_id=hidden.public_id), **_headers())
         assert response.status_code == 404
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "authorization",
+    (None, "Bearer not-a-token", "Bearer mock.firebase-user-1"),
+)
+def test_authorize_stays_anonymous_with_or_without_bearer(
+    client: Client,
+    freeze_catalog_clock: None,
+    fake_provider: FakeVideoProvider,
+    authorization: str | None,
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    asset_id = fake_provider.seed_ready_asset()
+    headers = _headers()
+    if authorization is not None:
+        headers["HTTP_AUTHORIZATION"] = authorization
+    with override_settings(PLAYBACK_SPIKE_ASSETS={episode.public_id: asset_id}):
+        response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **headers)
+    assert response.status_code == 200
+    assert response.status_code != 401
+    payload = response.json()
+    assert "playback_url" in payload
+    assert UserProfile.objects.count() == 0
 
 
 @pytest.mark.django_db

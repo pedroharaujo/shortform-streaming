@@ -29,6 +29,18 @@ this command):
 uv run python backend/manage.py seed_catalog
 ```
 
+`accounts` is the identity bounded application created by P2-T01. Django
+verifies Firebase ID tokens and owns `UserProfile` rows keyed by `firebase_uid`.
+The public API never returns `firebase_uid`. Clients call:
+
+- `GET /v1/me` (Firebase ID token required)
+
+Local and CI default to mock verification (`FIREBASE_AUTH_MODE=mock`, tokens
+shaped `mock.<uid>`). Production uses firebase-admin (`FIREBASE_AUTH_MODE=admin`)
+and fails closed when a token cannot be verified. Optional emulator host for
+admin-mode local work: `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`. Never commit
+service-account JSON.
+
 `playback` is the video-provider and authorize bounded application created by
 P2-T05. Django never serves video bytes. Anonymous clients request a short-lived
 opaque HLS URL from:
@@ -40,9 +52,9 @@ episodes return HTTP 404 `ErrorEnvelope`, never 403. An unset or disabled
 `VideoProvider` returns HTTP 503 `ErrorEnvelope` and never mints unsigned access.
 Local settings default to `VIDEO_PROVIDER=fake`. Production rejects `fake`.
 
-Later plan tasks own `accounts`, `entitlements`, `commerce`, `advertising`,
-`experiments`, and `notifications`. P2-T06 owns MediaAsset ingestion; this app
-maps spike episodes through `PLAYBACK_SPIKE_ASSETS` only.
+Later plan tasks own `entitlements`, `commerce`, `advertising`, `experiments`,
+and `notifications`. P2-T06 owns MediaAsset ingestion; this app maps spike
+episodes through `PLAYBACK_SPIKE_ASSETS` only.
 
 Generate 9:16 test media and submit it to Bunny Stream (requires non-production
 credentials; missing credentials are not a Bunny failure):

@@ -93,8 +93,10 @@ BEARER_SCHEME: dict[str, object] = {
     "bearerFormat": "JWT",
     "description": (
         "Firebase Authentication ID token presented as an HTTP Bearer credential. "
-        "Health endpoints do not use this scheme. Token verification is implemented "
-        "in a later task."
+        "Django verifies the token and maps the UID to one local profile. "
+        "Health probes, anonymous catalog reads, and anonymous playback authorize "
+        "do not use this scheme. "
+        "Client-supplied user or profile identifiers are ignored."
     ),
 }
 
@@ -151,8 +153,9 @@ SPECTACULAR_SETTINGS: dict[str, object] = {
         "documented as components. Health probes, anonymous catalog reads, and anonymous "
         "playback authorize are unauthenticated. Catalog and playback operations require "
         "explicit X-Territory, X-Platform, and X-Language headers; those values are never "
-        "inferred from Accept-Language. Firebase token verification is not implemented in "
-        "this task. Django never serves video bytes."
+        "inferred from Accept-Language. GET /v1/me requires FirebaseIdToken; missing or "
+        "invalid tokens return 401 ErrorEnvelope. firebase_uid is never returned. "
+        "Django never serves video bytes."
     ),
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,

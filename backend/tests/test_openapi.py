@@ -173,6 +173,25 @@ def test_schema_documents_catalog_as_unauthenticated_with_error_envelope() -> No
     assert "PublicId" in ref or schema_ref.get("type") == "string"
 
 
+def test_schema_documents_me_as_firebase_authenticated() -> None:
+    schema = build_schema()
+    me = schema["paths"]["/v1/me"]["get"]
+    security = me.get("security")
+    assert security == [{"FirebaseIdToken": []}]
+    assert "401" in me["responses"]
+    assert _response_schema_ref(me["responses"]["401"]).endswith("/ErrorEnvelope")
+    success = schema["components"]["schemas"]["CurrentUserProfile"]["properties"]
+    assert "public_id" in success
+    assert "created_at" in success
+    assert "updated_at" in success
+    assert "firebase_uid" not in success
+    description = schema["info"]["description"].casefold()
+    assert "later task" not in description
+    bearer = schema["components"]["securitySchemes"]["FirebaseIdToken"]["description"].casefold()
+    assert "later task" not in bearer
+    assert "verif" in bearer
+
+
 def test_schema_documents_playback_authorize_as_unauthenticated() -> None:
     schema = build_schema()
     authorize = schema["paths"]["/v1/playback/{episode_id}/authorize"]["post"]

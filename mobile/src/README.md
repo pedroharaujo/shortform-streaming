@@ -6,8 +6,11 @@ Strict TypeScript sources for the Expo app.
 | ------------------- | ------------------------------------------------------------------------------------------------ |
 | `api/catalog/`      | Thin catalog wrapper over `@shortform/api-client` (`GET /v1/catalog/home`, series, episodes)     |
 | `api/health/`       | Thin health-probe wrapper over `@shortform/api-client` (`GET /health/live`, `GET /health/ready`) |
+| `api/me/`           | Authenticated `GET /v1/me`; Bearer ID token only, never a backend user id                        |
+| `auth/`             | Local/Jest Firebase Auth mock and in-memory ID-token session                                     |
 | `config/`           | Environment selection re-export and Expo manifest reads                                          |
 | `features/catalog/` | Home rails, series detail, episode-selected screens, artwork fallback                            |
+| `features/auth/`    | Isolated email/password sign-in screen                                                           |
 | `features/health/`  | Backend availability screen and hook                                                             |
 
 Add `components` and `analytics` when those features exist. Tests sit next to the modules they cover (`*.test.ts` / `*.test.tsx`).

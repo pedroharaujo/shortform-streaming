@@ -31,12 +31,16 @@ Local Django already allows `10.0.2.2` so the Android emulator `Host` header is 
 mobile/
   app/                 Expo Router routes (`app/index.tsx` is the home catalog)
   app/health.tsx       Backend availability screen (secondary route)
+  app/sign-in.tsx      Isolated email/password sign-in (not a login wall)
   app/playback-spike.tsx Isolated HLS spike (not the catalog episode screen)
   src/api/catalog/     Thin catalog wrapper over `@shortform/api-client`
   src/api/playback/    Thin playback authorize wrapper over `@shortform/api-client`
   src/api/health/      Thin health wrapper over `@shortform/api-client`
+  src/api/me/          Authenticated `GET /v1/me` (Bearer ID token only)
+  src/auth/            Local/Jest Firebase Auth mock and session token holder
   src/config/          Environment selection and manifest reads
   src/features/catalog Home, series detail, and episode-selected screens
+  src/features/auth/   Sign-in screen
   src/features/playback Isolated expo-video spike screen
   src/features/health/ Backend availability screen
   maestro/             Local Maestro flow (not a CI job)
@@ -46,6 +50,20 @@ mobile/
 
 `src/api/catalog` and `src/api/health` map generated OpenAPI calls onto mobile outcomes
 (timeout, 4xx, network failure). Do not expand them into a second handwritten HTTP client.
+`src/api/me` attaches a Firebase ID token as `Authorization: Bearer` on `GET /v1/me` only.
+Catalog and playback authorize stay unauthenticated even when a session exists.
+
+## Firebase Auth (email/password)
+
+This PR's device and local/CI development client uses the local mock in
+`src/auth/localMockFirebaseAuth.ts`, which issues `mock.<uid>` tokens accepted
+by Django when `FIREBASE_AUTH_MODE=mock`. Native `@react-native-firebase/auth`
+is follow-up issue #50 (P2-T01-F1) and is not wired here. Expo Go remains
+unsupported (ADR 0003). Never commit production `google-services.json`.
+
+Home remains the anonymous catalog; **Sign in** is a separate route (`/sign-in`)
+and is not a login wall (D-005 stays Proposed). Apple and Google providers are
+out of scope for P2-T01.
 
 ## Commands
 
@@ -106,7 +124,7 @@ This is the sequence that proves the app can reach the local API. It was **not**
 
    The first run generates `mobile/android/` (gitignored) and installs the development client on the emulator.
 
-5. The launch route is Home. After seeding the local catalog, it should show the featured rail (Harbor Lights for territory `FR`). Open **Backend availability** from Home to probe `/health/live` and `/health/ready`. Use **Check again** after restarting or stopping the API.
+5. The launch route is Home. After seeding the local catalog, it should show the featured rail (Harbor Lights for territory `FR`). Open **Sign in** for email/password against the local mock (optional). Isolated HLS play uses `/playback-spike?episodeId=<id>` (see `docs/runbooks/playback-spike.md`). Open **Backend availability** from Home to probe `/health/live` and `/health/ready`. Use **Check again** after restarting or stopping the API.
 
 ### iOS simulator equivalent
 

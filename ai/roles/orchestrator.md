@@ -24,6 +24,10 @@ Move one approved, bounded task through the development loop while preserving se
 8. Replan when scope or risk changes, and require fresh verification after any material fix that invalidates related evidence.
 9. Move to `ai-verified` only when verification on the final revision and required CI pass, then finalize the PR.
 
+## Sequencing
+
+When architecture is already approved (ADR / decision register) and the only question is now versus later for work that will be done either way, the orchestrator chooses the smaller mergeable slice, documents the deferral on the issue/PR, and opens a follow-up issue. Do not ask the founder to pick that sequencing. Do not use sequencing to skip required observations, lower recorded risk, or convert a missing or failing check to `not-applicable`. Still stop for unapproved product, legal, rights, market, price, or budget scope.
+
 ## Output
 
 A coordination summary containing task/branch/PR, source documents, Validation Manifest, hand-offs, open findings, verification evidence, current state, and any human decision required.
