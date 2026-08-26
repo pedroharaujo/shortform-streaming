@@ -27,6 +27,8 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 | Mobile runtime | `react-native` | 0.86.2 |
 | Mobile runtime | `react-native-safe-area-context` | ~5.7.0 |
 | Mobile runtime | `expo-video` | ~57.0.2 |
+| Mobile runtime | `@react-native-firebase/app` | ^26.3.2 (Expo 57 / RN 0.86 `expo install`; Android Auth first) |
+| Mobile runtime | `@react-native-firebase/auth` | ^26.3.2 (same pin as app; email/password + Auth emulator) |
 | Mobile runtime | `react-native-worklets` | 0.10.1 (workspace override; SDK 57 table) |
 | Mobile runtime | `react-native-reanimated` | 4.5.1 (workspace override; SDK 57 table) |
 | Mobile runtime | `react-native-gesture-handler` | 2.32.0 (workspace override; SDK 57 table ~2.32.0) |
@@ -46,6 +48,8 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 | CI / Docker | Python | 3.14 |
 
 `pnpm-workspace.yaml` overrides `react`, `react-native`, `react-test-renderer`, and `@react-native/metro-config` so transitives cannot pull RN 0.87 or React 19.2.8. It also overrides `react-native-worklets` to `0.10.1`, `react-native-reanimated` to `4.5.1`, and `react-native-gesture-handler` to `2.32.0`. Without those pins, Expo 57 transitives resolve worklets `0.12.1`, reanimated `4.6.0`, and gesture-handler `3.2.1`. Worklets 0.12 renamed `WorkletRuntime::executeSync` to `runSync`; SDK 57 `expo-modules-core@57.0.13` still calls `executeSync`, so Android native compile fails (`WorkletJSCallInvoker.cpp`: no member named `executeSync`). This is expo/expo#49225. Reanimated 4.6.x requires worklets 0.12.x, so both packages must pin together. Gesture Handler 3.x CMake-links `libworklets.so` from a worklets 0.12 layout; with worklets 0.10.1 the `.so` is missing and ninja fails (`:react-native-gesture-handler:buildCMakeDebug`). Pin RNGH to the SDK 57 table (`~2.32.0`). Do not patch `node_modules`. 0.10.x still exposes `executeSync`; Dependabot may open 0.10.x patches but not `>=0.11.0`. RNGH 2.32.x patches may still open; ignore `>=2.33.0`.
+
+`allowBuilds` stays minimal (`unrs-resolver: true`). `@react-native-firebase` pulls `@firebase/util` and `protobufjs` lifecycle scripts; those are recorded as `false` so frozen installs do not fail with `ERR_PNPM_IGNORED_BUILDS`. Do not set `@firebase/util` to `true`: its postinstall can write `FIREBASE_WEBAPP_CONFIG` (including api keys) into package dist.
 
 ## Dependabot ignore majors
 

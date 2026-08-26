@@ -25,10 +25,16 @@ overrides:
   react-native-gesture-handler: "2.32.0"
 
 # Install scripts are denied by default. Every entry below is an explicit,
-# justified exception and must stay minimal.
+# justified exception and must stay minimal. `false` records an intentional deny
+# so install does not fail with ERR_PNPM_IGNORED_BUILDS (pnpm 11).
 allowBuilds:
   # Native path resolver used by the ESLint import plugin in eslint-config-expo.
   unrs-resolver: true
+  # Transitive from @react-native-firebase. Do not run: postinstall can write
+  # FIREBASE_WEBAPP_CONFIG (including api keys) into package dist.
+  '@firebase/util': false
+  # Transitive from @react-native-firebase. Postinstall is a version-scheme warning only.
+  protobufjs: false
 
 # pnpm 11 defaults minimumReleaseAge to 24h. Expo SDK 57.0.16 and its
 # matching 57.x packages were published 2026-08-24, inside that window.

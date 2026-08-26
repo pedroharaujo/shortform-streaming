@@ -671,7 +671,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 - [ ] Unit tests cover missing, malformed, expired, and valid tokens with emulator/mocked verification.
 - [ ] Device signs up, calls `/v1/me`, signs out, signs in again, and receives the same profile.
 
-Native Firebase Auth on an Android development build is follow-up **P2-T01-F1** (GitHub issue #50). P2-T01 may land with mock-backed local/CI verification. The Android identity loop remains required and may use mock tokens (D-026).
+**P2-T01-F1** (GitHub issue #50) wires native `@react-native-firebase/auth` on the Android development build against the Auth emulator. Jest and CI keep `createLocalMockFirebaseAuth` / `FIREBASE_AUTH_MODE=mock`. Missing `GoogleService-Info.plist` must not fail Android or CI JavaScript export (D-026). Do not commit `google-services.json`.
 
 #### P2-T02 — Implement account lifecycle, consent, and deletion
 
