@@ -9,11 +9,20 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_ENVIRONMENT = ("DJANGO_SECRET_KEY", "DJANGO_ALLOWED_HOSTS", "DATABASE_URL")
+PLAYBACK_ENVIRONMENT = (
+    "VIDEO_PROVIDER",
+    "BUNNY_STREAM_LIBRARY_ID",
+    "BUNNY_STREAM_API_KEY",
+    "BUNNY_STREAM_CDN_HOSTNAME",
+    "BUNNY_STREAM_TOKEN_KEY",
+    "PLAYBACK_SPIKE_ASSETS",
+)
 CONFIGURATION_ENVIRONMENT = (
     *REQUIRED_ENVIRONMENT,
     "DATABASE_CONNECT_TIMEOUT",
     "FIREBASE_AUTH_MODE",
     "FIREBASE_PROJECT_ID",
+    *PLAYBACK_ENVIRONMENT,
 )
 IMPORT_VALID_ENVIRONMENT = {
     "DJANGO_SECRET_KEY": "replace-with-provider-value",
@@ -143,3 +152,39 @@ def test_production_settings_pass_deployment_checks_with_strong_synthetic_config
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_production_settings_reject_fake_video_provider() -> None:
+    result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "VIDEO_PROVIDER": "fake"})
+
+    assert result.returncode != 0
+    assert "VIDEO_PROVIDER" in result.stderr
+
+
+def test_production_settings_reject_bunny_without_credentials() -> None:
+    result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "VIDEO_PROVIDER": "bunny"})
+
+    assert result.returncode != 0
+    assert "BUNNY_STREAM" in result.stderr
+
+
+def test_production_settings_accept_bunny_with_required_credentials() -> None:
+    result = run_settings_import(
+        {
+            **IMPORT_VALID_ENVIRONMENT,
+            "VIDEO_PROVIDER": "bunny",
+            "BUNNY_STREAM_LIBRARY_ID": "12345",
+            "BUNNY_STREAM_API_KEY": "replace-with-provider-value",
+            "BUNNY_STREAM_CDN_HOSTNAME": "vz-example.b-cdn.net",
+            "BUNNY_STREAM_TOKEN_KEY": "replace-with-provider-value",
+        }
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_production_settings_reject_unknown_video_provider() -> None:
+    result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "VIDEO_PROVIDER": "gcp"})
+
+    assert result.returncode != 0
+    assert "VIDEO_PROVIDER" in result.stderr

@@ -104,6 +104,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/playback/{episode_id}/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Authorize episode playback
+         * @description Anonymous free-playback spike. Requires the same catalog context headers as catalog reads. Unknown, ineligible, or unmapped episodes return 404 ErrorEnvelope, never 403. An unset or disabled VideoProvider returns 503 ErrorEnvelope and never mints unsigned access. Success returns an opaque HTTPS HLS URL that is not served by Django.
+         */
+        post: operations["v1_playback_authorize_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/series/{public_id}": {
         parameters: {
             query?: never;
@@ -221,6 +241,18 @@ export interface components {
              *     * `unavailable` - unavailable
              */
             status: components["schemas"]["StatusEnum"];
+        };
+        PlaybackAuthorizeResponse: {
+            /**
+             * Format: uri
+             * @description Opaque HTTPS HLS playlist URL. Short-lived. Does not include Bunny library ids, video ids as separate fields, or an embed player URL. Django never serves these bytes.
+             */
+            playback_url: string;
+            /**
+             * Format: date-time
+             * @description UTC expiry of this playback URL. Clients must re-authorize after expiry.
+             */
+            expires_at: string;
         };
         /**
          * @description Opaque public identifier. Sequential database integers are never used as public IDs.
@@ -390,6 +422,62 @@ export interface operations {
             };
             /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_playback_authorize_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
+                "X-Language": string;
+                /** @description Client platform. Required. Values: ios, android. */
+                "X-Platform": "android" | "ios";
+                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
+                "X-Territory": string;
+            };
+            path: {
+                /** @description Opaque episode public identifier. Sequential database integers are never used as public IDs. */
+                episode_id: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaybackAuthorizeResponse"];
+                };
+            };
+            /** @description Missing or malformed catalog context headers. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Playback provider is unset or disabled. Fail-closed: no URL is minted. HTTP 503, never an unsigned playlist. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

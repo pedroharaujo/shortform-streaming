@@ -192,6 +192,17 @@ def test_schema_documents_me_as_firebase_authenticated() -> None:
     assert "verif" in bearer
 
 
+def test_schema_documents_playback_authorize_as_unauthenticated() -> None:
+    schema = build_schema()
+    authorize = schema["paths"]["/v1/playback/{episode_id}/authorize"]["post"]
+    assert authorize.get("security") in ([], None) or authorize["security"] == []
+    for status_code in ("400", "404", "503"):
+        assert status_code in authorize["responses"]
+        assert _response_schema_ref(authorize["responses"][status_code]).endswith("/ErrorEnvelope")
+    success = _response_schema_ref(authorize["responses"]["200"])
+    assert "PlaybackAuthorizeResponse" in success
+
+
 def _response_schema_ref(response: dict[str, Any]) -> str:
     content = response.get("content", {}).get("application/json", {})
     schema = content.get("schema", {})

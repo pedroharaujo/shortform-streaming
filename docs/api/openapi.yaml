@@ -6,10 +6,12 @@ info:
   description: HTTP API for the Shortform Streaming MVP. This document is generated
     from Django; do not edit docs/api/openapi.yaml by hand. Shared conventions (error
     envelope, cursor pagination, opaque public IDs, and Firebase ID-token bearer auth)
-    are documented as components. Health probes and anonymous catalog reads are unauthenticated.
-    Catalog operations require explicit X-Territory, X-Platform, and X-Language headers;
-    those values are never inferred from Accept-Language. GET /v1/me requires FirebaseIdToken;
-    missing or invalid tokens return 401 ErrorEnvelope. firebase_uid is never returned.
+    are documented as components. Health probes, anonymous catalog reads, and anonymous
+    playback authorize are unauthenticated. Catalog and playback operations require
+    explicit X-Territory, X-Platform, and X-Language headers; those values are never
+    inferred from Accept-Language. GET /v1/me requires FirebaseIdToken; missing or
+    invalid tokens return 401 ErrorEnvelope. firebase_uid is never returned. Django
+    never serves video bytes.
 paths:
   /health/live:
     get:
@@ -183,6 +185,76 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Missing, malformed, expired, revoked, or otherwise unverifiable
             Firebase ID token. The response never includes the token or firebase_uid.
+  /v1/playback/{episode_id}/authorize:
+    post:
+      operationId: v1_playback_authorize_create
+      description: Anonymous free-playback spike. Requires the same catalog context
+        headers as catalog reads. Unknown, ineligible, or unmapped episodes return
+        404 ErrorEnvelope, never 403. An unset or disabled VideoProvider returns 503
+        ErrorEnvelope and never mints unsigned access. Success returns an opaque HTTPS
+        HLS URL that is not served by Django.
+      summary: Authorize episode playback
+      parameters:
+      - in: header
+        name: X-Language
+        schema:
+          type: string
+        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
+          from Accept-Language.'
+        required: true
+      - in: header
+        name: X-Platform
+        schema:
+          type: string
+          enum:
+          - android
+          - ios
+        description: 'Client platform. Required. Values: ios, android.'
+        required: true
+      - in: header
+        name: X-Territory
+        schema:
+          type: string
+        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
+          inferred from Accept-Language or UI language.
+        required: true
+      - in: path
+        name: episode_id
+        schema:
+          $ref: '#/components/schemas/PublicId'
+        description: Opaque episode public identifier. Sequential database integers
+          are never used as public IDs.
+        required: true
+      tags:
+      - playback
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaybackAuthorizeResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing or malformed catalog context headers.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or ineligible public id. Does not confirm whether the
+            id exists.
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: 'Playback provider is unset or disabled. Fail-closed: no URL
+            is minted. HTTP 503, never an unsigned playlist.'
+      security: []
   /v1/series/{public_id}:
     get:
       operationId: v1_series_retrieve
@@ -474,6 +546,23 @@ components:
             * `unavailable` - unavailable
       required:
       - status
+    PlaybackAuthorizeResponse:
+      type: object
+      properties:
+        playback_url:
+          type: string
+          format: uri
+          description: Opaque HTTPS HLS playlist URL. Short-lived. Does not include
+            Bunny library ids, video ids as separate fields, or an embed player URL.
+            Django never serves these bytes.
+        expires_at:
+          type: string
+          format: date-time
+          description: UTC expiry of this playback URL. Clients must re-authorize
+            after expiry.
+      required:
+      - expires_at
+      - playback_url
     PublicId:
       type: string
       minLength: 1
@@ -494,6 +583,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Firebase Authentication ID token presented as an HTTP Bearer credential.
-        Django verifies the token and maps the UID to one local profile. Health probes
-        and anonymous catalog reads do not use this scheme. Client-supplied user or
-        profile identifiers are ignored.
+        Django verifies the token and maps the UID to one local profile. Health probes,
+        anonymous catalog reads, and anonymous playback authorize do not use this
+        scheme. Client-supplied user or profile identifiers are ignored.
