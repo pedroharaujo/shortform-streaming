@@ -6,10 +6,15 @@
 import { createApiClient } from '@shortform/api-client';
 import type { paths } from '@shortform/api-client';
 
-import type { CurrentUserProfile, ErrorEnvelope, MeClient, MeRequestOutcome } from './types';
+import {
+  DEFAULT_TIMEOUT_MS,
+  UNKNOWN_CODE,
+  describeFailure,
+  readEnvelope,
+  withTimeout,
+} from '../http';
+import type { CurrentUserProfile, MeClient, MeRequestOutcome } from './types';
 
-const DEFAULT_TIMEOUT_MS = 5_000;
-const UNKNOWN_CODE = 'unknown';
 const UNKNOWN_MESSAGE = 'Account request failed.';
 
 export interface MeClientOptions {
@@ -17,27 +22,6 @@ export interface MeClientOptions {
   readonly getCredential: () => string | null;
   readonly timeoutMs?: number;
   readonly fetchImplementation?: typeof fetch;
-}
-
-function describeFailure(error: unknown): string {
-  if (error instanceof Error && error.name === 'AbortError') {
-    return 'timeout';
-  }
-  if (error instanceof Error && error.message !== '') {
-    return error.message;
-  }
-  return 'network request failed';
-}
-
-function readEnvelope(payload: unknown): Pick<ErrorEnvelope, 'code' | 'message'> {
-  if (typeof payload === 'object' && payload !== null) {
-    const { code, message } = payload as Partial<ErrorEnvelope>;
-    return {
-      code: typeof code === 'string' && code !== '' ? code : UNKNOWN_CODE,
-      message: typeof message === 'string' && message !== '' ? message : UNKNOWN_MESSAGE,
-    };
-  }
-  return { code: UNKNOWN_CODE, message: UNKNOWN_MESSAGE };
 }
 
 export function createMeClient(options: MeClientOptions): MeClient {
@@ -59,14 +43,14 @@ export function createMeClient(options: MeClientOptions): MeClient {
         };
       }
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const { data, error, response } = await api.GET('/v1/me' satisfies keyof paths, {
-          headers: { Authorization: `Bearer ${bearer}` },
-          signal: controller.signal,
-        });
-        const envelope = readEnvelope(error ?? data);
+        const { data, error, response } = await withTimeout(timeoutMs, (signal) =>
+          api.GET('/v1/me' satisfies keyof paths, {
+            headers: { Authorization: `Bearer ${bearer}` },
+            signal,
+          }),
+        );
+        const envelope = readEnvelope(error ?? data, UNKNOWN_MESSAGE);
         if (response.status === 401) {
           return {
             outcome: 'unauthenticated',
@@ -94,8 +78,6 @@ export function createMeClient(options: MeClientOptions): MeClient {
         return { outcome: 'ok', data: data as CurrentUserProfile };
       } catch (caught: unknown) {
         return { outcome: 'unreachable', reason: describeFailure(caught) };
-      } finally {
-        clearTimeout(timeout);
       }
     },
   };

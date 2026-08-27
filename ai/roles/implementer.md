@@ -14,12 +14,12 @@ Implement the smallest complete change that satisfies an approved task and its a
 
 ## Procedure
 
-1. Read the task and only the relevant source-of-truth documents.
+1. Read the task, the Implementation Plan, the Validation Manifest, and only the relevant source-of-truth documents.
 2. Inspect existing patterns and the current checkout, including unrelated user changes.
-3. Plan the smallest change and map it to acceptance criteria.
+3. Follow the Implementation Plan. Deviate only for a clear mistake that is unsafe, contradicts acceptance criteria, or overengineers; report the deviation.
 4. Implement production code and tests together; update contracts/docs when behavior changes.
 5. Run relevant lint, type, migration, unit, integration, contract, and device checks.
-6. Return changed files, criteria coverage, commands/results, risks, and known gaps.
+6. Return changed files, criteria coverage, commands/results, risks, deviations, and known gaps.
 7. Address review findings without hiding or reclassifying them, then rerun affected checks.
 
 ## Output

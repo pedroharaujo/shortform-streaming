@@ -8,6 +8,7 @@
 
 import { createApiClient } from '@shortform/api-client';
 
+import { DEFAULT_TIMEOUT_MS, describeFailure, withTimeout } from '../http';
 import type {
   BackendHealthSnapshot,
   HealthClient,
@@ -21,7 +22,6 @@ const PROBE_PATHS = {
   readiness: '/health/ready',
 } as const satisfies Record<HealthProbeName, '/health/live' | '/health/ready'>;
 
-const DEFAULT_TIMEOUT_MS = 5_000;
 const UNKNOWN_STATUS = 'unknown';
 
 export interface HealthClientOptions {
@@ -40,16 +40,6 @@ function readStatus(payload: unknown): string {
   return UNKNOWN_STATUS;
 }
 
-function describeFailure(error: unknown): string {
-  if (error instanceof Error && error.name === 'AbortError') {
-    return 'timeout';
-  }
-  if (error instanceof Error && error.message !== '') {
-    return error.message;
-  }
-  return 'network request failed';
-}
-
 function parseStatus(rawBody: string): string {
   try {
     return readStatus(JSON.parse(rawBody) as unknown);
@@ -66,15 +56,14 @@ export function createHealthClient(options: HealthClientOptions): HealthClient {
   });
 
   async function probe(name: HealthProbeName): Promise<HealthProbeResult> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
-      const { data, error, response } = await api.GET(PROBE_PATHS[name], {
-        headers: { Accept: 'application/json' },
-        parseAs: 'text',
-        signal: controller.signal,
-      });
+      const { data, error, response } = await withTimeout(timeoutMs, (signal) =>
+        api.GET(PROBE_PATHS[name], {
+          headers: { Accept: 'application/json' },
+          parseAs: 'text',
+          signal,
+        }),
+      );
 
       const status =
         typeof data === 'string' || typeof error === 'string'
@@ -87,8 +76,6 @@ export function createHealthClient(options: HealthClientOptions): HealthClient {
       return { outcome: 'available', probe: name, status };
     } catch (error: unknown) {
       return { outcome: 'unreachable', probe: name, reason: describeFailure(error) };
-    } finally {
-      clearTimeout(timeout);
     }
   }
 

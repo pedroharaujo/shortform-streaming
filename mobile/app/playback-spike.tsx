@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 import type { JSX } from 'react';
 import { useMemo } from 'react';
 import { Platform } from 'react-native';
@@ -22,6 +22,10 @@ export default function PlaybackSpikeRoute(): JSX.Element {
       }),
     [configuration.baseUrl, configuration.catalogTerritory],
   );
+
+  if (!__DEV__) {
+    return <Redirect href="/" />;
+  }
 
   return <PlaybackSpikeScreen client={client} episodeId={episodeId} />;
 }

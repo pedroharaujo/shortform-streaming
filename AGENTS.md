@@ -18,7 +18,7 @@ When documents conflict, the decision register and accepted ADRs govern. Do not 
 
 - The primary agent acts as orchestrator and follows `ai/roles/orchestrator.md` and `ai/workflows/development-loop.md`.
 - Before implementation, the orchestrator owns a proportional Validation Manifest covering the change surface, semantic risk, selected checks, justified omissions, reusable evidence, specialist agents, and replanning conditions.
-- The optional, read-only `validation-planner` may advise when scope is ambiguous, cross-boundary, or sensitive. It does not add a state transition or mandatory serial step and does not replace reviewer, verifier, or CI.
+- After producing the Validation Manifest, the orchestrator delegates to the required, read-only `planner` for a bounded Implementation Plan. This is a serial step at the start of `ai-in-progress`; it does not create a GitHub state and does not replace reviewer, verifier, or CI. The orchestrator remains accountable for the Validation Manifest.
 - The orchestrator never implements or fixes production code. It delegates implementation to the `implementer` agent.
 - The implementer never approves its own work.
 - After implementation, use a fresh `reviewer` context and then a separate `verifier` context. Reviewer and implementer must never be the same agent thread.

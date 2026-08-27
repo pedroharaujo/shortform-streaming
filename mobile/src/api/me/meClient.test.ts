@@ -1,35 +1,9 @@
-import { createCatalogClient } from '../catalog/catalogClient';
-import { createMeClient } from './meClient';
 import { setAuthSession } from '../../auth/session';
+import { createCatalogClient } from '../catalog/catalogClient';
+import { jsonResponse, requestHeaders, requestUrl } from '../fetchTestUtils';
+import { createMeClient } from './meClient';
 
 const BASE_URL = 'http://10.0.2.2:8000';
-
-function jsonResponse(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-  });
-}
-
-function requestHeaders(input: RequestInfo | URL, init?: RequestInit): Headers {
-  if (typeof Request !== 'undefined' && input instanceof Request) {
-    return new Headers(input.headers);
-  }
-  return new Headers(init?.headers);
-}
-
-function requestUrl(input: RequestInfo | URL): string {
-  if (typeof input === 'string') {
-    return input;
-  }
-  if (input instanceof URL) {
-    return input.href;
-  }
-  if (typeof Request !== 'undefined' && input instanceof Request) {
-    return input.url;
-  }
-  return String(input);
-}
 
 describe('createMeClient', () => {
   afterEach(() => {

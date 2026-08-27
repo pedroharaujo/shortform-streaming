@@ -47,6 +47,15 @@ Use generated, redacted, or self-owned fixtures. When a private resource is requ
 - Documentation and environment examples are current.
 - No secrets or confidential/licensed material are present.
 
+## Testing policy
+
+- Write one test at the highest level that would catch the bug.
+- Do not add client + screen + smoke coverage for the same outcome.
+- Keep backend tests for auth, eligibility, playback authorize, production
+  settings, and OpenAPI.
+- Do not add tests for presentational fallbacks, ASCII strings, or framework
+  defaults.
+
 Validate AI governance changes with `python scripts/validate_ai_governance.py`. Use the area-specific commands in `AGENTS.md`; an unavailable required command is a blocker, not a pass.
 
 Pull requests run always-on `Repository foundation` and `OpenAPI contract` checks plus the path-aware `Application CI` gate. Do not treat skipped `Backend`, `Mobile`, or `Container` jobs as missing required checks; the human ruleset should require the always-reporting `Application CI` job name documented in `docs/runbooks/repository-controls.md`. Extra local commands include `pnpm backend:test:coverage`, `pnpm mobile:bundle:check`, and `docker build -f backend/Dockerfile -t shortform-backend:ci .`.
