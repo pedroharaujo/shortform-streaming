@@ -7,6 +7,7 @@ from django.db.models import Exists, OuterRef, Q, QuerySet
 from django.utils import timezone
 
 from apps.catalog.models import ContentRight, Episode, PublicationStatus, Series
+from apps.playback.models import MediaAssetState
 
 # Language eligibility uses ContentRight.languages (licensed original/subtitle/dub
 # grant). X-Language must be in that list. Series.original_language is metadata
@@ -84,9 +85,14 @@ def eligible_episodes_for_series(
     eligibility so unpublished/ineligible series never leak episode lists.
     """
     instant = now if now is not None else timezone.now()
-    queryset = series.episodes.filter(
-        publication_status=PublicationStatus.PUBLISHED
-    ).select_related("season")
+    queryset = (
+        series.episodes.filter(
+            publication_status=PublicationStatus.PUBLISHED,
+            media_assets__state=MediaAssetState.READY,
+        )
+        .select_related("season")
+        .distinct()
+    )
     open_window = Q(window_starts_at__isnull=True) | Q(window_starts_at__lte=instant)
     open_end = Q(window_ends_at__isnull=True) | Q(window_ends_at__gt=instant)
     filtered: QuerySet[Episode] = queryset.filter(open_window, open_end).order_by(
@@ -105,5 +111,7 @@ def episode_is_eligible(
     if episode.publication_status != PublicationStatus.PUBLISHED:
         return False
     if not episode_window_is_open(episode, instant):
+        return False
+    if not episode.has_ready_media_asset():
         return False
     return series_is_eligible(episode.series, context, now=instant)

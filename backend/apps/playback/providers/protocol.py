@@ -26,4 +26,4 @@ class VideoProvider(Protocol):
         """Mint a short-lived opaque HTTPS HLS URL. Never unsigned."""
 
     def takedown(self, asset_id: str) -> None:
-        """Expire or delete the provider asset. No admin workflow in P2-T05."""
+        """Expire or delete the provider asset. Admin takedown must call this."""

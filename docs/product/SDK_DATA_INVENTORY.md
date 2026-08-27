@@ -101,6 +101,14 @@ Anonymous free-playback spike. Does not implement MediaAsset (P2-T06), entitleme
 | in-flight (not merged) | `POST /v1/playback/{episode_id}/authorize` with the same `X-Territory` / `X-Platform` / `X-Language` headers as catalog | Django remains the authorizer after eligibility checks, then returns an opaque HTTPS HLS playlist URL it does not serve. | Art. 6(1)(b)/(f) to deliver requested playback — planned/assumed. Anonymous spike is not itself the D-005 guest-boundary implementation. | Django; active `VideoProvider` (Fake locally; Bunny Stream when configured on that PR) | **pending D-020**. Bunny processing region is **not** decided here. | Authorization is request-scoped. Spike asset map is config, not a consumer table. | Anonymous client on that PR; Django. Ineligible → 404. | No consumer playback history on that PR. URL expiry is the access control. P2-T02/P2-T08 progress deletion is out of scope. |
 | in-flight (not merged) | Short-lived signed/tokenized HLS `playback_url` + `expires_at` | Bearer credential for CDN bytes. Plan rule: CDN URLs are short-lived and **excluded from logs and analytics**. | Art. 6(1)(b)/(f) — planned/assumed. Not DRM (ADR 0005). | Bunny Stream CDN (default path on that spike). GCP Cloud CDN is documented-not-active. | **pending D-020** | Until `expires_at`. Do not persist in analytics, crash reports, or Admin screenshots. | The client that received the response; anyone who intercepts the URL until expiry | Expiry / unsigned request denied at CDN (spike evidence on the PR, not on `main`). Takedown at provider is a later Django action (ADR 0005). Never copy signed URLs into Git. |
 
+### P2-T06 — MediaAsset staff ingest (this slice)
+
+Staff-authenticated Django Admin ingest of **self-owned/generated test media**. No PII. Does not mark P0-T03 complete. Production signed PUT/TUS is deferred (#55). GCP Cloud CDN fallback stays unplugged. D-020 residency/retention is not decided here.
+
+| Status | Field / event | Purpose | Lawful basis / consent (planned/assumed) | Processor | Region | Retention | Access roles | Deletion behavior |
+|---|---|---|---|---|---|---|---|---|
+| in-flight (not merged) | `MediaAsset` (checksum, provider name/id, state, caption language/presence, thumbnail count, duration, renditions, redacted diagnostic) | Track ingest readiness so an episode cannot publish or play without a ready asset plus valid rights. Postgres stores provider-agnostic ids, not CDN files (ADR 0005). | Art. 6(1)(f) to operate the service / Art. 6(1)(b) to deliver requested playback — planned/assumed. Generated test media only; licensed media waits for P0-T02 / D-019. | Django/PostgreSQL; active `VideoProvider` (Fake locally; Bunny Stream when configured). | **pending D-020** | While the episode is operated; takedown expires/deletes the provider asset (ADR 0005); **pending D-020** | Staff via Django Admin. Viewers never read this table; they receive only short-lived URLs from authorize. | Admin takedown → `removed` + provider delete/expire. Signed URLs, API keys, and raw provider payloads must not appear in diagnostics, logs, or Admin. |
+
 ---
 
 ## Planned processors
@@ -161,7 +169,7 @@ Shared planned properties (only if consent permits): `event_id`; anonymous/app-i
 ## What this slice does not do
 
 - Does not implement or configure any SDK, auth, playback, deletion, commerce, or analytics runtime.
-- Does not start P2-T01 device work, P2-T05 device work, or P2-T06.
+- Does not start P2-T01 device work or P2-T05 device work. P2-T06 MediaAsset staff ingest is this engineering slice; it does not mark P0-T03 complete.
 - Does not mark P0-T03 complete. Legal/privacy, content-rating, and ads-only finance/tax owner boxes stay open. Store IAP EUR settlement waits for P7.
 - Does not invent a D-020 residency/retention decision. D-005–D-007 are founder-approved 2026-08-27 in the decision register; this inventory does not convert D-008/D-009 from Proposed. D-017, D-018, D-019, D-020, and D-025 remain open.
 - Does not treat merged P2-T01 / P2-T05 / P2-T01-F1 as still unshipped; the `85207d2` snapshot is historical.

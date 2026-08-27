@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -117,24 +116,3 @@ BUNNY_STREAM_CDN_HOSTNAME = os.environ.get("BUNNY_STREAM_CDN_HOSTNAME", "").stri
 BUNNY_STREAM_TOKEN_KEY = os.environ.get("BUNNY_STREAM_TOKEN_KEY", "").strip()
 PLAYBACK_TOKEN_TTL_SECONDS = 600
 FAKE_PLAYBACK_CDN_HOST = "video.example.test"
-
-
-def _parse_playback_spike_assets(raw: str) -> dict[str, str]:
-    if not raw.strip():
-        return {}
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as error:
-        raise ImproperlyConfigured("PLAYBACK_SPIKE_ASSETS must be a JSON object") from error
-    if not isinstance(parsed, dict):
-        raise ImproperlyConfigured("PLAYBACK_SPIKE_ASSETS must be a JSON object")
-    assets: dict[str, str] = {}
-    for episode_id, asset_id in parsed.items():
-        if not isinstance(episode_id, str) or not isinstance(asset_id, str):
-            raise ImproperlyConfigured("PLAYBACK_SPIKE_ASSETS keys and values must be strings")
-        if episode_id.strip() and asset_id.strip():
-            assets[episode_id.strip()] = asset_id.strip()
-    return assets
-
-
-PLAYBACK_SPIKE_ASSETS = _parse_playback_spike_assets(os.environ.get("PLAYBACK_SPIKE_ASSETS", ""))

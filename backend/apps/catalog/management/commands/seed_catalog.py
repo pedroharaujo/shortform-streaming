@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import uuid
 from datetime import datetime
 from typing import Any
@@ -17,6 +18,7 @@ from apps.catalog.models import (
     Series,
     SeriesTranslation,
 )
+from apps.playback.models import MediaAsset, MediaAssetState
 
 # Stable opaque ids so the command is idempotent. Tests must not depend on this
 # command; they build their own rows.
@@ -102,6 +104,24 @@ class Command(BaseCommand):
                 "synopsis": "Synthetic episode synopsis.",
             },
         )
+        checksum = hashlib.sha256(f"synthetic-seed:{name}".encode()).hexdigest()
+        ready_asset = MediaAsset.objects.filter(
+            episode=episode, state=MediaAssetState.READY
+        ).first()
+        if ready_asset is None:
+            ready_asset = MediaAsset(episode=episode, checksum=checksum)
+        ready_asset.checksum = checksum
+        ready_asset.provider_name = "fake"
+        ready_asset.provider_asset_id = _stable_id("asset", f"{name}-e1")
+        ready_asset.state = MediaAssetState.READY
+        ready_asset.captions_language = REQUIRED_CATALOG_LANGUAGE
+        ready_asset.has_captions = True
+        ready_asset.thumbnail_count = 1
+        ready_asset.duration_seconds = 90.0
+        ready_asset.renditions = ["360p", "540p", "720p"]
+        ready_asset.diagnostic_message = ""
+        ready_asset.full_clean()
+        ready_asset.save()
         ContentRight.objects.update_or_create(
             series=series,
             contract_reference=f"synthetic-contract-{name}",

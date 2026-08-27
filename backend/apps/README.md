@@ -41,23 +41,27 @@ and fails closed when a token cannot be verified. Optional emulator host for
 admin-mode local work: `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`. Never commit
 service-account JSON.
 
-`playback` is the video-provider and authorize bounded application created by
-P2-T05. Django never serves video bytes. Anonymous clients request a short-lived
-opaque HLS URL from:
+`playback` is the video-provider, MediaAsset ingestion, and authorize bounded
+application (P2-T05 / P2-T06). Django never serves video bytes. Staff upload a
+vertical master through Django Admin; `VideoProvider` encodes it. Anonymous
+clients request a short-lived opaque HLS URL from:
 
 - `POST /v1/playback/{episode_id}/authorize`
 
-The same catalog context headers are required. Unknown, ineligible, or unmapped
-episodes return HTTP 404 `ErrorEnvelope`, never 403. An unset or disabled
-`VideoProvider` returns HTTP 503 `ErrorEnvelope` and never mints unsigned access.
-Local settings default to `VIDEO_PROVIDER=fake`. Production rejects `fake`.
+The same catalog context headers are required. Unknown, ineligible, unpublished,
+or episodes without a ready MediaAsset return HTTP 404 `ErrorEnvelope`, never
+403. An unset or disabled `VideoProvider` returns HTTP 503 `ErrorEnvelope` and
+never mints unsigned access. Local settings default to `VIDEO_PROVIDER=fake`.
+Production rejects `fake`. Authorize looks up the episode's ready MediaAsset;
+`PLAYBACK_SPIKE_ASSETS` is obsolete and is not consulted.
 
 Later plan tasks own `entitlements`, `commerce`, `advertising`, `experiments`,
-and `notifications`. P2-T06 owns MediaAsset ingestion; this app maps spike
-episodes through `PLAYBACK_SPIKE_ASSETS` only.
+and `notifications`.
 
 Generate 9:16 test media and submit it to Bunny Stream (requires non-production
-credentials; missing credentials are not a Bunny failure):
+credentials; missing credentials are not a Bunny failure). The command is a
+provider smoke test only; it does not attach catalog MediaAsset. Staff ingest is
+Django Admin file upload plus retry reconcile:
 
 ```shell
 uv run python backend/manage.py spike_bunny_playback
