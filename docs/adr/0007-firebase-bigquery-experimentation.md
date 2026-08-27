@@ -3,6 +3,10 @@
 - **Status:** Accepted
 - **Date:** 2026-08-23
 
+## MVP vs P7 split (2026-08-27)
+
+The architecture decision is unchanged. **MVP** implements typed Firebase Analytics events only. BigQuery export, Looker Studio metric models, Remote Config A/B Testing, and the MMP spend-threshold decision (D-018) wait for **P7**.
+
 ## Context
 
 The business depends on joining acquisition, content progression, experiments, verified purchases/rewards, retention, and infrastructure/content costs.

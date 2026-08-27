@@ -30,9 +30,9 @@ Decision D-019 applies only before licensed-media ingestion or production video-
 
 ### Monetization and promotion
 
-- [ ] Subscription access is permitted.
-- [ ] Transactional/coin-based episode access is permitted.
-- [ ] Advertising-supported and rewarded-ad access are permitted.
+- [ ] Advertising-supported and rewarded-ad access are permitted. **Mandatory** before ads-only publication.
+- [ ] Subscription access is permitted. **Required before P7 IAP**, not before ads-only publication.
+- [ ] Transactional/coin-based episode access is permitted. **Required before P7 IAP**, not before ads-only publication.
 - [ ] Free promotional episodes are permitted.
 - [ ] Clips, frames, posters, trailers, and talent likeness may be used in paid acquisition on named networks.
 - [ ] Revenue definition, store-fee treatment, taxes, refunds, chargebacks, ad revenue, minimum guarantees, royalties, and reporting cadence are recorded in the private finance system.

@@ -3,6 +3,10 @@
 - **Status:** Accepted subject to release-time regional policy review
 - **Date:** 2026-08-23
 
+## MVP timing (2026-08-27)
+
+This ADR is not implemented for MVP launch. MVP commerce is AdMob rewarded ads only (D-007). RevenueCat, store IAP, subscriptions, and the coin ledger remain the accepted P7 IAP path (D-015/D-008/D-009). The technical decision is unchanged.
+
 ## Context
 
 The mobile product sells digital subscriptions and virtual currency. Store policies and purchase lifecycles are complex, while coin spending and episode entitlements require first-party transactional authority.
