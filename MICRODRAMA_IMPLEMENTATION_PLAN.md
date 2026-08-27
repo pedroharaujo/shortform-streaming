@@ -455,9 +455,9 @@ Two decision classes apply throughout the roadmap:
 - [x] Storefront-localized customer prices and EUR reporting/desired settlement are approved.
 - [x] Decision D-001 approves 21 EU/EUR countries as the MVP distribution scope, and D-024 records France as the intended legal-entity country.
 - [x] Phase 1 may start with local/emulated/fake services, generated test data, and self-owned/generated test media without real credentials.
-- [ ] Before public release, the French entity's legal name/form, incorporation, registered address, D-U-N-S where required, organization accounts, and EUR-compatible payment/bank configuration are approved and verified.
+- [ ] Before ads-only public release, the French entity's legal name/form, incorporation, registered address, D-U-N-S where required, organization accounts, and AdMob production configuration are approved and verified. Store IAP EUR-compatible Apple/Google bank configuration is required before P7 IAP, not before ads-only launch.
 - [x] MVP inclusions/exclusions and monetization defaults are approved (ads-only, hardcoded free window, guest boundary, 1 series; 2026-08-27).
-- [ ] KPI definitions, experiment guardrails, budget ceiling, and stop/go review date are documented.
+- [ ] KPI definitions, ads-only UA budget ceiling, and stop/go review date are documented. Experiment guardrails belong to P4-T05 / P7, not this remaining P0-T01 closer.
 
 **Validation and integration tests:**
 
@@ -485,22 +485,22 @@ Two decision classes apply throughout the roadmap:
 
 #### P0-T03 — Create product policy and store-compliance matrix
 
-**Description:** Map coins, subscriptions, storefront-localized customer pricing, EUR settlement, rewarded ads, account deletion, privacy, consent, and age rating to Apple, Google Play, AdMob, GDPR, and the national requirements of the 21 approved MVP markets. UK GDPR review is a gate for a future United Kingdom expansion and is outside MVP scope.
+**Description:** For ads-only MVP, map rewarded ads, account deletion, privacy, consent, and age rating to Apple, Google Play, AdMob, GDPR, and the national requirements of the 21 approved MVP markets. IAP/coin/subscription disclosures, store billing, restore, and storefront EUR settlement are **P7 policy** and do not close this task. UK GDPR review is a gate for a future United Kingdom expansion and is outside MVP scope.
 
-**Objective:** Avoid building monetization flows that stores or regulators reject.
+**Objective:** Avoid building ads, privacy, and deletion flows that stores or regulators reject. Do not wait on P7 IAP finance to document the ads-only path.
 
-**Dependencies:** Approved decisions D-001, D-002, D-021, and the approved business target in D-022. D-005 through D-007 are founder-approved for MVP ads (2026-08-27). D-008 and D-009 remain Proposed and are required only before P7 IAP, not before ads-only MVP behavior.
+**Dependencies:** Approved decisions D-001, D-002, D-021, and the approved business target in D-022. D-005 through D-007 are founder-approved for MVP ads (2026-08-27). D-008 and D-009 remain Proposed and are required only before P7 IAP, not before ads-only MVP behavior. Store IAP EUR settlement (D-022 financial setup) is required before P7 IAP, not before this ads-only P0-T03 slice.
 
 **Acceptance criteria:**
 
-- [ ] Mobile digital goods use store billing by default.
-- [ ] Coin non-expiry, refund handling, restore behavior, subscription disclosure, and rewarded-ad consent are documented.
-- [ ] Privacy policy, terms, content policy, support contact, and data-deletion process have owners and deadlines.
+- [ ] Rewarded-ad consent, reward disclosure, SSV/grant authority, and account deletion are documented for ads-only MVP.
+- [ ] Privacy policy, terms, content policy, support contact, and data-deletion process have owners and deadlines for the ads-only binary.
+- [ ] IAP/coin/subscription disclosures, store billing default, restore, and EUR store settlement remain **P7 policy**; they do not close P0-T03 for ads-only MVP.
 
 **Validation and integration tests:**
 
-- [ ] Compliance reviewer walks through every monetization screen against the matrix.
-- [ ] Store review notes template explains the business model and test account path.
+- [ ] Compliance reviewer walks through free, locked, rewarded-ad, and deletion screens against the matrix. Coin, subscription, and restore walkthroughs wait for P7.
+- [ ] Store review notes template explains the ads-only business model and test account path.
 
 #### P0-T04 — Establish architecture decision records and cost model
 
@@ -685,7 +685,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **Objective:** Provide privacy-safe account control from the beginning.
 
-**Dependencies:** P2-T01, P0-T03.
+**Dependencies:** P2-T01, P0-T03 ads/privacy/deletion slice. IAP/coin/subscription disclosures and store EUR settlement are P7 policy and do not block this task.
 
 **Acceptance criteria:**
 
@@ -831,7 +831,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **Objective:** Change free-window and ad availability without treating the client as authoritative.
 
-**Dependencies:** P2-T07, P0-T03.
+**Dependencies:** P2-T07, P0-T03 ads/privacy slice. IAP/coin/subscription disclosures and store EUR settlement are P7 policy and do not block this task.
 
 **Acceptance criteria:**
 
@@ -899,7 +899,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **Objective:** Produce decision-grade events for the ads-only loop instead of inconsistent ad hoc tracking.
 
-**Dependencies:** P2-T08, P3-T08, P0-T03.
+**Dependencies:** P2-T08, P3-T08, P0-T03 ads/privacy slice. IAP/coin/subscription disclosures and store EUR settlement are P7 policy and do not block this task.
 
 **Acceptance criteria:**
 
@@ -1170,7 +1170,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **Objective:** Submit a transparent, reviewable ads-only product.
 
-**Dependencies:** P0-T03, P6-T01, P6-T03.
+**Dependencies:** P0-T03 ads/privacy/deletion slice, P6-T01, P6-T03. IAP/coin/subscription disclosures and store EUR settlement are P7 policy and do not block this task.
 
 **Acceptance criteria:**
 
@@ -1205,19 +1205,19 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 #### P6-T05A — Obtain Public Release Clearance
 
-**Description:** Assemble one signed release record proving product, rights, policy, cost, entity, financial, store, privacy, security, and launch decisions are complete for the exact binary, catalog, configuration, and markets to be released.
+**Description:** Assemble one signed ads-only release record proving product, rights, ads/privacy/deletion policy, ads-path cost, entity, AdMob production, security, and launch decisions are complete for the exact binary, catalog, configuration, and markets to be released. Store IAP finance, EUR settlement, and D-018 are not part of this ads-only record.
 
 **Objective:** Provide one auditable hard gate between isolated validation and public distribution or real commercial activity.
 
-**Dependencies:** P0-T01, P0-T02, P0-T03, P0-T04, P5-T08, P6-T04, and P6-T05; every release-applicable Decision Register entry must be approved, including D-007 (approved 2026-08-27), D-017 before any paid acquisition, D-020 before public production activation, and D-025 before organization/store/payout activation. D-008 and D-009 are **not** required for ads-only public release; they are required before P7 IAP.
+**Dependencies:** P0-T01, P0-T02, P0-T03 ads/privacy/deletion slice, P0-T04, P5-T08, P6-T04, and P6-T05; every ads-only release-applicable Decision Register entry must be approved, including D-007 (approved 2026-08-27), D-017 before any paid acquisition, D-020 before public production activation, and D-025 before organization/store/payout activation. D-008 and D-009 are **not** required for ads-only public release; they are required before P7 IAP. D-018 is **not** required for ads-only public release; it is required before P4-T07 / material MMP. Do not silently approve D-017, D-018, D-019, D-020, or D-025.
 
 **Acceptance criteria:**
 
-- [ ] P0-T01 through P0-T04 have current owner approvals and evidence for the release candidate; no proposal is silently treated as approval.
+- [ ] P0-T01 through P0-T04 have current owner approvals and evidence for the ads-only release candidate; no proposal is silently treated as approval. P0-T03 IAP/coin/subscription/EUR-settlement rows are P7 and do not block this clearance.
 - [ ] The exact catalog passes territorial rights/provenance, DRM/protection, age/content, and promotional-use review for every enabled D-001 market.
 - [ ] GDPR/privacy-by-design, consent, account deletion, security, accessibility, store policy/declarations, national legal/language requirements, support, incident response, and rollback checks pass.
-- [ ] The French entity and required registration/organization data are verified; Apple/Google accounts, tax, bank, payout, EUR reconciliation, and real ad configuration are approved for activation. Store IAP products wait for P7.
-- [ ] D-017 defines the paid-acquisition ceiling and D-020 defines approved production data residency/retention; all other decisions applicable to the release are Approved rather than Proposed or Decision required.
+- [ ] The French entity and required registration/organization data are verified; AdMob production configuration is approved for activation. Store IAP products and store IAP EUR settlement wait for P7.
+- [ ] D-017 defines the paid-acquisition ceiling and D-020 defines approved production data residency/retention before those activities start. D-018 is not an ads-only public-release gate. All other decisions applicable to the ads-only release are Approved rather than Proposed or Decision required.
 
 **Validation and integration tests:**
 
@@ -1235,7 +1235,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 **Acceptance criteria:**
 
 - [ ] Rollout stages, owners, halt thresholds, support coverage, and rollback options are documented.
-- [ ] Rights availability, ads, dashboards, alerts, and budgets are checked immediately before release. Store prices/products wait for P7 IAP.
+- [ ] Rights availability, ads, Firebase DebugView, AdMob earnings versus ads-manager spend, alerts, and budgets are checked immediately before release. Store prices/products and Looker dashboards wait for P7.
 - [ ] Paid acquisition begins only within the D-017 approved cap, using traceable creative IDs.
 
 **Validation and integration tests:**
@@ -1247,7 +1247,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 - [ ] Both apps are approved and released in the chosen market.
 - [ ] Licensed catalog is available only within contractual rights.
-- [ ] Daily contribution, quality, and funnel reporting is operating.
+- [ ] Daily contribution, quality, and funnel reporting is operating (Firebase DebugView and AdMob versus ads-manager spend; Looker is P7).
 - [ ] Rollout decisions follow documented technical and business guardrails.
 
 ---
@@ -1285,7 +1285,7 @@ Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
 
 **Objective:** Align Apple, Google, RevenueCat, backend, analytics, and UI identifiers.
 
-**Dependencies:** P0-T03, P3-T01.
+**Dependencies:** P0-T03 P7 IAP policy slice, P3-T01.
 
 **Acceptance criteria:**
 
@@ -1449,7 +1449,7 @@ Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
 
 Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
 
-**Description:** Define hypothesis template, primary metric, guardrails, sample-size check, duration, exposure, segmentation, stopping rules, and decision record. Queue free-episode count, offer order, coin price, and paywall copy experiments.
+**Description:** Define hypothesis template, primary metric, guardrails, sample-size check, duration, exposure, segmentation, stopping rules, and decision record. Queue free-episode count, offer order, coin price, and paywall copy experiments. Experiment guardrails formerly listed on remaining P0-T01 AC live here (P7), not as an ads-only launch closer.
 
 **Objective:** Turn experimentation into a disciplined product process.
 
@@ -1778,17 +1778,23 @@ These do not all block Phase 1. Resolve each before implementing the feature tha
 - Data residency and retention behavior before production-shaped retention/deletion automation.
 - Technical DRM/provider choice if the proof-of-concept or a future contract requires it.
 
-### Required before public release
+### Required before public release (ads-only MVP)
 
-These are deferred from the Phase 1 coding path but remain hard release gates:
+These are deferred from the Phase 1 coding path but remain hard ads-only release gates. They do **not** include P7 IAP, store EUR settlement, Looker/BigQuery models, Remote Config A/B, push, or MMP adoption:
 
 - French entity legal name and form, incorporation, registered address, D-U-N-S where required, tax/organization enrollment data, and store-account countries.
-- Verified Apple bank-account currency and Google payments profile/bank configuration for EUR settlement.
 - Per-market territorial rights, GDPR/privacy review, national legal/language requirements, age rating, allowed content categories, store declarations, and consent behavior for the 21 approved launch countries.
 - Final license terms, commercial-media provenance, protection/DRM obligations, and approval of every title before it enters staging or production.
-- Initial acquisition budget, MMP adoption threshold, support owners, incident-response owners, launch guardrails, and stop/go review date.
+- AdMob production configuration before real advertising.
+- Initial acquisition budget (D-017), support owners, incident-response owners, ads-only launch guardrails, and stop/go review date. D-017 remains **Decision required** until the founder approves it.
 
-No public production activation/traffic promotion, storefront distribution, licensed-media publication, paid acquisition, real purchase/subscription, or real advertising may be enabled until every applicable Public Release Readiness gate is approved and verified. Isolated production-candidate provisioning and test-data validation remain permitted under P5-T08.
+### Required before Phase 7 IAP / growth platform (not ads-only launch)
+
+- Verified Apple bank-account currency and Google payments profile/bank configuration for **store IAP** EUR settlement.
+- Coin pack sizes, subscription period/price, IAP disclosures, and restore/sync policy (D-008/D-009 remain Proposed).
+- MMP adoption threshold (D-018) before P4-T07 / material MMP. D-018 remains **Decision required**; it is not an ads-only public-release gate.
+
+No public production activation/traffic promotion, storefront distribution, licensed-media publication, paid acquisition, or real advertising may be enabled until every applicable **ads-only** Public Release Readiness gate is approved and verified. Real purchase/subscription stays disabled until the Phase 7 IAP gates pass. Isolated production-candidate provisioning and test-data validation remain permitted under P5-T08.
 
 Already approved by the founder:
 
@@ -1871,22 +1877,35 @@ These are primary sources used to validate changeable decisions. Recheck them at
 
 ## 16. Public Release Readiness and Final MVP Completion Checklist
 
-This is a hard publication gate, not a prerequisite for Phase 1 or isolated production-candidate validation. Until every applicable item is independently verified, production-candidate environments remain isolated and must not enable public traffic, storefront distribution, licensed media, paid acquisition, real purchases/subscriptions, or real advertising.
+This is a hard publication gate, not a prerequisite for Phase 1 or isolated production-candidate validation. Until every applicable **ads-only** item is independently verified, production-candidate environments remain isolated and must not enable public traffic, storefront distribution, licensed media, paid acquisition, or real advertising. Real purchase/subscription stays off until the Phase 7 checklist passes.
 
-- [ ] Product, rights, policy, architecture, and cost decisions approved.
-- [ ] P6-T05A Public Release Clearance is independently approved for the exact revision, catalog, markets, and production configuration.
+### Ads-only MVP launch
+
+When every item in this subsection is satisfied, the platform is suitable for ads-only real-market validation (rewarded-ad LTV versus capped UA). It does **not** wait on P7 coin/IAP/subscription, BigQuery/Looker models, Remote Config A/B, MMP, or push.
+
+- [ ] Product, rights, ads/privacy/deletion policy, architecture, and ads-path cost decisions approved. IAP/coin/subscription/EUR-settlement policy remains P7.
+- [ ] P6-T05A Public Release Clearance is independently approved for the exact ads-only revision, catalog, markets, and production configuration.
 - [ ] Public protected monorepo and full CI operational, with no secrets, licensed media, or confidential contracts committed.
 - [ ] Rights-aware catalog and Django Admin operational.
 - [ ] Firebase auth and account deletion operational.
 - [ ] Bunny Stream HLS pipeline and tokenized playback operational (GCP Cloud CDN fallback documented and unused unless activated).
 - [ ] Vertical player, progress, and free episode journey operational.
 - [ ] Rewarded-ad intent, SSV, and ad-grant entitlements operational (MVP ads path).
-- [ ] Coin ledger/unlock, store coin packs, subscription, and restore operational (**P7**).
-- [ ] MVP reward path is server-verified, idempotent, and supportable. Full IAP commerce reconciliation is **P7**.
-- [ ] Thin Firebase Analytics events and campaign IDs operational. BigQuery models, dashboards, experiments, and push operational (**P7**).
+- [ ] MVP reward path is server-verified, idempotent, and supportable.
+- [ ] Thin Firebase Analytics events and campaign IDs operational (Firebase DebugView; AdMob earnings versus ads-manager spend).
 - [ ] Staging/production IaC, secure CI/CD, backups, observability, security controls, and runbooks operational.
-- [ ] Accessibility, localization, regression matrix, beta, and store compliance complete.
-- [ ] Licensed launch catalog and campaign creatives pass rights review.
-- [ ] Controlled rollout and daily unit-economics review are ready.
+- [ ] Accessibility, localization, regression matrix, beta, and ads-only store compliance complete.
+- [ ] Licensed launch catalog (1 series) and campaign creatives pass rights review.
+- [ ] Controlled rollout and daily ads-only unit-economics review are ready.
 
-When every item above is satisfied, the platform is an MVP suitable for real-market validation. It is not yet a studio, distributor, consumer web service, or mature recommendation platform; those expansions depend on evidence from the mobile acquisition and monetization loop.
+### Phase 7 — IAP, warehouse analytics, experiments, MMP, and push
+
+These items keep their original task IDs. They are the first post-MVP phase. Completing them is **not** required before ads-only market validation.
+
+- [ ] Coin ledger/unlock, store coin packs, subscription, and restore operational.
+- [ ] Full IAP commerce reconciliation operational.
+- [ ] Store IAP EUR settlement, IAP disclosures, and restore/sync policy approved (D-008/D-009 remain Proposed until then).
+- [ ] BigQuery models, Looker dashboards, Remote Config experiments, and push operational.
+- [ ] MMP adopted or explicitly declined at the D-018 spend/ambiguity threshold (P4-T07). D-018 stays Decision required until that gate.
+
+The platform is not yet a studio, distributor, consumer web service, or mature recommendation platform; those expansions depend on evidence from the mobile acquisition and monetization loop.

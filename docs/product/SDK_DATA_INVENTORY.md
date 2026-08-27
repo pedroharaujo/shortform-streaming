@@ -2,12 +2,12 @@
 
 **Plan task:** P0-T03 remaining engineering slice
 **Status:** Engineering inventory published; P0-T03 is **not** complete
-**Verified current-on-main against:** `85207d2` (`main` at inventory branch creation)
+**Code snapshot:** historical as of `85207d2` (`main` at inventory branch creation). It is **not** current `main`. P2-T01 (PR #48), P2-T05 (PR #45), and P2-T01-F1 (PR #51) have since merged; do not treat Firebase Auth or Bunny playback authorize as unshipped.
 **Not legal advice.** Lawful-basis and consent cells are conservative GDPR-ready **planned/assumed** engineering defaults for a later legal review. They do not approve processing, transfers, or store declarations.
 
-This file is the single engineering source for later privacy labels (P6-T04), account deletion (P2-T02), and legal/privacy review. It must match current `main` code, in-flight pull requests (cited, not shipped), and planned processors (MVP and P7). It does not implement SDKs, auth, playback, deletion, commerce, or analytics.
+This file is the single engineering source for later privacy labels (P6-T04), account deletion (P2-T02), and legal/privacy review. Row labels below still describe the `85207d2` research snapshot plus later planned processors; they are not a claim that merged P2-T01/P2-T05 work is still unmerged. This file does not implement SDKs, auth, playback, deletion, commerce, or analytics.
 
-Owner boxes that remain open: finance EUR settlement, legal/privacy jurisdiction review, content rating, and finance/tax treatment. See `STORE_COMPLIANCE_MATRIX.md`.
+Owner boxes that remain open for the **ads-only** P0-T03 slice: legal/privacy jurisdiction review, content rating, and AdMob/ads-only finance/tax treatment. Store IAP EUR settlement is required before P7 IAP, not before this ads-only slice. See `STORE_COMPLIANCE_MATRIX.md`.
 
 ## How to read status labels
 
@@ -15,8 +15,8 @@ Every inventory row uses one of:
 
 | Label | Meaning |
 |---|---|
-| **current-on-main** | Present in code and OpenAPI at `85207d2`. Do not treat later draft branches as shipped. |
-| **in-flight (not merged)** | Exists only on an open PR. Must not be described as on `main` or as a shipping binary. |
+| **current-on-main** | Present in code and OpenAPI at the `85207d2` snapshot. Later `main` also includes merged P2-T01 / P2-T01-F1 / P2-T05; see the snapshot note above. |
+| **in-flight (not merged)** | Research label from the `85207d2` inventory. P2-T01 (PR #48) and P2-T05 (PR #45) have **merged** since then; do not treat those rows as still unshipped. |
 | **planned MVP** | Accepted architecture required for ads-only MVP launch; **not implemented**. |
 | **planned P7** / **not-in-MVP (deferred P7)** | Accepted architecture deferred to Phase 7 (issue #52, 2026-08-27); **not implemented**. Not a silent drop. |
 | **not-in-MVP** / **not-adopted** | Explicitly out of MVP or awaiting a decision so the processor is not silently omitted or declared in store labels. |
@@ -25,7 +25,7 @@ Every inventory row uses one of:
 
 | ID | Inventory treatment |
 |---|---|
-| D-013 | **Accepted.** Firebase Auth, Analytics, Crashlytics, and App Check are planned MVP processors (ADR 0003). Remote Config A/B and FCM are **planned P7**. Not present on `main` at `85207d2`. |
+| D-013 | **Accepted.** Firebase Auth, Analytics, Crashlytics, and App Check are planned MVP processors (ADR 0003). Remote Config A/B and FCM are **planned P7**. Consumer Firebase Auth verification (`GET /v1/me`) and native Android Auth (P2-T01 / P2-T01-F1) have **merged to `main` after** `85207d2`. Do not treat Firebase Auth as unshipped. |
 | D-014 / ADR 0005 | Bunny Stream is the accepted **default**; GCP Cloud CDN is the **documented fallback and is not active**. P2-T05 on-device proof is not this task. |
 | D-015 / ADR 0006 | RevenueCat plus Django ledger remain accepted architecture. **MVP implementation deferred to P7**; MVP commerce is AdMob only. Not implemented. |
 | D-016 / ADR 0007 | Firebase Analytics typed events are planned MVP. BigQuery export, Looker Studio, and Remote Config A/B are **planned P7**. Canonical events below are **planned, not implemented**. |
@@ -53,7 +53,7 @@ Separate authentication identity, operational logs, analytics identifiers, and f
 
 ---
 
-## Current-on-main (`85207d2`)
+## Current-on-main (`85207d2` snapshot; not current `main`)
 
 Verified against `backend/apps/health/`, `backend/apps/catalog/`, `backend/config/settings/base.py`, `backend/config/urls.py`, `backend/config/exceptions.py`, and `docs/api/openapi.yaml` at `85207d2`. OpenAPI paths on this revision are `/health/live`, `/health/ready`, `/v1/catalog/home`, `/v1/series/{public_id}`, `/v1/episodes/{public_id}` only. There is no `LOGGING` dict; Django’s default request/error logging applies. `AUTH_USER_MODEL` is unset, so staff identity is `django.contrib.auth` `User`. Consumer Firebase identity is **not** on this revision.
 
@@ -74,9 +74,9 @@ Verified against `backend/apps/health/`, `backend/apps/catalog/`, `backend/confi
 
 ---
 
-## In-flight (not merged)
+## Merged after snapshot (P2-T01 / P2-T05)
 
-Research only. These rows describe open PRs. They are **not** on `main` at `85207d2` and must not appear on store labels as shipped until merged and released.
+Research rows below were labeled in-flight at `85207d2`. Those PRs have **merged** (P2-T01 #48, P2-T05 #45; native Android Auth follow-up P2-T01-F1 #51). Do not treat Firebase Auth or Bunny playback authorize as unshipped. Row text is the historical research snapshot, not a current-unmerged claim.
 
 ### P2-T01 — UserProfile / Firebase UID / `GET /v1/me` (PR #48)
 
@@ -105,7 +105,7 @@ Anonymous free-playback spike. Does not implement MediaAsset (P2-T06), entitleme
 
 ## Planned processors
 
-Accepted by D-013, D-014, D-007 and ADRs 0003–0007 unless noted, with P7 timing from issue #52 (2026-08-27). **Not implemented** on `main` at `85207d2`. Region and retention remain **pending D-020**. Consent/deletion propagation is P2-T02 / P4-T01 / P6-T04, not this slice.
+Accepted by D-013, D-014, D-007 and ADRs 0003–0007 unless noted, with P7 timing from issue #52 (2026-08-27). **Snapshot:** processors not implemented on `main` at `85207d2` remain labeled planned below, except that consumer Firebase Auth verification and Bunny playback authorize later merged (see snapshot note). Region and retention remain **pending D-020**. Consent/deletion propagation is P2-T02 / P4-T01 / P6-T04, not this slice.
 
 | Status | Field / event (processor + typical data) | Purpose | Lawful basis / consent (planned/assumed) | Processor | Region | Retention | Access roles | Deletion behavior |
 |---|---|---|---|---|---|---|---|---|
@@ -119,7 +119,7 @@ Accepted by D-013, D-014, D-007 and ADRs 0003–0007 unless noted, with P7 timin
 | planned MVP | Firebase App Check attestation tokens | Attest genuine app instances; reduce abuse | Art. 6(1)(f) security of the service — planned/assumed | Google Firebase App Check | **pending D-020** | Token lifetime; **pending D-020** | Verifying backends | Short-lived; not a consumer profile field. |
 | planned P7 | RevenueCat: app user id (mapped to Django profile), store product ids, subscription lifecycle, webhook event **references** (not raw receipts in analytics) | Store product presentation, receipt lifecycle, subscription entitlements (ADR 0006). Django ledger remains authority for coins. Deferred from MVP 2026-08-27; MVP commerce is AdMob only. | Art. 6(1)(b) to fulfil a purchase; Art. 6(1)(c) for legally required financial records — planned/assumed | RevenueCat; Apple; Google Play | **pending D-020** | Financial/audit **pending D-020** and legal/accounting needs | Support/finance with least privilege; not analytics | P2-T02: financial audit retains only legally necessary pseudonymous fields. Do not put receipts in analytics. |
 | planned MVP | AdMob rewarded ads: ad unit, consent/nPA flags, SSV callback identifiers (server intent), no live ads outside production | Opt-in rewarded ads; production grant from verified server callback. Only MVP monetization path (D-007). | ePrivacy + Art. 6(1)(a) for advertising identifiers / personalization; non-personalized ads still need a legal review — planned/assumed. Gate SDK init on consent. | Google AdMob | **pending D-020** | **pending D-020** | Advertising/ops; Django for entitlement grant | Opt-out/consent withdrawal; entitlement records follow commerce deletion rules (P2-T02/P3). |
-| planned MVP | Bunny Stream default: encode/store/deliver ABR HLS; Django mints short-lived access; app plays in `expo-video`, not Bunny’s web player | Production video path (D-014 / ADR 0005). **Not configured on `main`.** P2-T05 spike is in-flight only. | Art. 6(1)(b)/(f) to deliver video — planned/assumed. Extra DPA/subprocessors apply (Bunny is an EU company); region still **pending D-020**. | Bunny Stream | **pending D-020** (do not invent an EU-region decision) | Media retained while licensed/operated; takedown must expire/delete at provider (ADR 0005); **pending D-020** | Staff via Django ingestion; viewers only via expiring URLs | Takedown/expiry. Signed URLs never in logs/analytics/Git. |
+| planned MVP | Bunny Stream default: encode/store/deliver ABR HLS; Django mints short-lived access; app plays in `expo-video`, not Bunny’s web player | Production video path (D-014 / ADR 0005). Playback authorize spike **merged** after `85207d2` (PR #45); full MediaAsset/entitlements/player remain later P2 tasks. | Art. 6(1)(b)/(f) to deliver video — planned/assumed. Extra DPA/subprocessors apply (Bunny is an EU company); region still **pending D-020**. | Bunny Stream | **pending D-020** (do not invent an EU-region decision) | Media retained while licensed/operated; takedown must expire/delete at provider (ADR 0005); **pending D-020** | Staff via Django ingestion; viewers only via expiring URLs | Takedown/expiry. Signed URLs never in logs/analytics/Git. |
 | planned MVP (documented fallback; **not active**) | GCP Cloud Storage → Transcoder → Cloud CDN signed prefix/cookie | Fallback only if Bunny fails P2-T05, a license/residency/support constraint forbids Bunny, or measured cost/reliability is worse. Do not run both pipelines. | Same as video delivery — planned/assumed. Activate only under ADR 0005 triggers. | Google Cloud (Storage, Transcoder, Cloud CDN) | **pending D-020** | Same as video; **pending D-020** | Staff/ops if activated | Same takedown/expiry rules. **Not active** — do not declare as a shipping SDK/processor until activated. |
 | planned MVP | Expo / EAS: Expo account, build metadata, signing handled by EAS/Apple/Google, runtime updates | Development builds, CI/release binaries. Expo Go is not sufficient for AdMob or native Firebase. Purchases wait for P7. | Art. 6(1)(b)/(f) for building and delivering the app — planned/assumed. EAS credentials never in `.env`. | Expo (EAS) | **pending D-020** | Build artifacts per Expo retention; **pending D-020** | Mobile engineers; Expo org admins | Rotate credentials in EAS; delete unused artifacts per provider tools. Not consumer deletion. |
 | planned MVP (optional) | Sentry error monitoring | Optional if Firebase Crashlytics plus Cloud Error Reporting is sufficient (plan). | Same conservative consent/legitimate-interest split as Crashlytics — planned/assumed | Sentry (only if adopted) | **pending D-020** | **pending D-020** | Engineering | Do not enable in production without DPA and this inventory update. Prefer Crashlytics + Cloud Error Reporting unless a later decision adopts Sentry. |
@@ -162,9 +162,9 @@ Shared planned properties (only if consent permits): `event_id`; anonymous/app-i
 
 - Does not implement or configure any SDK, auth, playback, deletion, commerce, or analytics runtime.
 - Does not start P2-T01 device work, P2-T05 device work, or P2-T06.
-- Does not mark P0-T03 complete. Finance, legal/privacy, and content-rating owner boxes stay open.
-- Does not invent a D-020 residency/retention decision. D-005–D-007 are founder-approved 2026-08-27 in the decision register; this inventory does not convert D-008/D-009 from Proposed.
-- Does not treat PR #48 or PR #45 as shipped.
+- Does not mark P0-T03 complete. Legal/privacy, content-rating, and ads-only finance/tax owner boxes stay open. Store IAP EUR settlement waits for P7.
+- Does not invent a D-020 residency/retention decision. D-005–D-007 are founder-approved 2026-08-27 in the decision register; this inventory does not convert D-008/D-009 from Proposed. D-017, D-018, D-019, D-020, and D-025 remain open.
+- Does not treat merged P2-T01 / P2-T05 / P2-T01-F1 as still unshipped; the `85207d2` snapshot is historical.
 
 ## Related documents
 

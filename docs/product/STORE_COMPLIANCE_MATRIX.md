@@ -81,11 +81,17 @@ The MVP app interface and initial microdrama catalog are in English. The intende
 - [ ] Review notes explain why rewarded ads are optional and how rewards are verified.
 - [ ] No licensed production content is used in screenshots or review media without promotional rights.
 
-## Required approvals before P0-T03 completion
+## Required approvals before P0-T03 completion (ads-only MVP)
+
+Store IAP EUR settlement, IAP merchant, and store-billing refund treatment are **not** P0-T03 closers. They are required before P7 IAP, not before ads-only launch.
 
 - [x] Distribution countries/storefront scope is founder-approved; per-market rights and legal/language launch gates remain open.
-- [ ] Finance confirms that the registered store accounts and bank configuration can settle proceeds in EUR.
 - [ ] Legal/privacy owner reviews the relevant jurisdiction row set.
 - [ ] Content rating owner approves provisional rating method.
-- [ ] Finance/tax owner approves merchant, tax, refund, and revenue-recognition treatment.
-- [x] Engineering published [`SDK_DATA_INVENTORY.md`](SDK_DATA_INVENTORY.md) (2026-08-25; timing labels updated 2026-08-27). This checks the engineering inventory box only: the inventory exists and is labeled current-on-main / in-flight (not merged) / planned MVP / planned P7. **P0-T03 is still incomplete** — finance EUR settlement, legal/privacy jurisdiction review, content rating, and finance/tax treatment remain open. Apple privacy labels and Google Data safety declarations are not confirmed until those reviews and a matching binary exist.
+- [ ] Finance/tax owner approves **AdMob/ads-only** merchant, tax, and revenue-recognition treatment. Store IAP/refund/EUR-settlement treatment waits for P7.
+- [x] Engineering published [`SDK_DATA_INVENTORY.md`](SDK_DATA_INVENTORY.md) (2026-08-25; timing labels updated 2026-08-27). This checks the engineering inventory box only: the inventory exists and is labeled current-on-main / in-flight snapshot / planned MVP / planned P7. **P0-T03 is still incomplete** — legal/privacy jurisdiction review, content rating, and ads-only finance/tax treatment remain open. Store IAP EUR settlement is required before P7 IAP, not before this ads-only slice. Apple privacy labels and Google Data safety declarations are not confirmed until those reviews and a matching binary exist.
+
+## Required before P7 IAP (not ads-only launch)
+
+- [ ] Finance confirms that the registered store accounts and bank configuration can settle IAP proceeds in EUR.
+- [ ] Finance/tax owner approves IAP merchant, tax, refund, and revenue-recognition treatment.

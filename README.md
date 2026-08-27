@@ -218,11 +218,11 @@ protections. Do not reuse the local example values or commit a populated `.env`.
 
 ## Project status
 
-Implementation has started with Phase 0 product, rights, compliance, architecture, and cost gates. The founder-approved MVP launch scope is the 21 EU countries using EUR listed canonically in decision D-001. The MVP interface and initial microdrama catalog are in English. Customer prices remain localized strings supplied by each user's App Store or Google Play storefront, while EUR is the company's base reporting currency and desired store-settlement currency.
+Implementation has started with Phase 0 product, rights, compliance, architecture, and cost gates. The founder-approved MVP launch scope is the 21 EU countries using EUR listed canonically in decision D-001. The MVP interface and initial microdrama catalog are in English. The ads-only MVP has no IAP; store-localized price strings apply when P7 IAP ships. EUR is the company's base reporting currency and desired store-settlement currency for that later IAP path.
 
 Phase 1 engineering may proceed without company-registration or store-account data. Development and automated tests use only short self-owned, generated, or purpose-made test media and local/emulated/provider-fake integrations; real licensed media and production credentials are not required.
 
-The approved geographic scope is not final launch clearance. Territorial content rights, GDPR/privacy, per-market legal and language review, age/content controls, store compliance, incorporation and registration details of the intended French entity, and verified EUR-compatible Apple/Google organization, payment-profile, and bank configuration remain mandatory release gates. No public distribution or real purchase, subscription, or advertising flow may be enabled before that review passes.
+The approved geographic scope is not final launch clearance. Territorial content rights, GDPR/privacy, per-market legal and language review, age/content controls, store compliance, incorporation and registration details of the intended French entity, and AdMob production configuration remain mandatory **ads-only** release gates. Store IAP EUR-compatible Apple/Google payment-profile and bank configuration is required before P7 IAP, not before ads-only launch. No public distribution or real advertising may be enabled before ads-only clearance. Real purchase or subscription flows wait for P7.
 
 ## Source of truth
 
