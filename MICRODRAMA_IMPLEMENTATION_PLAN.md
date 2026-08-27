@@ -767,14 +767,16 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **Acceptance criteria:**
 
-- [ ] States cover pending upload, uploaded, processing, ready, failed, blocked, and removed.
-- [ ] Duplicate callbacks/retries are idempotent and failures expose safe admin diagnostics.
-- [ ] An episode cannot publish until a ready media asset and valid rights exist.
+- [x] States cover pending upload, uploaded, processing, ready, failed, blocked, and removed.
+- [x] Duplicate callbacks/retries are idempotent and failures expose safe admin diagnostics.
+- [x] An episode cannot publish until a ready media asset and valid rights exist.
 
 **Validation and integration tests:**
 
-- [ ] Integration test runs a short self-owned/generated fixture through upload → job → ready using a provider fake and a non-production smoke test against Bunny Stream (or the GCP fallback if that path is active); no production provider credential is required for local checks.
-- [ ] Corrupt upload, checksum mismatch, failed job, retry, and takedown paths pass.
+- [x] Integration test runs a short self-owned/generated fixture through upload → job → ready using a provider fake and a non-production smoke test against Bunny Stream (or the GCP fallback if that path is active); no production provider credential is required for local checks.
+- [x] Corrupt upload, checksum mismatch, failed job, retry, and takedown paths pass.
+
+Evidence (2026-08-27): PR #56 merged; Fake CI ingest tests; optional Bunny smoke reached ready; D-014 not reopened; production signed PUT is #55.
 
 #### P2-T07 — Implement entitlement-aware playback authorization
 

@@ -214,8 +214,12 @@ def test_illegal_transition_rejected(fake_provider: FakeVideoProvider) -> None:
     )
     asset.state = MediaAssetState.READY
     asset.provider_asset_id = asset.provider_asset_id or "fake_ready"
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError) as exc_info:
         asset.transition_to(MediaAssetState.PROCESSING)
+    message = str(exc_info.value)
+    assert "→" not in message
+    assert "->" in message
+    message.encode("cp1252")
 
 
 @pytest.mark.django_db
