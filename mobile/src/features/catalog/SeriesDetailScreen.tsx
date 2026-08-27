@@ -1,9 +1,10 @@
 import type { JSX } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CatalogClient, CatalogEpisodeSummary } from '../../api/catalog/types';
 import { CatalogArtwork } from './CatalogArtwork';
+import { CatalogFetchStatus } from './CatalogFetchStatus';
 import { useCatalogSeries } from './useCatalogSeries';
 
 export interface SeriesDetailScreenProps {
@@ -57,31 +58,14 @@ export function SeriesDetailScreen({
         <Text style={styles.backLabel}>Back</Text>
       </Pressable>
 
-      {state.phase === 'loading' ? (
-        <View
-          accessibilityLiveRegion="polite"
-          style={styles.centered}
-          testID="series-detail-loading"
-        >
-          <ActivityIndicator accessibilityLabel="Loading series" />
-          <Text style={styles.muted}>Loading series…</Text>
-        </View>
-      ) : null}
-
-      {state.phase === 'error' ? (
-        <View style={styles.centered} testID="series-detail-error">
-          <Text style={styles.body}>{state.message}</Text>
-          <Pressable
-            accessibilityLabel="Try again"
-            accessibilityRole="button"
-            onPress={refresh}
-            style={styles.button}
-            testID="series-detail-retry"
-          >
-            <Text style={styles.buttonLabel}>Try again</Text>
-          </Pressable>
-        </View>
-      ) : null}
+      <CatalogFetchStatus
+        errorMessage={state.phase === 'error' ? state.message : undefined}
+        loadingAccessibilityLabel="Loading series"
+        loadingText="Loading series…"
+        onRetry={refresh}
+        phase={state.phase}
+        testIDPrefix="series-detail"
+      />
 
       {state.phase === 'not-found' ? (
         <View style={styles.centered} testID="series-detail-not-found">
@@ -114,15 +98,6 @@ const styles = StyleSheet.create({
   back: { alignSelf: 'flex-start', marginBottom: 12, paddingVertical: 4 },
   backLabel: { color: '#a1a1aa', fontSize: 16 },
   body: { color: '#fafafa', fontSize: 16, textAlign: 'center' },
-  button: {
-    borderColor: '#3f3f46',
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  buttonLabel: { color: '#fafafa', fontSize: 16 },
   centered: { alignItems: 'center', flex: 1, gap: 12, justifyContent: 'center' },
   container: { backgroundColor: '#09090b', flex: 1, padding: 24 },
   content: { paddingBottom: 24 },

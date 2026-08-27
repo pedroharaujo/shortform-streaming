@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
 import type { CatalogClient, CatalogHome } from '../../api/catalog/types';
+import { useCatalogQuery } from './useCatalogQuery';
 
 export type CatalogHomeState =
   | { readonly phase: 'loading' }
@@ -18,38 +19,18 @@ function hasEligibleSeries(home: CatalogHome): boolean {
 }
 
 export function useCatalogHome(client: CatalogClient): CatalogHomeQuery {
-  const [state, setState] = useState<CatalogHomeState>({ phase: 'loading' });
-  const [attempt, setAttempt] = useState(0);
+  const load = useCallback(async (): Promise<CatalogHomeState> => {
+    const result = await client.getHome();
+    if (result.outcome === 'ok') {
+      return hasEligibleSeries(result.data)
+        ? { phase: 'loaded', home: result.data }
+        : { phase: 'empty' };
+    }
+    if (result.outcome === 'unreachable') {
+      return { phase: 'error', message: result.reason };
+    }
+    return { phase: 'error', message: result.message };
+  }, [client]);
 
-  const refresh = useCallback(() => {
-    setState({ phase: 'loading' });
-    setAttempt((current) => current + 1);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    void client.getHome().then((result) => {
-      if (!active) {
-        return;
-      }
-      if (result.outcome === 'ok') {
-        setState(
-          hasEligibleSeries(result.data)
-            ? { phase: 'loaded', home: result.data }
-            : { phase: 'empty' },
-        );
-        return;
-      }
-      if (result.outcome === 'unreachable') {
-        setState({ phase: 'error', message: result.reason });
-        return;
-      }
-      setState({ phase: 'error', message: result.message });
-    });
-    return () => {
-      active = false;
-    };
-  }, [client, attempt]);
-
-  return { state, refresh };
+  return useCatalogQuery(load);
 }

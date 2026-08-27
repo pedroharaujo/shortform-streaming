@@ -1,9 +1,10 @@
 import type { JSX } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CatalogClient, CatalogSeriesCard } from '../../api/catalog/types';
 import { CatalogArtwork } from './CatalogArtwork';
+import { CatalogFetchStatus } from './CatalogFetchStatus';
 import { useCatalogHome } from './useCatalogHome';
 
 export interface HomeCatalogScreenProps {
@@ -51,27 +52,14 @@ export function HomeCatalogScreen({
         Home
       </Text>
 
-      {state.phase === 'loading' ? (
-        <View accessibilityLiveRegion="polite" style={styles.centered} testID="home-loading">
-          <ActivityIndicator accessibilityLabel="Loading catalog" />
-          <Text style={styles.muted}>Loading catalog…</Text>
-        </View>
-      ) : null}
-
-      {state.phase === 'error' ? (
-        <View style={styles.centered} testID="home-error">
-          <Text style={styles.body}>{state.message}</Text>
-          <Pressable
-            accessibilityLabel="Try again"
-            accessibilityRole="button"
-            onPress={refresh}
-            style={styles.button}
-            testID="home-retry"
-          >
-            <Text style={styles.buttonLabel}>Try again</Text>
-          </Pressable>
-        </View>
-      ) : null}
+      <CatalogFetchStatus
+        errorMessage={state.phase === 'error' ? state.message : undefined}
+        loadingAccessibilityLabel="Loading catalog"
+        loadingText="Loading catalog…"
+        onRetry={refresh}
+        phase={state.phase}
+        testIDPrefix="home"
+      />
 
       {state.phase === 'empty' ? (
         <View style={styles.centered} testID="home-empty">
@@ -120,15 +108,6 @@ export function HomeCatalogScreen({
 
 const styles = StyleSheet.create({
   body: { color: '#fafafa', fontSize: 16, textAlign: 'center' },
-  button: {
-    borderColor: '#3f3f46',
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  buttonLabel: { color: '#fafafa', fontSize: 16 },
   card: { marginRight: 12, width: 160 },
   cardSynopsis: { color: '#a1a1aa', fontSize: 13, marginTop: 4 },
   cardTitle: { color: '#fafafa', fontSize: 16, fontWeight: '600', marginTop: 8 },
@@ -136,7 +115,6 @@ const styles = StyleSheet.create({
   container: { backgroundColor: '#09090b', flex: 1, padding: 24 },
   healthLink: { alignSelf: 'center', marginTop: 16, padding: 8 },
   healthLinkLabel: { color: '#a1a1aa', fontSize: 14 },
-  muted: { color: '#a1a1aa', fontSize: 16 },
   rail: { marginBottom: 24 },
   railRow: { flexDirection: 'row', flexWrap: 'wrap' },
   railTitle: { color: '#fafafa', fontSize: 18, fontWeight: '600', marginBottom: 12 },
