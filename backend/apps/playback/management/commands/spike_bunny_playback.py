@@ -12,6 +12,14 @@ from apps.playback.media import generate_vertical_test_media
 from apps.playback.providers.factory import get_video_provider
 from apps.playback.redact import redact_playback_url
 
+# ASCII-only: Windows cp1252 consoles cannot encode Unicode arrows.
+SPIKE_SUCCESS_FOOTER = (
+    "This command does not attach a catalog MediaAsset. Upload a vertical "
+    "master through Django Admin (Playback -> Media assets) and retry "
+    "reconcile until ready. PLAYBACK_SPIKE_ASSETS is obsolete. Never commit "
+    "credentials or paste signed URLs."
+)
+
 
 class Command(BaseCommand):
     help = (
@@ -86,9 +94,4 @@ class Command(BaseCommand):
         self.stdout.write(f"  audio: {'yes' if metadata.has_audio else 'no'}")
         self.stdout.write(f"  playback_url: {redact_playback_url(access.playback_url)}")
         self.stdout.write(f"  expires_at: {access.expires_at.isoformat()}")
-        self.stdout.write(
-            "This command does not attach a catalog MediaAsset. Upload a vertical "
-            "master through Django Admin (Playback → Media assets) and retry "
-            "reconcile until ready. PLAYBACK_SPIKE_ASSETS is obsolete. Never commit "
-            "credentials or paste signed URLs."
-        )
+        self.stdout.write(SPIKE_SUCCESS_FOOTER)

@@ -15,12 +15,19 @@ IN_FLIGHT_STATES = frozenset({"pending_upload", "uploaded", "processing", "ready
 
 
 class MediaAssetState(models.TextChoices):
+    """Lifecycle states for MediaAsset.
+
+    BLOCKED is reserved: no Admin or ingest path sets it yet. Keep the enum
+    value and legal transitions so a later rights/takedown workflow can use it
+    without a schema change. Do not invent a blocked workflow here.
+    """
+
     PENDING_UPLOAD = "pending_upload", "Pending upload"
     UPLOADED = "uploaded", "Uploaded"
     PROCESSING = "processing", "Processing"
     READY = "ready", "Ready"
     FAILED = "failed", "Failed"
-    BLOCKED = "blocked", "Blocked"
+    BLOCKED = "blocked", "Blocked"  # Reserved; no Admin/ingest path yet.
     REMOVED = "removed", "Removed"
 
 
@@ -186,7 +193,7 @@ class MediaAsset(models.Model):
         allowed = ALLOWED_TRANSITIONS.get(self.state, frozenset())
         if new_state not in allowed:
             raise ValidationError(
-                {"state": f"Illegal media-asset transition {self.state} → {new_state}."}
+                {"state": f"Illegal media-asset transition {self.state} -> {new_state}."}
             )
         self.state = new_state
 
