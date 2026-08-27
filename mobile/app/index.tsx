@@ -23,7 +23,7 @@ export default function HomeRoute(): JSX.Element {
   return (
     <HomeCatalogScreen
       client={client}
-      onOpenHealth={() => router.push('/health')}
+      {...(__DEV__ ? { onOpenHealth: () => router.push('/health') } : {})}
       onOpenSignIn={() => router.push('/sign-in')}
       onSelectSeries={(seriesId) => router.push(`/series/${seriesId}`)}
     />
