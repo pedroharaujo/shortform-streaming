@@ -102,8 +102,9 @@ paths:
     get:
       operationId: v1_episodes_retrieve
       description: Localized episode detail. The episode is eligible only when its
-        series is eligible and the episode is published within its optional window.
-        Ineligible ids return 404, never 403. Monetization lock state is omitted.
+        series is eligible, the episode is published within its optional window, and
+        a ready MediaAsset exists. Ineligible ids return 404, never 403. Monetization
+        lock state is omitted.
       summary: Episode detail
       parameters:
       - in: header
@@ -188,11 +189,12 @@ paths:
   /v1/playback/{episode_id}/authorize:
     post:
       operationId: v1_playback_authorize_create
-      description: Anonymous free-playback spike. Requires the same catalog context
-        headers as catalog reads. Unknown, ineligible, or unmapped episodes return
-        404 ErrorEnvelope, never 403. An unset or disabled VideoProvider returns 503
-        ErrorEnvelope and never mints unsigned access. Success returns an opaque HTTPS
-        HLS URL that is not served by Django.
+      description: Anonymous free playback. Requires the same catalog context headers
+        as catalog reads. Unknown, ineligible, unpublished, or episodes without a
+        ready MediaAsset return 404 ErrorEnvelope, never 403. An unset or disabled
+        VideoProvider returns 503 ErrorEnvelope and never mints unsigned access. Success
+        looks up the episode's ready MediaAsset and returns an opaque HTTPS HLS URL
+        that is not served by Django.
       summary: Authorize episode playback
       parameters:
       - in: header

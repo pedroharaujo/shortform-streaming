@@ -260,8 +260,8 @@ class Episode(models.Model):
     """Episode metadata. Monetization lock state is omitted (P3 / P2-T04).
 
     Publish rule: English title + synopsis, positive duration, valid optional
-    window, and the parent series must have a structurally valid non-takedown
-    ContentRight. MediaAsset readiness is not a publish gate in P2-T03 (P2-T06).
+    window, the parent series must have a structurally valid non-takedown
+    ContentRight, and a ready MediaAsset must exist (P2-T06).
     """
 
     public_id = models.CharField(max_length=40, unique=True, editable=False)
@@ -361,6 +361,21 @@ class Episode(models.Model):
                     )
                 }
             )
+        if not self.has_ready_media_asset():
+            raise ValidationError(
+                {
+                    "publication_status": (
+                        "Publishing requires a ready MediaAsset with valid captions and thumbnail."
+                    )
+                }
+            )
+
+    def has_ready_media_asset(self) -> bool:
+        if not self.pk:
+            return False
+        from apps.playback.models import MediaAssetState
+
+        return self.media_assets.filter(state=MediaAssetState.READY).exists()
 
     @property
     def english_title(self) -> str:

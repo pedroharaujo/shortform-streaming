@@ -10,9 +10,8 @@ video bytes. The app never uses Bunny’s web player.
 ## Local Fake (default)
 
 `.env.example` sets `VIDEO_PROVIDER=fake`. Pytest and Application CI need no
-Bunny credentials. Map an eligible episode public id to a Fake asset id in
-Django settings (tests use `override_settings`; live local mapping is optional
-JSON in `PLAYBACK_SPIKE_ASSETS`).
+Bunny credentials. Authorize looks up the episode's **ready MediaAsset** (P2-T06).
+`PLAYBACK_SPIKE_ASSETS` is obsolete and is not consulted.
 
 Authorize:
 
@@ -55,11 +54,13 @@ Missing credentials are **not** a Bunny failure and must not reopen D-014.
    ```
 
    The command prints **redacted** status (rendition names, duration, captions,
-   portrait flag). It prints the provider asset id so you can map it. It must
-   never print a usable signed URL (signing query/path values are replaced with
-   `redacted`).
-5. Map `PLAYBACK_SPIKE_ASSETS={"<episode_public_id>":"<asset_id>"}` in the local
-   untracked env. Restart Django. Call authorize as above. Play in `expo-video`.
+   portrait flag). It does **not** attach a catalog MediaAsset. For authorize and
+   publish, upload the generated (or any) vertical master through Django Admin
+   (`Playback → Media assets → Add`) and use **Retry reconcile** until the row is
+   `ready`. Do not paste a provider asset id into Admin. `PLAYBACK_SPIKE_ASSETS`
+   is obsolete. The command must never print a usable signed URL (signing
+   query/path values are replaced with `redacted`).
+5. Restart Django if needed. Call authorize as above. Play in `expo-video`.
 6. Confirm unsigned and expired playlist GETs return **403**. Django remains
    the authorizer. A signed GET with no Referer should return **200** when
    Block Direct URL File Access is off.

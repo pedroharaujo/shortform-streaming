@@ -155,8 +155,9 @@ class EpisodeDetailView(CatalogAnonymousView):
         summary="Episode detail",
         description=(
             "Localized episode detail. The episode is eligible only when its series is "
-            "eligible and the episode is published within its optional window. "
-            "Ineligible ids return 404, never 403. Monetization lock state is omitted."
+            "eligible, the episode is published within its optional window, and a "
+            "ready MediaAsset exists. Ineligible ids return 404, never 403. "
+            "Monetization lock state is omitted."
         ),
         parameters=[PUBLIC_ID_PARAMETER, *CATALOG_CONTEXT_PARAMETERS],
         responses={200: CatalogEpisodeDetailSerializer, 400: ERROR_400, 404: ERROR_404},

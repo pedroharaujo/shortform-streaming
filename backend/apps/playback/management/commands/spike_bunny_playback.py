@@ -87,6 +87,8 @@ class Command(BaseCommand):
         self.stdout.write(f"  playback_url: {redact_playback_url(access.playback_url)}")
         self.stdout.write(f"  expires_at: {access.expires_at.isoformat()}")
         self.stdout.write(
-            "Map the episode public_id to this asset_id via PLAYBACK_SPIKE_ASSETS. "
-            "Never commit credentials or paste signed URLs."
+            "This command does not attach a catalog MediaAsset. Upload a vertical "
+            "master through Django Admin (Playback → Media assets) and retry "
+            "reconcile until ready. PLAYBACK_SPIKE_ASSETS is obsolete. Never commit "
+            "credentials or paste signed URLs."
         )

@@ -351,3 +351,20 @@ def test_catalog_stays_anonymous_with_or_without_bearer(
     assert episode_response.status_code == 200
     assert episode_response.json()["id"] == episode.public_id
     assert UserProfile.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_takedown_hides_episode_from_catalog(client: Client, freeze_catalog_clock: None) -> None:
+    del freeze_catalog_clock
+    from apps.playback.ingest import takedown_asset
+
+    series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    asset = episode.media_assets.get()
+    takedown_asset(asset)
+    detail = client.get(f"/v1/series/{series.public_id}", **_headers()).json()
+    seasons = detail.get("seasons") or []
+    ids = [item["id"] for season in seasons for item in season.get("episodes") or []]
+    assert episode.public_id not in ids
+    hidden = client.get(f"/v1/episodes/{episode.public_id}", **_headers())
+    assert hidden.status_code == 404
+    assert hidden.status_code != 403

@@ -7,10 +7,11 @@ from unittest.mock import patch
 from urllib.parse import urlparse
 
 import pytest
-from django.test import Client, override_settings
+from django.test import Client
 
 from apps.accounts.models import UserProfile
 from apps.catalog.models import PublicationStatus
+from apps.playback.models import MediaAssetState
 from apps.playback.providers.factory import reset_provider_cache
 from apps.playback.providers.fake import FakeVideoProvider
 from tests.catalog.builders import (
@@ -23,6 +24,11 @@ from tests.catalog.builders import (
 
 AUTHORIZE = "/v1/playback/{episode_id}/authorize"
 HMAC_KEY = "synthetic-hmac-for-tests"
+
+
+def _seed_ready(provider: FakeVideoProvider, episode: Any) -> str:
+    asset = episode.media_assets.get()
+    return provider.seed_ready_asset(asset.provider_asset_id)
 
 
 def _headers(
@@ -86,11 +92,12 @@ def test_unknown_episode_is_404_not_403(
 
 
 @pytest.mark.django_db
-def test_unmapped_eligible_episode_is_404(
+def test_eligible_episode_without_ready_asset_is_404(
     client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
 ) -> None:
     del freeze_catalog_clock
     _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    episode.media_assets.all().delete()
     fake_provider.seed_ready_asset("asset-unmapped")
     response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
     assert response.status_code == 404
@@ -103,28 +110,25 @@ def test_mapped_ineligible_episode_is_404(
 ) -> None:
     del freeze_catalog_clock
     series, episode = make_published_title(title="Harbor Lights", territory="FR")
-    asset_id = fake_provider.seed_ready_asset()
-    with override_settings(PLAYBACK_SPIKE_ASSETS={episode.public_id: asset_id}):
-        wrong_territory = client.post(
-            AUTHORIZE.format(episode_id=episode.public_id),
-            **_headers(territory="DE"),
-        )
-        assert wrong_territory.status_code == 404
-        assert wrong_territory.status_code != 403
+    _seed_ready(fake_provider, episode)
+    wrong_territory = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(territory="DE"),
+    )
+    assert wrong_territory.status_code == 404
+    assert wrong_territory.status_code != 403
 
-        taken_down = make_series(title="Taken Down")
-        make_right(taken_down, territories=["FR"], takedown=True)
-        hidden = make_episode(taken_down, publication_status=PublicationStatus.DRAFT)
-        type(taken_down).objects.filter(pk=taken_down.pk).update(
-            publication_status=PublicationStatus.PUBLISHED
-        )
-        type(hidden).objects.filter(pk=hidden.pk).update(
-            publication_status=PublicationStatus.PUBLISHED
-        )
+    taken_down = make_series(title="Taken Down")
+    make_right(taken_down, territories=["FR"], takedown=True)
+    hidden = make_episode(taken_down, publication_status=PublicationStatus.DRAFT)
+    type(taken_down).objects.filter(pk=taken_down.pk).update(
+        publication_status=PublicationStatus.PUBLISHED
+    )
+    type(hidden).objects.filter(pk=hidden.pk).update(publication_status=PublicationStatus.PUBLISHED)
     hidden_asset = fake_provider.seed_ready_asset()
-    with override_settings(PLAYBACK_SPIKE_ASSETS={hidden.public_id: hidden_asset}):
-        response = client.post(AUTHORIZE.format(episode_id=hidden.public_id), **_headers())
-        assert response.status_code == 404
+    del hidden_asset
+    response = client.post(AUTHORIZE.format(episode_id=hidden.public_id), **_headers())
+    assert response.status_code == 404
 
 
 @pytest.mark.django_db
@@ -140,12 +144,11 @@ def test_authorize_stays_anonymous_with_or_without_bearer(
 ) -> None:
     del freeze_catalog_clock
     _series, episode = make_published_title(title="Harbor Lights", territory="FR")
-    asset_id = fake_provider.seed_ready_asset()
+    _seed_ready(fake_provider, episode)
     headers = _headers()
     if authorization is not None:
         headers["HTTP_AUTHORIZATION"] = authorization
-    with override_settings(PLAYBACK_SPIKE_ASSETS={episode.public_id: asset_id}):
-        response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **headers)
+    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **headers)
     assert response.status_code == 200
     assert response.status_code != 401
     payload = response.json()
@@ -159,9 +162,8 @@ def test_success_returns_opaque_https_m3u8_not_on_django_origin(
 ) -> None:
     del freeze_catalog_clock
     _series, episode = make_published_title(title="Harbor Lights", territory="FR")
-    asset_id = fake_provider.seed_ready_asset()
-    with override_settings(PLAYBACK_SPIKE_ASSETS={episode.public_id: asset_id}):
-        response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    _seed_ready(fake_provider, episode)
+    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
     assert response.status_code == 200
     payload = response.json()
     assert set(payload.keys()) == {"playback_url", "expires_at"}
@@ -192,10 +194,7 @@ def test_disabled_provider_returns_503_and_never_mints(
 ) -> None:
     del freeze_catalog_clock
     _series, episode = make_published_title(title="Harbor Lights", territory="FR")
-    with (
-        override_settings(PLAYBACK_SPIKE_ASSETS={episode.public_id: "asset-1"}),
-        patch("apps.playback.views.get_video_provider", return_value=None),
-    ):
+    with patch("apps.playback.views.get_video_provider", return_value=None):
         response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
     assert response.status_code == 503
     body = response.json()
@@ -214,8 +213,46 @@ def test_clock_window_end_exclusive_is_404(
         starts_at=DEFAULT_NOW - timedelta(days=1),
         ends_at=DEFAULT_NOW,
     )
-    asset_id = fake_provider.seed_ready_asset()
-    with override_settings(PLAYBACK_SPIKE_ASSETS={episode.public_id: asset_id}):
-        response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    _seed_ready(fake_provider, episode)
+    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
     assert response.status_code == 404
     del series
+
+
+@pytest.mark.django_db
+def test_non_ready_and_removed_assets_are_404(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    asset = episode.media_assets.get()
+    fake_provider.seed_ready_asset(asset.provider_asset_id)
+    asset.state = MediaAssetState.PROCESSING
+    asset.save(update_fields=["state"])
+    processing = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert processing.status_code == 404
+
+    asset.state = MediaAssetState.READY
+    asset.save(update_fields=["state"])
+    fake_provider.takedown(asset.provider_asset_id)
+    asset.state = MediaAssetState.REMOVED
+    asset.save(update_fields=["state"])
+    removed = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert removed.status_code == 404
+    assert removed.status_code != 403
+
+
+@pytest.mark.django_db
+def test_playback_spike_assets_is_not_the_success_path(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    episode.media_assets.all().delete()
+    spike_id = fake_provider.seed_ready_asset()
+    from django.test import override_settings
+
+    with override_settings(PLAYBACK_SPIKE_ASSETS={episode.public_id: spike_id}):
+        response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert response.status_code == 404
+    assert response.json()["code"] == "not_found"

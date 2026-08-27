@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
-from django.conf import settings
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny
@@ -19,6 +18,7 @@ from apps.playback.exceptions import (
     VideoAssetNotFoundError,
     VideoProviderError,
 )
+from apps.playback.ingest import ready_asset_for_episode
 from apps.playback.providers.factory import get_video_provider
 from apps.playback.serializers import PlaybackAuthorizeResponseSerializer
 
@@ -55,11 +55,12 @@ class PlaybackAuthorizeView(PlaybackAnonymousView):
         tags=["playback"],
         summary="Authorize episode playback",
         description=(
-            "Anonymous free-playback spike. Requires the same catalog context headers "
-            "as catalog reads. Unknown, ineligible, or unmapped episodes return 404 "
-            "ErrorEnvelope, never 403. An unset or disabled VideoProvider returns 503 "
-            "ErrorEnvelope and never mints unsigned access. Success returns an opaque "
-            "HTTPS HLS URL that is not served by Django."
+            "Anonymous free playback. Requires the same catalog context headers as "
+            "catalog reads. Unknown, ineligible, unpublished, or episodes without a "
+            "ready MediaAsset return 404 ErrorEnvelope, never 403. An unset or "
+            "disabled VideoProvider returns 503 ErrorEnvelope and never mints unsigned "
+            "access. Success looks up the episode's ready MediaAsset and returns an "
+            "opaque HTTPS HLS URL that is not served by Django."
         ),
         parameters=[EPISODE_ID_PARAMETER, *CATALOG_CONTEXT_PARAMETERS],
         request=None,
@@ -75,9 +76,10 @@ class PlaybackAuthorizeView(PlaybackAnonymousView):
         episode = (
             Episode.objects.select_related("series", "season").filter(public_id=episode_id).first()
         )
-        mapping = getattr(settings, "PLAYBACK_SPIKE_ASSETS", {}) or {}
-        asset_id = mapping.get(episode_id) if isinstance(mapping, dict) else None
-        if episode is None or not episode_is_eligible(episode, context) or not asset_id:
+        if episode is None or not episode_is_eligible(episode, context):
+            raise NotFound(detail=_NOT_FOUND_MESSAGE)
+        asset = ready_asset_for_episode(episode)
+        if asset is None:
             raise NotFound(detail=_NOT_FOUND_MESSAGE)
 
         provider = get_video_provider()
@@ -85,7 +87,7 @@ class PlaybackAuthorizeView(PlaybackAnonymousView):
             raise PlaybackUnavailable()
 
         try:
-            access = provider.issue_playback_access(str(asset_id))
+            access = provider.issue_playback_access(asset.provider_asset_id)
         except VideoAssetNotFoundError:
             raise NotFound(detail=_NOT_FOUND_MESSAGE) from None
         except VideoProviderError:

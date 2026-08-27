@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime, timedelta
 
 from apps.catalog.models import (
@@ -13,6 +14,7 @@ from apps.catalog.models import (
     Series,
     SeriesTranslation,
 )
+from apps.playback.models import MediaAsset, MediaAssetState
 
 DEFAULT_NOW = datetime(2026, 6, 15, 12, 0, tzinfo=UTC)
 
@@ -126,10 +128,38 @@ def make_episode(
         synopsis=synopsis,
     )
     if publication_status == PublicationStatus.PUBLISHED:
+        make_ready_media_asset(episode)
         episode.publication_status = PublicationStatus.PUBLISHED
         episode.full_clean()
         episode.save()
     return episode
+
+
+def make_ready_media_asset(
+    episode: Episode,
+    *,
+    provider_asset_id: str | None = None,
+    checksum: str | None = None,
+    provider_name: str = "fake",
+) -> MediaAsset:
+    """Attach a ready MediaAsset so published fixtures satisfy the P2-T06 gate."""
+    digest = checksum or hashlib.sha256(f"synthetic:{episode.public_id}".encode()).hexdigest()
+    asset = MediaAsset(
+        episode=episode,
+        checksum=digest,
+        provider_name=provider_name,
+        provider_asset_id=provider_asset_id or f"fake_{episode.public_id}",
+        state=MediaAssetState.READY,
+        captions_language=REQUIRED_CATALOG_LANGUAGE,
+        has_captions=True,
+        thumbnail_count=1,
+        duration_seconds=float(episode.duration_seconds),
+        renditions=["360p", "540p", "720p"],
+        diagnostic_message="",
+    )
+    asset.full_clean()
+    asset.save()
+    return asset
 
 
 def make_published_title(

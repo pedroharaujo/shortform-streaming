@@ -182,3 +182,15 @@ def test_rights_window_database_constraint() -> None:
 def test_timezone_aware_defaults() -> None:
     assert DEFAULT_NOW.tzinfo is UTC
     assert timezone.is_aware(DEFAULT_NOW)
+
+
+@pytest.mark.django_db
+def test_episode_publish_requires_ready_media_asset() -> None:
+    series = make_series()
+    make_right(series)
+    episode = make_episode(series, publication_status=PublicationStatus.DRAFT)
+    episode.publication_status = PublicationStatus.PUBLISHED
+    with pytest.raises(ValidationError) as exc_info:
+        episode.full_clean()
+    assert "publication_status" in exc_info.value.message_dict
+    assert "MediaAsset" in str(exc_info.value)
