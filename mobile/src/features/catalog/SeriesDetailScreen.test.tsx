@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import type {
@@ -96,8 +96,9 @@ describe('SeriesDetailScreen', () => {
     expect(view.getByTestId('episode-row-ep_harbor_6')).toBeTruthy();
     expectNoFreeOrLockedBadges(view);
 
-    await fireEvent.press(view.getByTestId('episode-row-ep_harbor_1'));
-    await fireEvent.press(view.getByTestId('episode-row-ep_harbor_6'));
+    const user = userEvent.setup();
+    await user.press(view.getByTestId('episode-row-ep_harbor_1'));
+    await user.press(view.getByTestId('episode-row-ep_harbor_6'));
     expect(onSelectEpisode).toHaveBeenNthCalledWith(1, 'ep_harbor_1');
     expect(onSelectEpisode).toHaveBeenNthCalledWith(2, 'ep_harbor_6');
   });
