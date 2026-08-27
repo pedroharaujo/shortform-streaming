@@ -16,7 +16,7 @@ Describe the user/business outcome and the smallest implementation used to achie
 
 ## Validation Manifest
 
-- Owner: orchestrator / optional `validation-planner` consultation:
+- Owner: orchestrator:
 - Base revision:
 - Change surface (scope, behavior, consumers/boundaries) and risk (`R0` / `R1` / `R2` / `R3`) with triggers:
 - Checks/observations: `required`; `selected`; `not-applicable` with reasons:
