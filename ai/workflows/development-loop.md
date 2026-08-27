@@ -9,9 +9,9 @@
 
 ## Validation planning
 
-The orchestrator owns the Validation Manifest and usually prepares it directly. The optional, read-only `validation-planner` may advise only when scope is ambiguous, crosses component or contract boundaries, or has a sensitive trigger. Consulting it does not create a state transition or serial gate, and it does not replace review, verification, required CI, or human approval.
+The orchestrator owns the Validation Manifest and produces it before implementation. The read-only `planner` does not own the Validation Manifest. The planner returns an Implementation Plan as a required serial step inside `ai-in-progress`; it does not replace review, verification, required CI, or human approval.
 
-Classify the semantic impact at the highest applicable level; never classify only from file extension or path:
+Classify the semantic impact at the highest applicable level from intended behavior, affected consumers, data flow, and failure impact; never classify only from file extension or path:
 
 - `R0`: documentation or process only, without executable or configuration behavior change.
 - `R1`: isolated module behavior with bounded consumers and no sensitive trigger.
@@ -36,7 +36,8 @@ A required, missing, or failing check cannot become `not-applicable`. Independen
 ```text
 ai-ready
   -> orchestrate
-  -> ai-in-progress / implement
+  -> ai-in-progress / plan
+  -> implement
   -> self-check and hand-off
   -> ai-review / independent review
        -> BLOCKER or MAJOR? implementer fixes -> independent re-review
@@ -46,7 +47,7 @@ ai-ready
   -> finalize PR
 ```
 
-The required order is **implement -> review -> fix -> verify -> PR**. `fix` and re-review repeat as many times as needed. A PR may be opened as a draft earlier for visibility, but it is not ready for approval until `ai-verified`.
+The required order is **plan -> implement -> review -> fix -> verify -> PR**. `fix` and re-review repeat as many times as needed. A PR may be opened as a draft earlier for visibility, but it is not ready for approval until `ai-verified`.
 
 ## Proportional execution and evidence reuse
 
@@ -57,7 +58,8 @@ The required order is **implement -> review -> fix -> verify -> PR**. `fix` and 
 
 ## Hand-off contracts
 
-- Orchestrator to implementer: task/plan ID, branch, objective, out-of-scope items, criteria, source documents, and the Validation Manifest with checks and risks.
+- Orchestrator to planner: task/plan ID, branch, objective, out-of-scope items, criteria, source documents, and the Validation Manifest with checks and risks.
+- Planner to implementer: bounded Implementation Plan, forwarded via the orchestrator together with the Validation Manifest.
 - Implementer to reviewer: final diff/revision, criteria mapping, commands/results, limitations, migrations/contracts/docs, deployment, and rollback notes.
 - Reviewer to implementer/orchestrator: prioritized findings with location, evidence, impact, safe direction, and `APPROVE` or `CHANGES_REQUESTED`.
 - Verifier to orchestrator: tested revision, criterion evidence, exact commands/results, limitations, and `VERIFIED`, `FAILED`, or `BLOCKED`.

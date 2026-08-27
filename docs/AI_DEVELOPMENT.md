@@ -15,8 +15,7 @@ The root `AGENTS.md` is loaded automatically. Project-scoped custom agents are i
 
 ```text
 Act only as orchestrator for issue #42. Follow ai/workflows/development-loop.md.
-Confirm the ai-ready gate, then delegate implementation to implementer.
-Create a Validation Manifest before implementation. Use validation-planner only if scope is ambiguous, cross-boundary, or sensitive.
+Confirm the ai-ready gate, produce the Validation Manifest, then delegate to planner for an Implementation Plan before implementer writes code.
 Use a fresh reviewer after implementation and a separate verifier after blocking findings are clear.
 Return fixes to implementer and repeat until the final revision is independently verified.
 Do not implement code in the orchestrator context and do not merge automatically.
@@ -28,11 +27,11 @@ Inspect subagent threads in the Codex app. In the CLI, use `/agent`. If custom a
 
 Every task has a Validation Manifest owned by the orchestrator. It identifies the semantic risk (`R0`-`R3`), affected consumers and boundaries, required and selected checks, justified `not-applicable` items, specialized reviews, reusable evidence, and escalation conditions. The exact schema and risk triggers are in `ai/workflows/development-loop.md`.
 
-Use the optional `validation-planner` only for ambiguous, cross-boundary, or sensitive scope. It is a read-only consultant, not another required hand-off. The implementer runs selected checks; the reviewer normally inspects the diff and evidence rather than repeating suites; the verifier can inspect matching, unexpired CI evidence on the final SHA and adds only the checks needed for independent coverage. Review, final-revision verification, and required CI remain mandatory.
+The read-only `planner` is a required serial step inside `ai-in-progress`. It returns an Implementation Plan; it does not own the Validation Manifest and does not replace reviewer, verifier, required CI, or human approval. The implementer follows that plan and runs selected checks; the reviewer normally inspects the diff and evidence rather than repeating suites; the verifier can inspect matching, unexpired CI evidence on the final SHA and adds only the checks needed for independent coverage. Review, final-revision verification, and required CI remain mandatory.
 
 ## Cursor (compatible)
 
-Project agents are in `.cursor/agents/`, with an always-applied pointer in `.cursor/rules/ai-native-workflow.mdc`. Ask the main Cursor agent to act as orchestrator and explicitly delegate to `implementer`, `reviewer`, and `verifier`; it may consult `validation-planner` under the same optional triggers. Use separate/background agents so review contexts do not inherit implementation reasoning.
+Project agents are in `.cursor/agents/`, with an always-applied pointer in `.cursor/rules/ai-native-workflow.mdc`. Ask the main Cursor agent to act as orchestrator and explicitly delegate to `planner`, then `implementer`, `reviewer`, and `verifier`. Use separate/background agents so review contexts do not inherit implementation reasoning.
 
 Cursor Bugbot guidance is in `.cursor/BUGBOT.md`; Bugbot is an additional reviewer, never a replacement for verifier evidence or required checks.
 
