@@ -37,4 +37,21 @@ describe('SignInScreen', () => {
     expect(getSessionCredential()).not.toContain('usr_from_server');
     expect(onFinished).toHaveBeenCalled();
   });
+
+  it('signs out and clears the session credential', async () => {
+    const auth = createLocalMockFirebaseAuth();
+    await auth.signIn('user@example.com', 'correct-horse');
+    setAuthSession({ credential: 'mock.user_example_com' });
+    const meClient: MeClient = { getMe: jest.fn() };
+    const user = userEvent.setup();
+
+    const view = await render(
+      <SignInScreen auth={auth} meClient={meClient} onFinished={jest.fn()} />,
+    );
+    await user.press(view.getByTestId('sign-in-sign-out'));
+
+    await waitFor(() => expect(view.getByTestId('sign-in-message')).toBeTruthy());
+    expect(getSessionCredential()).toBeNull();
+    expect(auth.getCredential()).toBeNull();
+  });
 });

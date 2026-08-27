@@ -37,7 +37,7 @@ mobile/
   src/api/playback/    Thin playback authorize wrapper over `@shortform/api-client`
   src/api/health/      Thin health wrapper over `@shortform/api-client`
   src/api/me/          Authenticated `GET /v1/me` (Bearer ID token only)
-  src/auth/            Local/Jest Firebase Auth mock and session token holder
+  src/auth/            Email/password factory (Jest mock; native Firebase on device) and session holder
   src/config/          Environment selection and manifest reads
   src/features/catalog Home, series detail, and episode-selected screens
   src/features/auth/   Sign-in screen
@@ -55,15 +55,59 @@ Catalog and playback authorize stay unauthenticated even when a session exists.
 
 ## Firebase Auth (email/password)
 
-This PR's device and local/CI development client uses the local mock in
-`src/auth/localMockFirebaseAuth.ts`, which issues `mock.<uid>` tokens accepted
-by Django when `FIREBASE_AUTH_MODE=mock`. Native `@react-native-firebase/auth`
-is follow-up issue #50 (P2-T01-F1) and is not wired here. Expo Go remains
-unsupported (ADR 0003). Never commit production `google-services.json`.
+On an Android **development build**, `/sign-in` uses native `@react-native-firebase/auth`
+against the Auth emulator when `extra.api.environment` is `local`. Jest and CI keep
+the local mock in `src/auth/localMockFirebaseAuth.ts` (`mock.<uid>` tokens,
+`FIREBASE_AUTH_MODE=mock`). The factory in `src/auth/createEmailPasswordAuth.ts`
+selects mock whenever `JEST_WORKER_ID` is set and never statically imports
+`@react-native-firebase/*` from modules Jest loads.
 
-Home remains the anonymous catalog; **Sign in** is a separate route (`/sign-in`)
-and is not a login wall (D-005 stays Proposed). Apple and Google providers are
-out of scope for P2-T01.
+Expo Go remains unsupported (ADR 0003). Catalog, health, and playback stay anonymous;
+**Sign in** is a separate route (`/sign-in`) and is not a login wall (D-005 stays
+Proposed). Apple and Google providers are out of scope for P2-T01-F1.
+
+### Local Android identity loop (development client)
+
+Do **not** commit `google-services.json` or `GoogleService-Info.plist` (root `.gitignore`
+already lists them). Missing iOS plist must not block Android or CI JavaScript export
+(D-026).
+
+1. From a **non-production** Firebase project whose project id matches Django
+   (`FIREBASE_PROJECT_ID=demo-shortform-local` in `.env.example`, or the same id your
+   local Django uses), download Android `google-services.json` and copy it next to
+   `mobile/app.config.ts` (`mobile/google-services.json`). `app.config.ts` points
+   `android.googleServicesFile` at that relative path; the file stays gitignored.
+   `pnpm mobile:config:check` and `pnpm mobile:bundle:check` pass in CI without the
+   file because they never read it. Native prebuild (`expo run:android`) needs a
+   local copy. Do not set `ios.googleServicesFile` in this slice (D-026).
+
+2. Start the Auth emulator from the repository root (see `firebase.json`; host
+   `127.0.0.1:9099`):
+
+   ```shell
+   firebase emulators:start --only auth
+   ```
+
+   The Android emulator reaches that host at `10.0.2.2:9099`. Django on the host uses
+   `127.0.0.1:9099`.
+
+3. Point Django at the emulator (not mock) for this device loop only:
+
+   ```dotenv
+   FIREBASE_AUTH_MODE=admin
+   FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+   FIREBASE_PROJECT_ID=demo-shortform-local
+   ```
+
+   Keep `FIREBASE_AUTH_MODE=mock` for Jest and Application CI. Never put Firebase API
+   keys or service-account JSON in `EXPO_PUBLIC_*`.
+
+4. After adding native Firebase packages, rebuild the development client
+   (`pnpm --filter @shortform/mobile android` / `expo run:android`). Metro reload is not
+   enough.
+
+5. On `/sign-in`, create an account or sign in, confirm `GET /v1/me`, use **Sign out**,
+   then sign in again. The same `public_id` should return. Do not use Expo Go.
 
 ## Commands
 
@@ -124,7 +168,7 @@ This is the sequence that proves the app can reach the local API. It was **not**
 
    The first run generates `mobile/android/` (gitignored) and installs the development client on the emulator.
 
-5. The launch route is Home. After seeding the local catalog, it should show the featured rail (Harbor Lights for territory `FR`). Open **Sign in** for email/password against the local mock (optional). Isolated HLS play uses `/playback-spike?episodeId=<id>` (see `docs/runbooks/playback-spike.md`). Open **Backend availability** from Home to probe `/health/live` and `/health/ready`. Use **Check again** after restarting or stopping the API.
+5. The launch route is Home. After seeding the local catalog, it should show the featured rail (Harbor Lights for territory `FR`). Open **Sign in** for email/password against native Firebase Auth and the Auth emulator on a rebuilt development client (optional; Jest still uses the local mock). Isolated HLS play uses `/playback-spike?episodeId=<id>` (see `docs/runbooks/playback-spike.md`). Open **Backend availability** from Home to probe `/health/live` and `/health/ready`. Use **Check again** after restarting or stopping the API.
 
 ### iOS simulator equivalent
 

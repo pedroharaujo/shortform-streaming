@@ -20,22 +20,24 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 
 | Area | Package | Compatible pin |
 | --- | --- | --- |
-| Mobile runtime | `expo` | 57.0.16 |
-| Mobile runtime | `expo-constants` | ~57.0.14 |
-| Mobile runtime | `expo-router` | ~57.0.16 |
+| Mobile runtime | `expo` | 57.0.17 |
+| Mobile runtime | `expo-constants` | ~57.0.15 |
+| Mobile runtime | `expo-router` | ~57.0.17 |
 | Mobile runtime | `react` | 19.2.3 |
-| Mobile runtime | `react-native` | 0.86.2 |
+| Mobile runtime | `react-native` | 0.86.3 |
 | Mobile runtime | `react-native-safe-area-context` | ~5.7.0 |
-| Mobile runtime | `expo-video` | ~57.0.2 |
+| Mobile runtime | `expo-video` | ~57.0.3 |
+| Mobile runtime | `@react-native-firebase/app` | ^26.3.2 (Expo 57 / RN 0.86 `expo install`; Android Auth first) |
+| Mobile runtime | `@react-native-firebase/auth` | ^26.3.2 (same pin as app; email/password + Auth emulator) |
 | Mobile runtime | `react-native-worklets` | 0.10.1 (workspace override; SDK 57 table) |
 | Mobile runtime | `react-native-reanimated` | 4.5.1 (workspace override; SDK 57 table) |
 | Mobile runtime | `react-native-gesture-handler` | 2.32.0 (workspace override; SDK 57 table ~2.32.0) |
 | Mobile tooling | `eslint` | ^9.39.5 (9.x only) |
-| Mobile tooling | `eslint-config-expo` | ~57.0.1 |
+| Mobile tooling | `eslint-config-expo` | ~57.0.2 |
 | Mobile tooling | `typescript` | ~6.0.3 |
 | Mobile test | `jest` | ~29.7.0 |
 | Mobile test | `@types/jest` | 29.5.14 |
-| Mobile test | `jest-expo` | ~57.0.4 |
+| Mobile test | `jest-expo` | ~57.0.5 |
 | Mobile test | `react-test-renderer` | 19.2.3 |
 | Workspace | `openapi-fetch` | ^0.17.0 |
 | Backend | Django | 6.1 (`>=6.1,<6.2`) |
@@ -45,7 +47,9 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 | Backend tooling | ruff | 0.16.4 |
 | CI / Docker | Python | 3.14 |
 
-`pnpm-workspace.yaml` overrides `react`, `react-native`, `react-test-renderer`, and `@react-native/metro-config` so transitives cannot pull RN 0.87 or React 19.2.8. It also overrides `react-native-worklets` to `0.10.1`, `react-native-reanimated` to `4.5.1`, and `react-native-gesture-handler` to `2.32.0`. Without those pins, Expo 57 transitives resolve worklets `0.12.1`, reanimated `4.6.0`, and gesture-handler `3.2.1`. Worklets 0.12 renamed `WorkletRuntime::executeSync` to `runSync`; SDK 57 `expo-modules-core@57.0.13` still calls `executeSync`, so Android native compile fails (`WorkletJSCallInvoker.cpp`: no member named `executeSync`). This is expo/expo#49225. Reanimated 4.6.x requires worklets 0.12.x, so both packages must pin together. Gesture Handler 3.x CMake-links `libworklets.so` from a worklets 0.12 layout; with worklets 0.10.1 the `.so` is missing and ninja fails (`:react-native-gesture-handler:buildCMakeDebug`). Pin RNGH to the SDK 57 table (`~2.32.0`). Do not patch `node_modules`. 0.10.x still exposes `executeSync`; Dependabot may open 0.10.x patches but not `>=0.11.0`. RNGH 2.32.x patches may still open; ignore `>=2.33.0`.
+`pnpm-workspace.yaml` overrides `react`, `react-native` (0.86.3), `react-test-renderer`, and `@react-native/metro-config` (0.86.3) so transitives cannot pull RN 0.87 or React 19.2.8. It also overrides `react-native-worklets` to `0.10.1`, `react-native-reanimated` to `4.5.1`, and `react-native-gesture-handler` to `2.32.0`. Without those pins, Expo 57 transitives resolve worklets `0.12.1`, reanimated `4.6.0`, and gesture-handler `3.2.1`. Worklets 0.12 renamed `WorkletRuntime::executeSync` to `runSync`; SDK 57 `expo-modules-core@57.0.13` still calls `executeSync`, so Android native compile fails (`WorkletJSCallInvoker.cpp`: no member named `executeSync`). This is expo/expo#49225. Reanimated 4.6.x requires worklets 0.12.x, so both packages must pin together. Gesture Handler 3.x CMake-links `libworklets.so` from a worklets 0.12 layout; with worklets 0.10.1 the `.so` is missing and ninja fails (`:react-native-gesture-handler:buildCMakeDebug`). Pin RNGH to the SDK 57 table (`~2.32.0`). Do not patch `node_modules`. 0.10.x still exposes `executeSync`; Dependabot may open 0.10.x patches but not `>=0.11.0`. RNGH 2.32.x patches may still open; ignore `>=2.33.0`.
+
+`allowBuilds` stays minimal (`unrs-resolver: true`). `@react-native-firebase` pulls `@firebase/util` and `protobufjs` lifecycle scripts; those are recorded as `false` so frozen installs do not fail with `ERR_PNPM_IGNORED_BUILDS`. Do not set `@firebase/util` to `true`: its postinstall can write `FIREBASE_WEBAPP_CONFIG` (including api keys) into package dist.
 
 ## Dependabot ignore majors
 
@@ -113,6 +117,8 @@ Short operational record of the GitHub issue thread (no tokens, secrets, or pers
 4. **Jest 30 regression.** Dependabot PR #35 then merged `jest` 30.4.2 and `@types/jest` 30.0.0. Application CI Mobile failed expo-doctor (`@types/jest` expected 29.5.14, found 30.0.0; `jest` expected ~29.7.0, found 30.4.2). Issue #31 remained open. This close-out restores the Jest 29 pins and adds the missing ignore rules.
 
 ## Recovery
+
+If Application CI Mobile fails expo-doctor on SDK 57 **patch** pins (`expo` 57.0.x, `react-native` 0.86.x, matching router/constants/video/jest-expo/eslint-config-expo), bump with `pnpm --filter @shortform/mobile exec expo install` for those packages, keep the `react-native` / `@react-native/metro-config` workspace overrides on the same 0.86.x patch, add only new exact versions to `minimumReleaseAgeExclude`, regenerate `pnpm-lock.yaml`, and confirm frozen install plus `npx --yes expo-doctor`. Do not move to Expo 58 or RN 0.87.
 
 If Application CI Mobile fails expo-doctor on `jest` or `@types/jest`, restore `jest@~29.7.0` and `@types/jest@29.5.14` with `npx expo install` from `mobile/`, regenerate `pnpm-lock.yaml` from the repository root, and confirm `pnpm install --frozen-lockfile` plus `npx --yes expo-doctor` from `mobile/`. Do not bump Jest 30 while the repository remains on Expo SDK 57.
 

@@ -156,9 +156,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     version: '0.1.0',
     orientation: 'portrait',
     userInterfaceStyle: 'dark',
-    android: { package: 'com.shortformstreaming.app' },
+    android: {
+      package: 'com.shortformstreaming.app',
+      // Path only; Expo JS export does not read the gitignored file. Prebuild
+      // copies it when present. Do not set ios.googleServicesFile (D-026).
+      googleServicesFile: './google-services.json',
+    },
     ios: { bundleIdentifier: 'com.shortformstreaming.app', supportsTablet: false },
-    plugins: ['expo-router', 'expo-video'],
+    plugins: ['expo-router', 'expo-video', '@react-native-firebase/app'],
     experiments: { typedRoutes: true },
     extra: { api },
   };

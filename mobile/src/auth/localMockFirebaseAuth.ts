@@ -5,8 +5,8 @@
  * This mock implements email/password and issues `mock.<uid>` ID tokens that
  * the Django local verifier accepts. It never sends a backend user id.
  *
- * Device builds can keep using this until a development client loads native
- * Firebase Auth and the Auth emulator (`FIREBASE_AUTH_EMULATOR_HOST`).
+ * Device and simulator runtimes use `createNativeFirebaseAuth` instead
+ * (`createEmailPasswordAuth` selects the implementation).
  */
 
 export interface AuthUserSession {
