@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
 import type { CatalogClient, CatalogSeriesDetail } from '../../api/catalog/types';
+import { useCatalogQuery } from './useCatalogQuery';
 
 export type CatalogSeriesState =
   | { readonly phase: 'loading' }
@@ -14,38 +15,19 @@ export interface CatalogSeriesQuery {
 }
 
 export function useCatalogSeries(client: CatalogClient, publicId: string): CatalogSeriesQuery {
-  const [state, setState] = useState<CatalogSeriesState>({ phase: 'loading' });
-  const [attempt, setAttempt] = useState(0);
+  const load = useCallback(async (): Promise<CatalogSeriesState> => {
+    const result = await client.getSeries(publicId);
+    if (result.outcome === 'ok') {
+      return { phase: 'loaded', series: result.data };
+    }
+    if (result.outcome === 'not-found') {
+      return { phase: 'not-found' };
+    }
+    if (result.outcome === 'unreachable') {
+      return { phase: 'error', message: result.reason };
+    }
+    return { phase: 'error', message: result.message };
+  }, [client, publicId]);
 
-  const refresh = useCallback(() => {
-    setState({ phase: 'loading' });
-    setAttempt((current) => current + 1);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    void client.getSeries(publicId).then((result) => {
-      if (!active) {
-        return;
-      }
-      if (result.outcome === 'ok') {
-        setState({ phase: 'loaded', series: result.data });
-        return;
-      }
-      if (result.outcome === 'not-found') {
-        setState({ phase: 'not-found' });
-        return;
-      }
-      if (result.outcome === 'unreachable') {
-        setState({ phase: 'error', message: result.reason });
-        return;
-      }
-      setState({ phase: 'error', message: result.message });
-    });
-    return () => {
-      active = false;
-    };
-  }, [client, publicId, attempt]);
-
-  return { state, refresh };
+  return useCatalogQuery(load);
 }
