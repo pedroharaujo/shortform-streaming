@@ -3,14 +3,14 @@ import { useMemo } from 'react';
 import { router } from 'expo-router';
 
 import { createMeClient } from '../src/api/me/meClient';
-import { createLocalMockFirebaseAuth } from '../src/auth/localMockFirebaseAuth';
+import { createEmailPasswordAuth } from '../src/auth/createEmailPasswordAuth';
 import { getSessionCredential } from '../src/auth/session';
 import { getApiConfiguration } from '../src/config/appConfiguration';
 import { SignInScreen } from '../src/features/auth/SignInScreen';
 
 export default function SignInRoute(): JSX.Element {
   const configuration = useMemo(() => getApiConfiguration(), []);
-  const auth = useMemo(() => createLocalMockFirebaseAuth(), []);
+  const auth = useMemo(() => createEmailPasswordAuth(), []);
   const meClient = useMemo(
     () =>
       createMeClient({

@@ -48,6 +48,18 @@ export function SignInScreen({ auth, meClient, onFinished }: SignInScreenProps):
     setMessage(me.reason);
   }
 
+  async function signOut(): Promise<void> {
+    setBusy(true);
+    setMessage(null);
+    try {
+      await auth.signOut();
+    } finally {
+      setAuthSession(null);
+      setBusy(false);
+      setMessage('Signed out');
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container} testID="sign-in-screen">
       <Text accessibilityRole="header" style={styles.title}>
@@ -107,6 +119,18 @@ export function SignInScreen({ auth, meClient, onFinished }: SignInScreenProps):
           testID="sign-in-create"
         >
           <Text style={styles.buttonLabel}>Create account</Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Sign out"
+          accessibilityRole="button"
+          disabled={busy}
+          onPress={() => {
+            void signOut();
+          }}
+          style={styles.button}
+          testID="sign-in-sign-out"
+        >
+          <Text style={styles.buttonLabel}>Sign out</Text>
         </Pressable>
       </View>
     </SafeAreaView>
