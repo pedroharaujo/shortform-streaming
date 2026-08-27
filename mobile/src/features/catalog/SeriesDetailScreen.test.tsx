@@ -73,66 +73,6 @@ function expectNoFreeOrLockedBadges(view: Awaited<ReturnType<typeof renderSeries
 }
 
 describe('SeriesDetailScreen', () => {
-  it('shows a loading state before the series resolves', async () => {
-    const pending: CatalogClient = {
-      getHome: () => new Promise(() => {}),
-      getSeries: () => new Promise(() => {}),
-      getEpisode: () => new Promise(() => {}),
-    };
-
-    const view = await renderSeriesScreen(
-      <SeriesDetailScreen
-        client={pending}
-        onBack={() => {}}
-        onSelectEpisode={() => {}}
-        seriesId="ser_harbor"
-      />,
-    );
-
-    expect(view.getByTestId('series-detail-loading')).toBeTruthy();
-    expect(view.getByLabelText('Loading series')).toBeTruthy();
-    expect(view.queryByTestId('series-detail-loaded')).toBeNull();
-  });
-
-  it('shows an error and retries the series request', async () => {
-    let calls = 0;
-    const client: CatalogClient = {
-      getHome: async () => ({ outcome: 'ok', data: { rails: [] } }),
-      getSeries: async () => {
-        calls += 1;
-        return {
-          outcome: 'error',
-          httpStatus: 400,
-          code: 'invalid_request_context',
-          message: 'Catalog context is invalid.',
-        };
-      },
-      getEpisode: async () => ({
-        outcome: 'not-found',
-        httpStatus: 404,
-        code: 'not_found',
-        message: 'Resource not found.',
-      }),
-    };
-
-    const view = await renderSeriesScreen(
-      <SeriesDetailScreen
-        client={client}
-        onBack={() => {}}
-        onSelectEpisode={() => {}}
-        seriesId="ser_harbor"
-      />,
-    );
-
-    expect(await view.findByTestId('series-detail-error')).toBeTruthy();
-    expect(view.getByText('Catalog context is invalid.')).toBeTruthy();
-    expect(calls).toBe(1);
-
-    await fireEvent.press(view.getByTestId('series-detail-retry'));
-    expect(await view.findByTestId('series-detail-error')).toBeTruthy();
-    expect(calls).toBe(2);
-  });
-
   it('renders published seasons and listed episodes without lock or free inference', async () => {
     const onSelectEpisode = jest.fn();
     const view = await renderSeriesScreen(

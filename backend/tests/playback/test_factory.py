@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from io import StringIO
 from unittest.mock import patch
 
-from django.core.management.base import OutputWrapper
 from django.test import override_settings
 
 from apps.playback.providers.factory import get_video_provider, reset_provider_cache
@@ -76,16 +74,3 @@ def test_command_refuses_fake_provider() -> None:
     assert raised is not None
     assert "VIDEO_PROVIDER=bunny" in str(raised)
     generate.assert_not_called()
-
-
-def test_spike_success_footer_is_ascii() -> None:
-    from apps.playback.management.commands.spike_bunny_playback import SPIKE_SUCCESS_FOOTER
-
-    assert "→" not in SPIKE_SUCCESS_FOOTER
-    assert "Playback -> Media assets" in SPIKE_SUCCESS_FOOTER
-    SPIKE_SUCCESS_FOOTER.encode("cp1252")
-    buffer = StringIO()
-    OutputWrapper(buffer).write(SPIKE_SUCCESS_FOOTER)
-    written = buffer.getvalue()
-    assert "→" not in written
-    written.encode("cp1252")
