@@ -9,6 +9,13 @@
 import { createApiClient } from '@shortform/api-client';
 import type { paths } from '@shortform/api-client';
 
+import {
+  DEFAULT_TIMEOUT_MS,
+  UNKNOWN_CODE,
+  describeFailure,
+  readEnvelope,
+  withTimeout,
+} from '../http';
 import type {
   CatalogClient,
   CatalogEpisodeDetail,
@@ -16,12 +23,9 @@ import type {
   CatalogPlatform,
   CatalogRequestOutcome,
   CatalogSeriesDetail,
-  ErrorEnvelope,
 } from './types';
 import { CATALOG_LANGUAGE } from './types';
 
-const DEFAULT_TIMEOUT_MS = 5_000;
-const UNKNOWN_CODE = 'unknown';
 const UNKNOWN_MESSAGE = 'Catalog request failed.';
 
 export interface CatalogClientOptions {
@@ -30,27 +34,6 @@ export interface CatalogClientOptions {
   readonly platform: CatalogPlatform;
   readonly timeoutMs?: number;
   readonly fetchImplementation?: typeof fetch;
-}
-
-function describeFailure(error: unknown): string {
-  if (error instanceof Error && error.name === 'AbortError') {
-    return 'timeout';
-  }
-  if (error instanceof Error && error.message !== '') {
-    return error.message;
-  }
-  return 'network request failed';
-}
-
-function readEnvelope(payload: unknown): Pick<ErrorEnvelope, 'code' | 'message'> {
-  if (typeof payload === 'object' && payload !== null) {
-    const { code, message } = payload as Partial<ErrorEnvelope>;
-    return {
-      code: typeof code === 'string' && code !== '' ? code : UNKNOWN_CODE,
-      message: typeof message === 'string' && message !== '' ? message : UNKNOWN_MESSAGE,
-    };
-  }
-  return { code: UNKNOWN_CODE, message: UNKNOWN_MESSAGE };
 }
 
 export function createCatalogClient(options: CatalogClientOptions): CatalogClient {
@@ -74,12 +57,9 @@ export function createCatalogClient(options: CatalogClientOptions): CatalogClien
       response: Response;
     }>,
   ): Promise<CatalogRequestOutcome<T>> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
-      const { data, error, response } = await perform(controller.signal);
-      const envelope = readEnvelope(error ?? data);
+      const { data, error, response } = await withTimeout(timeoutMs, perform);
+      const envelope = readEnvelope(error ?? data, UNKNOWN_MESSAGE);
 
       if (response.status === 404) {
         return {
@@ -108,8 +88,6 @@ export function createCatalogClient(options: CatalogClientOptions): CatalogClien
       return { outcome: 'ok', data };
     } catch (caught: unknown) {
       return { outcome: 'unreachable', reason: describeFailure(caught) };
-    } finally {
-      clearTimeout(timeout);
     }
   }
 

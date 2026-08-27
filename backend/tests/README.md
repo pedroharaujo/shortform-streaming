@@ -21,3 +21,7 @@ boundaries. Builders construct synthetic data in tests; they do not depend on
 `seed_catalog`.
 
 Repository-level tests remain under `tests/repository/`.
+
+See the Testing policy in `CONTRIBUTING.md`: prefer one test at the highest
+level that would catch the bug, and keep this suite's auth, eligibility,
+playback authorize, production settings, and OpenAPI coverage.

@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router';
 import type { JSX } from 'react';
 import { useMemo } from 'react';
 
@@ -11,6 +12,10 @@ export default function HealthRoute(): JSX.Element {
     () => createHealthClient({ baseUrl: configuration.baseUrl }),
     [configuration.baseUrl],
   );
+
+  if (!__DEV__) {
+    return <Redirect href="/" />;
+  }
 
   return <BackendHealthScreen client={client} configuration={configuration} />;
 }

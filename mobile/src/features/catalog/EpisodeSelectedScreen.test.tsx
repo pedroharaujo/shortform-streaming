@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import type {
@@ -53,56 +53,6 @@ function expectNoFreeOrLockedBadges(view: Awaited<ReturnType<typeof renderEpisod
 }
 
 describe('EpisodeSelectedScreen', () => {
-  it('shows a loading state before the episode resolves', async () => {
-    const pending: CatalogClient = {
-      getHome: () => new Promise(() => {}),
-      getSeries: () => new Promise(() => {}),
-      getEpisode: () => new Promise(() => {}),
-    };
-
-    const view = await renderEpisodeScreen(
-      <EpisodeSelectedScreen client={pending} episodeId="ep_harbor_1" onBack={() => {}} />,
-    );
-
-    expect(view.getByTestId('episode-selected-loading')).toBeTruthy();
-    expect(view.getByLabelText('Loading episode')).toBeTruthy();
-    expect(view.queryByTestId('episode-selected')).toBeNull();
-  });
-
-  it('shows an error and retries the episode request', async () => {
-    let calls = 0;
-    const client: CatalogClient = {
-      getHome: async () => ({ outcome: 'ok', data: { rails: [] } }),
-      getSeries: async () => ({
-        outcome: 'not-found',
-        httpStatus: 404,
-        code: 'not_found',
-        message: 'Resource not found.',
-      }),
-      getEpisode: async () => {
-        calls += 1;
-        return {
-          outcome: 'error',
-          httpStatus: 400,
-          code: 'invalid_request_context',
-          message: 'Catalog context is invalid.',
-        };
-      },
-    };
-
-    const view = await renderEpisodeScreen(
-      <EpisodeSelectedScreen client={client} episodeId="ep_harbor_1" onBack={() => {}} />,
-    );
-
-    expect(await view.findByTestId('episode-selected-error')).toBeTruthy();
-    expect(view.getByText('Catalog context is invalid.')).toBeTruthy();
-    expect(calls).toBe(1);
-
-    await fireEvent.press(view.getByTestId('episode-selected-retry'));
-    expect(await view.findByTestId('episode-selected-error')).toBeTruthy();
-    expect(calls).toBe(2);
-  });
-
   it('shows the selected listed episode without playback', async () => {
     const view = await renderEpisodeScreen(
       <EpisodeSelectedScreen

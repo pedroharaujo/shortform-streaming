@@ -1,36 +1,7 @@
+import { abortSignal, jsonResponse, requestUrl } from '../fetchTestUtils';
 import { createHealthClient } from './healthClient';
 
 const BASE_URL = 'http://10.0.2.2:8000';
-
-function jsonResponse(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-  });
-}
-
-function requestUrl(input: RequestInfo | URL): string {
-  if (typeof input === 'string') {
-    return input;
-  }
-  if (input instanceof URL) {
-    return input.href;
-  }
-  if (typeof Request !== 'undefined' && input instanceof Request) {
-    return input.url;
-  }
-  return String(input);
-}
-
-function abortSignal(input: unknown, init?: { signal?: AbortSignal }): AbortSignal | undefined {
-  if (init?.signal !== undefined) {
-    return init.signal;
-  }
-  if (typeof Request !== 'undefined' && input instanceof Request) {
-    return input.signal;
-  }
-  return undefined;
-}
 
 describe('createHealthClient', () => {
   it('requests the documented health paths', async () => {

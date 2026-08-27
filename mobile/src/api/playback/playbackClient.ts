@@ -9,16 +9,16 @@ import { createApiClient } from '@shortform/api-client';
 import type { paths } from '@shortform/api-client';
 
 import type { CatalogPlatform } from '../catalog/types';
-import type {
-  ErrorEnvelope,
-  PlaybackAuthorizeResponse,
-  PlaybackClient,
-  PlaybackRequestOutcome,
-} from './types';
+import {
+  DEFAULT_TIMEOUT_MS,
+  UNKNOWN_CODE,
+  describeFailure,
+  readEnvelope,
+  withTimeout,
+} from '../http';
+import type { PlaybackAuthorizeResponse, PlaybackClient, PlaybackRequestOutcome } from './types';
 import { PLAYBACK_LANGUAGE } from './types';
 
-const DEFAULT_TIMEOUT_MS = 5_000;
-const UNKNOWN_CODE = 'unknown';
 const UNKNOWN_MESSAGE = 'Playback request failed.';
 
 export interface PlaybackClientOptions {
@@ -27,27 +27,6 @@ export interface PlaybackClientOptions {
   readonly platform: CatalogPlatform;
   readonly timeoutMs?: number;
   readonly fetchImplementation?: typeof fetch;
-}
-
-function describeFailure(error: unknown): string {
-  if (error instanceof Error && error.name === 'AbortError') {
-    return 'timeout';
-  }
-  if (error instanceof Error && error.message !== '') {
-    return error.message;
-  }
-  return 'network request failed';
-}
-
-function readEnvelope(payload: unknown): Pick<ErrorEnvelope, 'code' | 'message'> {
-  if (typeof payload === 'object' && payload !== null) {
-    const { code, message } = payload as Partial<ErrorEnvelope>;
-    return {
-      code: typeof code === 'string' && code !== '' ? code : UNKNOWN_CODE,
-      message: typeof message === 'string' && message !== '' ? message : UNKNOWN_MESSAGE,
-    };
-  }
-  return { code: UNKNOWN_CODE, message: UNKNOWN_MESSAGE };
 }
 
 export function createPlaybackClient(options: PlaybackClientOptions): PlaybackClient {
@@ -71,12 +50,9 @@ export function createPlaybackClient(options: PlaybackClientOptions): PlaybackCl
       response: Response;
     }>,
   ): Promise<PlaybackRequestOutcome<T>> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
-      const { data, error, response } = await perform(controller.signal);
-      const envelope = readEnvelope(error ?? data);
+      const { data, error, response } = await withTimeout(timeoutMs, perform);
+      const envelope = readEnvelope(error ?? data, UNKNOWN_MESSAGE);
 
       if (response.status === 404) {
         return {
@@ -113,8 +89,6 @@ export function createPlaybackClient(options: PlaybackClientOptions): PlaybackCl
       return { outcome: 'ok', data };
     } catch (caught: unknown) {
       return { outcome: 'unreachable', reason: describeFailure(caught) };
-    } finally {
-      clearTimeout(timeout);
     }
   }
 

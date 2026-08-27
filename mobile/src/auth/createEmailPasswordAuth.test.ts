@@ -17,13 +17,25 @@ describe('createEmailPasswordAuth', () => {
     expect(nativeFirebaseModuleLoaded()).toBe(false);
 
     const auth = createEmailPasswordAuth();
-    const outcome = await auth.signIn('user@example.com', 'password-one');
+    const first = await auth.signIn('User@example.com', 'password-one');
 
-    expect(outcome.outcome).toBe('ok');
-    if (outcome.outcome !== 'ok') {
+    expect(first.outcome).toBe('ok');
+    if (first.outcome !== 'ok') {
       throw new Error('expected ok');
     }
-    expect(outcome.session.credential).toBe('mock.user_example_com');
+    expect(first.session.credential).toBe('mock.user_example_com');
+    expect(first.session.credential.startsWith('mock.')).toBe(true);
+    expect(first.session.credential).not.toContain('usr_');
     expect(nativeFirebaseModuleLoaded()).toBe(false);
+
+    await auth.signOut();
+    expect(auth.getCredential()).toBeNull();
+
+    const second = await auth.signIn('user@example.com', 'password-one');
+    expect(second.outcome).toBe('ok');
+    if (second.outcome !== 'ok') {
+      throw new Error('expected ok');
+    }
+    expect(second.session.credential).toBe(first.session.credential);
   });
 });

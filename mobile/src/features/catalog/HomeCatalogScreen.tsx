@@ -9,7 +9,7 @@ import { useCatalogHome } from './useCatalogHome';
 export interface HomeCatalogScreenProps {
   readonly client: CatalogClient;
   readonly onSelectSeries: (seriesId: string) => void;
-  readonly onOpenHealth: () => void;
+  readonly onOpenHealth?: () => void;
   readonly onOpenSignIn: () => void;
 }
 
@@ -105,15 +105,17 @@ export function HomeCatalogScreen({
       >
         <Text style={styles.healthLinkLabel}>Sign in</Text>
       </Pressable>
-      <Pressable
-        accessibilityLabel="Backend availability"
-        accessibilityRole="button"
-        onPress={onOpenHealth}
-        style={styles.healthLink}
-        testID="home-health"
-      >
-        <Text style={styles.healthLinkLabel}>Backend availability</Text>
-      </Pressable>
+      {__DEV__ && onOpenHealth !== undefined ? (
+        <Pressable
+          accessibilityLabel="Backend availability"
+          accessibilityRole="button"
+          onPress={onOpenHealth}
+          style={styles.healthLink}
+          testID="home-health"
+        >
+          <Text style={styles.healthLinkLabel}>Backend availability</Text>
+        </Pressable>
+      ) : null}
     </SafeAreaView>
   );
 }

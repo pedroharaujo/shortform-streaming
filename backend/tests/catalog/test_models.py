@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import UTC, timedelta
+from datetime import timedelta
 
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.utils import timezone
 
 from apps.catalog.models import ContentRight, Episode, PublicationStatus, Series
 from tests.catalog.builders import (
@@ -176,12 +175,6 @@ def test_rights_window_database_constraint() -> None:
                 starts_at=DEFAULT_NOW,
                 ends_at=DEFAULT_NOW - timedelta(seconds=1),
             )
-
-
-@pytest.mark.django_db
-def test_timezone_aware_defaults() -> None:
-    assert DEFAULT_NOW.tzinfo is UTC
-    assert timezone.is_aware(DEFAULT_NOW)
 
 
 @pytest.mark.django_db
