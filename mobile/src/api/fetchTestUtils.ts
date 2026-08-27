@@ -25,7 +25,10 @@ export function requestHeaders(input: RequestInfo | URL, init?: RequestInit): He
   return new Headers(init?.headers);
 }
 
-export function abortSignal(input: unknown, init?: { signal?: AbortSignal }): AbortSignal | undefined {
+export function abortSignal(
+  input: unknown,
+  init?: { signal?: AbortSignal },
+): AbortSignal | undefined {
   if (init?.signal !== undefined) {
     return init.signal;
   }

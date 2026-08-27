@@ -16,11 +16,7 @@ import {
   readEnvelope,
   withTimeout,
 } from '../http';
-import type {
-  PlaybackAuthorizeResponse,
-  PlaybackClient,
-  PlaybackRequestOutcome,
-} from './types';
+import type { PlaybackAuthorizeResponse, PlaybackClient, PlaybackRequestOutcome } from './types';
 import { PLAYBACK_LANGUAGE } from './types';
 
 const UNKNOWN_MESSAGE = 'Playback request failed.';
