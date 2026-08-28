@@ -86,13 +86,21 @@ container image). Do not `tofu apply` to change the running image.
 6. Push the commit tag and resolve the digest.
 7. `gcloud run jobs update` + `execute --wait` for migrate (`args = ["migrate"]`).
 8. `gcloud run services update … --no-traffic`.
-9. In-project smoke Job against the candidate revision URL.
+9. `gcloud run jobs update` the smoke job to the **same image digest**, then
+   `execute --wait` with `SMOKE_BASE_URL` and `FAIL_SMOKE`. Do not leave smoke
+   on a P5-T01-B placeholder (busybox/pause has no `python`).
 10. `gcloud run services update-traffic --to-revisions=$CANDIDATE=100`.
 
 Ingress stays `INGRESS_TRAFFIC_INTERNAL_ONLY`. GitHub-hosted runners must
 **not** HTTP-smoke the Cloud Run URL. Smoke runs as a Job inside the project,
 fetches an identity token from the metadata server, and calls `/health/ready`
 and `/health/live` with `Authorization: Bearer` and `X-Forwarded-Proto: https`.
+
+Cloud Run startup/liveness probes send `Host: localhost` and
+`X-Forwarded-Proto: https`. `django_allowed_hosts` **must** include
+`127.0.0.1` and `localhost` (already in `staging.tfvars.example`) so Django
+does not 400 the probes. Include a `.a.run.app` suffix and any real service
+host as well.
 
 ## fail_smoke drill
 

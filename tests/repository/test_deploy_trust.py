@@ -14,6 +14,7 @@ STAGING_VARS = ROOT / "infra/environments/staging/variables.tf"
 STAGING_OUTPUTS = ROOT / "infra/environments/staging/outputs.tf"
 STAGING_EXAMPLE = ROOT / "infra/environments/staging/staging.tfvars.example"
 WIF_MAIN = ROOT / "infra/modules/github_wif/main.tf"
+WIF_VARS = ROOT / "infra/modules/github_wif/variables.tf"
 CLOUD_RUN_MAIN = ROOT / "infra/modules/cloud_run/main.tf"
 CLOUD_RUN_VARS = ROOT / "infra/modules/cloud_run/variables.tf"
 CLOUD_RUN_JOB_MAIN = ROOT / "infra/modules/cloud_run_job/main.tf"
@@ -48,7 +49,7 @@ DEPLOY_STEP_NAMES = (
     "Push image digest",
     "Update and execute migrate job",
     "Update Cloud Run service with no traffic",
-    "Execute smoke job",
+    "Update and execute smoke job",
     "Promote revision",
 )
 
@@ -172,6 +173,10 @@ class DeployTrustTests(unittest.TestCase):
                 self.assertIn("gcloud run jobs update", migrate)
                 self.assertIn("gcloud run jobs execute", migrate)
                 self.assertIn("--wait", migrate)
+                self.assertRegex(
+                    migrate,
+                    r'gcloud run jobs update\s+"\$\{MIGRATE_JOB\}"[^\n]*--image=',
+                )
 
                 no_traffic = _step_body(
                     workflow, "Update Cloud Run service with no traffic"
@@ -179,17 +184,26 @@ class DeployTrustTests(unittest.TestCase):
                 self.assertIn("gcloud run services update", no_traffic)
                 self.assertIn("--no-traffic", no_traffic)
 
-                smoke = _step_body(workflow, "Execute smoke job")
+                smoke = _step_body(workflow, "Update and execute smoke job")
                 self.assertIn("SMOKE_BASE_URL", smoke)
                 self.assertIn("FAIL_SMOKE", smoke)
                 self.assertIn("inputs.fail_smoke", smoke)
                 self.assertIn("gcloud run jobs execute", smoke)
+                self.assertRegex(
+                    smoke,
+                    r'gcloud run jobs update\s+"\$\{SMOKE_JOB\}"[^\n]*--image=',
+                )
+                self.assertNotRegex(
+                    smoke,
+                    r"(?m)^\s+continue-on-error:",
+                )
 
                 promote = _step_body(workflow, "Promote revision")
                 self.assertIn("gcloud run services update-traffic", promote)
+                self.assertNotRegex(promote, r"(?m)^\s+if:")
                 self.assertGreater(
                     names.index("Promote revision"),
-                    names.index("Execute smoke job"),
+                    names.index("Update and execute smoke job"),
                 )
 
     def test_staging_workflow_triggers_and_fail_smoke(self) -> None:
@@ -204,9 +218,13 @@ class DeployTrustTests(unittest.TestCase):
         self.assertIn("environment: staging", workflow)
         self.assertIn("group: deploy-staging", workflow)
         self.assertNotIn("environment: production", workflow)
-        smoke = _step_body(workflow, "Execute smoke job")
+        smoke = _step_body(workflow, "Update and execute smoke job")
         self.assertIn("inputs.fail_smoke", smoke)
         self.assertIn("FAIL_SMOKE", smoke)
+        self.assertRegex(
+            smoke,
+            r'gcloud run jobs update\s+"\$\{SMOKE_JOB\}"[^\n]*--image=',
+        )
 
     def test_production_workflow_is_dispatch_only_gated_pipeline(self) -> None:
         workflow = _read(PRODUCTION_WORKFLOW)
@@ -229,6 +247,27 @@ class DeployTrustTests(unittest.TestCase):
         self.assertNotIn("allowed_audiences", text)
         self.assertIn('workload_identity_pool_id = "github-actions"', text)
         self.assertIn('workload_identity_pool_provider_id = "github"', text)
+        variables = _read(WIF_VARS)
+        ref_block = re.search(
+            r'variable "github_ref"\s*\{(.*?)^\}',
+            variables,
+            re.DOTALL | re.MULTILINE,
+        )
+        env_block = re.search(
+            r'variable "github_environment"\s*\{(.*?)^\}',
+            variables,
+            re.DOTALL | re.MULTILINE,
+        )
+        self.assertIsNotNone(ref_block)
+        self.assertIsNotNone(env_block)
+        self.assertIn("validation", ref_block.group(1))
+        self.assertIn("validation", env_block.group(1))
+        self.assertIn("can(regex(", ref_block.group(1))
+        self.assertIn("can(regex(", env_block.group(1))
+        self.assertIn("[A-Za-z0-9", ref_block.group(1))
+        self.assertIn("[A-Za-z0-9", env_block.group(1))
+        self.assertNotIn("&&", ref_block.group(1))
+        self.assertNotIn("==", env_block.group(1))
 
     def test_example_tfvars_uses_placeholder_repository(self) -> None:
         example = _read(STAGING_EXAMPLE)
@@ -265,10 +304,29 @@ class DeployTrustTests(unittest.TestCase):
         self.assertIn('resource "google_service_account" "runtime"', iam)
         self.assertIn("roles/run.invoker", iam)
         self.assertIn("google_service_account.runtime", iam)
-        runtime_block = iam.split('resource "google_service_account" "runtime"', 1)[1]
-        runtime_block = runtime_block.split("resource ", 1)[0]
-        self.assertNotIn("workloadIdentity", runtime_block)
-        self.assertNotIn("principalSet://", runtime_block)
+        resources = re.findall(
+            r'resource "([^"]+)" "([^"]+)" \{([\s\S]*?)\n\}',
+            iam,
+        )
+        self.assertGreater(len(resources), 0)
+        wif_members = []
+        for resource_type, resource_name, body in resources:
+            uses_runtime = "google_service_account.runtime" in body
+            is_wif = (
+                "roles/iam.workloadIdentityUser" in body or "principalSet://" in body
+            )
+            if is_wif:
+                wif_members.append((resource_type, resource_name))
+                self.assertIn("google_service_account.deploy", body)
+                self.assertNotIn("google_service_account.runtime", body)
+                self.assertFalse(resource_name.startswith("runtime"))
+            if uses_runtime and resource_type != "google_service_account":
+                self.assertNotIn("roles/iam.workloadIdentityUser", body)
+                self.assertNotIn("principalSet://", body)
+        self.assertEqual(
+            wif_members,
+            [("google_service_account_iam_member", "deploy_wif")],
+        )
 
     def test_required_services_include_wif_apis(self) -> None:
         main = _read(STAGING_MAIN)
@@ -291,6 +349,8 @@ class DeployTrustTests(unittest.TestCase):
         self.assertIn("/health/live", text)
         self.assertIn("X-Forwarded-Proto", text)
         self.assertIn("https", text)
+        self.assertGreaterEqual(len(re.findall(r'name\s*=\s*"Host"', text)), 2)
+        self.assertGreaterEqual(len(re.findall(r'value\s*=\s*"localhost"', text)), 2)
         self.assertIn("ignore_changes", text)
         self.assertIn("template[0].containers[0].image", text)
         self.assertNotRegex(text, r'name\s*=\s*"PORT"')

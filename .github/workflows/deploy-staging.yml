@@ -100,11 +100,12 @@ jobs:
           echo "candidate_url=${CANDIDATE_URL}"
           echo "CANDIDATE=${CANDIDATE}" >> "${GITHUB_ENV}"
           echo "CANDIDATE_URL=${CANDIDATE_URL}" >> "${GITHUB_ENV}"
-      - name: Execute smoke job
+      - name: Update and execute smoke job
         env:
           FAIL_SMOKE: ${{ inputs.fail_smoke == true }}
         run: |
           set -euo pipefail
+          gcloud run jobs update "${SMOKE_JOB}" --image="${IMAGE_DIGEST}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
           gcloud run jobs execute "${SMOKE_JOB}" --wait --update-env-vars="SMOKE_BASE_URL=${CANDIDATE_URL},FAIL_SMOKE=${FAIL_SMOKE}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
       - name: Promote revision
         run: |

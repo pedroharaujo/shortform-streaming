@@ -115,6 +115,10 @@ resource "google_cloud_run_v2_service" "this" {
             name  = "X-Forwarded-Proto"
             value = "https"
           }
+          http_headers {
+            name  = "Host"
+            value = "localhost"
+          }
         }
         period_seconds    = 10
         failure_threshold = 24
@@ -128,6 +132,10 @@ resource "google_cloud_run_v2_service" "this" {
           http_headers {
             name  = "X-Forwarded-Proto"
             value = "https"
+          }
+          http_headers {
+            name  = "Host"
+            value = "localhost"
           }
         }
         period_seconds    = 30

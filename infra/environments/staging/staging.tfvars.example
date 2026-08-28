@@ -22,6 +22,7 @@ cloud_run_service_name          = "example-only"
 # Not a public hello-world image. The hostname prefix is not a D-020 region.
 cloud_run_image = "changeme-docker.pkg.dev/example-only/example-only/shortform-api:unapplied-placeholder"
 
+# Probe Host is localhost. Include 127.0.0.1 and localhost so Django does not 400.
 django_allowed_hosts = "127.0.0.1,localhost,.a.run.app,example-only.example"
 firebase_project_id  = "example-only"
 video_provider       = ""
