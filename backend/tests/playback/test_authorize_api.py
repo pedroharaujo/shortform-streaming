@@ -128,6 +128,12 @@ def _assert_locked(payload: dict[str, Any], reason: str) -> None:
     assert "expires_at" not in payload
 
 
+def _assert_ineligible_404(response: Any) -> None:
+    assert response.status_code == 404
+    assert response.status_code != 403
+    assert "playback_url" not in response.json()
+
+
 @pytest.mark.django_db
 def test_missing_headers_return_400_error_envelope(client: Client) -> None:
     response = client.post(AUTHORIZE.format(episode_id="ep_missing"))
@@ -282,7 +288,7 @@ def test_valid_token_on_free_episode_may_create_profile(
 
 
 @pytest.mark.django_db
-def test_wrong_territory_unpublished_takedown_are_404_never_403(
+def test_wrong_territory_and_unpublished_are_404_never_403(
     client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
 ) -> None:
     del freeze_catalog_clock
@@ -292,28 +298,52 @@ def test_wrong_territory_unpublished_takedown_are_404_never_403(
         AUTHORIZE.format(episode_id=episode.public_id),
         **_headers(territory="DE"),
     )
-    assert wrong_territory.status_code == 404
-    assert wrong_territory.status_code != 403
+    _assert_ineligible_404(wrong_territory)
 
     unpublished = make_series(title="Draft Series")
     make_right(unpublished, territories=["FR"])
     draft = make_episode(unpublished, publication_status=PublicationStatus.DRAFT)
     unpublished_response = client.post(AUTHORIZE.format(episode_id=draft.public_id), **_headers())
-    assert unpublished_response.status_code == 404
-    assert unpublished_response.status_code != 403
+    _assert_ineligible_404(unpublished_response)
 
-    taken_down = make_series(title="Taken Down")
-    make_right(taken_down, territories=["FR"], takedown=True)
-    hidden = make_episode(taken_down, publication_status=PublicationStatus.DRAFT)
-    type(taken_down).objects.filter(pk=taken_down.pk).update(
-        publication_status=PublicationStatus.PUBLISHED
+
+@pytest.mark.django_db
+def test_entitled_catalog_ineligible_is_404_never_granted(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    """Staff entitlement must not bypass territory, takedown, or exclusive rights end."""
+    del freeze_catalog_clock
+    auth = _headers(authorization=_bearer(VALID_CREDENTIAL))
+
+    _fr_series, wrong_territory_episode = _published_episode(
+        order=6, title="Entitled Wrong Territory"
     )
-    type(hidden).objects.filter(pk=hidden.pk).update(publication_status=PublicationStatus.PUBLISHED)
-    hidden_asset = fake_provider.seed_ready_asset()
-    del hidden_asset
-    response = client.post(AUTHORIZE.format(episode_id=hidden.public_id), **_headers())
-    assert response.status_code == 404
-    assert response.status_code != 403
+    _seed_ready(fake_provider, wrong_territory_episode)
+    profile = get_or_create_profile(VALID_UID)
+    grant_staff_entitlement(profile, wrong_territory_episode)
+    wrong_territory = client.post(
+        AUTHORIZE.format(episode_id=wrong_territory_episode.public_id),
+        **_headers(territory="DE", authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    _assert_ineligible_404(wrong_territory)
+
+    taken_series, taken_episode = _published_episode(order=6, title="Entitled Takedown")
+    _seed_ready(fake_provider, taken_episode)
+    grant_staff_entitlement(profile, taken_episode)
+    assert taken_episode.media_assets.filter(state=MediaAssetState.READY).exists()
+    right = taken_series.rights.get()
+    right.takedown = True
+    right.save(update_fields=["takedown"])
+    taken_down = client.post(AUTHORIZE.format(episode_id=taken_episode.public_id), **auth)
+    _assert_ineligible_404(taken_down)
+
+    _expired_series, expired_episode = _published_episode(
+        order=6, title="Entitled Expired Right", ends_at=DEFAULT_NOW
+    )
+    _seed_ready(fake_provider, expired_episode)
+    grant_staff_entitlement(profile, expired_episode)
+    expired = client.post(AUTHORIZE.format(episode_id=expired_episode.public_id), **auth)
+    _assert_ineligible_404(expired)
 
 
 @pytest.mark.django_db
