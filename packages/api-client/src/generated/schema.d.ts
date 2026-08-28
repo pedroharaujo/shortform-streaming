@@ -104,6 +104,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/offers/{episode_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List episode access offers
+         * @description Return currently available access methods for a catalog-eligible episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished, takedown, wrong-territory, or unknown ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and methods. Grant returns HTTP 200 decision=granted with methods. This response never includes a playback URL and never calls the video provider. MVP method types are entitlement, free, and rewarded_ad. Client-supplied free-window or user identifiers are ignored.
+         */
+        get: operations["v1_offers_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/playback/{episode_id}/authorize": {
         parameters: {
             query?: never;
@@ -237,6 +257,35 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        EpisodeOffersGranted: {
+            /**
+             * @description granted when the episode is playable via entitlement or the free window.
+             *
+             *     * `granted` - granted (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            decision: "granted";
+            /** @description Opaque episode public id. */
+            episode_id: string;
+            /** @description Non-empty list of currently available methods. Never includes a playback URL. */
+            methods: components["schemas"]["OfferMethod"][];
+        };
+        EpisodeOffersLocked: {
+            /**
+             * @description locked when the episode is catalog-eligible but not playable.
+             *
+             *     * `locked` - locked (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            decision: "locked";
+            /** @description Opaque episode public id. */
+            episode_id: string;
+            /** @description Non-empty machine-readable lock reasons. Closed set: login_required, entitlement_required. */
+            lock_reasons: components["schemas"]["LockReasonsEnum"][];
+            /** @description Currently available unlock methods. Empty for anonymous locks and when rewarded ads are disabled. Never includes coin, subscription, or a playback URL. */
+            methods: components["schemas"]["OfferMethod"][];
+        };
+        EpisodeOffersResponse: components["schemas"]["EpisodeOffersGranted"] | components["schemas"]["EpisodeOffersLocked"];
         /** @description Stable API error envelope. `message` is a safe, user-displayable string. `request_id` is the correlation identifier for the request. */
         ErrorEnvelope: {
             /** @description Stable machine-readable error code. */
@@ -272,6 +321,20 @@ export interface components {
          * @enum {string}
          */
         LockReasonsEnum: "login_required" | "entitlement_required";
+        OfferMethod: {
+            /**
+             * @description MVP offer method: entitlement, free, or rewarded_ad. Coin and subscription are omitted.
+             *
+             *     * `entitlement` - entitlement
+             *     * `free` - free
+             *     * `rewarded_ad` - rewarded_ad
+             */
+            type: components["schemas"]["TypeEnum"];
+            /** @description English display title. Not legal or store copy. */
+            title: string;
+            /** @description English display description. Not legal or store copy. */
+            description: string;
+        };
         PlaybackAuthorizeGranted: {
             /**
              * @description granted when playback is authorized and a short-lived URL is returned.
@@ -304,7 +367,7 @@ export interface components {
              * @enum {string}
              */
             decision: "locked";
-            /** @description Non-empty machine-readable lock reasons. Closed set: login_required, entitlement_required. Offers are omitted until P3. */
+            /** @description Non-empty machine-readable lock reasons. Closed set: login_required, entitlement_required. Unlock methods are on GET /v1/offers/{episode_id}. This response never includes offers or a playback URL. */
             lock_reasons: components["schemas"]["LockReasonsEnum"][];
         };
         /**
@@ -324,6 +387,13 @@ export interface components {
          * @enum {string}
          */
         StatusEnum: "ok" | "unavailable";
+        /**
+         * @description * `entitlement` - entitlement
+         *     * `free` - free
+         *     * `rewarded_ad` - rewarded_ad
+         * @enum {string}
+         */
+        TypeEnum: "entitlement" | "free" | "rewarded_ad";
         WatchProgress: {
             /** @description Opaque episode public id. */
             episode_id: string;
@@ -498,6 +568,62 @@ export interface operations {
             };
             /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_offers_retrieve: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
+                "X-Language": string;
+                /** @description Client platform. Required. Values: ios, android. */
+                "X-Platform": "android" | "ios";
+                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
+                "X-Territory": string;
+            };
+            path: {
+                /** @description Opaque episode public identifier. Sequential database integers are never used as public IDs. */
+                episode_id: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EpisodeOffersResponse"];
+                };
+            };
+            /** @description Missing or malformed catalog context headers. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

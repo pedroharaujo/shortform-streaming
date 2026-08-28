@@ -10,13 +10,15 @@ info:
     POST /v1/playback/{episode_id}/authorize accepts an optional Firebase ID token:
     a missing token is anonymous, and a present invalid token is 401 ErrorEnvelope.
     Catalog-eligible locked episodes return HTTP 200 with decision locked and lock_reasons,
-    never a playback URL. GET/PUT /v1/progress/{episode_id} accepts the same optional
-    Firebase ID token plus an anonymous X-Device-Id header; lock is HTTP 403 and the
-    response never includes a playback URL. Catalog, playback, and progress operations
-    require explicit X-Territory, X-Platform, and X-Language headers; those values
-    are never inferred from Accept-Language. GET /v1/me requires FirebaseIdToken;
-    missing or invalid tokens return 401 ErrorEnvelope. firebase_uid is never returned.
-    Django never serves video bytes.'
+    never a playback URL. GET /v1/offers/{episode_id} accepts the same optional Firebase
+    ID token and catalog headers; ineligible ids are 404; locked catalog-eligible
+    episodes return HTTP 200 with methods and never a playback URL. GET/PUT /v1/progress/{episode_id}
+    accepts the same optional Firebase ID token plus an anonymous X-Device-Id header;
+    lock is HTTP 403 and the response never includes a playback URL. Catalog, playback,
+    offers, and progress operations require explicit X-Territory, X-Platform, and
+    X-Language headers; those values are never inferred from Accept-Language. GET
+    /v1/me requires FirebaseIdToken; missing or invalid tokens return 401 ErrorEnvelope.
+    firebase_uid is never returned. Django never serves video bytes.'
 paths:
   /health/live:
     get:
@@ -191,6 +193,82 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Missing, malformed, expired, revoked, or otherwise unverifiable
             Firebase ID token. The response never includes the token or firebase_uid.
+  /v1/offers/{episode_id}:
+    get:
+      operationId: v1_offers_retrieve
+      description: 'Return currently available access methods for a catalog-eligible
+        episode. Optional Firebase ID token: a missing Authorization header is anonymous;
+        a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible,
+        unpublished, takedown, wrong-territory, or unknown ids return 404 ErrorEnvelope,
+        never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons
+        and methods. Grant returns HTTP 200 decision=granted with methods. This response
+        never includes a playback URL and never calls the video provider. MVP method
+        types are entitlement, free, and rewarded_ad. Client-supplied free-window
+        or user identifiers are ignored.'
+      summary: List episode access offers
+      parameters:
+      - in: header
+        name: X-Language
+        schema:
+          type: string
+        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
+          from Accept-Language.'
+        required: true
+      - in: header
+        name: X-Platform
+        schema:
+          type: string
+          enum:
+          - android
+          - ios
+        description: 'Client platform. Required. Values: ios, android.'
+        required: true
+      - in: header
+        name: X-Territory
+        schema:
+          type: string
+        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
+          inferred from Accept-Language or UI language.
+        required: true
+      - in: path
+        name: episode_id
+        schema:
+          $ref: '#/components/schemas/PublicId'
+        description: Opaque episode public identifier. Sequential database integers
+          are never used as public IDs.
+        required: true
+      tags:
+      - offers
+      security:
+      - {}
+      - FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EpisodeOffersResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing or malformed catalog context headers.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or ineligible public id. Does not confirm whether the
+            id exists.
   /v1/playback/{episode_id}/authorize:
     post:
       operationId: v1_playback_authorize_create
@@ -701,6 +779,69 @@ components:
           items:
             type: object
             additionalProperties: true
+    EpisodeOffersGranted:
+      type: object
+      properties:
+        decision:
+          allOf:
+          - $ref: '#/components/schemas/PlaybackAuthorizeGrantedDecisionEnum'
+          description: |-
+            granted when the episode is playable via entitlement or the free window.
+
+            * `granted` - granted
+        episode_id:
+          type: string
+          description: Opaque episode public id.
+        methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfferMethod'
+          description: Non-empty list of currently available methods. Never includes
+            a playback URL.
+      required:
+      - decision
+      - episode_id
+      - methods
+    EpisodeOffersLocked:
+      type: object
+      properties:
+        decision:
+          allOf:
+          - $ref: '#/components/schemas/PlaybackAuthorizeLockedDecisionEnum'
+          description: |-
+            locked when the episode is catalog-eligible but not playable.
+
+            * `locked` - locked
+        episode_id:
+          type: string
+          description: Opaque episode public id.
+        lock_reasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/LockReasonsEnum'
+          description: 'Non-empty machine-readable lock reasons. Closed set: login_required,
+            entitlement_required.'
+        methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfferMethod'
+          description: Currently available unlock methods. Empty for anonymous locks
+            and when rewarded ads are disabled. Never includes coin, subscription,
+            or a playback URL.
+      required:
+      - decision
+      - episode_id
+      - lock_reasons
+      - methods
+    EpisodeOffersResponse:
+      oneOf:
+      - $ref: '#/components/schemas/EpisodeOffersGranted'
+      - $ref: '#/components/schemas/EpisodeOffersLocked'
+      discriminator:
+        propertyName: decision
+        mapping:
+          granted: '#/components/schemas/EpisodeOffersGranted'
+          locked: '#/components/schemas/EpisodeOffersLocked'
     ErrorEnvelope:
       type: object
       description: Stable API error envelope. `message` is a safe, user-displayable
@@ -765,6 +906,28 @@ components:
       description: |-
         * `login_required` - login_required
         * `entitlement_required` - entitlement_required
+    OfferMethod:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/TypeEnum'
+          description: |-
+            MVP offer method: entitlement, free, or rewarded_ad. Coin and subscription are omitted.
+
+            * `entitlement` - entitlement
+            * `free` - free
+            * `rewarded_ad` - rewarded_ad
+        title:
+          type: string
+          description: English display title. Not legal or store copy.
+        description:
+          type: string
+          description: English display description. Not legal or store copy.
+      required:
+      - description
+      - title
+      - type
     PlaybackAuthorizeGranted:
       type: object
       properties:
@@ -810,7 +973,8 @@ components:
           items:
             $ref: '#/components/schemas/LockReasonsEnum'
           description: 'Non-empty machine-readable lock reasons. Closed set: login_required,
-            entitlement_required. Offers are omitted until P3.'
+            entitlement_required. Unlock methods are on GET /v1/offers/{episode_id}.
+            This response never includes offers or a playback URL.'
       required:
       - decision
       - lock_reasons
@@ -842,6 +1006,16 @@ components:
       description: |-
         * `ok` - ok
         * `unavailable` - unavailable
+    TypeEnum:
+      enum:
+      - entitlement
+      - free
+      - rewarded_ad
+      type: string
+      description: |-
+        * `entitlement` - entitlement
+        * `free` - free
+        * `rewarded_ad` - rewarded_ad
     WatchProgress:
       type: object
       properties:
@@ -882,6 +1056,6 @@ components:
       description: 'Firebase Authentication ID token presented as an HTTP Bearer credential.
         Django verifies the token and maps the UID to one local profile. Health probes
         and anonymous catalog reads do not use this scheme. POST /v1/playback/{episode_id}/authorize
-        and GET/PUT /v1/progress/{episode_id} accept this scheme optionally: a missing
-        token is anonymous; a present invalid token is 401. Client-supplied user or
-        profile identifiers are ignored.'
+        and GET/PUT /v1/progress/{episode_id} and GET /v1/offers/{episode_id} accept
+        this scheme optionally: a missing token is anonymous; a present invalid token
+        is 401. Client-supplied user or profile identifiers are ignored.'

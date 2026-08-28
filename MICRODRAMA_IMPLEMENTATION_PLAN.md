@@ -679,6 +679,8 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **P2-T01-F1** (GitHub issue #50) wires native `@react-native-firebase/auth` on the Android development build against the Auth emulator. Jest and CI keep `createLocalMockFirebaseAuth` / `FIREBASE_AUTH_MODE=mock`. Missing `GoogleService-Info.plist` must not fail Android or CI JavaScript export (D-026). Do not commit `google-services.json`.
 
+**P2-T01-F2** (GitHub issue #85) adds Android Google Sign-In on the same native Auth path; Jest/CI remain mock; iOS Apple/Google observation is a later D-026 ship pass.
+
 #### P2-T02 — Implement account lifecycle, consent, and deletion
 
 **Description:** Add locale/country/consent state, profile API, logout behavior, data export request placeholder, and a verifiable deletion workflow spanning Django and Firebase.
@@ -841,14 +843,16 @@ Evidence (P2-T08 / #78): anonymous device-scoped progress without `UserProfile`;
 
 **Acceptance criteria:**
 
-- [ ] `/offers/{episode}` returns only currently legal/available methods with display metadata. MVP methods are existing entitlement, free policy, or rewarded-ad lock.
-- [ ] Invalid combinations are rejected in admin and server defaults work without Remote Config.
-- [ ] Published policy changes are auditable.
+- [x] `/offers/{episode}` returns only currently legal/available methods with display metadata. MVP methods are existing entitlement, free policy, or rewarded-ad lock.
+- [x] Invalid combinations are rejected in admin and server defaults work without Remote Config.
+- [x] Published policy changes are auditable.
 
 **Validation and integration tests:**
 
-- [ ] Decision-table tests cover free versus rewarded-ad lock and failure fallback. Coin and subscription offer types are not required.
-- [ ] Changing free count in staging updates the lock screen without an app release and cannot bypass server checks.
+- [x] Decision-table tests cover free versus rewarded-ad lock and failure fallback. Coin and subscription offer types are not required.
+- [x] Changing free count in staging updates the lock screen without an app release and cannot bypass server checks.
+
+Evidence (2026-08-28): P3-T01 / #84; AccessPolicy + `GET /v1/offers/{episode_id}`; D-006 defaults when no row; authorize ignores client free-window; anonymous locked offers omit rewarded-ad (D-005).
 
 #### P3-T07 — Implement rewarded-ad intent and verified reward grant
 

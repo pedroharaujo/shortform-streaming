@@ -1,35 +1,32 @@
 import type { JSX } from 'react';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { MeClient } from '../../api/me/types';
-import type { EmailPasswordAuth } from '../../auth/localMockFirebaseAuth';
+import type { AppAuth, AuthOutcome, AuthUserSession } from '../../auth/localMockFirebaseAuth';
 import { setAuthSession } from '../../auth/session';
 
 export interface SignInScreenProps {
-  readonly auth: EmailPasswordAuth;
+  readonly auth: AppAuth;
   readonly meClient: MeClient;
   readonly onFinished: () => void;
+  readonly googleSignInAvailable?: boolean;
 }
 
-export function SignInScreen({ auth, meClient, onFinished }: SignInScreenProps): JSX.Element {
+export function SignInScreen({
+  auth,
+  meClient,
+  onFinished,
+  googleSignInAvailable = Platform.OS === 'android',
+}: SignInScreenProps): JSX.Element {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function complete(kind: 'signIn' | 'signUp'): Promise<void> {
-    setBusy(true);
-    setMessage(null);
-    const outcome =
-      kind === 'signUp' ? await auth.signUp(email, password) : await auth.signIn(email, password);
-    if (outcome.outcome === 'error') {
-      setBusy(false);
-      setMessage(outcome.message);
-      return;
-    }
-    setAuthSession(outcome.session);
+  async function finishWithSession(session: AuthUserSession): Promise<void> {
+    setAuthSession(session);
     const me = await meClient.getMe();
     setBusy(false);
     if (me.outcome === 'ok') {
@@ -46,6 +43,33 @@ export function SignInScreen({ auth, meClient, onFinished }: SignInScreenProps):
       return;
     }
     setMessage(me.reason);
+  }
+
+  async function applyAuthOutcome(outcome: AuthOutcome): Promise<void> {
+    if (outcome.outcome === 'cancelled') {
+      setBusy(false);
+      return;
+    }
+    if (outcome.outcome === 'error') {
+      setBusy(false);
+      setMessage(outcome.message);
+      return;
+    }
+    await finishWithSession(outcome.session);
+  }
+
+  async function complete(kind: 'signIn' | 'signUp'): Promise<void> {
+    setBusy(true);
+    setMessage(null);
+    const outcome =
+      kind === 'signUp' ? await auth.signUp(email, password) : await auth.signIn(email, password);
+    await applyAuthOutcome(outcome);
+  }
+
+  async function completeGoogle(): Promise<void> {
+    setBusy(true);
+    setMessage(null);
+    await applyAuthOutcome(await auth.signInWithGoogle());
   }
 
   async function signOut(): Promise<void> {
@@ -66,8 +90,8 @@ export function SignInScreen({ auth, meClient, onFinished }: SignInScreenProps):
         Sign in
       </Text>
       <Text style={styles.muted}>
-        Email and password through Firebase Authentication. Catalog stays available without an
-        account.
+        Email and password through Firebase Authentication, or Google on Android. Catalog stays
+        available without an account.
       </Text>
       <TextInput
         autoCapitalize="none"
@@ -120,6 +144,20 @@ export function SignInScreen({ auth, meClient, onFinished }: SignInScreenProps):
         >
           <Text style={styles.buttonLabel}>Create account</Text>
         </Pressable>
+        {googleSignInAvailable ? (
+          <Pressable
+            accessibilityLabel="Sign in with Google"
+            accessibilityRole="button"
+            disabled={busy}
+            onPress={() => {
+              void completeGoogle();
+            }}
+            style={styles.button}
+            testID="sign-in-google"
+          >
+            <Text style={styles.buttonLabel}>Sign in with Google</Text>
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityLabel="Sign out"
           accessibilityRole="button"

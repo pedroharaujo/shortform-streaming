@@ -39,7 +39,8 @@ class PlaybackAuthorizeLockedSerializer(serializers.Serializer[Mapping[str, obje
         allow_empty=False,
         help_text=(
             "Non-empty machine-readable lock reasons. Closed set: login_required, "
-            "entitlement_required. Offers are omitted until P3."
+            "entitlement_required. Unlock methods are on GET /v1/offers/{episode_id}. "
+            "This response never includes offers or a playback URL."
         ),
     )
 

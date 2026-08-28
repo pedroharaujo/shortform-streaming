@@ -1,12 +1,14 @@
 /**
- * Email/password auth factory.
+ * App auth factory (email/password and Google).
  *
  * Jest always receives the local mock. Device/simulator runtimes load native
- * Firebase Auth through a runtime require so `@react-native-firebase/*` is
- * never statically imported from a module Jest evaluates.
+ * Firebase Auth through a runtime require so `@react-native-firebase/*` and
+ * `@react-native-google-signin/*` are never statically imported from a module
+ * Jest evaluates. Google Sign-In JS lives only in nativeFirebaseAuth, behind
+ * the same Jest/native gate.
  */
 
-import { createLocalMockFirebaseAuth, type EmailPasswordAuth } from './localMockFirebaseAuth';
+import { createLocalMockFirebaseAuth, type AppAuth } from './localMockFirebaseAuth';
 
 function isJestRuntime(): boolean {
   // Native Firebase must stay off the Jest module graph.
@@ -14,13 +16,13 @@ function isJestRuntime(): boolean {
   return typeof process.env.JEST_WORKER_ID === 'string';
 }
 
-export function createEmailPasswordAuth(): EmailPasswordAuth {
+export function createEmailPasswordAuth(): AppAuth {
   if (isJestRuntime()) {
     return createLocalMockFirebaseAuth();
   }
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy load keeps native SDK out of Jest
   const loaded = require('./nativeFirebaseAuth') as {
-    createNativeFirebaseAuth: () => EmailPasswordAuth;
+    createNativeFirebaseAuth: () => AppAuth;
   };
   return loaded.createNativeFirebaseAuth();
 }
