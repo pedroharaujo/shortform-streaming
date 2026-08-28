@@ -1,5 +1,12 @@
 name: shortform-streaming
 
+x-backend-container-environment: &backend-container-environment
+  DJANGO_SETTINGS_MODULE: config.settings.production
+  DJANGO_SECRET_KEY: local-compose-not-a-production-secret
+  DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
+  DATABASE_URL: postgresql://shortform@postgres:5432/shortform
+  FIREBASE_PROJECT_ID: demo-shortform-local
+
 services:
   postgres:
     image: postgres:17.6-alpine
@@ -17,6 +24,38 @@ services:
       start_period: 5s
     volumes:
       - postgres-data:/var/lib/postgresql/data
+
+  migrate:
+    profiles: ["container"]
+    image: shortform-backend:ci
+    environment: *backend-container-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["migrate"]
+
+  api:
+    profiles: ["container"]
+    image: shortform-backend:ci
+    environment: *backend-container-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ["web"]
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8080/health/ready', headers={'X-Forwarded-Proto': 'https'}), timeout=2)",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
 
 volumes:
   postgres-data:

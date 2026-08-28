@@ -75,6 +75,24 @@ class SecretScannerIntegrationTests(unittest.TestCase):
         self.assertNotIn(generated_value, result.stdout)
         self.assertNotIn(generated_value, result.stderr)
 
+    def test_compose_local_dummy_secret_literal_is_allowed(self) -> None:
+        with temporary_repository() as (_, repository):
+            dummy = "local-compose-not-a-production-secret"
+            fixture = repository / "compose.yaml"
+            fixture.write_text(f"DJANGO_SECRET_KEY: {dummy}\n", encoding="utf-8")
+
+            allowed = self.run_scanner(repository, "compose.yaml")
+            other = repository / "runtime.env"
+            generated_value = "not" + "-the-compose-dummy-" + ("x" * 12)
+            assignment_key = "DJANGO_" + "SECRET_" + "KEY"
+            other.write_text(assignment_key + "=" + generated_value + "\n", encoding="utf-8")
+            rejected = self.run_scanner(repository, "runtime.env")
+
+        self.assertEqual(allowed.returncode, 0, allowed.stderr)
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn("assigned-secret", rejected.stderr)
+        self.assert_redacted(rejected, generated_value)
+
     def test_canonical_placeholder_is_allowed_only_in_example_file(self) -> None:
         with temporary_repository() as (_, repository):
             placeholder = "canonical-" + "placeholder-only"

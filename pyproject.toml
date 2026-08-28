@@ -10,7 +10,9 @@ dependencies = [
     "drf-spectacular>=0.28,<1",
     "firebase-admin>=6.8,<8",
     "google-cloud-storage>=2.14,<4",
+    "gunicorn>=23,<26",
     "psycopg[binary]>=3.2,<3.4",
+    "whitenoise>=6.8,<7",
 ]
 
 [dependency-groups]
@@ -60,4 +62,8 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["google.cloud", "google.cloud.storage", "google.cloud.storage.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["gunicorn", "gunicorn.*", "whitenoise", "whitenoise.*"]
 ignore_missing_imports = true

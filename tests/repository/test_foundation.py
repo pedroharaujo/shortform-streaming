@@ -26,6 +26,7 @@ REQUIRED_PATHS = (
     "docs/analytics/README.md",
     "docs/runbooks/repository-controls.md",
     "docs/runbooks/compatible-dependency-set.md",
+    "docs/runbooks/django-container.md",
     "scripts/check_repository_foundation.py",
     "scripts/scan_secrets.py",
     "tests/repository/test_secret_scanner.py",
@@ -161,11 +162,24 @@ class RepositoryFoundationTests(unittest.TestCase):
 
     def test_backend_dockerfile_is_secret_free_build_smoke(self) -> None:
         dockerfile = (ROOT / "backend/Dockerfile").read_text(encoding="utf-8")
+        entrypoint = (ROOT / "backend/docker-entrypoint.sh").read_text(encoding="utf-8")
         self.assertIn("uv sync --locked", dockerfile)
         self.assertNotIn("DJANGO_SECRET_KEY", dockerfile)
         self.assertNotIn("DATABASE_URL", dockerfile)
         self.assertNotIn("config.settings.production", dockerfile)
         self.assertNotIn("docker push", dockerfile)
+        self.assertRegex(dockerfile, r"(?m)^USER app$")
+        self.assertIn('CMD ["web"]', dockerfile)
+        self.assertIn("collectstatic", dockerfile)
+        self.assertIn("config.settings.staticbuild", dockerfile)
+        self.assertIn("UV_PROJECT_ENVIRONMENT=/app/.venv", dockerfile)
+        self.assertIn("gunicorn", entrypoint)
+        self.assertIn("exec gunicorn", entrypoint)
+        self.assertIn("migrate --noinput", entrypoint)
+        self.assertEqual(entrypoint.count("manage.py migrate"), 1)
+        self.assertRegex(entrypoint, r"(?m)^\s*web\)\s*$")
+        self.assertRegex(entrypoint, r"(?m)^\s*migrate\)\s*$")
+        self.assertNotIn("--preload", entrypoint)
 
     def _assert_every_action_is_pinned(self, workflow: str) -> None:
         for line in workflow.splitlines():

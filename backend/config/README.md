@@ -1,8 +1,14 @@
 # Backend configuration
 
 `settings/base.py` contains shared Django/DRF, PostgreSQL, OpenAPI, and Django Admin
-configuration (sessions, messages, staticfiles, templates). Local Admin is served
-by `runserver` when `DEBUG` is true; production collectstatic is owned by P5-T02.
+configuration (sessions, messages, staticfiles, templates). WhiteNoise is inserted
+immediately after `SecurityMiddleware` and `STORAGES["staticfiles"]` uses
+`CompressedStaticFilesStorage`. `CONN_MAX_AGE` is an env integer defaulting to 0
+(0–3600) with `conn_health_checks=True`. Local Admin is served by `runserver` when
+`DEBUG` is true. The production image runs `collectstatic` with
+`config.settings.staticbuild` (placeholders only; no production fail-fast) and
+serves Admin static files through WhiteNoise. See
+[docs/runbooks/django-container.md](../../docs/runbooks/django-container.md).
 `spectacular.py` holds `drf-spectacular` settings and shared schema components.
 Health and anonymous catalog operations are forced to `security: []`.
 `exceptions.py` maps API errors onto the shared `ErrorEnvelope` (`code`, `message`,
