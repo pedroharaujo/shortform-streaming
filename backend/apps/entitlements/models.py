@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -85,6 +87,7 @@ class AccessPolicy(models.Model):
     subscription_unlock_enabled = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    _revision_actor: Any = None
 
     class Meta:
         constraints = [
@@ -118,9 +121,10 @@ class AccessPolicy(models.Model):
             return f"{self.series_id} · episode {self.episode_id}"
         return f"{self.series_id} · series"
 
-    def save(self, *args: object, **kwargs: object) -> None:
-        if self.episode_id and not self.series_id:
-            self.series_id = self.episode.series_id
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        episode = self.episode
+        if episode is not None and not self.series_id:
+            self.series_id = episode.series_id
         actor = getattr(self, "_revision_actor", None)
         super().save(*args, **kwargs)
         AccessPolicyRevision.objects.create(
@@ -140,7 +144,8 @@ class AccessPolicy(models.Model):
         super().clean()
         errors: dict[str, str] = {}
         if self.episode_id:
-            if self.episode.series_id != self.series_id:
+            episode = self.episode
+            if episode is not None and episode.series_id != self.series_id:
                 errors["episode"] = "Episode override must belong to the same series."
         else:
             if self.force_free or self.force_lock:

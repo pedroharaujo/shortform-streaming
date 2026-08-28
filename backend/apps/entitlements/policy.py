@@ -122,3 +122,69 @@ def evaluate_authorize_access(
     if profile is None:
         return Lock(lock_reasons=(LockReason.LOGIN_REQUIRED,))
     return Lock(lock_reasons=(LockReason.ENTITLEMENT_REQUIRED,))
+
+
+class OfferMethodType(StrEnum):
+    ENTITLEMENT = "entitlement"
+    FREE = "free"
+    REWARDED_AD = "rewarded_ad"
+
+
+@dataclass(frozen=True, slots=True)
+class OfferMethod:
+    type: OfferMethodType
+    title: str
+    description: str
+
+
+@dataclass(frozen=True, slots=True)
+class OffersGranted:
+    methods: tuple[OfferMethod, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class OffersLocked:
+    lock_reasons: tuple[LockReason, ...]
+    methods: tuple[OfferMethod, ...]
+
+
+_OFFER_COPY: dict[OfferMethodType, tuple[str, str]] = {
+    OfferMethodType.ENTITLEMENT: (
+        "Unlocked",
+        "This episode is already unlocked on your account.",
+    ),
+    OfferMethodType.FREE: ("Free episode", "Included in the free preview."),
+    OfferMethodType.REWARDED_AD: (
+        "Watch an ad to unlock",
+        "Watch one rewarded ad to unlock this episode permanently.",
+    ),
+}
+
+
+def _offer_method(kind: OfferMethodType) -> OfferMethod:
+    title, description = _OFFER_COPY[kind]
+    return OfferMethod(type=kind, title=title, description=description)
+
+
+def evaluate_episode_offers(
+    episode: Episode,
+    context: CatalogRequestContext,
+    profile: UserProfile | None,
+    *,
+    now: datetime | None = None,
+) -> Ineligible | OffersGranted | OffersLocked:
+    """Same authorize precedence; never mints. Anonymous locks omit rewarded-ad (D-005)."""
+    decision = evaluate_authorize_access(episode, context, profile, now=now)
+    if isinstance(decision, Ineligible):
+        return Ineligible()
+    if isinstance(decision, Grant):
+        kind = (
+            OfferMethodType.ENTITLEMENT
+            if decision.source == GrantSource.ENTITLEMENT
+            else OfferMethodType.FREE
+        )
+        return OffersGranted(methods=(_offer_method(kind),))
+    methods: tuple[OfferMethod, ...] = ()
+    if profile is not None and resolve_access_policy(episode).rewarded_ad_enabled:
+        methods = (_offer_method(OfferMethodType.REWARDED_AD),)
+    return OffersLocked(lock_reasons=decision.lock_reasons, methods=methods)
