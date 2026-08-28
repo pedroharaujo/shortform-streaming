@@ -8,6 +8,7 @@ os.environ.setdefault(
     "postgresql://shortform@127.0.0.1:5432/shortform",
 )
 os.environ.setdefault("VIDEO_PROVIDER", "fake")
+os.environ.setdefault("STAFF_UPLOAD_STORE", "fake")
 
 from .base import *  # noqa: E402,F403
 

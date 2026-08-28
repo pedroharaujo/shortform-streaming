@@ -44,6 +44,13 @@ service-account JSON.
 `playback` is the video-provider, MediaAsset ingestion, and authorize bounded
 application (P2-T05 / P2-T06 / P2-T07). Django never serves video bytes. Staff
 upload a vertical master through Django Admin; `VideoProvider` encodes it.
+The Django-mediated Admin `master_file` path remains for small local/CI
+fixtures. Staff may also mint a short-lived HTTPS PUT URL from Admin (Signed
+upload) so the master body never transits Cloud Run/Django. After PUT, staff
+complete the upload; Django reads the private object, verifies SHA-256, then
+submits to `VideoProvider`. Local/CI use an in-process Fake object store.
+Viewers never receive write credentials.
+
 Clients request a short-lived opaque HLS URL from:
 
 - `POST /v1/playback/{episode_id}/authorize`

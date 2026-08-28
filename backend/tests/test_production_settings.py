@@ -16,6 +16,9 @@ PLAYBACK_ENVIRONMENT = (
     "BUNNY_STREAM_CDN_HOSTNAME",
     "BUNNY_STREAM_TOKEN_KEY",
     "PLAYBACK_SPIKE_ASSETS",
+    "STAFF_UPLOAD_STORE",
+    "STAFF_UPLOAD_GCS_BUCKET",
+    "STAFF_UPLOAD_URL_TTL_SECONDS",
 )
 CONFIGURATION_ENVIRONMENT = (
     *REQUIRED_ENVIRONMENT,
@@ -98,3 +101,23 @@ def test_production_settings_reject_fake_video_provider() -> None:
 
     assert result.returncode != 0
     assert "VIDEO_PROVIDER" in result.stderr
+
+
+def test_production_settings_reject_fake_staff_upload_store() -> None:
+    result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "STAFF_UPLOAD_STORE": "fake"})
+
+    assert result.returncode != 0
+    assert "STAFF_UPLOAD_STORE" in result.stderr
+
+
+def test_production_settings_accept_unset_staff_upload_store() -> None:
+    result = run_settings_import(IMPORT_VALID_ENVIRONMENT)
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_production_settings_gcs_staff_upload_without_bucket_fails() -> None:
+    result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "STAFF_UPLOAD_STORE": "gcs"})
+
+    assert result.returncode != 0
+    assert "STAFF_UPLOAD_GCS_BUCKET" in result.stderr

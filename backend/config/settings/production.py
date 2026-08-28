@@ -61,3 +61,14 @@ if _video_provider == "bunny":
         )
 elif _video_provider:
     raise ImproperlyConfigured("VIDEO_PROVIDER must be empty (disabled) or bunny in production")
+
+_staff_upload_store = os.environ.get("STAFF_UPLOAD_STORE", "").strip().lower()
+if _staff_upload_store == "fake":
+    raise ImproperlyConfigured("STAFF_UPLOAD_STORE=fake is not allowed in production")
+if _staff_upload_store == "gcs":
+    if not os.environ.get("STAFF_UPLOAD_GCS_BUCKET", "").strip():
+        raise ImproperlyConfigured(
+            "STAFF_UPLOAD_GCS_BUCKET is required when STAFF_UPLOAD_STORE=gcs"
+        )
+elif _staff_upload_store:
+    raise ImproperlyConfigured("STAFF_UPLOAD_STORE must be empty (disabled) or gcs in production")
