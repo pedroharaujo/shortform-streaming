@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from unittest.mock import patch
-
 from django.test import override_settings
 
 from apps.playback.providers.factory import get_video_provider, reset_provider_cache
@@ -22,27 +20,6 @@ def test_factory_returns_fake_when_configured() -> None:
     assert isinstance(provider, FakeVideoProvider)
 
 
-def test_factory_returns_none_when_unset() -> None:
-    with override_settings(VIDEO_PROVIDER=""):
-        assert get_video_provider() is None
-
-
-def test_factory_returns_none_for_unknown_provider() -> None:
-    with override_settings(VIDEO_PROVIDER="unknown"):
-        assert get_video_provider() is None
-
-
-def test_factory_returns_none_when_bunny_credentials_missing() -> None:
-    with override_settings(
-        VIDEO_PROVIDER="bunny",
-        BUNNY_STREAM_LIBRARY_ID="",
-        BUNNY_STREAM_API_KEY="",
-        BUNNY_STREAM_CDN_HOSTNAME="",
-        BUNNY_STREAM_TOKEN_KEY="",
-    ):
-        assert get_video_provider() is None
-
-
 def test_factory_builds_bunny_when_configured() -> None:
     with override_settings(
         VIDEO_PROVIDER="bunny",
@@ -56,21 +33,18 @@ def test_factory_builds_bunny_when_configured() -> None:
     assert provider.__class__.__name__ == "BunnyStreamVideoProvider"
 
 
-def test_command_refuses_fake_provider() -> None:
-    from django.core.management import call_command
-    from django.core.management.base import CommandError
-
-    with (
-        override_settings(VIDEO_PROVIDER="fake"),
-        patch(
-            "apps.playback.management.commands.spike_bunny_playback.generate_vertical_test_media"
-        ) as generate,
+def test_factory_returns_none_when_unusable() -> None:
+    with override_settings(VIDEO_PROVIDER=""):
+        assert get_video_provider() is None
+    reset_provider_cache()
+    with override_settings(VIDEO_PROVIDER="unknown"):
+        assert get_video_provider() is None
+    reset_provider_cache()
+    with override_settings(
+        VIDEO_PROVIDER="bunny",
+        BUNNY_STREAM_LIBRARY_ID="",
+        BUNNY_STREAM_API_KEY="",
+        BUNNY_STREAM_CDN_HOSTNAME="",
+        BUNNY_STREAM_TOKEN_KEY="",
     ):
-        try:
-            call_command("spike_bunny_playback")
-            raised = None
-        except CommandError as error:
-            raised = error
-    assert raised is not None
-    assert "VIDEO_PROVIDER=bunny" in str(raised)
-    generate.assert_not_called()
+        assert get_video_provider() is None

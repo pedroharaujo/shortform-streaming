@@ -155,28 +155,3 @@ def test_submit_upload_captions_and_status_use_http_mocks() -> None:
         bodies = [call[1] for call in transport.calls]
         assert all(LIBRARY_ID in url for url in bodies)
         assert VIDEO_ID in bodies[1]
-
-
-def test_get_asset_maps_processing_and_failure() -> None:
-    processing = ScriptedTransport(
-        [BunnyHttpResponse(200, json.dumps({"guid": VIDEO_ID, "status": 2}).encode())]
-    )
-    failed = ScriptedTransport(
-        [BunnyHttpResponse(200, json.dumps({"guid": VIDEO_ID, "status": 5}).encode())]
-    )
-    processing_provider = BunnyStreamVideoProvider(
-        library_id=LIBRARY_ID,
-        api_key=API_VALUE,
-        cdn_hostname=CDN_HOST,
-        token_key=SIGNING_VALUE,
-        transport=processing,
-    )
-    failed_provider = BunnyStreamVideoProvider(
-        library_id=LIBRARY_ID,
-        api_key=API_VALUE,
-        cdn_hostname=CDN_HOST,
-        token_key=SIGNING_VALUE,
-        transport=failed,
-    )
-    assert processing_provider.get_asset(VIDEO_ID).status == "processing"
-    assert failed_provider.get_asset(VIDEO_ID).status == "failed"

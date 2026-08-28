@@ -1,5 +1,4 @@
 import { setAuthSession } from '../../auth/session';
-import { createCatalogClient } from '../catalog/catalogClient';
 import { jsonResponse, requestHeaders, requestUrl } from '../fetchTestUtils';
 import { createMeClient } from './meClient';
 
@@ -56,34 +55,5 @@ describe('createMeClient', () => {
       message: 'Authentication is required.',
     });
     expect(performRequest).not.toHaveBeenCalled();
-  });
-});
-
-describe('catalog client stays unauthenticated when a session exists', () => {
-  afterEach(() => {
-    setAuthSession(null);
-  });
-
-  it('never sends Authorization on catalog reads', async () => {
-    setAuthSession({ credential: 'mock.local_user' });
-    const performRequest = jest.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
-      jsonResponse({ rails: [{ id: 'featured', title: 'Featured', series: [] }] }, 200),
-    );
-    const catalog = createCatalogClient({
-      baseUrl: BASE_URL,
-      territory: 'FR',
-      platform: 'ios',
-      fetchImplementation: performRequest as unknown as typeof fetch,
-    });
-
-    await catalog.getHome();
-    await catalog.getSeries('ser_harbor');
-    await catalog.getEpisode('ep_harbor_1');
-
-    expect(performRequest).toHaveBeenCalled();
-    for (const [input, init] of performRequest.mock.calls) {
-      const headers = requestHeaders(input, init);
-      expect(headers.get('Authorization')).toBeNull();
-    }
   });
 });

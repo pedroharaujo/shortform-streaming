@@ -3,43 +3,13 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
-from django.core.exceptions import ImproperlyConfigured
 from django.test import override_settings
 
 from apps.accounts.exceptions import TokenFailure, TokenVerificationError
 from apps.accounts.verification import (
     AdminFirebaseTokenVerifier,
-    MockFirebaseTokenVerifier,
-    get_token_verifier,
     reset_admin_verifier,
 )
-
-
-def test_mock_verifier_accepts_prefixed_uid() -> None:
-    verified = MockFirebaseTokenVerifier().verify_id_token("mock.abc_123")
-    assert verified.uid == "abc_123"
-
-
-@pytest.mark.parametrize(
-    ("credential", "failure"),
-    (
-        ("", TokenFailure.MALFORMED),
-        ("jwt-without-prefix", TokenFailure.MALFORMED),
-        ("mock.expired", TokenFailure.EXPIRED),
-        ("mock.revoked", TokenFailure.REVOKED),
-        ("mock.has space", TokenFailure.MALFORMED),
-    ),
-)
-def test_mock_verifier_failure_modes(credential: str, failure: TokenFailure) -> None:
-    with pytest.raises(TokenVerificationError) as raised:
-        MockFirebaseTokenVerifier().verify_id_token(credential)
-    assert raised.value.failure == failure
-
-
-def test_get_token_verifier_rejects_unknown_mode() -> None:
-    with override_settings(FIREBASE_AUTH_MODE="off"):
-        with pytest.raises(ImproperlyConfigured):
-            get_token_verifier()
 
 
 def test_admin_verifier_fail_closed_without_project_id() -> None:

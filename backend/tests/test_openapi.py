@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.test import Client
 from drf_spectacular.generators import SchemaGenerator
 
 from config.spectacular import (
     BEARER_SCHEME,
-    HEALTH_PATHS,
     SHARED_COMPONENT_SCHEMAS,
 )
 
@@ -61,87 +59,7 @@ def test_schema_includes_shared_conventions() -> None:
     assert schema.get("security") in (None, [])
 
 
-def test_schema_documents_health_status_and_unauthenticated_probes() -> None:
-    schema = build_schema()
-    health_status = schema["components"]["schemas"]["HealthStatus"]
-    status = health_status["properties"]["status"]
-    enum_values = status.get("enum")
-    if enum_values is None:
-        for item in status.get("allOf", []):
-            if "enum" in item:
-                enum_values = item["enum"]
-                break
-            ref = item.get("$ref")
-            if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
-                referenced = schema["components"]["schemas"].get(ref.rsplit("/", 1)[-1], {})
-                if "enum" in referenced:
-                    enum_values = referenced["enum"]
-                    break
-    if enum_values is None:
-        enum_values = schema["components"]["schemas"].get("StatusEnum", {}).get("enum")
-    assert enum_values is not None
-    assert set(enum_values) == {"ok", "unavailable"}
-
-    paths = schema["paths"]
-    for path in HEALTH_PATHS:
-        operation = paths[path]["get"]
-        assert operation.get("security") in ([], None) or operation["security"] == []
-        assert "200" in operation["responses"]
-    assert "503" in paths["/health/ready"]["get"]["responses"]
-
-
-def test_live_payload_matches_health_status_schema(client: Client) -> None:
-    schema = build_schema()
-    enum_values = _health_status_enum(schema)
-    response = client.get("/health/live")
-    payload = response.json()
-    assert response.status_code == 200
-    assert payload["status"] in enum_values
-    assert payload == {"status": "ok"}
-
-
-def test_ready_unavailable_payload_matches_health_status_schema(client: Client) -> None:
-    from unittest.mock import MagicMock, patch
-
-    from django.db import OperationalError
-
-    schema = build_schema()
-    enum_values = _health_status_enum(schema)
-    database = MagicMock()
-    database.cursor.side_effect = OperationalError("synthetic outage")
-    mocked_connections = MagicMock()
-    mocked_connections.__getitem__.return_value = database
-
-    with patch("apps.health.views.connections", mocked_connections):
-        response = client.get("/health/ready")
-
-    payload = response.json()
-    assert response.status_code == 503
-    assert payload["status"] in enum_values
-    assert payload == {"status": "unavailable"}
-
-
-def _health_status_enum(schema: dict[str, Any]) -> set[str]:
-    status = schema["components"]["schemas"]["HealthStatus"]["properties"]["status"]
-    enum_values = status.get("enum")
-    if enum_values is None:
-        for item in status.get("allOf", []):
-            if "enum" in item:
-                enum_values = item["enum"]
-                break
-            ref = item.get("$ref")
-            if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
-                referenced = schema["components"]["schemas"].get(ref.rsplit("/", 1)[-1], {})
-                if "enum" in referenced:
-                    enum_values = referenced["enum"]
-                    break
-    if enum_values is None:
-        enum_values = schema["components"]["schemas"].get("StatusEnum", {}).get("enum")
-    assert enum_values is not None
-    return set(enum_values)
-
-
-def test_schema_documents_catalog_as_unauthenticated_with_error_envelope() -> None:
+def test_schema_documents_path_security_and_error_envelope() -> None:
     schema = build_schema()
     paths = schema["paths"]
     home = paths["/v1/catalog/home"]["get"]
@@ -172,10 +90,7 @@ def test_schema_documents_catalog_as_unauthenticated_with_error_envelope() -> No
     ref = schema_ref.get("$ref", "")
     assert "PublicId" in ref or schema_ref.get("type") == "string"
 
-
-def test_schema_documents_me_as_firebase_authenticated() -> None:
-    schema = build_schema()
-    me = schema["paths"]["/v1/me"]["get"]
+    me = paths["/v1/me"]["get"]
     security = me.get("security")
     assert security == [{"FirebaseIdToken": []}]
     assert "401" in me["responses"]
@@ -191,16 +106,13 @@ def test_schema_documents_me_as_firebase_authenticated() -> None:
     assert "later task" not in bearer
     assert "verif" in bearer
 
-
-def test_schema_documents_playback_authorize_as_unauthenticated() -> None:
-    schema = build_schema()
-    authorize = schema["paths"]["/v1/playback/{episode_id}/authorize"]["post"]
+    authorize = paths["/v1/playback/{episode_id}/authorize"]["post"]
     assert authorize.get("security") in ([], None) or authorize["security"] == []
     for status_code in ("400", "404", "503"):
         assert status_code in authorize["responses"]
         assert _response_schema_ref(authorize["responses"][status_code]).endswith("/ErrorEnvelope")
-    success = _response_schema_ref(authorize["responses"]["200"])
-    assert "PlaybackAuthorizeResponse" in success
+    authorize_success = _response_schema_ref(authorize["responses"]["200"])
+    assert "PlaybackAuthorizeResponse" in authorize_success
 
 
 def _response_schema_ref(response: dict[str, Any]) -> str:

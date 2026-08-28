@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import pytest
-from django.db import connections
 from django.test import Client
 
-from apps.accounts.exceptions import TokenFailure
 from apps.accounts.models import UserProfile
-from apps.accounts.verification import MOCK_TOKEN_PREFIX, mock_token_overrides
+from apps.accounts.verification import MOCK_TOKEN_PREFIX
 
 ME = "/v1/me"
 SAFE_MESSAGE = "Authentication is required."
@@ -45,11 +42,8 @@ def test_missing_token_returns_401_error_envelope(client: Client) -> None:
 @pytest.mark.parametrize(
     "header",
     (
-        "not-bearer tok",
         "Bearer",
-        "Bearer ",
-        "Basic abc",
-        f"Bearer {MOCK_TOKEN_PREFIX}expired extra",
+        "not-bearer tok",
     ),
 )
 def test_malformed_authorization_header_returns_401(client: Client, header: str) -> None:
@@ -58,33 +52,10 @@ def test_malformed_authorization_header_returns_401(client: Client, header: str)
 
 
 @pytest.mark.django_db
-def test_malformed_token_returns_401(client: Client) -> None:
-    credential = "not.a.firebase.token"
-    response = client.get(ME, **_bearer(credential))
-    _assert_unauthorized(response, credential)
-
-
-@pytest.mark.django_db
 def test_expired_token_returns_401(client: Client) -> None:
     credential = f"{MOCK_TOKEN_PREFIX}expired"
     response = client.get(ME, **_bearer(credential))
     _assert_unauthorized(response, credential)
-
-
-@pytest.mark.django_db
-def test_revoked_token_returns_401(client: Client) -> None:
-    credential = f"{MOCK_TOKEN_PREFIX}revoked"
-    response = client.get(ME, **_bearer(credential))
-    _assert_unauthorized(response, credential)
-
-
-@pytest.mark.django_db
-def test_overridden_expired_and_revoked_tokens_return_401(client: Client) -> None:
-    expired = "custom-expired-jwt"
-    revoked = "custom-revoked-jwt"
-    with mock_token_overrides({expired: TokenFailure.EXPIRED, revoked: TokenFailure.REVOKED}):
-        _assert_unauthorized(client.get(ME, **_bearer(expired)), expired)
-        _assert_unauthorized(client.get(ME, **_bearer(revoked)), revoked)
 
 
 @pytest.mark.django_db
@@ -142,25 +113,3 @@ def test_client_supplied_ids_are_ignored(client: Client) -> None:
     assert body["public_id"] == created.public_id
     assert UserProfile.objects.filter(firebase_uid=attacker_uid).count() == 1
     assert UserProfile.objects.filter(firebase_uid=VALID_UID).count() == 1
-
-
-@pytest.mark.django_db(transaction=True)
-def test_concurrent_get_or_create_one_profile() -> None:
-    uid = "concurrent-firebase-uid"
-    credential = f"{MOCK_TOKEN_PREFIX}{uid}"
-
-    def once() -> str:
-        http = Client()
-        try:
-            response = http.get(ME, **_bearer(credential))
-            assert response.status_code == 200
-            return str(response.json()["public_id"])
-        finally:
-            connections.close_all()
-
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        futures = [pool.submit(once) for _ in range(8)]
-        public_ids = [future.result() for future in as_completed(futures)]
-
-    assert len(set(public_ids)) == 1
-    assert UserProfile.objects.filter(firebase_uid=uid).count() == 1

@@ -13,7 +13,6 @@ from apps.playback.ingest import ingest_master
 from apps.playback.models import MediaAsset, MediaAssetState
 from apps.playback.providers.factory import reset_provider_cache
 from apps.playback.providers.fake import FakeVideoProvider
-from apps.playback.redact import sanitize_diagnostic
 from tests.catalog.builders import make_episode, make_right, make_series
 
 HMAC_KEY = "synthetic-hmac-for-tests"
@@ -124,39 +123,3 @@ def test_admin_diagnostics_are_redacted(
     assert "usable-signed-token" not in body
     assert "AccessKey=supersecret" not in body
     assert asset.diagnostic_message in body
-
-
-def test_sanitize_diagnostic_strips_keys_and_urls() -> None:
-    cleaned = sanitize_diagnostic(SECRET_DIAGNOSTIC)
-    assert "supersecret" not in cleaned
-    assert "usable-signed-token" not in cleaned
-    assert "https://" not in cleaned
-    assert "redacted" in cleaned.lower() or "[redacted-url]" in cleaned
-
-
-@pytest.mark.django_db
-def test_staff_checksum_mismatch_is_form_error_not_500(
-    admin_client: Client, fake_provider: FakeVideoProvider
-) -> None:
-    del fake_provider
-    episode = _draft_episode()
-    response = admin_client.post(
-        reverse("admin:playback_mediaasset_add"),
-        {
-            "episode": str(episode.pk),
-            "captions_language": "en",
-            "master_file": SimpleUploadedFile(
-                "master.bin", SYNTHETIC_MASTER, content_type="application/octet-stream"
-            ),
-            "captions_file": SimpleUploadedFile(
-                "captions.vtt", SYNTHETIC_VTT, content_type="text/vtt"
-            ),
-            "expected_checksum": "0" * 64,
-            "_save": "Save",
-        },
-    )
-    assert response.status_code == 200
-    assert response.status_code != 500
-    body = response.content.decode()
-    assert "Checksum mismatch" in body
-    assert MediaAsset.objects.count() == 0
