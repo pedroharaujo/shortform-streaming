@@ -5,7 +5,7 @@
 # This file is NOT a D-020 (residency/retention), D-024 (legal-entity
 # country), or D-025 (registration details) approval.
 # These are NOT a real GCP project ID or billing account ID.
-# Do not tofu apply from this slice (P5-T01-A / #70). Apply is P5-T01-B / #71.
+# Copy to a gitignored staging.tfvars before apply (P5-T01-B / #71).
 
 project_id         = "example-only"
 region             = "changeme"

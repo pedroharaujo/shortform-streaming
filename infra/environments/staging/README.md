@@ -1,8 +1,13 @@
-# Staging OpenTofu composition (P5-T01-A / GitHub issue #70)
+# Staging OpenTofu composition (P5-T01)
 
-Reviewable, repeatable staging infrastructure definition. **Do not apply**
-this composition in this slice. Apply to an empty staging GCP project is
-**P5-T01-B / GitHub issue #71**.
+Reviewable, repeatable staging infrastructure definition. Apply to the empty
+staging GCP project is **P5-T01-B / GitHub issue #71**. Follow
+`docs/runbooks/staging-apply.md` (session project override, state-bucket
+bootstrap, two-phase apply). Do not apply to founder projects other than
+staging.
+
+Public activation stays off. `europe-west9` (or any `region` value supplied at
+apply time) is **not** a D-020 residency/retention approval.
 
 ## What this defines
 
@@ -31,9 +36,9 @@ this composition in this slice. Apply to an empty staging GCP project is
   (`iamcredentials`).
 - Public activation (`INGRESS_TRAFFIC_ALL`, `allUsers`, domain mapping).
 - A D-020 region/retention decision. `region` has no default.
-- Real project, billing, or state-bucket identifiers.
+- Real project, billing, or state-bucket identifiers in git.
 
-## How to review (credential-free; no apply)
+## How to review (credential-free)
 
 From the repository root, with OpenTofu >= 1.6.0:
 
@@ -45,15 +50,16 @@ tofu init -backend=false -input=false -lockfile=readonly
 tofu validate
 ```
 
-`tofu apply` and `tofu plan` against a live project belong to #71. This
-directory commits no state files, no `*.tfvars` (only `*.tfvars.example`),
-and no `backend.hcl` (only `backend.hcl.example`).
+Live `tofu plan` / `tofu apply` uses a gitignored `staging.tfvars` and
+`backend.hcl`. This directory commits no state files, no `*.tfvars` (only
+`*.tfvars.example`), and no `backend.hcl` (only `backend.hcl.example`).
 
-Remote state uses a partial `backend "gcs" {}`. GCS encrypts at rest;
-optional KMS for state is #71. The state bucket is not managed here.
+Remote state uses a partial `backend "gcs" {}`. GCS encrypts at rest.
+KMS/CMEK for state was **not** added. The state bucket is not managed here;
+bootstrap it with gcloud as in the runbook.
 
-## Apply follow-up (#71)
+## Apply
 
-P5-T01-B will copy the example tfvars/backend files locally, supply a real
-empty staging project, and apply. Public traffic stays off until a later
-activation task.
+Copy the example tfvars/backend files locally, supply the real empty staging
+project, and follow `docs/runbooks/staging-apply.md`. Public traffic stays off
+until a later activation task.

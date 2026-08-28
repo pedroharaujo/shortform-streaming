@@ -32,6 +32,7 @@
 
 - `runbooks/repository-controls.md` — required `main` ruleset, security settings, and P1-T01 evidence/recovery.
 - `runbooks/compatible-dependency-set.md` — Expo SDK 57 / Django 6.1 compatible versions and Dependabot ignore policy (P1-T05A).
+- `runbooks/staging-apply.md` — OpenTofu 1.11.14 install, session project override, state-bucket bootstrap, and staging apply (P5-T01-B).
 
 ## Future documentation locations
 
