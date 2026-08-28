@@ -1,8 +1,8 @@
 # ADR 0005: Bunny Stream Default HLS Delivery with GCP Cloud CDN Fallback
 
-- **Status:** Accepted default 2026-08-24; P2-T05 must prove Bunny Stream; first-license DRM (D-019) may still change the production provider
+- **Status:** Accepted default 2026-08-24; **P2-T05 passed on Android under D-026** (2026-08-26 Pixel emulator, isolated `/playback-spike`, per `docs/runbooks/playback-spike.md` and the COST_MODEL spike table); Bunny did **not** fail; GCP Cloud CDN fallback stays **unplugged**; D-014 was **not** reopened; first-license DRM (**D-019**) may still change the production provider. iOS native play is **not** claimed (deferred to the iOS ship pass under D-026).
 - **Date:** 2026-08-23
-- **Updated:** 2026-08-26
+- **Updated:** 2026-08-28
 
 ## Context
 
