@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from urllib.parse import urlparse
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -33,6 +34,7 @@ from apps.playback.serializers import (
 )
 
 _NOT_FOUND_MESSAGE = "Resource not found."
+_OPTIONAL_FIREBASE_AUTH: list[Any] = [{}, {"FirebaseIdToken": []}]
 
 ERROR_503 = OpenApiResponse(
     response={"$ref": "#/components/schemas/ErrorEnvelope"},
@@ -58,7 +60,7 @@ class PlaybackAuthorizeView(CatalogAnonymousView):
     authentication_classes = [OptionalFirebaseIdTokenAuthentication]
 
     @extend_schema(
-        auth=[{}, {"FirebaseIdToken": []}],
+        auth=_OPTIONAL_FIREBASE_AUTH,
         tags=["playback"],
         summary="Authorize episode playback",
         description=(
