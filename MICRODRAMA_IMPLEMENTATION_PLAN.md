@@ -841,14 +841,16 @@ Evidence (P2-T08 / #78): anonymous device-scoped progress without `UserProfile`;
 
 **Acceptance criteria:**
 
-- [ ] `/offers/{episode}` returns only currently legal/available methods with display metadata. MVP methods are existing entitlement, free policy, or rewarded-ad lock.
-- [ ] Invalid combinations are rejected in admin and server defaults work without Remote Config.
-- [ ] Published policy changes are auditable.
+- [x] `/offers/{episode}` returns only currently legal/available methods with display metadata. MVP methods are existing entitlement, free policy, or rewarded-ad lock.
+- [x] Invalid combinations are rejected in admin and server defaults work without Remote Config.
+- [x] Published policy changes are auditable.
 
 **Validation and integration tests:**
 
-- [ ] Decision-table tests cover free versus rewarded-ad lock and failure fallback. Coin and subscription offer types are not required.
-- [ ] Changing free count in staging updates the lock screen without an app release and cannot bypass server checks.
+- [x] Decision-table tests cover free versus rewarded-ad lock and failure fallback. Coin and subscription offer types are not required.
+- [x] Changing free count in staging updates the lock screen without an app release and cannot bypass server checks.
+
+Evidence (2026-08-28): P3-T01 / #84; AccessPolicy + `GET /v1/offers/{episode_id}`; D-006 defaults when no row; authorize ignores client free-window; anonymous locked offers omit rewarded-ad (D-005).
 
 #### P3-T07 — Implement rewarded-ad intent and verified reward grant
 
