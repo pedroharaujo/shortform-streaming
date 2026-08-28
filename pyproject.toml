@@ -9,6 +9,7 @@ dependencies = [
     "djangorestframework>=3.16,<3.19",
     "drf-spectacular>=0.28,<1",
     "firebase-admin>=6.8,<8",
+    "google-cloud-storage>=2.14,<4",
     "psycopg[binary]>=3.2,<3.4",
 ]
 
@@ -55,4 +56,8 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["firebase_admin", "firebase_admin.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["google.cloud", "google.cloud.storage", "google.cloud.storage.*"]
 ignore_missing_imports = true

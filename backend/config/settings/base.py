@@ -117,3 +117,13 @@ BUNNY_STREAM_CDN_HOSTNAME = os.environ.get("BUNNY_STREAM_CDN_HOSTNAME", "").stri
 BUNNY_STREAM_TOKEN_KEY = os.environ.get("BUNNY_STREAM_TOKEN_KEY", "").strip()
 PLAYBACK_TOKEN_TTL_SECONDS = 600
 FAKE_PLAYBACK_CDN_HOST = "video.example.test"
+
+# Staff signed PUT landing zone (P2-T06-F1). Empty disables minting.
+# Local settings default to "fake". Production rejects "fake".
+STAFF_UPLOAD_STORE = os.environ.get("STAFF_UPLOAD_STORE", "").strip().lower()
+STAFF_UPLOAD_GCS_BUCKET = os.environ.get("STAFF_UPLOAD_GCS_BUCKET", "").strip()
+_raw_staff_upload_ttl = os.environ.get("STAFF_UPLOAD_URL_TTL_SECONDS", "600").strip() or "600"
+try:
+    STAFF_UPLOAD_URL_TTL_SECONDS = int(_raw_staff_upload_ttl)
+except ValueError:
+    STAFF_UPLOAD_URL_TTL_SECONDS = 600

@@ -6,12 +6,21 @@ from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
-from django.http import HttpRequest, HttpResponseRedirect
+from django.http import Http404, HttpRequest, HttpResponseRedirect
 from django.http.response import HttpResponseBase
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
 
+from apps.catalog.models import Episode
 from apps.playback.exceptions import VideoProviderError
-from apps.playback.ingest import ingest_master, reconcile, takedown_asset
-from apps.playback.models import MediaAsset
+from apps.playback.ingest import (
+    begin_staff_upload,
+    complete_staff_upload,
+    ingest_master,
+    reconcile,
+    takedown_asset,
+)
+from apps.playback.models import SHA256_HEX, MediaAsset
 from apps.playback.redact import sanitize_diagnostic
 
 
@@ -77,6 +86,31 @@ class MediaAssetCreateForm(forms.ModelForm):  # type: ignore[type-arg]
         return self.ingested_asset
 
 
+class StaffSignedUploadForm(forms.Form):
+    episode = forms.ModelChoiceField(queryset=Episode.objects.all())
+    expected_checksum = forms.CharField(
+        max_length=64,
+        help_text="SHA-256 hex of the master that will be PUT to object storage.",
+    )
+    captions_language = forms.CharField(max_length=2, initial="en")
+
+    def clean_expected_checksum(self) -> str:
+        value = str(self.cleaned_data.get("expected_checksum") or "").strip().lower()
+        if not SHA256_HEX.fullmatch(value):
+            raise ValidationError("Expected checksum must be a SHA-256 hex digest.")
+        return value
+
+    def clean_captions_language(self) -> str:
+        return str(self.cleaned_data.get("captions_language") or "en").strip().lower() or "en"
+
+
+class StaffCompleteUploadForm(forms.Form):
+    captions_file = forms.FileField(
+        required=False,
+        help_text="Optional WebVTT sidecar. Required before the asset can become ready.",
+    )
+
+
 @admin.register(MediaAsset)
 class MediaAssetAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
@@ -113,6 +147,90 @@ class MediaAssetAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "updated_at",
     )
     ordering = ("-created_at",)
+    change_list_template = "admin/playback/mediaasset/change_list.html"
+    change_form_template = "admin/playback/mediaasset/change_form.html"
+
+    def get_urls(self) -> list[Any]:
+        info = self.opts.app_label, self.opts.model_name
+        custom = [
+            path(
+                "signed-upload/",
+                self.admin_site.admin_view(self.signed_upload_view),
+                name=f"{info[0]}_{info[1]}_signed_upload",
+            ),
+            path(
+                "<path:object_id>/complete-upload/",
+                self.admin_site.admin_view(self.complete_upload_view),
+                name=f"{info[0]}_{info[1]}_complete_upload",
+            ),
+        ]
+        return custom + super().get_urls()
+
+    def signed_upload_view(self, request: HttpRequest) -> HttpResponseBase:
+        form = StaffSignedUploadForm(request.POST or None)
+        signed_put_url: str | None = None
+        expires_at = None
+        asset: MediaAsset | None = None
+        if request.method == "POST" and form.is_valid():
+            try:
+                asset, signed_put_url, expires_at = begin_staff_upload(
+                    episode=form.cleaned_data["episode"],
+                    expected_checksum=form.cleaned_data["expected_checksum"],
+                    captions_language=form.cleaned_data.get("captions_language") or "en",
+                )
+            except ValidationError as error:
+                form.add_error(None, error)
+                signed_put_url = None
+                asset = None
+                expires_at = None
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "form": form,
+            "signed_put_url": signed_put_url,
+            "expires_at": expires_at,
+            "asset": asset,
+            "title": "Signed staff upload",
+        }
+        return TemplateResponse(
+            request,
+            "admin/playback/mediaasset/signed_upload.html",
+            context,
+        )
+
+    def complete_upload_view(self, request: HttpRequest, object_id: str) -> HttpResponseBase:
+        asset = self.get_object(request, object_id)
+        if asset is None:
+            raise Http404()
+        form = StaffCompleteUploadForm(request.POST or None, request.FILES or None)
+        if request.method == "POST" and form.is_valid():
+            captions = form.cleaned_data.get("captions_file")
+            captions_bytes = captions.read() if captions is not None else None
+            try:
+                complete_staff_upload(asset, captions_bytes=captions_bytes)
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
+                self.message_user(
+                    request,
+                    "Upload completed. Encoding started.",
+                    level=messages.SUCCESS,
+                )
+                return HttpResponseRedirect(
+                    reverse("admin:playback_mediaasset_change", args=[asset.pk])
+                )
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "form": form,
+            "original": asset,
+            "title": "Complete signed upload",
+        }
+        return TemplateResponse(
+            request,
+            "admin/playback/mediaasset/complete_upload.html",
+            context,
+        )
 
     @admin.display(description="Checksum")
     def checksum_short(self, obj: MediaAsset) -> str:

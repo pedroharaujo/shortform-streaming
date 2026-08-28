@@ -1,0 +1,10 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+{% if original.state == "pending_upload" %}
+<li>
+  <a href="{% url 'admin:playback_mediaasset_complete_upload' original.pk %}" class="historylink">Complete signed upload</a>
+</li>
+{% endif %}
+{{ block.super }}
+{% endblock %}
