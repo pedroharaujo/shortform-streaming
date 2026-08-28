@@ -91,6 +91,8 @@ override.tf.json
 # Editors and OS
 .idea/
 .vscode/
+.cursor/
+.codex/
 .DS_Store
 Thumbs.db
 *.swp

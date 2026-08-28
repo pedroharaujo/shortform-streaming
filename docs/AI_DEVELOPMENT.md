@@ -20,8 +20,8 @@ inside this application repository.
 After install, start a new session from the repository root so `AGENTS.md` and
 the plugin skills reload.
 
-Codex may keep `.codex/config.toml` for harness limits such as concurrent
-subagent threads. Do not add duplicate project-agent role definitions there.
+`.cursor/` and `.codex/` are local harness directories and are gitignored. Do
+not put project instructions there. Shared instructions live in `AGENTS.md`.
 
 ## Routing
 
@@ -59,7 +59,7 @@ and deployment, rollback, documentation, and sensitive-data checks are complete.
 
 Never merge automatically. Agent review is not a human GitHub approval.
 
-Cursor Bugbot guidance is in `.cursor/BUGBOT.md`. Bugbot is an additional
+Cursor Bugbot, when used, should follow `AGENTS.md`. It is an additional
 reviewer, never a replacement for required checks.
 
 ## Repository gates

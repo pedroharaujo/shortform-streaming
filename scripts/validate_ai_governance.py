@@ -17,19 +17,6 @@ OBSOLETE_PATHS = (
     "ai/roles/verifier.md",
     "ai/roles/validation-planner.md",
     "ai/workflows/development-loop.md",
-    ".codex/agents/orchestrator.toml",
-    ".codex/agents/planner.toml",
-    ".codex/agents/implementer.toml",
-    ".codex/agents/reviewer.toml",
-    ".codex/agents/verifier.toml",
-    ".codex/agents/validation-planner.toml",
-    ".cursor/agents/orchestrator.md",
-    ".cursor/agents/planner.md",
-    ".cursor/agents/implementer.md",
-    ".cursor/agents/reviewer.md",
-    ".cursor/agents/verifier.md",
-    ".cursor/agents/validation-planner.md",
-    ".cursor/rules/ai-native-workflow.mdc",
 )
 
 VENDORED_SUPERPOWERS = (
@@ -50,7 +37,6 @@ REQUIRED_DOCS = (
     "docs/README.md",
     "docs/product/MVP_PRODUCT_BRIEF.md",
     "docs/product/DECISION_REGISTER.md",
-    ".cursor/BUGBOT.md",
 )
 
 AGENTS_TOKENS = (
@@ -144,15 +130,10 @@ def validate_operating_docs() -> None:
     if "ai/workflows/development-loop.md" in contributing:
         raise AssertionError("CONTRIBUTING.md still references the removed workflow")
 
-    bugbot = read(".cursor/BUGBOT.md")
-    for token in (
-        "decision-register",
-        "purchases, coins, rewards",
-        "territory",
-        "OpenAPI",
-    ):
-        if token.casefold() not in bugbot.casefold():
-            raise AssertionError(f".cursor/BUGBOT.md is missing {token}")
+    gitignore = read(".gitignore")
+    for folder in (".cursor/", ".codex/"):
+        if folder not in gitignore:
+            raise AssertionError(f".gitignore must exclude {folder}")
 
     pr = read(".github/pull_request_template.md")
     for token in (
