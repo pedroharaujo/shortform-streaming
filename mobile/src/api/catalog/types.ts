@@ -20,7 +20,6 @@ export type CatalogSeriesDetail = components['schemas']['CatalogSeriesDetail'];
 export type CatalogSeason = components['schemas']['CatalogSeason'];
 export type CatalogEpisodeSummary = components['schemas']['CatalogEpisodeSummary'];
 export type CatalogEpisodeDetail = components['schemas']['CatalogEpisodeDetail'];
-export type ErrorEnvelope = components['schemas']['ErrorEnvelope'];
 
 export type CatalogRequestOutcome<T> =
   | { readonly outcome: 'ok'; readonly data: T }

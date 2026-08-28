@@ -44,3 +44,43 @@ export async function withTimeout<T>(
     clearTimeout(timeout);
   }
 }
+
+export type JsonRequestResult<T> =
+  | { readonly outcome: 'ok'; readonly data: T }
+  | {
+      readonly outcome: 'http';
+      readonly status: number;
+      readonly envelope: { readonly code: string; readonly message: string };
+    }
+  | { readonly outcome: 'unreachable'; readonly reason: string };
+
+export async function mapJsonRequest<T>(
+  timeoutMs: number,
+  fallbackMessage: string,
+  perform: (signal: AbortSignal) => Promise<{
+    data?: T;
+    error?: unknown;
+    response: Response;
+  }>,
+): Promise<JsonRequestResult<T>> {
+  try {
+    const { data, error, response } = await withTimeout(timeoutMs, perform);
+    if (!response.ok) {
+      return {
+        outcome: 'http',
+        status: response.status,
+        envelope: readEnvelope(error ?? data, fallbackMessage),
+      };
+    }
+    if (data === undefined) {
+      return {
+        outcome: 'http',
+        status: response.status,
+        envelope: { code: UNKNOWN_CODE, message: fallbackMessage },
+      };
+    }
+    return { outcome: 'ok', data };
+  } catch (caught: unknown) {
+    return { outcome: 'unreachable', reason: describeFailure(caught) };
+  }
+}

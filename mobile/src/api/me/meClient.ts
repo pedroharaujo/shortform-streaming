@@ -6,13 +6,7 @@
 import { createApiClient } from '@shortform/api-client';
 import type { paths } from '@shortform/api-client';
 
-import {
-  DEFAULT_TIMEOUT_MS,
-  UNKNOWN_CODE,
-  describeFailure,
-  readEnvelope,
-  withTimeout,
-} from '../http';
+import { DEFAULT_TIMEOUT_MS, mapJsonRequest } from '../http';
 import type { CurrentUserProfile, MeClient, MeRequestOutcome } from './types';
 
 const UNKNOWN_MESSAGE = 'Account request failed.';
@@ -43,42 +37,32 @@ export function createMeClient(options: MeClientOptions): MeClient {
         };
       }
 
-      try {
-        const { data, error, response } = await withTimeout(timeoutMs, (signal) =>
-          api.GET('/v1/me' satisfies keyof paths, {
-            headers: { Authorization: `Bearer ${bearer}` },
-            signal,
-          }),
-        );
-        const envelope = readEnvelope(error ?? data, UNKNOWN_MESSAGE);
-        if (response.status === 401) {
-          return {
-            outcome: 'unauthenticated',
-            httpStatus: 401,
-            code: envelope.code,
-            message: envelope.message,
-          };
-        }
-        if (!response.ok) {
-          return {
-            outcome: 'error',
-            httpStatus: response.status,
-            code: envelope.code,
-            message: envelope.message,
-          };
-        }
-        if (data === undefined) {
-          return {
-            outcome: 'error',
-            httpStatus: response.status,
-            code: UNKNOWN_CODE,
-            message: UNKNOWN_MESSAGE,
-          };
-        }
-        return { outcome: 'ok', data: data as CurrentUserProfile };
-      } catch (caught: unknown) {
-        return { outcome: 'unreachable', reason: describeFailure(caught) };
+      const result = await mapJsonRequest<CurrentUserProfile>(timeoutMs, UNKNOWN_MESSAGE, (signal) =>
+        api.GET('/v1/me' satisfies keyof paths, {
+          headers: { Authorization: `Bearer ${bearer}` },
+          signal,
+        }),
+      );
+      if (result.outcome === 'ok') {
+        return { outcome: 'ok', data: result.data };
       }
+      if (result.outcome === 'unreachable') {
+        return { outcome: 'unreachable', reason: result.reason };
+      }
+      if (result.status === 401) {
+        return {
+          outcome: 'unauthenticated',
+          httpStatus: 401,
+          code: result.envelope.code,
+          message: result.envelope.message,
+        };
+      }
+      return {
+        outcome: 'error',
+        httpStatus: result.status,
+        code: result.envelope.code,
+        message: result.envelope.message,
+      };
     },
   };
 }

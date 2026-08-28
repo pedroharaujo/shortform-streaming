@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CatalogClient } from '../../api/catalog/types';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
-import { useCatalogEpisode } from './useCatalogEpisode';
+import { useCatalogEpisode } from './useCatalog';
 
 export interface EpisodeSelectedScreenProps {
   readonly client: CatalogClient;

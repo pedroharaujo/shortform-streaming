@@ -1,7 +1,6 @@
 import { Platform } from 'react-native';
 
-import { createCatalogClient } from '../../api/catalog/catalogClient';
-import { resolveCatalogPlatform } from '../../api/catalog/catalogPlatform';
+import { createCatalogClient, resolveCatalogPlatform } from '../../api/catalog/catalogClient';
 import type { CatalogClient } from '../../api/catalog/types';
 import { getApiConfiguration } from '../../config/appConfiguration';
 

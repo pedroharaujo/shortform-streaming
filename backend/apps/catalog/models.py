@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 from django.contrib.postgres.fields import ArrayField
@@ -25,51 +26,30 @@ class PublicationStatus(models.TextChoices):
     PUBLISHED = "published", "Published"
 
 
-class Platform(models.TextChoices):
-    IOS = "ios", "iOS"
-    ANDROID = "android", "Android"
+def _dedupe_codes(values: list[str] | None, transform: Callable[[str], str]) -> list[str]:
+    if not values:
+        return []
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        code = transform(raw.strip())
+        if code in seen:
+            continue
+        seen.add(code)
+        normalized.append(code)
+    return normalized
 
 
 def normalize_territory_codes(values: list[str] | None) -> list[str]:
-    if not values:
-        return []
-    normalized: list[str] = []
-    seen: set[str] = set()
-    for raw in values:
-        code = raw.strip().upper()
-        if code in seen:
-            continue
-        seen.add(code)
-        normalized.append(code)
-    return normalized
+    return _dedupe_codes(values, str.upper)
 
 
 def normalize_language_codes(values: list[str] | None) -> list[str]:
-    if not values:
-        return []
-    normalized: list[str] = []
-    seen: set[str] = set()
-    for raw in values:
-        code = raw.strip().lower()
-        if code in seen:
-            continue
-        seen.add(code)
-        normalized.append(code)
-    return normalized
+    return _dedupe_codes(values, str.lower)
 
 
 def normalize_platforms(values: list[str] | None) -> list[str]:
-    if not values:
-        return []
-    normalized: list[str] = []
-    seen: set[str] = set()
-    for raw in values:
-        code = raw.strip().lower()
-        if code in seen:
-            continue
-        seen.add(code)
-        normalized.append(code)
-    return normalized
+    return _dedupe_codes(values, str.lower)
 
 
 def _validate_territory_codes(values: list[str], field_name: str) -> None:

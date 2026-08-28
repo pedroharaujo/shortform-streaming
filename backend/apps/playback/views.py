@@ -4,15 +4,18 @@ from urllib.parse import urlparse
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.exceptions import NotFound
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from apps.catalog.eligibility import episode_is_eligible
 from apps.catalog.models import Episode
 from apps.catalog.request_context import parse_catalog_context
-from apps.catalog.views import CATALOG_CONTEXT_PARAMETERS, ERROR_400, ERROR_404
+from apps.catalog.views import (
+    CATALOG_CONTEXT_PARAMETERS,
+    ERROR_400,
+    ERROR_404,
+    CatalogAnonymousView,
+)
 from apps.playback.exceptions import (
     PlaybackUnavailable,
     VideoAssetNotFoundError,
@@ -44,12 +47,7 @@ EPISODE_ID_PARAMETER = OpenApiParameter(
 )
 
 
-class PlaybackAnonymousView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
-
-
-class PlaybackAuthorizeView(PlaybackAnonymousView):
+class PlaybackAuthorizeView(CatalogAnonymousView):
     @extend_schema(
         auth=[],
         tags=["playback"],

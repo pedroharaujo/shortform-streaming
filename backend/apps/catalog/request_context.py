@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-import re
-
 from rest_framework.exceptions import APIException
 from rest_framework.request import Request
 
 from apps.catalog.eligibility import CatalogRequestContext
-from apps.catalog.models import ALLOWED_PLATFORMS
+from apps.catalog.models import ALLOWED_PLATFORMS, ISO_639_1, ISO_3166_1_ALPHA_2
 from config.error_envelope import FieldError
 
 TERRITORY_HEADER = "X-Territory"
 PLATFORM_HEADER = "X-Platform"
 LANGUAGE_HEADER = "X-Language"
-
-_ISO_3166_1_ALPHA_2 = re.compile(r"^[A-Za-z]{2}$")
-_ISO_639_1 = re.compile(r"^[A-Za-z]{2}$")
 
 _CONTEXT_MESSAGE = (
     "X-Territory, X-Platform, and X-Language are required explicit catalog context "
@@ -48,7 +43,7 @@ def parse_catalog_context(request: Request) -> CatalogRequestContext:
     if territory is None:
         errors.append(_missing(TERRITORY_HEADER))
         territory_value = ""
-    elif not _ISO_3166_1_ALPHA_2.fullmatch(territory):
+    elif not ISO_3166_1_ALPHA_2.fullmatch(territory):
         errors.append(
             {
                 "field": TERRITORY_HEADER,
@@ -78,7 +73,7 @@ def parse_catalog_context(request: Request) -> CatalogRequestContext:
     if language is None:
         errors.append(_missing(LANGUAGE_HEADER))
         language_value = ""
-    elif not _ISO_639_1.fullmatch(language):
+    elif not ISO_639_1.fullmatch(language):
         errors.append(
             {
                 "field": LANGUAGE_HEADER,

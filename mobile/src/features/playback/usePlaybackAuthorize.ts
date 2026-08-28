@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
 import type { PlaybackAuthorizeResponse, PlaybackClient } from '../../api/playback/types';
+import { useCatalogQuery } from '../catalog/useCatalog';
 
 export type PlaybackAuthorizeState =
   | { readonly phase: 'loading' }
@@ -12,51 +13,34 @@ export interface PlaybackAuthorizeQuery {
   readonly refresh: () => void;
 }
 
+const EMPTY_EPISODE_MESSAGE = 'Episode id is required for the playback spike.';
+
 export function usePlaybackAuthorize(
   client: PlaybackClient,
   episodeId: string,
 ): PlaybackAuthorizeQuery {
-  const [state, setState] = useState<PlaybackAuthorizeState>({ phase: 'loading' });
-  const [attempt, setAttempt] = useState(0);
-
-  const refresh = useCallback(() => {
-    setState({ phase: 'loading' });
-    setAttempt((current) => current + 1);
-  }, []);
-
-  useEffect(() => {
+  const load = useCallback(async (): Promise<PlaybackAuthorizeState> => {
     if (episodeId === '') {
-      return;
+      return { phase: 'error', message: EMPTY_EPISODE_MESSAGE };
     }
-    let active = true;
-    void client.authorize(episodeId).then((result) => {
-      if (!active) {
-        return;
-      }
-      if (result.outcome === 'ok') {
-        const authorized: PlaybackAuthorizeResponse = result.data;
-        setState({
-          phase: 'loaded',
-          playbackUrl: authorized.playback_url,
-          expiresAt: authorized.expires_at,
-        });
-        return;
-      }
-      if (result.outcome === 'unreachable') {
-        setState({ phase: 'error', message: result.reason });
-        return;
-      }
-      setState({ phase: 'error', message: result.message });
-    });
-    return () => {
-      active = false;
-    };
-  }, [client, episodeId, attempt]);
+    const result = await client.authorize(episodeId);
+    if (result.outcome === 'ok') {
+      const authorized: PlaybackAuthorizeResponse = result.data;
+      return {
+        phase: 'loaded',
+        playbackUrl: authorized.playback_url,
+        expiresAt: authorized.expires_at,
+      };
+    }
+    if (result.outcome === 'unreachable') {
+      return { phase: 'error', message: result.reason };
+    }
+    return { phase: 'error', message: result.message };
+  }, [client, episodeId]);
 
+  const { state, refresh } = useCatalogQuery(load);
   const resolvedState: PlaybackAuthorizeState =
-    episodeId === ''
-      ? { phase: 'error', message: 'Episode id is required for the playback spike.' }
-      : state;
+    episodeId === '' ? { phase: 'error', message: EMPTY_EPISODE_MESSAGE } : state;
 
   return { state: resolvedState, refresh };
 }

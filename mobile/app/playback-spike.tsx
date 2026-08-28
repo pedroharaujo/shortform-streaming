@@ -3,7 +3,7 @@ import type { JSX } from 'react';
 import { useMemo } from 'react';
 import { Platform } from 'react-native';
 
-import { resolveCatalogPlatform } from '../src/api/catalog/catalogPlatform';
+import { resolveCatalogPlatform } from '../src/api/catalog/catalogClient';
 import { createPlaybackClient } from '../src/api/playback/playbackClient';
 import { getApiConfiguration } from '../src/config/appConfiguration';
 import { readRouteId } from '../src/features/catalog/readRouteId';
