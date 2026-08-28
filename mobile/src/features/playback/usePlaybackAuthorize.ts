@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
 
-import type { PlaybackAuthorizeResponse, PlaybackClient } from '../../api/playback/types';
+import type { PlaybackClient } from '../../api/playback/types';
 import { useCatalogQuery } from '../catalog/useCatalog';
 
 export type PlaybackAuthorizeState =
   | { readonly phase: 'loading' }
   | { readonly phase: 'error'; readonly message: string }
+  | { readonly phase: 'locked'; readonly reasons: readonly string[] }
   | { readonly phase: 'loaded'; readonly playbackUrl: string; readonly expiresAt: string };
 
 export interface PlaybackAuthorizeQuery {
@@ -14,6 +15,7 @@ export interface PlaybackAuthorizeQuery {
 }
 
 const EMPTY_EPISODE_MESSAGE = 'Episode id is required for the playback spike.';
+const MISSING_URL_MESSAGE = 'Playback authorization did not return a URL.';
 
 export function usePlaybackAuthorize(
   client: PlaybackClient,
@@ -25,12 +27,17 @@ export function usePlaybackAuthorize(
     }
     const result = await client.authorize(episodeId);
     if (result.outcome === 'ok') {
-      const authorized: PlaybackAuthorizeResponse = result.data;
+      if (result.data.playback_url === '') {
+        return { phase: 'error', message: MISSING_URL_MESSAGE };
+      }
       return {
         phase: 'loaded',
-        playbackUrl: authorized.playback_url,
-        expiresAt: authorized.expires_at,
+        playbackUrl: result.data.playback_url,
+        expiresAt: result.data.expires_at,
       };
+    }
+    if (result.outcome === 'locked') {
+      return { phase: 'locked', reasons: result.lockReasons };
     }
     if (result.outcome === 'unreachable') {
       return { phase: 'error', message: result.reason };

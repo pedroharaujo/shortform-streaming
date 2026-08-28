@@ -94,23 +94,24 @@ BEARER_SCHEME: dict[str, object] = {
     "description": (
         "Firebase Authentication ID token presented as an HTTP Bearer credential. "
         "Django verifies the token and maps the UID to one local profile. "
-        "Health probes, anonymous catalog reads, and anonymous playback authorize "
-        "do not use this scheme. "
+        "Health probes and anonymous catalog reads do not use this scheme. "
+        "POST /v1/playback/{episode_id}/authorize accepts this scheme optionally: "
+        "a missing token is anonymous; a present invalid token is 401. "
         "Client-supplied user or profile identifiers are ignored."
     ),
 }
 
 HEALTH_PATHS = ("/health/live", "/health/ready")
-# Anonymous catalog (P2-T03) and playback authorize (P2-T05, free spike).
-# Keep these unauthenticated even if a later task sets a global Firebase
-# security requirement.
+# Anonymous catalog (P2-T03). Keep these unauthenticated even if a later task
+# sets a global Firebase security requirement. Playback authorize is optional
+# Firebase (P2-T07) and is not forced empty.
 UNAUTHENTICATED_PATH_PREFIXES = (
     "/health/",
     "/v1/catalog/",
     "/v1/series/",
     "/v1/episodes/",
-    "/v1/playback/",
 )
+OPTIONAL_FIREBASE_PATH_PREFIXES = ("/v1/playback/",)
 
 
 def inject_shared_components(
@@ -133,14 +134,20 @@ def inject_shared_components(
         for path, path_item in paths.items():
             if not isinstance(path, str) or not isinstance(path_item, dict):
                 continue
-            if not any(
+            if any(
                 path == prefix[:-1] or path.startswith(prefix)
                 for prefix in UNAUTHENTICATED_PATH_PREFIXES
             ):
-                continue
-            for operation in path_item.values():
-                if isinstance(operation, dict) and "responses" in operation:
-                    operation["security"] = []
+                for operation in path_item.values():
+                    if isinstance(operation, dict) and "responses" in operation:
+                        operation["security"] = []
+            elif any(
+                path == prefix[:-1] or path.startswith(prefix)
+                for prefix in OPTIONAL_FIREBASE_PATH_PREFIXES
+            ):
+                for operation in path_item.values():
+                    if isinstance(operation, dict) and "responses" in operation:
+                        operation["security"] = [{}, {"FirebaseIdToken": []}]
     return result
 
 
@@ -150,12 +157,15 @@ SPECTACULAR_SETTINGS: dict[str, object] = {
         "HTTP API for the Shortform Streaming MVP. This document is generated from Django; "
         "do not edit docs/api/openapi.yaml by hand. Shared conventions (error envelope, "
         "cursor pagination, opaque public IDs, and Firebase ID-token bearer auth) are "
-        "documented as components. Health probes, anonymous catalog reads, and anonymous "
-        "playback authorize are unauthenticated. Catalog and playback operations require "
-        "explicit X-Territory, X-Platform, and X-Language headers; those values are never "
-        "inferred from Accept-Language. GET /v1/me requires FirebaseIdToken; missing or "
-        "invalid tokens return 401 ErrorEnvelope. firebase_uid is never returned. "
-        "Django never serves video bytes."
+        "documented as components. Health probes and anonymous catalog reads are "
+        "unauthenticated. POST /v1/playback/{episode_id}/authorize accepts an optional "
+        "Firebase ID token: a missing token is anonymous, and a present invalid token "
+        "is 401 ErrorEnvelope. Catalog-eligible locked episodes return HTTP 200 with "
+        "decision locked and lock_reasons, never a playback URL. Catalog and playback "
+        "operations require explicit X-Territory, X-Platform, and X-Language headers; "
+        "those values are never inferred from Accept-Language. GET /v1/me requires "
+        "FirebaseIdToken; missing or invalid tokens return 401 ErrorEnvelope. "
+        "firebase_uid is never returned. Django never serves video bytes."
     ),
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,

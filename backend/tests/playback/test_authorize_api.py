@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 from typing import Any
 from unittest.mock import patch
 from urllib.parse import urlparse
@@ -9,7 +12,10 @@ import pytest
 from django.test import Client
 
 from apps.accounts.models import UserProfile
+from apps.accounts.profiles import get_or_create_profile
+from apps.accounts.verification import MOCK_TOKEN_PREFIX
 from apps.catalog.models import PublicationStatus
+from apps.entitlements.models import EpisodeEntitlement
 from apps.playback.models import MediaAssetState
 from apps.playback.providers.factory import reset_provider_cache
 from apps.playback.providers.fake import FakeVideoProvider
@@ -18,11 +24,17 @@ from tests.catalog.builders import (
     make_episode,
     make_published_title,
     make_right,
+    make_season,
     make_series,
 )
+from tests.entitlements.builders import grant_staff_entitlement
 
 AUTHORIZE = "/v1/playback/{episode_id}/authorize"
 HMAC_KEY = "synthetic-hmac-for-tests"
+VALID_UID = "firebase-user-1"
+OTHER_UID = "firebase-user-2"
+VALID_CREDENTIAL = f"{MOCK_TOKEN_PREFIX}{VALID_UID}"
+OTHER_CREDENTIAL = f"{MOCK_TOKEN_PREFIX}{OTHER_UID}"
 
 
 def _seed_ready(provider: FakeVideoProvider, episode: Any) -> str:
@@ -36,15 +48,42 @@ def _headers(
     platform: str = "ios",
     language: str = "en",
     request_id: str | None = None,
+    authorization: str | None = None,
 ) -> dict[str, Any]:
-    headers = {
+    headers: dict[str, Any] = {
         "HTTP_X_TERRITORY": territory,
         "HTTP_X_PLATFORM": platform,
         "HTTP_X_LANGUAGE": language,
     }
     if request_id is not None:
         headers["HTTP_X_REQUEST_ID"] = request_id
+    if authorization is not None:
+        headers["HTTP_AUTHORIZATION"] = authorization
     return headers
+
+
+def _bearer(credential: str) -> str:
+    return f"Bearer {credential}"
+
+
+def _published_episode(
+    *,
+    order: int = 1,
+    season_number: int = 1,
+    title: str = "Harbor Lights",
+    ends_at: Any = None,
+) -> tuple[Any, Any]:
+    series, first = make_published_title(title=title, territory="FR", ends_at=ends_at)
+    if season_number == 1 and order == 1:
+        return series, first
+    season = make_season(series, number=season_number)
+    episode = make_episode(
+        series,
+        season=season,
+        order=order,
+        publication_status=PublicationStatus.PUBLISHED,
+    )
+    return series, episode
 
 
 @pytest.fixture
@@ -65,6 +104,36 @@ def fake_provider() -> Iterator[FakeVideoProvider]:
     reset_provider_cache()
 
 
+def _assert_granted(payload: dict[str, Any], fake_provider: FakeVideoProvider) -> None:
+    assert set(payload.keys()) == {"decision", "playback_url", "expires_at"}
+    assert payload["decision"] == "granted"
+    playback_url = payload["playback_url"]
+    parsed = urlparse(playback_url)
+    assert parsed.scheme == "https"
+    assert parsed.path.endswith(".m3u8")
+    assert parsed.hostname == "video.example.test"
+    assert "lock_reasons" not in payload
+    assert fake_provider.verify_playback_request(
+        playback_url,
+        now=DEFAULT_NOW,
+        request_host="video.example.test",
+        referrer="https://video.example.test/app",
+    )
+
+
+def _assert_locked(payload: dict[str, Any], reason: str) -> None:
+    assert payload["decision"] == "locked"
+    assert payload["lock_reasons"] == [reason]
+    assert "playback_url" not in payload
+    assert "expires_at" not in payload
+
+
+def _assert_ineligible_404(response: Any) -> None:
+    assert response.status_code == 404
+    assert response.status_code != 403
+    assert "playback_url" not in response.json()
+
+
 @pytest.mark.django_db
 def test_missing_headers_return_400_error_envelope(client: Client) -> None:
     response = client.post(AUTHORIZE.format(episode_id="ep_missing"))
@@ -77,7 +146,149 @@ def test_missing_headers_return_400_error_envelope(client: Client) -> None:
 
 
 @pytest.mark.django_db
-def test_mapped_ineligible_episode_is_404(
+@pytest.mark.parametrize("order", (1, 5))
+def test_anonymous_free_window_grants(
+    client: Client,
+    freeze_catalog_clock: None,
+    fake_provider: FakeVideoProvider,
+    order: int,
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=order, title=f"Free {order}")
+    _seed_ready(fake_provider, episode)
+    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert response.status_code == 200
+    _assert_granted(response.json(), fake_provider)
+
+
+@pytest.mark.django_db
+def test_anonymous_order_six_is_locked_login_required(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="Past Window")
+    _seed_ready(fake_provider, episode)
+    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert response.status_code == 200
+    _assert_locked(response.json(), "login_required")
+    assert UserProfile.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_season_two_order_one_is_free_for_anonymous(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=1, season_number=2, title="Season Two")
+    _seed_ready(fake_provider, episode)
+    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert response.status_code == 200
+    _assert_granted(response.json(), fake_provider)
+
+
+@pytest.mark.django_db
+def test_staff_entitlement_grants_order_six(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="Entitled")
+    _seed_ready(fake_provider, episode)
+    profile = get_or_create_profile(VALID_UID)
+    grant_staff_entitlement(profile, episode)
+    response = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    assert response.status_code == 200
+    _assert_granted(response.json(), fake_provider)
+
+
+@pytest.mark.django_db
+def test_other_users_entitlement_does_not_grant(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="Other Entitled")
+    _seed_ready(fake_provider, episode)
+    other = get_or_create_profile(OTHER_UID)
+    grant_staff_entitlement(other, episode)
+    response = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    assert response.status_code == 200
+    _assert_locked(response.json(), "entitlement_required")
+    assert UserProfile.objects.filter(firebase_uid=VALID_UID).count() == 1
+
+
+@pytest.mark.django_db
+def test_authenticated_without_entitlement_past_window_is_locked(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="Auth Locked")
+    _seed_ready(fake_provider, episode)
+    response = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    assert response.status_code == 200
+    _assert_locked(response.json(), "entitlement_required")
+
+
+@pytest.mark.django_db
+def test_missing_bearer_past_window_does_not_create_profile(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="Anon Locked")
+    _seed_ready(fake_provider, episode)
+    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert response.status_code == 200
+    _assert_locked(response.json(), "login_required")
+    assert UserProfile.objects.count() == 0
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("credential", ("not-a-token", f"{MOCK_TOKEN_PREFIX}expired"))
+def test_invalid_or_expired_bearer_is_401(
+    client: Client,
+    freeze_catalog_clock: None,
+    fake_provider: FakeVideoProvider,
+    credential: str,
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="Invalid Token")
+    _seed_ready(fake_provider, episode)
+    response = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(credential)),
+    )
+    assert response.status_code == 401
+    body = response.json()
+    assert body["code"] == "authentication_required"
+    assert "playback_url" not in body
+    assert UserProfile.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_valid_token_on_free_episode_may_create_profile(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=1, title="Free Auth")
+    _seed_ready(fake_provider, episode)
+    response = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    assert response.status_code == 200
+    _assert_granted(response.json(), fake_provider)
+    assert UserProfile.objects.filter(firebase_uid=VALID_UID).count() == 1
+
+
+@pytest.mark.django_db
+def test_wrong_territory_and_unpublished_are_404_never_403(
     client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
 ) -> None:
     del freeze_catalog_clock
@@ -87,81 +298,81 @@ def test_mapped_ineligible_episode_is_404(
         AUTHORIZE.format(episode_id=episode.public_id),
         **_headers(territory="DE"),
     )
-    assert wrong_territory.status_code == 404
-    assert wrong_territory.status_code != 403
+    _assert_ineligible_404(wrong_territory)
 
-    taken_down = make_series(title="Taken Down")
-    make_right(taken_down, territories=["FR"], takedown=True)
-    hidden = make_episode(taken_down, publication_status=PublicationStatus.DRAFT)
-    type(taken_down).objects.filter(pk=taken_down.pk).update(
-        publication_status=PublicationStatus.PUBLISHED
-    )
-    type(hidden).objects.filter(pk=hidden.pk).update(publication_status=PublicationStatus.PUBLISHED)
-    hidden_asset = fake_provider.seed_ready_asset()
-    del hidden_asset
-    response = client.post(AUTHORIZE.format(episode_id=hidden.public_id), **_headers())
-    assert response.status_code == 404
+    unpublished = make_series(title="Draft Series")
+    make_right(unpublished, territories=["FR"])
+    draft = make_episode(unpublished, publication_status=PublicationStatus.DRAFT)
+    unpublished_response = client.post(AUTHORIZE.format(episode_id=draft.public_id), **_headers())
+    _assert_ineligible_404(unpublished_response)
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(
-    "authorization",
-    (None, "Bearer not-a-token", "Bearer mock.firebase-user-1"),
-)
-def test_authorize_stays_anonymous_with_or_without_bearer(
-    client: Client,
-    freeze_catalog_clock: None,
-    fake_provider: FakeVideoProvider,
-    authorization: str | None,
+def test_entitled_catalog_ineligible_is_404_never_granted(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
 ) -> None:
+    """Staff entitlement must not bypass territory, takedown, or exclusive rights end."""
     del freeze_catalog_clock
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
-    _seed_ready(fake_provider, episode)
-    headers = _headers()
-    if authorization is not None:
-        headers["HTTP_AUTHORIZATION"] = authorization
-    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **headers)
-    assert response.status_code == 200
-    assert response.status_code != 401
-    payload = response.json()
-    assert "playback_url" in payload
-    assert UserProfile.objects.count() == 0
+    auth = _headers(authorization=_bearer(VALID_CREDENTIAL))
+
+    _fr_series, wrong_territory_episode = _published_episode(
+        order=6, title="Entitled Wrong Territory"
+    )
+    _seed_ready(fake_provider, wrong_territory_episode)
+    profile = get_or_create_profile(VALID_UID)
+    grant_staff_entitlement(profile, wrong_territory_episode)
+    wrong_territory = client.post(
+        AUTHORIZE.format(episode_id=wrong_territory_episode.public_id),
+        **_headers(territory="DE", authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    _assert_ineligible_404(wrong_territory)
+
+    taken_series, taken_episode = _published_episode(order=6, title="Entitled Takedown")
+    _seed_ready(fake_provider, taken_episode)
+    grant_staff_entitlement(profile, taken_episode)
+    assert taken_episode.media_assets.filter(state=MediaAssetState.READY).exists()
+    right = taken_series.rights.get()
+    right.takedown = True
+    right.save(update_fields=["takedown"])
+    taken_down = client.post(AUTHORIZE.format(episode_id=taken_episode.public_id), **auth)
+    _assert_ineligible_404(taken_down)
+
+    _expired_series, expired_episode = _published_episode(
+        order=6, title="Entitled Expired Right", ends_at=DEFAULT_NOW
+    )
+    _seed_ready(fake_provider, expired_episode)
+    grant_staff_entitlement(profile, expired_episode)
+    expired = client.post(AUTHORIZE.format(episode_id=expired_episode.public_id), **auth)
+    _assert_ineligible_404(expired)
 
 
 @pytest.mark.django_db
-def test_success_returns_opaque_https_m3u8_not_on_django_origin(
+def test_rights_end_exclusive_is_404_at_boundary(
     client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
 ) -> None:
     del freeze_catalog_clock
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
-    _seed_ready(fake_provider, episode)
-    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
-    assert response.status_code == 200
-    payload = response.json()
-    assert set(payload.keys()) == {"playback_url", "expires_at"}
-    playback_url = payload["playback_url"]
-    parsed = urlparse(playback_url)
-    assert parsed.scheme == "https"
-    assert parsed.path.endswith(".m3u8")
-    assert parsed.hostname == "video.example.test"
-    assert parsed.hostname not in {"testserver", "localhost", "127.0.0.1"}
-    assert "iframe" not in playback_url
-    assert "mediadelivery" not in playback_url
-    assert "embed" not in playback_url
-    expires_at = payload["expires_at"]
-    assert expires_at
-    assert "library" not in payload
-    assert "guid" not in payload
-    assert fake_provider.verify_playback_request(
-        playback_url,
-        now=DEFAULT_NOW,
-        request_host="video.example.test",
-        referrer="https://video.example.test/app",
+    _expired, expired_episode = make_published_title(
+        title="Expired Right", territory="FR", ends_at=DEFAULT_NOW
     )
+    _seed_ready(fake_provider, expired_episode)
+    expired = client.post(AUTHORIZE.format(episode_id=expired_episode.public_id), **_headers())
+    assert expired.status_code == 404
+    assert expired.status_code != 403
+    assert "playback_url" not in expired.json()
+
+    _open, open_episode = make_published_title(
+        title="Open Right",
+        territory="FR",
+        ends_at=DEFAULT_NOW + timedelta(seconds=1),
+    )
+    _seed_ready(fake_provider, open_episode)
+    granted = client.post(AUTHORIZE.format(episode_id=open_episode.public_id), **_headers())
+    assert granted.status_code == 200
+    _assert_granted(granted.json(), fake_provider)
 
 
 @pytest.mark.django_db
-def test_disabled_provider_returns_503_and_never_mints(
+def test_disabled_provider_returns_503_on_grant_candidate(
     client: Client, freeze_catalog_clock: None
 ) -> None:
     del freeze_catalog_clock
@@ -172,6 +383,19 @@ def test_disabled_provider_returns_503_and_never_mints(
     body = response.json()
     assert body["code"] == "playback_unavailable"
     assert "playback_url" not in body
+
+
+@pytest.mark.django_db
+def test_locked_does_not_mint_when_provider_is_none(
+    client: Client, freeze_catalog_clock: None
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="Locked No Provider")
+    with patch("apps.playback.views.get_video_provider", return_value=None) as provider:
+        response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert response.status_code == 200
+    _assert_locked(response.json(), "login_required")
+    provider.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -195,3 +419,111 @@ def test_non_ready_and_removed_assets_are_404(
     removed = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
     assert removed.status_code == 404
     assert removed.status_code != 403
+
+
+@pytest.mark.django_db
+def test_grant_then_rights_removal_is_404(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    _seed_ready(fake_provider, episode)
+    granted = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert granted.status_code == 200
+    _assert_granted(granted.json(), fake_provider)
+
+    right = series.rights.get()
+    right.takedown = True
+    right.save(update_fields=["takedown"])
+    after = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert after.status_code == 404
+    assert "playback_url" not in after.json()
+
+
+@pytest.mark.django_db
+def test_free_window_is_order_not_time(client: Client, fake_provider: FakeVideoProvider) -> None:
+    _series, episode = _published_episode(order=6, title="Clock Order")
+    _seed_ready(fake_provider, episode)
+    future = DEFAULT_NOW + timedelta(days=365)
+    with (
+        patch("apps.catalog.eligibility.timezone.now", return_value=future),
+        patch("apps.playback.providers.fake.timezone.now", return_value=future),
+    ):
+        response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert response.status_code == 200
+    _assert_locked(response.json(), "login_required")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_anonymous_lock_has_no_url(
+    freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="Concurrent Lock")
+    _seed_ready(fake_provider, episode)
+    episode_id = episode.public_id
+
+    def authorize() -> Any:
+        thread_client = Client()
+        return thread_client.post(AUTHORIZE.format(episode_id=episode_id), **_headers())
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = [future.result() for future in [pool.submit(authorize), pool.submit(authorize)]]
+    for response in responses:
+        assert response.status_code == 200
+        _assert_locked(response.json(), "login_required")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_entitled_grants(
+    freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="Concurrent Grant")
+    _seed_ready(fake_provider, episode)
+    profile = get_or_create_profile(VALID_UID)
+    grant_staff_entitlement(profile, episode)
+    episode_id = episode.public_id
+
+    def authorize() -> Any:
+        thread_client = Client()
+        return thread_client.post(
+            AUTHORIZE.format(episode_id=episode_id),
+            **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = [future.result() for future in [pool.submit(authorize), pool.submit(authorize)]]
+    for response in responses:
+        assert response.status_code == 200
+        _assert_granted(response.json(), fake_provider)
+
+
+@pytest.mark.django_db
+def test_client_cannot_create_entitlement_via_authorize(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="No Client Grant")
+    _seed_ready(fake_provider, episode)
+    before = EpisodeEntitlement.objects.count()
+    response = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        data=json.dumps(
+            {
+                "user_id": "usr_forged",
+                "episode_id": episode.public_id,
+                "source": "staff",
+            }
+        ),
+        content_type="application/json",
+        **_headers(),
+    )
+    assert response.status_code == 200
+    _assert_locked(response.json(), "login_required")
+    assert EpisodeEntitlement.objects.count() == before
+
+    missing_collection = client.post("/v1/entitlements", **_headers())
+    assert missing_collection.status_code == 404
+    missing_me = client.get("/v1/me/entitlements")
+    assert missing_me.status_code == 404

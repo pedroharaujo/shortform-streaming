@@ -32,9 +32,11 @@ export function PlaybackSpikeScreen({ client, episodeId }: PlaybackSpikeScreenPr
         </View>
       ) : null}
 
-      {state.phase === 'error' ? (
+      {state.phase === 'error' || state.phase === 'locked' ? (
         <View style={styles.centered} testID="playback-spike-error">
-          <Text style={styles.body}>{state.message}</Text>
+          <Text style={styles.body}>
+            {state.phase === 'locked' ? state.reasons.join(', ') : state.message}
+          </Text>
           <Pressable
             accessibilityLabel="Try again"
             accessibilityRole="button"

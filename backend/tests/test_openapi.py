@@ -107,12 +107,26 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     assert "verif" in bearer
 
     authorize = paths["/v1/playback/{episode_id}/authorize"]["post"]
-    assert authorize.get("security") in ([], None) or authorize["security"] == []
-    for status_code in ("400", "404", "503"):
+    security = authorize.get("security")
+    assert security == [{}, {"FirebaseIdToken": []}]
+    for status_code in ("400", "401", "404", "503"):
         assert status_code in authorize["responses"]
         assert _response_schema_ref(authorize["responses"][status_code]).endswith("/ErrorEnvelope")
-    authorize_success = _response_schema_ref(authorize["responses"]["200"])
-    assert "PlaybackAuthorizeResponse" in authorize_success
+    authorize_200 = authorize["responses"]["200"]["content"]["application/json"]["schema"]
+    resolved_200 = _resolve_schema(authorize_200, schema["components"]["schemas"])
+    one_of = resolved_200.get("oneOf") or authorize_200.get("oneOf")
+    assert isinstance(one_of, list) and len(one_of) >= 2
+    discriminator = resolved_200.get("discriminator") or authorize_200.get("discriminator")
+    assert discriminator["propertyName"] == "decision"
+    locked = schema["components"]["schemas"]["PlaybackAuthorizeLocked"]
+    locked_properties = locked.get("properties", {})
+    assert "playback_url" not in locked_properties
+    assert "expires_at" not in locked_properties
+    assert "lock_reasons" in locked_properties
+    granted = schema["components"]["schemas"]["PlaybackAuthorizeGranted"]
+    assert "playback_url" in granted["properties"]
+    assert "expires_at" in granted["properties"]
+    assert "lock_reasons" not in granted["properties"]
 
 
 def _response_schema_ref(response: dict[str, Any]) -> str:
@@ -122,3 +136,13 @@ def _response_schema_ref(response: dict[str, Any]) -> str:
     if isinstance(ref, str):
         return ref
     return str(schema)
+
+
+def _resolve_schema(schema: dict[str, Any], components: dict[str, Any]) -> dict[str, Any]:
+    ref = schema.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
+        name = ref.rsplit("/", 1)[-1]
+        resolved = components.get(name)
+        if isinstance(resolved, dict):
+            return resolved
+    return schema

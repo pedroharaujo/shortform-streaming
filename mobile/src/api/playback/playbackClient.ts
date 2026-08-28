@@ -1,8 +1,9 @@
 /**
- * Anonymous playback authorize mapped through the generated OpenAPI client.
+ * Playback authorize mapped through the generated OpenAPI client.
  *
- * Context headers match catalog. The app plays the returned opaque HLS URL in
- * expo-video and never embeds Bunny's web player.
+ * Optional Firebase credential matches meClient. Null/empty omits Authorization.
+ * HTTP 200 is narrowed on `decision`. Django remains the authorizer; this client
+ * never holds Bunny keys.
  */
 
 import { createApiClient } from '@shortform/api-client';
@@ -10,7 +11,12 @@ import type { paths } from '@shortform/api-client';
 
 import type { CatalogPlatform } from '../catalog/types';
 import { DEFAULT_TIMEOUT_MS, mapJsonRequest } from '../http';
-import type { PlaybackAuthorizeResponse, PlaybackClient, PlaybackRequestOutcome } from './types';
+import type {
+  PlaybackAuthorizeGranted,
+  PlaybackAuthorizeResponse,
+  PlaybackClient,
+  PlaybackRequestOutcome,
+} from './types';
 import { PLAYBACK_LANGUAGE } from './types';
 
 const UNKNOWN_MESSAGE = 'Playback request failed.';
@@ -19,8 +25,13 @@ export interface PlaybackClientOptions {
   readonly baseUrl: string;
   readonly territory: string;
   readonly platform: CatalogPlatform;
+  readonly getCredential?: () => string | null;
   readonly timeoutMs?: number;
   readonly fetchImplementation?: typeof fetch;
+}
+
+function isGranted(body: PlaybackAuthorizeResponse): body is PlaybackAuthorizeGranted {
+  return body.decision === 'granted';
 }
 
 export function createPlaybackClient(options: PlaybackClientOptions): PlaybackClient {
@@ -37,52 +48,70 @@ export function createPlaybackClient(options: PlaybackClientOptions): PlaybackCl
     ...(options.fetchImplementation === undefined ? {} : { fetch: options.fetchImplementation }),
   });
 
-  async function request<T>(
-    perform: (signal: AbortSignal) => Promise<{
-      data?: T;
-      error?: unknown;
-      response: Response;
-    }>,
-  ): Promise<PlaybackRequestOutcome<T>> {
-    const result = await mapJsonRequest(timeoutMs, UNKNOWN_MESSAGE, perform);
-    if (result.outcome === 'ok') {
-      return { outcome: 'ok', data: result.data };
-    }
-    if (result.outcome === 'unreachable') {
-      return { outcome: 'unreachable', reason: result.reason };
-    }
-    if (result.status === 404) {
-      return {
-        outcome: 'not-found',
-        httpStatus: 404,
-        code: result.envelope.code,
-        message: result.envelope.message,
-      };
-    }
-    if (result.status === 503) {
-      return {
-        outcome: 'unavailable',
-        httpStatus: 503,
-        code: result.envelope.code,
-        message: result.envelope.message,
-      };
-    }
-    return {
-      outcome: 'error',
-      httpStatus: result.status,
-      code: result.envelope.code,
-      message: result.envelope.message,
-    };
-  }
-
   return {
-    authorize(episodeId: string) {
-      return request<PlaybackAuthorizeResponse>((signal) =>
-        api.POST('/v1/playback/{episode_id}/authorize' satisfies keyof paths, {
-          params: { path: { episode_id: episodeId }, header: contextHeaders },
-          signal,
-        }),
+    async authorize(episodeId: string): Promise<PlaybackRequestOutcome> {
+      const bearer = options.getCredential === undefined ? null : options.getCredential();
+      const authorizationHeaders =
+        bearer === null || bearer === '' ? {} : { Authorization: `Bearer ${bearer}` };
+
+      const result = await mapJsonRequest<PlaybackAuthorizeResponse>(
+        timeoutMs,
+        UNKNOWN_MESSAGE,
+        (signal) =>
+          api.POST('/v1/playback/{episode_id}/authorize' satisfies keyof paths, {
+            params: { path: { episode_id: episodeId }, header: contextHeaders },
+            headers: authorizationHeaders,
+            signal,
+          }),
       );
+      if (result.outcome === 'ok') {
+        const body = result.data;
+        if (isGranted(body) && body.playback_url !== '') {
+          return { outcome: 'ok', data: body };
+        }
+        if (body.decision === 'locked') {
+          return { outcome: 'locked', lockReasons: body.lock_reasons };
+        }
+        return {
+          outcome: 'error',
+          httpStatus: 200,
+          code: 'unknown',
+          message: UNKNOWN_MESSAGE,
+        };
+      }
+      if (result.outcome === 'unreachable') {
+        return { outcome: 'unreachable', reason: result.reason };
+      }
+      if (result.status === 401) {
+        return {
+          outcome: 'unauthenticated',
+          httpStatus: 401,
+          code: result.envelope.code,
+          message: result.envelope.message,
+        };
+      }
+      if (result.status === 404) {
+        return {
+          outcome: 'not-found',
+          httpStatus: 404,
+          code: result.envelope.code,
+          message: result.envelope.message,
+        };
+      }
+      if (result.status === 503) {
+        return {
+          outcome: 'unavailable',
+          httpStatus: 503,
+          code: result.envelope.code,
+          message: result.envelope.message,
+        };
+      }
+      return {
+        outcome: 'error',
+        httpStatus: result.status,
+        code: result.envelope.code,
+        message: result.envelope.message,
+      };
     },
   };
 }

@@ -10,6 +10,7 @@ describe('createPlaybackClient', () => {
     const performRequest = jest.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       jsonResponse(
         {
+          decision: 'granted',
           playback_url: 'https://video.example.test/hls/a/playlist.m3u8',
           expires_at: '2026-08-25T12:10:00Z',
         },
@@ -36,6 +37,99 @@ describe('createPlaybackClient', () => {
     expect(headers.get('X-Language')).toBe('en');
     expect(headers.get('Authorization')).toBeNull();
     expect(headers.get('Accept-Language')).toBeNull();
+  });
+
+  it('attaches Bearer when getCredential returns a token', async () => {
+    const performRequest = jest.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse(
+        {
+          decision: 'granted',
+          playback_url: 'https://video.example.test/hls/a/playlist.m3u8',
+          expires_at: '2026-08-25T12:10:00Z',
+        },
+        200,
+      ),
+    );
+    const client = createPlaybackClient({
+      baseUrl: BASE_URL,
+      territory: TERRITORY,
+      platform: PLATFORM,
+      getCredential: () => 'mock.firebase-user-1',
+      fetchImplementation: performRequest as unknown as typeof fetch,
+    });
+
+    await client.authorize('ep_harbor_1');
+
+    const [input, init] = performRequest.mock.calls[0] ?? [];
+    const headers = requestHeaders(input as RequestInfo | URL, init);
+    expect(headers.get('Authorization')).toBe('Bearer mock.firebase-user-1');
+  });
+
+  it('maps 200 locked to locked, not ok', async () => {
+    const performRequest = jest.fn(async () =>
+      jsonResponse({ decision: 'locked', lock_reasons: ['login_required'] }, 200),
+    );
+    const client = createPlaybackClient({
+      baseUrl: BASE_URL,
+      territory: TERRITORY,
+      platform: PLATFORM,
+      fetchImplementation: performRequest as unknown as typeof fetch,
+    });
+
+    const result = await client.authorize('ep_harbor_6');
+    expect(result).toEqual({ outcome: 'locked', lockReasons: ['login_required'] });
+  });
+
+  it('maps 200 granted to ok', async () => {
+    const performRequest = jest.fn(async () =>
+      jsonResponse(
+        {
+          decision: 'granted',
+          playback_url: 'https://video.example.test/hls/a/playlist.m3u8',
+          expires_at: '2026-08-25T12:10:00Z',
+        },
+        200,
+      ),
+    );
+    const client = createPlaybackClient({
+      baseUrl: BASE_URL,
+      territory: TERRITORY,
+      platform: PLATFORM,
+      fetchImplementation: performRequest as unknown as typeof fetch,
+    });
+
+    const result = await client.authorize('ep_harbor_1');
+    expect(result.outcome).toBe('ok');
+    if (result.outcome === 'ok') {
+      expect(result.data.playback_url).toContain('.m3u8');
+    }
+  });
+
+  it('maps 401 to unauthenticated', async () => {
+    const performRequest = jest.fn(async () =>
+      jsonResponse(
+        {
+          code: 'authentication_required',
+          message: 'Authentication is required.',
+          request_id: 'r0',
+        },
+        401,
+      ),
+    );
+    const client = createPlaybackClient({
+      baseUrl: BASE_URL,
+      territory: TERRITORY,
+      platform: PLATFORM,
+      getCredential: () => 'not-a-token',
+      fetchImplementation: performRequest as unknown as typeof fetch,
+    });
+
+    await expect(client.authorize('ep_harbor_6')).resolves.toEqual({
+      outcome: 'unauthenticated',
+      httpStatus: 401,
+      code: 'authentication_required',
+      message: 'Authentication is required.',
+    });
   });
 
   it('maps 404 and 503 without treating them as success', async () => {

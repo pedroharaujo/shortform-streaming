@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "apps.catalog",
     "apps.accounts",
     "apps.playback",
+    "apps.entitlements",
 ]
 
 MIDDLEWARE = [
