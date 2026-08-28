@@ -9,13 +9,7 @@ import { createApiClient } from '@shortform/api-client';
 import type { paths } from '@shortform/api-client';
 
 import type { CatalogPlatform } from '../catalog/types';
-import {
-  DEFAULT_TIMEOUT_MS,
-  UNKNOWN_CODE,
-  describeFailure,
-  readEnvelope,
-  withTimeout,
-} from '../http';
+import { DEFAULT_TIMEOUT_MS, mapJsonRequest } from '../http';
 import type { PlaybackAuthorizeResponse, PlaybackClient, PlaybackRequestOutcome } from './types';
 import { PLAYBACK_LANGUAGE } from './types';
 
@@ -50,46 +44,35 @@ export function createPlaybackClient(options: PlaybackClientOptions): PlaybackCl
       response: Response;
     }>,
   ): Promise<PlaybackRequestOutcome<T>> {
-    try {
-      const { data, error, response } = await withTimeout(timeoutMs, perform);
-      const envelope = readEnvelope(error ?? data, UNKNOWN_MESSAGE);
-
-      if (response.status === 404) {
-        return {
-          outcome: 'not-found',
-          httpStatus: 404,
-          code: envelope.code,
-          message: envelope.message,
-        };
-      }
-      if (response.status === 503) {
-        return {
-          outcome: 'unavailable',
-          httpStatus: 503,
-          code: envelope.code,
-          message: envelope.message,
-        };
-      }
-      if (!response.ok) {
-        return {
-          outcome: 'error',
-          httpStatus: response.status,
-          code: envelope.code,
-          message: envelope.message,
-        };
-      }
-      if (data === undefined) {
-        return {
-          outcome: 'error',
-          httpStatus: response.status,
-          code: UNKNOWN_CODE,
-          message: UNKNOWN_MESSAGE,
-        };
-      }
-      return { outcome: 'ok', data };
-    } catch (caught: unknown) {
-      return { outcome: 'unreachable', reason: describeFailure(caught) };
+    const result = await mapJsonRequest(timeoutMs, UNKNOWN_MESSAGE, perform);
+    if (result.outcome === 'ok') {
+      return { outcome: 'ok', data: result.data };
     }
+    if (result.outcome === 'unreachable') {
+      return { outcome: 'unreachable', reason: result.reason };
+    }
+    if (result.status === 404) {
+      return {
+        outcome: 'not-found',
+        httpStatus: 404,
+        code: result.envelope.code,
+        message: result.envelope.message,
+      };
+    }
+    if (result.status === 503) {
+      return {
+        outcome: 'unavailable',
+        httpStatus: 503,
+        code: result.envelope.code,
+        message: result.envelope.message,
+      };
+    }
+    return {
+      outcome: 'error',
+      httpStatus: result.status,
+      code: result.envelope.code,
+      message: result.envelope.message,
+    };
   }
 
   return {

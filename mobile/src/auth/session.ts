@@ -9,10 +9,6 @@ import type { AuthUserSession } from './localMockFirebaseAuth';
 
 let session: AuthUserSession | null = null;
 
-export function getAuthSession(): AuthUserSession | null {
-  return session;
-}
-
 export function setAuthSession(next: AuthUserSession | null): void {
   session = next;
 }

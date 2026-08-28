@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
 import type { BackendHealthSnapshot, HealthClient } from '../../api/health/types';
+import { useCatalogQuery } from '../catalog/useCatalog';
 
 export type BackendHealthState =
   | { readonly phase: 'loading' }
@@ -12,25 +13,10 @@ export interface BackendHealth {
 }
 
 export function useBackendHealth(client: HealthClient): BackendHealth {
-  const [state, setState] = useState<BackendHealthState>({ phase: 'loading' });
-  const [attempt, setAttempt] = useState(0);
+  const load = useCallback(async (): Promise<BackendHealthState> => {
+    const snapshot = await client.probeAll();
+    return { phase: 'loaded', snapshot };
+  }, [client]);
 
-  const refresh = useCallback(() => {
-    setState({ phase: 'loading' });
-    setAttempt((current) => current + 1);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    void client.probeAll().then((snapshot) => {
-      if (active) {
-        setState({ phase: 'loaded', snapshot });
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [client, attempt]);
-
-  return { state, refresh };
+  return useCatalogQuery(load);
 }

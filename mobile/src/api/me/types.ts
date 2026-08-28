@@ -1,7 +1,6 @@
 import type { components } from '@shortform/api-client';
 
 export type CurrentUserProfile = components['schemas']['CurrentUserProfile'];
-export type ErrorEnvelope = components['schemas']['ErrorEnvelope'];
 
 export type MeRequestOutcome =
   | { readonly outcome: 'ok'; readonly data: CurrentUserProfile }

@@ -213,7 +213,3 @@ class MediaAsset(models.Model):
                 diagnostic_message=self.diagnostic_message,
             )
             self.refresh_from_db()
-
-    @property
-    def is_ready(self) -> bool:
-        return self.state == MediaAssetState.READY

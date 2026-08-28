@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { CatalogClient, CatalogSeriesCard } from '../../api/catalog/types';
 import { CatalogArtwork } from './CatalogArtwork';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
-import { useCatalogHome } from './useCatalogHome';
+import { useCatalogHome } from './useCatalog';
 
 export interface HomeCatalogScreenProps {
   readonly client: CatalogClient;

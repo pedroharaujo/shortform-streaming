@@ -12,7 +12,6 @@ import type { CatalogPlatform } from '../catalog/types';
 export const PLAYBACK_LANGUAGE = 'en';
 
 export type PlaybackAuthorizeResponse = components['schemas']['PlaybackAuthorizeResponse'];
-export type ErrorEnvelope = components['schemas']['ErrorEnvelope'];
 
 export type PlaybackRequestOutcome<T> =
   | { readonly outcome: 'ok'; readonly data: T }

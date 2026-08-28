@@ -9,13 +9,7 @@
 import { createApiClient } from '@shortform/api-client';
 import type { paths } from '@shortform/api-client';
 
-import {
-  DEFAULT_TIMEOUT_MS,
-  UNKNOWN_CODE,
-  describeFailure,
-  readEnvelope,
-  withTimeout,
-} from '../http';
+import { DEFAULT_TIMEOUT_MS, mapJsonRequest } from '../http';
 import type {
   CatalogClient,
   CatalogEpisodeDetail,
@@ -24,7 +18,7 @@ import type {
   CatalogRequestOutcome,
   CatalogSeriesDetail,
 } from './types';
-import { CATALOG_LANGUAGE } from './types';
+import { CATALOG_LANGUAGE, CatalogPlatformError } from './types';
 
 const UNKNOWN_MESSAGE = 'Catalog request failed.';
 
@@ -34,6 +28,15 @@ export interface CatalogClientOptions {
   readonly platform: CatalogPlatform;
   readonly timeoutMs?: number;
   readonly fetchImplementation?: typeof fetch;
+}
+
+export function resolveCatalogPlatform(os: string): CatalogPlatform {
+  if (os === 'ios' || os === 'android') {
+    return os;
+  }
+  throw new CatalogPlatformError(
+    `Catalog requests require ios or android; received ${JSON.stringify(os)}.`,
+  );
 }
 
 export function createCatalogClient(options: CatalogClientOptions): CatalogClient {
@@ -57,38 +60,27 @@ export function createCatalogClient(options: CatalogClientOptions): CatalogClien
       response: Response;
     }>,
   ): Promise<CatalogRequestOutcome<T>> {
-    try {
-      const { data, error, response } = await withTimeout(timeoutMs, perform);
-      const envelope = readEnvelope(error ?? data, UNKNOWN_MESSAGE);
-
-      if (response.status === 404) {
-        return {
-          outcome: 'not-found',
-          httpStatus: 404,
-          code: envelope.code,
-          message: envelope.message,
-        };
-      }
-      if (!response.ok) {
-        return {
-          outcome: 'error',
-          httpStatus: response.status,
-          code: envelope.code,
-          message: envelope.message,
-        };
-      }
-      if (data === undefined) {
-        return {
-          outcome: 'error',
-          httpStatus: response.status,
-          code: UNKNOWN_CODE,
-          message: UNKNOWN_MESSAGE,
-        };
-      }
-      return { outcome: 'ok', data };
-    } catch (caught: unknown) {
-      return { outcome: 'unreachable', reason: describeFailure(caught) };
+    const result = await mapJsonRequest(timeoutMs, UNKNOWN_MESSAGE, perform);
+    if (result.outcome === 'ok') {
+      return { outcome: 'ok', data: result.data };
     }
+    if (result.outcome === 'unreachable') {
+      return { outcome: 'unreachable', reason: result.reason };
+    }
+    if (result.status === 404) {
+      return {
+        outcome: 'not-found',
+        httpStatus: 404,
+        code: result.envelope.code,
+        message: result.envelope.message,
+      };
+    }
+    return {
+      outcome: 'error',
+      httpStatus: result.status,
+      code: result.envelope.code,
+      message: result.envelope.message,
+    };
   }
 
   return {

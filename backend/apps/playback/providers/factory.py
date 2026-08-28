@@ -5,7 +5,7 @@ from django.conf import settings
 from apps.playback.exceptions import VideoProviderError
 from apps.playback.providers.bunny import BunnyStreamVideoProvider
 from apps.playback.providers.fake import FakeVideoProvider, fake_provider_from_settings
-from apps.playback.providers.protocol import VideoProvider
+from apps.playback.providers.types import VideoProvider
 
 _cached_fake: FakeVideoProvider | None = None
 
