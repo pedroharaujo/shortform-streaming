@@ -10,7 +10,7 @@ From the repository root, with no production secrets in the environment or build
 docker build -f backend/Dockerfile -t shortform-backend:ci .
 ```
 
-CI uses that exact command string. The image is multi-stage (`python:3.14-slim-bookworm` + pinned uv `0.9.28`), non-root (`USER app`, uid/gid 1000), and does not `docker push`.
+The GitHub Application CI **Container** job runs that exact command string only. It does **not** run Compose or `scripts/verify_backend_container.sh`. The image is multi-stage (`python:3.14-slim-bookworm` + pinned uv `0.9.28`), non-root (`USER app`, uid/gid 1000), and does not `docker push`.
 
 Confirm the image user and that secret names are not baked into `Env`:
 
@@ -84,7 +84,9 @@ docker compose --profile container up -d --wait
 scripts/verify_backend_container.sh
 ```
 
-The verify script checks live/ready JSON, Admin login HTML, Admin CSS, Postgres stop/start recovery (ready 503 / live 200, then ready 200), and `docker stop` on `api` within the gunicorn graceful window. It tears down Compose on success or failure. It requires `shortform-backend:ci` already built.
+The verify script is **local** (and optional operator) evidence. It checks live/ready JSON, Admin login HTML, Admin CSS, Postgres stop/start recovery (ready 503 / live 200, then ready 200), and `docker stop` on `api` within the gunicorn graceful window. It tears down Compose on success or failure. It requires `shortform-backend:ci` already built.
+
+Do not claim the GitHub Container job ran Compose. Wiring `scripts/verify_backend_container.sh` into Application CI is deferred until that change does not ALWAYS_RUN the Mobile job (editing `.github/workflows/application-ci.yml` or `scripts/ci_path_filters.py` retriggers Mobile) or until expo pins are current (P2-T08 / P5-T03).
 
 ## Readiness (unchanged views)
 
@@ -123,3 +125,4 @@ This repository does not add a paid SaaS scanner or an unpinned `aquasecurity/tr
 - Deploying a backward-compatible migration and rolling back a revision without schema corruption
 - Production approval gates
 - `tofu apply` and edits under `infra/**`
+- Wiring `scripts/verify_backend_container.sh` into the Application CI Container job (that edit ALWAYS_RUNs Mobile; expo pins are owned by P2-T08)

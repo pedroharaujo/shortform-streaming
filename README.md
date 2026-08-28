@@ -113,9 +113,11 @@ CI collects a coverage report without a failing floor. Reproduce that locally wi
 pnpm backend:test:coverage
 ```
 
-Build the backend image (no registry login or push) and run the local container
-evidence profile (migrations as a separate step, then gunicorn). Dummy production
-values live in `compose.yaml`; do not use `.env.example` for that profile:
+Build the backend image (no registry login or push). Application CI Container
+runs only this build command. Compose and `scripts/verify_backend_container.sh`
+are **local** evidence (dummy production values in `compose.yaml`; do not use
+`.env.example` for that profile). Wiring the verify script into Application CI
+is deferred so it does not ALWAYS_RUN Mobile (P2-T08 / P5-T03):
 
 ```shell
 docker build -f backend/Dockerfile -t shortform-backend:ci .

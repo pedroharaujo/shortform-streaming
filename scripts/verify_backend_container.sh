@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Local / operator Compose evidence for the backend image. Application CI does
+# not run this script (Container job is docker build only). See
+# docs/runbooks/django-container.md.
 set -euo pipefail
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"

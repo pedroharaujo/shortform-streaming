@@ -155,7 +155,6 @@ class RepositoryFoundationTests(unittest.TestCase):
         self.assertIn("pnpm mobile:config:check", application)
         self.assertIn("pnpm mobile:bundle:check", application)
         self.assertIn("docker build -f backend/Dockerfile", application)
-        self.assertIn("scripts/verify_backend_container.sh", application)
         self.assertRegex(
             application,
             r"uses: actions/dependency-review-action@[0-9a-f]{40} # v[0-9]",
