@@ -20,9 +20,10 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 
 | Area | Package | Compatible pin |
 | --- | --- | --- |
-| Mobile runtime | `expo` | 57.0.17 |
-| Mobile runtime | `expo-constants` | ~57.0.15 |
+| Mobile runtime | `expo` | 57.0.18 |
+| Mobile runtime | `expo-constants` | ~57.0.16 |
 | Mobile runtime | `expo-router` | ~57.0.17 |
+| Mobile runtime | `expo-secure-store` | ~57.0.2 |
 | Mobile runtime | `react` | 19.2.3 |
 | Mobile runtime | `react-native` | 0.86.3 |
 | Mobile runtime | `react-native-safe-area-context` | ~5.7.0 |
