@@ -31,9 +31,9 @@ Anonymous locked offers return `login_required` and an empty `methods` list
 
 ## Rollback
 
-Revert the PR. Reverse migration `0002_accesspolicy` drops `AccessPolicy` and
-`AccessPolicyRevision` only. It does not alter `EpisodeEntitlement` or catalog
-tables.
+Revert the PR. Reverse `0003_accesspolicy_series_level_no_force_flags` first,
+then `0002_accesspolicy`. `0002` drops `AccessPolicy` and `AccessPolicyRevision`
+only. Neither migration alters `EpisodeEntitlement` or catalog tables.
 
 After revert, authorize must still fail closed: never mint a playback URL on
 lock. Do not weaken territory, rights, takedown, or age-rating checks as part of

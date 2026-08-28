@@ -59,6 +59,44 @@ def test_staff_cannot_delete_live_access_policy(admin_client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_episode_override_add_ignores_submitted_series_window(
+    admin_client: Client,
+) -> None:
+    series, episode = make_published_title(title="Override Add Inherit", territory="FR")
+    AccessPolicy.objects.create(series=series, free_episode_order_max=3)
+    add_url = reverse("admin:entitlements_accesspolicy_add")
+    response = admin_client.post(
+        add_url,
+        {
+            "series": str(series.pk),
+            "episode": str(episode.pk),
+            "free_episode_order_max": "10",
+            "rewarded_ad_enabled": "on",
+            "_save": "Save",
+            **_REVISION_MANAGEMENT,
+        },
+    )
+    assert response.status_code in {302, 200}
+    override = AccessPolicy.objects.get(series=series, episode=episode)
+    assert override.free_episode_order_max == 3
+    assert override.rewarded_ad_enabled is True
+
+
+@pytest.mark.django_db
+def test_changelist_shows_inherited_series_window_for_override(
+    admin_client: Client,
+) -> None:
+    series, episode = make_published_title(title="Override List Inherit", territory="FR")
+    AccessPolicy.objects.create(series=series, free_episode_order_max=3, rewarded_ad_enabled=False)
+    AccessPolicy.objects.create(series=series, episode=episode)
+    changelist = reverse("admin:entitlements_accesspolicy_changelist")
+    response = admin_client.get(changelist)
+    assert response.status_code == 200
+    assert b"3 (series)" in response.content
+    assert b"False (series)" in response.content
+
+
+@pytest.mark.django_db
 def test_episode_override_change_form_marks_series_fields_readonly(
     admin_client: Client,
 ) -> None:
