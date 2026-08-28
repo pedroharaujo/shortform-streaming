@@ -74,8 +74,13 @@ mobile/ios/
 
 # Infrastructure
 .terraform/
+.tofu/
 *.tfstate
 *.tfstate.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+backend.hcl
 crash.log
 override.tf
 override.tf.json
