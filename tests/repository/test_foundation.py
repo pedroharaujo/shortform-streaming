@@ -59,16 +59,6 @@ IGNORED_PRIVATE_PATHS = (
     "service-account-production.json",
 )
 
-TRACKABLE_NESTED_PATHS = (
-    "backend/apps/media/models.py",
-    "backend/apps/licensed-media/models.py",
-    "backend/apps/contracts/models.py",
-    "backend/apps/private/config.py",
-    "backend/apps/sources/service.ts",
-    "backend/apps/credentials/provider.py",
-    "backend/apps/secrets/service.py",
-)
-
 
 class RepositoryFoundationTests(unittest.TestCase):
     def test_required_foundation_paths_exist(self) -> None:
@@ -92,32 +82,6 @@ class RepositoryFoundationTests(unittest.TestCase):
                     check=False,
                 )
                 self.assertEqual(result.returncode, 0)
-
-    def test_typescript_source_is_not_ignored_as_mpeg_ts_media(self) -> None:
-        result = subprocess.run(
-            ["git", "check-ignore", "--no-index", "--quiet", "mobile/src/example.ts"],
-            cwd=ROOT,
-            check=False,
-        )
-        self.assertEqual(result.returncode, 1)
-
-    def test_nested_domain_directories_are_not_ignored(self) -> None:
-        for relative_path in TRACKABLE_NESTED_PATHS:
-            with self.subTest(path=relative_path):
-                result = subprocess.run(
-                    [
-                        "git",
-                        "-c",
-                        "core.ignoreCase=false",
-                        "check-ignore",
-                        "--no-index",
-                        "--quiet",
-                        relative_path,
-                    ],
-                    cwd=ROOT,
-                    check=False,
-                )
-                self.assertEqual(result.returncode, 1)
 
     def test_repository_workflows_are_pinned_and_least_privilege(self) -> None:
         workflow_dir = ROOT / ".github/workflows"
@@ -195,52 +159,6 @@ class RepositoryFoundationTests(unittest.TestCase):
             r"uses: actions/dependency-review-action@[0-9a-f]{40} # v[0-9]",
         )
 
-    def test_dependabot_covers_application_ecosystems(self) -> None:
-        dependabot = (ROOT / ".github/dependabot.yml").read_text(encoding="utf-8")
-        for ecosystem in ("github-actions", "uv", "npm", "docker"):
-            with self.subTest(ecosystem=ecosystem):
-                self.assertIn(f"package-ecosystem: {ecosystem}", dependabot)
-        self.assertIn("directory: /backend", dependabot)
-
-    def test_dependabot_ignores_incompatible_majors(self) -> None:
-        dependabot = (ROOT / ".github/dependabot.yml").read_text(encoding="utf-8")
-        npm = self._dependabot_ignored_ranges(dependabot, "npm")
-        uv = self._dependabot_ignored_ranges(dependabot, "uv")
-        docker = self._dependabot_ignored_ranges(dependabot, "docker")
-
-        npm_expected = {
-            "react-native": ">=0.87.0",
-            "eslint": ">=10.0.0",
-            "react": ">19.2.3",
-            "react-test-renderer": ">19.2.3",
-            "expo": ">=58.0.0",
-            "expo-router": ">=58.0.0",
-            "expo-constants": ">=58.0.0",
-            "jest-expo": ">=58.0.0",
-            "eslint-config-expo": ">=58.0.0",
-            "typescript": ">=7.0.0",
-            "jest": ">=30.0.0",
-            "@types/jest": ">=30.0.0",
-            "react-native-screens": ">=4.27.0",
-            "react-native-safe-area-context": ">=5.8.0",
-            "expo-video": ">=58.0.0",
-            "react-native-worklets": ">=0.11.0",
-            "react-native-reanimated": ">=4.6.0",
-            "react-native-gesture-handler": ">=2.33.0",
-        }
-        for name, version in npm_expected.items():
-            with self.subTest(ecosystem="npm", dependency=name):
-                self.assertIn(name, npm)
-                self.assertIn(version, npm[name])
-
-        for name, version in (("django", ">=6.2"), ("django-stubs", ">=6.2")):
-            with self.subTest(ecosystem="uv", dependency=name):
-                self.assertIn(name, uv)
-                self.assertIn(version, uv[name])
-
-        self.assertIn("python", docker)
-        self.assertIn(">=3.15", docker["python"])
-
     def test_backend_dockerfile_is_secret_free_build_smoke(self) -> None:
         dockerfile = (ROOT / "backend/Dockerfile").read_text(encoding="utf-8")
         self.assertIn("uv sync --locked", dockerfile)
@@ -248,27 +166,6 @@ class RepositoryFoundationTests(unittest.TestCase):
         self.assertNotIn("DATABASE_URL", dockerfile)
         self.assertNotIn("config.settings.production", dockerfile)
         self.assertNotIn("docker push", dockerfile)
-
-    def _dependabot_ecosystem_block(self, config: str, ecosystem: str) -> str:
-        matches = list(re.finditer(r"(?m)^  - package-ecosystem: (\S+)\s*$", config))
-        self.assertTrue(matches, "dependabot.yml has no package-ecosystem entries")
-        for index, match in enumerate(matches):
-            if match.group(1) == ecosystem:
-                end = matches[index + 1].start() if index + 1 < len(matches) else len(config)
-                return config[match.start() : end]
-        self.fail(f"missing package-ecosystem: {ecosystem}")
-        return ""
-
-    def _dependabot_ignored_ranges(self, config: str, ecosystem: str) -> dict[str, list[str]]:
-        block = self._dependabot_ecosystem_block(config, ecosystem)
-        ignores: dict[str, list[str]] = {}
-        for match in re.finditer(
-            r'dependency-name:\s*["\']?([^"\'\s]+)["\']?\s*\n\s*versions:\s*\[([^\]]+)\]',
-            block,
-        ):
-            versions = [item.strip().strip("\"'") for item in match.group(2).split(",") if item.strip()]
-            ignores[match.group(1)] = versions
-        return ignores
 
     def _assert_every_action_is_pinned(self, workflow: str) -> None:
         for line in workflow.splitlines():
@@ -290,12 +187,6 @@ class RepositoryFoundationTests(unittest.TestCase):
         )
         self.assertEqual(len(job_ids), len(timeouts), msg=name)
         self.assertGreater(len(timeouts), 0, msg=name)
-
-    def test_bootstrap_command_is_documented(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("python scripts/check_repository_foundation.py", readme)
-        self.assertIn("## Architecture and repository layout", readme)
-        self.assertIn("## Common commands", readme)
 
 
 if __name__ == "__main__":

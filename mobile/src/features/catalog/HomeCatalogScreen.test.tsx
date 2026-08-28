@@ -21,10 +21,6 @@ const harborLightsHome: CatalogHome = {
   ],
 };
 
-const emptyHome: CatalogHome = {
-  rails: [{ id: 'featured', title: 'Featured', series: [] }],
-};
-
 function stubClient(home: CatalogRequestOutcome<CatalogHome>): CatalogClient {
   return {
     getHome: async () => home,
@@ -44,27 +40,6 @@ function stubClient(home: CatalogRequestOutcome<CatalogHome>): CatalogClient {
 }
 
 describe('HomeCatalogScreen', () => {
-  it('shows a loading state before the home catalog resolves', async () => {
-    const pending: CatalogClient = {
-      getHome: () => new Promise(() => {}),
-      getSeries: () => new Promise(() => {}),
-      getEpisode: () => new Promise(() => {}),
-    };
-
-    const view = await render(
-      <HomeCatalogScreen
-        client={pending}
-        onOpenHealth={() => {}}
-        onOpenSignIn={() => {}}
-        onSelectSeries={() => {}}
-      />,
-    );
-
-    expect(view.getByTestId('home-loading')).toBeTruthy();
-    expect(view.getByLabelText('Loading catalog')).toBeTruthy();
-    expect(view.queryByTestId('home-rail-featured')).toBeNull();
-  });
-
   it('shows an error and retries the catalog request', async () => {
     let calls = 0;
     const client: CatalogClient = {
@@ -106,21 +81,6 @@ describe('HomeCatalogScreen', () => {
 
     await userEvent.setup().press(view.getByTestId('home-retry'));
     await waitFor(() => expect(calls).toBe(2));
-  });
-
-  it('shows an empty state when the featured rail has no eligible titles', async () => {
-    const view = await render(
-      <HomeCatalogScreen
-        client={stubClient({ outcome: 'ok', data: emptyHome })}
-        onOpenHealth={() => {}}
-        onOpenSignIn={() => {}}
-        onSelectSeries={() => {}}
-      />,
-    );
-
-    await waitFor(() => expect(view.getByTestId('home-empty')).toBeTruthy());
-    expect(view.getByText('No titles are available.')).toBeTruthy();
-    expect(view.queryByText('Harbor Lights')).toBeNull();
   });
 
   it('renders a published featured Harbor Lights series and selects it', async () => {

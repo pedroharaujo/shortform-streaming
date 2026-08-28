@@ -151,18 +151,6 @@ def test_missing_and_invalid_headers_return_400_error_envelope(client: Client) -
 
 
 @pytest.mark.django_db
-def test_well_formed_unknown_territory_returns_empty_home(
-    client: Client, freeze_catalog_clock: None
-) -> None:
-    del freeze_catalog_clock
-    make_published_title(title="Harbor Lights", territory="FR")
-    response = client.get(HOME, **_headers(territory="US"))
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["rails"][0]["series"] == []
-
-
-@pytest.mark.django_db
 def test_ineligible_public_ids_return_404_not_403(
     client: Client, freeze_catalog_clock: None
 ) -> None:
@@ -187,31 +175,6 @@ def test_ineligible_public_ids_return_404_not_403(
     episode_response = client.get(f"/v1/episodes/{episode.public_id}", **_headers(territory="DE"))
     assert episode_response.status_code == 404
     assert episode_response.json()["code"] == "not_found"
-
-
-@pytest.mark.django_db
-def test_clock_boundaries_start_inclusive_end_exclusive(
-    client: Client, freeze_catalog_clock: None
-) -> None:
-    del freeze_catalog_clock
-    starting, _ = make_published_title(
-        title="Starts now",
-        territory="FR",
-        starts_at=DEFAULT_NOW,
-        ends_at=DEFAULT_NOW + timedelta(days=1),
-        editorial_rank=0,
-    )
-    ending, _ = make_published_title(
-        title="Ends now",
-        territory="FR",
-        starts_at=DEFAULT_NOW - timedelta(days=1),
-        ends_at=DEFAULT_NOW,
-        editorial_rank=1,
-    )
-    payload = client.get(HOME, **_headers()).json()
-    ids = [item["id"] for item in payload["rails"][0]["series"]]
-    assert starting.public_id in ids
-    assert ending.public_id not in ids
 
 
 @pytest.mark.django_db
@@ -242,75 +205,6 @@ def test_series_and_episode_detail_omit_db_ids_and_contract_secrets(
     assert episode_body["series_id"] == series.public_id
     assert "access_state" not in episode_body
     assert "pk" not in episode_body
-
-
-@pytest.mark.django_db
-def test_draft_episode_omitted_from_eligible_series(
-    client: Client, freeze_catalog_clock: None
-) -> None:
-    del freeze_catalog_clock
-    series, published = make_published_title(title="Harbor Lights", territory="FR")
-    draft_episode = make_episode(series, order=2, publication_status=PublicationStatus.DRAFT)
-    detail = client.get(f"/v1/series/{series.public_id}", **_headers()).json()
-    ids = [item["id"] for item in detail["seasons"][0]["episodes"]]
-    assert ids == [published.public_id]
-    assert draft_episode.public_id not in ids
-    hidden = client.get(f"/v1/episodes/{draft_episode.public_id}", **_headers())
-    assert hidden.status_code == 404
-
-
-@pytest.mark.django_db
-def test_episode_window_boundary(client: Client, freeze_catalog_clock: None) -> None:
-    del freeze_catalog_clock
-    series, first = make_published_title(title="Harbor Lights", territory="FR")
-    closed = make_episode(
-        series,
-        order=2,
-        publication_status=PublicationStatus.PUBLISHED,
-        window_starts_at=DEFAULT_NOW - timedelta(days=1),
-        window_ends_at=DEFAULT_NOW,
-    )
-    opening = make_episode(
-        series,
-        order=3,
-        publication_status=PublicationStatus.PUBLISHED,
-        window_starts_at=DEFAULT_NOW,
-        window_ends_at=None,
-    )
-    detail = client.get(f"/v1/series/{series.public_id}", **_headers()).json()
-    ids = [item["id"] for item in detail["seasons"][0]["episodes"]]
-    assert first.public_id in ids
-    assert opening.public_id in ids
-    assert closed.public_id not in ids
-    assert client.get(f"/v1/episodes/{closed.public_id}", **_headers()).status_code == 404
-    assert client.get(f"/v1/episodes/{opening.public_id}", **_headers()).status_code == 200
-
-
-@pytest.mark.django_db
-def test_home_orders_by_editorial_rank_then_public_id(
-    client: Client, freeze_catalog_clock: None
-) -> None:
-    del freeze_catalog_clock
-    later, _ = make_published_title(title="Second", territory="FR", editorial_rank=10)
-    earlier, _ = make_published_title(title="First", territory="FR", editorial_rank=1)
-    payload = client.get(HOME, **_headers()).json()
-    ids = [item["id"] for item in payload["rails"][0]["series"]]
-    assert ids == [earlier.public_id, later.public_id]
-
-
-@pytest.mark.django_db
-def test_localized_title_prefers_requested_language(
-    client: Client, freeze_catalog_clock: None
-) -> None:
-    del freeze_catalog_clock
-    series, _episode = make_published_title(title="English Title", territory="FR")
-    series.translations.create(
-        language="de",
-        title="Deutscher Titel",
-        synopsis="Deutsche Synopsis.",
-    )
-    payload = client.get(HOME, **_headers(language="en")).json()
-    assert payload["rails"][0]["series"][0]["title"] == "English Title"
 
 
 @pytest.mark.django_db

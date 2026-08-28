@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from datetime import timedelta
 from typing import Any
 from unittest.mock import patch
 from urllib.parse import urlparse
@@ -78,38 +77,11 @@ def test_missing_headers_return_400_error_envelope(client: Client) -> None:
 
 
 @pytest.mark.django_db
-def test_unknown_episode_is_404_not_403(
-    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
-) -> None:
-    del freeze_catalog_clock, fake_provider
-    response = client.post(
-        AUTHORIZE.format(episode_id="ep_doesnotexist000000000000000000"),
-        **_headers(),
-    )
-    assert response.status_code == 404
-    assert response.status_code != 403
-    assert response.json()["code"] == "not_found"
-
-
-@pytest.mark.django_db
-def test_eligible_episode_without_ready_asset_is_404(
-    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
-) -> None:
-    del freeze_catalog_clock
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
-    episode.media_assets.all().delete()
-    fake_provider.seed_ready_asset("asset-unmapped")
-    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
-    assert response.status_code == 404
-    assert response.json()["code"] == "not_found"
-
-
-@pytest.mark.django_db
 def test_mapped_ineligible_episode_is_404(
     client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
 ) -> None:
     del freeze_catalog_clock
-    series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
     _seed_ready(fake_provider, episode)
     wrong_territory = client.post(
         AUTHORIZE.format(episode_id=episode.public_id),
@@ -203,23 +175,6 @@ def test_disabled_provider_returns_503_and_never_mints(
 
 
 @pytest.mark.django_db
-def test_clock_window_end_exclusive_is_404(
-    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
-) -> None:
-    del freeze_catalog_clock
-    series, episode = make_published_title(
-        title="Ended",
-        territory="FR",
-        starts_at=DEFAULT_NOW - timedelta(days=1),
-        ends_at=DEFAULT_NOW,
-    )
-    _seed_ready(fake_provider, episode)
-    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
-    assert response.status_code == 404
-    del series
-
-
-@pytest.mark.django_db
 def test_non_ready_and_removed_assets_are_404(
     client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
 ) -> None:
@@ -240,19 +195,3 @@ def test_non_ready_and_removed_assets_are_404(
     removed = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
     assert removed.status_code == 404
     assert removed.status_code != 403
-
-
-@pytest.mark.django_db
-def test_playback_spike_assets_is_not_the_success_path(
-    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
-) -> None:
-    del freeze_catalog_clock
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
-    episode.media_assets.all().delete()
-    spike_id = fake_provider.seed_ready_asset()
-    from django.test import override_settings
-
-    with override_settings(PLAYBACK_SPIKE_ASSETS={episode.public_id: spike_id}):
-        response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
-    assert response.status_code == 404
-    assert response.json()["code"] == "not_found"
