@@ -27,11 +27,13 @@ locals {
     "cloudbilling.googleapis.com",
   ])
 
-  # Stdlib-only in-project smoke. SMOKE_BASE_URL is supplied at job execute
-  # time by CI; it is not baked into this composition.
+  # Stdlib-only in-project smoke. SMOKE_AUDIENCE (service URL) and
+  # SMOKE_BASE_URL (tagged candidate URL) are supplied at job execute
+  # time by CI; they are not baked into this composition.
   smoke_script = <<-PY
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -39,14 +41,18 @@ fail = os.environ.get("FAIL_SMOKE", "").strip().lower()
 if fail in ("1", "true", "yes"):
     sys.exit(1)
 
+audience = os.environ.get("SMOKE_AUDIENCE", "").strip().rstrip("/")
 base = os.environ.get("SMOKE_BASE_URL", "").strip().rstrip("/")
+if not audience:
+    sys.stderr.write("SMOKE_AUDIENCE is required\n")
+    sys.exit(1)
 if not base:
     sys.stderr.write("SMOKE_BASE_URL is required\n")
     sys.exit(1)
 
 meta = (
     "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity"
-    "?audience=" + base
+    "?audience=" + audience
 )
 req = urllib.request.Request(meta, headers={"Metadata-Flavor": "Google"})
 try:
@@ -57,21 +63,30 @@ except Exception as exc:
     sys.exit(1)
 
 def check(path):
-    request = urllib.request.Request(
-        base + path,
-        headers={
-            "Authorization": "Bearer " + token,
-            "X-Forwarded-Proto": "https",
-        },
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=10) as resp:
-            if resp.status != 200:
-                sys.stderr.write("%s returned %s\n" % (path, resp.status))
-                sys.exit(1)
-    except urllib.error.HTTPError as exc:
-        sys.stderr.write("%s returned %s\n" % (path, exc.code))
-        sys.exit(1)
+    url = base + path
+    last_error = "unknown"
+    attempts = 5
+    for attempt in range(attempts):
+        request = urllib.request.Request(
+            url,
+            headers={
+                "Authorization": "Bearer " + token,
+                "X-Forwarded-Proto": "https",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=10) as resp:
+                if resp.status == 200:
+                    return
+                last_error = "%s returned %s" % (path, resp.status)
+        except urllib.error.HTTPError as exc:
+            last_error = "%s returned %s" % (path, exc.code)
+        except Exception as exc:
+            last_error = "%s failed: %s" % (path, exc)
+        if attempt + 1 < attempts:
+            time.sleep(2 ** attempt)
+    sys.stderr.write("%s\n" % last_error)
+    sys.exit(1)
 
 check("/health/ready")
 check("/health/live")

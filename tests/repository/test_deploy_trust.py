@@ -183,16 +183,27 @@ class DeployTrustTests(unittest.TestCase):
                 )
                 self.assertIn("gcloud run services update", no_traffic)
                 self.assertIn("--no-traffic", no_traffic)
+                self.assertIn("--tag=candidate", no_traffic)
+                self.assertIn("SERVICE_URL", no_traffic)
+                self.assertIn("filter(tag:candidate)", no_traffic)
 
                 smoke = _step_body(workflow, "Update and execute smoke job")
                 self.assertIn("SMOKE_BASE_URL", smoke)
+                self.assertIn("SMOKE_AUDIENCE", smoke)
                 self.assertIn("FAIL_SMOKE", smoke)
                 self.assertIn("inputs.fail_smoke", smoke)
                 self.assertIn("gcloud run jobs execute", smoke)
+                self.assertIn("SMOKE_BASE_URL=${CANDIDATE_URL}", smoke)
+                self.assertIn("SMOKE_AUDIENCE=${SERVICE_URL}", smoke)
                 self.assertRegex(
                     smoke,
                     r'gcloud run jobs update\s+"\$\{SMOKE_JOB\}"[^\n]*--image=',
                 )
+                self.assertIn('--image="${IMAGE_DIGEST}"', smoke)
+                update_at = smoke.find("gcloud run jobs update")
+                execute_at = smoke.find("gcloud run jobs execute")
+                self.assertGreaterEqual(update_at, 0)
+                self.assertGreater(execute_at, update_at)
                 self.assertNotRegex(
                     smoke,
                     r"(?m)^\s+continue-on-error:",
@@ -225,6 +236,9 @@ class DeployTrustTests(unittest.TestCase):
             smoke,
             r'gcloud run jobs update\s+"\$\{SMOKE_JOB\}"[^\n]*--image=',
         )
+        self.assertIn("SMOKE_AUDIENCE", smoke)
+        self.assertIn("SMOKE_BASE_URL=${CANDIDATE_URL}", smoke)
+        self.assertIn("SMOKE_AUDIENCE=${SERVICE_URL}", smoke)
 
     def test_production_workflow_is_dispatch_only_gated_pipeline(self) -> None:
         workflow = _read(PRODUCTION_WORKFLOW)
@@ -375,12 +389,28 @@ class DeployTrustTests(unittest.TestCase):
             combined,
         )
         self.assertIn("SMOKE_BASE_URL", combined)
+        self.assertIn("SMOKE_AUDIENCE", combined)
         self.assertIn("Bearer", combined)
         self.assertIn("X-Forwarded-Proto", combined)
         self.assertIn("/health/ready", combined)
         self.assertIn("/health/live", combined)
         self.assertIn("FAIL_SMOKE", combined)
         self.assertIn("Metadata-Flavor", combined)
+        self.assertIn("time.sleep", combined)
+        script_match = re.search(
+            r"smoke_script = <<-PY\n(.*)\nPY",
+            staging,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(script_match)
+        script = script_match.group(1)
+        self.assertIn('os.environ.get("SMOKE_AUDIENCE"', script)
+        self.assertIn('os.environ.get("SMOKE_BASE_URL"', script)
+        self.assertIn('"?audience=" + audience', script)
+        self.assertNotIn('"?audience=" + base', script)
+        self.assertNotRegex(script, r"\?audience=.*SMOKE_BASE_URL")
+        self.assertRegex(script, r"audience = os\.environ\.get\(\"SMOKE_AUDIENCE\"")
+        self.assertRegex(script, r"base = os\.environ\.get\(\"SMOKE_BASE_URL\"")
         self.assertIn("service_account = var.runtime_service_account_email", job_module)
         self.assertIn("ignore_changes", job_module)
 

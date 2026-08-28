@@ -102,9 +102,9 @@ sequence, WIF, fail-smoke, and traffic-only rollback are in
 [`staging-deploy.md`](staging-deploy.md).
 
 - Startup/readiness: HTTP GET `/health/ready` on port 8080 with
-  `X-Forwarded-Proto: https`.
-- Liveness: HTTP GET `/health/live` with the same forwarded proto (do not
-  require Postgres).
+  `Host: localhost` and `X-Forwarded-Proto: https`.
+- Liveness: HTTP GET `/health/live` with the same `Host` and forwarded proto
+  (do not require Postgres).
 - Run `migrate` as a **separate** Cloud Run Job (`args = ["migrate"]`) against
   the same image digest **before** shifting request traffic to a new `web`
   revision.

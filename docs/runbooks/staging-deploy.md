@@ -85,16 +85,30 @@ container image). Do not `tofu apply` to change the running image.
    `docker/login-action`).
 6. Push the commit tag and resolve the digest.
 7. `gcloud run jobs update` + `execute --wait` for migrate (`args = ["migrate"]`).
-8. `gcloud run services update … --no-traffic`.
+8. Capture the **service URL** (`status.url`). Then
+   `gcloud run services update … --no-traffic --tag=candidate`.
 9. `gcloud run jobs update` the smoke job to the **same image digest**, then
-   `execute --wait` with `SMOKE_BASE_URL` and `FAIL_SMOKE`. Do not leave smoke
+   `execute --wait` with `SMOKE_BASE_URL` (tagged candidate URL),
+   `SMOKE_AUDIENCE` (service URL), and `FAIL_SMOKE`. Do not leave smoke
    on a P5-T01-B placeholder (busybox/pause has no `python`).
 10. `gcloud run services update-traffic --to-revisions=$CANDIDATE=100`.
 
 Ingress stays `INGRESS_TRAFFIC_INTERNAL_ONLY`. GitHub-hosted runners must
-**not** HTTP-smoke the Cloud Run URL. Smoke runs as a Job inside the project,
-fetches an identity token from the metadata server, and calls `/health/ready`
-and `/health/live` with `Authorization: Bearer` and `X-Forwarded-Proto: https`.
+**not** HTTP-smoke the Cloud Run URL. Smoke runs as a Job inside the project.
+
+Cloud Run IAM ID tokens must use the **service URL** as `aud`, even when
+calling a tagged revision. Using the revision/tag URL as audience returns
+401 (`invalid_token`). CI therefore:
+
+- mints the metadata identity token with `audience=$SMOKE_AUDIENCE` where
+  `SMOKE_AUDIENCE` is `status.url` of the service;
+- HTTP-smokes `$SMOKE_BASE_URL` which is the **tagged** candidate URL
+  (`status.traffic.filter(tag:candidate).url` after `--tag=candidate`).
+
+The Job GETs `{SMOKE_BASE_URL}/health/ready` and `/health/live` with
+`Authorization: Bearer` and `X-Forwarded-Proto: https`, retrying with
+backoff for min-instance-zero cold start. The Host header is the tagged
+URL host (include `.a.run.app` in `django_allowed_hosts`).
 
 Cloud Run startup/liveness probes send `Host: localhost` and
 `X-Forwarded-Proto: https`. `django_allowed_hosts` **must** include
