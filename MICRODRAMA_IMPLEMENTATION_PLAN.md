@@ -508,19 +508,19 @@ Two decision classes apply throughout the roadmap:
 
 **Objective:** Make technical tradeoffs and contribution economics explicit.
 
-**Dependencies:** Accepted technical decisions D-010 through D-013, D-015, and D-016, plus approved pricing/reporting decisions D-021/D-022. D-014 is accepted as Bunny Stream default with GCP Cloud CDN fallback; P0-T04 records that ADR and a provisional cost baseline. P2-T05 still has to prove Bunny on device before production video configuration. P0-T01, P0-T02, and P0-T03 may proceed in parallel.
+**Dependencies:** Accepted technical decisions D-010 through D-013, D-015, and D-016, plus approved pricing/reporting decisions D-021/D-022. D-014 is accepted as Bunny Stream default with GCP Cloud CDN fallback; P0-T04 records that ADR and a provisional cost baseline. P2-T05 **Android** proved Bunny (2026-08-26, D-026); iOS play deferred; **production video-provider configuration still waits** (credentials, D-019, public-release gates). P0-T01, P0-T02, and P0-T03 may proceed in parallel.
 
 **Acceptance criteria:**
 
-- [ ] ADRs exist for monorepo, modular monolith, Firebase Auth, Supabase PostgreSQL, video delivery (Bunny default / GCP CDN fallback), RevenueCat, and Firebase analytics/experimentation.
-- [ ] The video ADR records D-014 as Bunny Stream default with GCP Cloud CDN fallback; completing P0-T04 requires a `VideoProvider` boundary and provisional cost assumptions for both paths. P2-T05 remains the on-device proof for Bunny.
-- [ ] Cost sheet supports minutes watched, renditions, egress, MAU, purchases, and ad revenue inputs.
-- [ ] Thresholds for reconsidering Supabase, CDN, transcoder, and MMP are documented.
+- [x] ADRs exist for monorepo, modular monolith, Firebase Auth, Supabase PostgreSQL, video delivery (Bunny default / GCP CDN fallback), RevenueCat, and Firebase analytics/experimentation.
+- [x] The video ADR records D-014 as Bunny Stream default with GCP Cloud CDN fallback; completing P0-T04 requires a `VideoProvider` boundary and provisional cost assumptions for both paths. P2-T05 remains the on-device proof for Bunny.
+- [x] Cost sheet supports minutes watched, renditions, egress, MAU, purchases, and ad revenue inputs.
+- [x] Thresholds for reconsidering Supabase, CDN, transcoder, and MMP are documented.
 
 **Validation and integration tests:**
 
-- [ ] Model one small beta, target launch, and 10× scenario.
-- [ ] Confirm infrastructure variable cost flows into cohort contribution margin.
+- [x] Model one small beta, target launch, and 10× scenario.
+- [x] Confirm infrastructure variable cost flows into cohort contribution margin.
 
 ### Checkpoint 0 — Public-release feasibility (not a Phase 1 gate)
 

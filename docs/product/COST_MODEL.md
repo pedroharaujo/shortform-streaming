@@ -1,7 +1,7 @@
 # MVP Unit-Cost and Contribution Model
 
 **Plan task:** P0-T04  
-**Status:** Formula baseline; ads-first MVP validation (2026-08-27). Provider quotes, catalog terms, and acquisition budget are pending. Store, subscription, and RevenueCat inputs remain for **P7** scenarios.
+**Status:** Three **hypothetical** scenarios filled (small closed beta, controlled storefront launch, 10× scale). D-017 acquisition spend is **not assumed** and is **not** an approved UA budget. This sheet is **not** Checkpoint 0 cost-model approval. Provider quotes, catalog terms, and acquisition budget remain pending except cited public list prices and the P2-T05 Bunny encode observation. Store, subscription, and RevenueCat inputs remain for **P7** scenarios.
 
 The business should be evaluated by acquired cohort, not by aggregate revenue. EUR is the company reporting currency. Keep provider pricing inputs versioned with an effective date and source link; do not hard-code volatile prices into application logic.
 
@@ -64,6 +64,8 @@ contribution_LTV_to_CAC
   = cohort_contribution_LTV_per_user / cohort_CAC
 ```
 
+These scenarios report `cohort_contribution_before_acquisition` only. `acquisition_spend` is pending D-017 (Decision required) and is excluded from the numeric result. `contribution_LTV_to_CAC` is **not claimed**.
+
 ## Required input sheet
 
 | Category | Input | Unit | Source/owner |
@@ -86,6 +88,8 @@ contribution_LTV_to_CAC
 
 ## Video-specific model
 
+Default production path: **Bunny Stream** (D-014 / ADR 0005). The provider boundary is the `VideoProvider` Protocol at `backend/apps/playback/providers/types.py` (job submit/status, asset metadata, takedown, and playback authorization). This document cites that Protocol; it does not change that file. Documented fallback: private GCS → Transcoder API → Cloud CDN, **unplugged**. P2-T05 did not activate it. GCP list prices below are **modeling only**, not production config and not billing-export measurements.
+
 ```text
 transcoder_cost_per_source_minute
   = sum(price_per_output_minute_for_each_rendition)
@@ -99,31 +103,140 @@ CDN_cost_per_watch_hour
   + request_cost_per_watch_hour
 ```
 
-Measure actual bitrate and rendition selection. Do not estimate all viewing at the highest rendition.
+Measure actual bitrate and rendition selection. Do not estimate all viewing at the highest rendition. Scenario GB figures below are **hypothetical modeling assumptions from the bitrate formula**; P2-T05 did not meter GB.
+
+## Shared modeling assumptions
+
+One table used by all three scenarios. Every volume is **hypothetical**. EUR uses Frankfurter **1 USD = 0.85734 EUR** on **2026-08-24** (https://api.frankfurter.app/latest?from=USD&to=EUR), same retrieval as the Bunny spike table. No new dated FX pull.
+
+| # | Input | Value | Label |
+| --- | --- | --- | --- |
+| 1 | GB / watch-hour | **0.721 GB / watch-hour** | **Hypothetical** mix, not all at 1080p: 40% 480p @ 1.2 Mbps, 40% 720p @ 2.5 Mbps, 20% 360p @ 0.8 Mbps. `0.4×1.2 + 0.4×2.5 + 0.2×0.8 = 1.64 Mbps`. `1.64 × 3600 / 8 / 1024 = 0.720703125` ≈ **0.721** (3 d.p.). **Hypothetical modeling assumption from the bitrate formula**; P2-T05 did not meter GB. |
+| 2 | Catalog source minutes | **60** | D-004 one series; **hypothetical** 40 episodes × 1.5 min. Not a licensed catalog. |
+| 3 | Stored GB | **≈ 4.13 GB** | **Modeling, not metered.** Aggregate ladder bitrates 0.4+0.8+1.2+2.5+4.5 = 9.4 Mbps × 1.0 h source → `9.4 × 3600 / 8 / 1024 = 4.130859375` ≈ **4.13 GB** stored for 60 source minutes. Formula-derived. |
+| 4 | Bunny variable video | encode **USD 0.00**; storage **USD 0.0413 / month**; CDN = watch-hours × 0.721 × USD 0.010 | encode = 60 × USD 0.00 = **USD 0.00**; storage = 4.13 × 0.01 = **USD 0.0413** (table ~USD 0.041). CDN uses Bunny Standard list USD 0.010 / GB. |
+| 5 | Other `variable_infrastructure` terms | **USD 0.00** | API/DB/analytics/notifications/MMP: **not modeled / pending quotes**. Kept in the sum so the formula identity is visible. Cloud Run request counts are not invented. |
+| 6 | P7 IAP | **0 / N/A / labeled P7** | Payer conversion, store commissions, coins, subscriptions = **P7**. Ads-only uses rewarded ads/user and net eCPM. |
+| 7 | Acquisition spend | **pending D-017 (Decision required)** | **Not assumed.** No dollar or euro UA figure. `cohort_contribution` is shown **before acquisition**. Approved `contribution_LTV_to_CAC` is **not computed or claimed**. |
+| 8 | Content cost | **USD 0.00 / pending catalog terms** | Self-owned/generated test media; licensed MG/share is P0-T02. Pending, not an approved content budget. |
+| 9 | Net eCPM | **hypothetical USD 8.00** (EUR 6.85872 at 0.85734) **per 1,000 rewarded impressions** | Not measured AdMob yield. `net_ad_revenue = (users × ads_per_user / 1000) × eCPM`. |
+| 10 | EUR | 1 USD = 0.85734 EUR on 2026-08-24 | Frankfurter / ECB reference; reused, not a new pull. |
 
 ## Scenario template
 
-Create at least three scenarios before P0-T04 is complete:
+Three **hypothetical** scenarios. Same fields throughout. This is **not an approved budget**. D-017 remains **pending** (Decision required). Country/storefront mix **references D-001 EU EUR founder scope, still gated by territorial rights**. Customer currency is EUR under D-001/D-021. First real negotiated quotes remain pending except cited public list prices and the P2-T05 Bunny encode observation.
 
-### Small closed beta
+| Field | Small closed beta (**hypothetical**) | Controlled storefront launch (**hypothetical**) | 10× scale (**hypothetical** 10× launch volumes) |
+| --- | --- | --- | --- |
+| Acquired users / MAU | **30** (tens of users; invite-only) | **500 MAU** | **5,000 MAU** |
+| Catalog source minutes | 60 | 60 | 60 (same one-series template; catalog growth is a later decision) |
+| Watch hours / user | **0.5** over the cohort window | **1.0 / month** | **1.0 / month** (do not assume linear engagement quality; only scale headcount ×10) |
+| P7 payer conversion / net payer revenue | **P7 / 0** | **P7 / 0** | **P7 / 0**; **do not assume linear payer conversion** (N/A ads-only) |
+| Rewarded ads / user | **3** | **8 / month** | **8 / month** (same rate; not a conversion curve) |
+| Net eCPM | hypothetical USD 8.00 (EUR 6.85872) | same | same |
+| Content cost | pending / USD 0.00 | pending / USD 0.00 | pending / USD 0.00 |
+| Acquisition spend | **pending D-017 — not assumed** | **pending D-017 — not an approved budget** | **pending D-017 — not assumed** |
+| Encode (Bunny default) | USD 0.00 | USD 0.00 | USD 0.00 |
+| Storage (Bunny list × modeled GB) | ~USD 0.041 | ~USD 0.041 | ~USD 0.041 (same catalog) |
+| CDN (Bunny list × modeled GB) | 30 × 0.5 × 0.721 × 0.010 ≈ **USD 0.108** | 500 × 1.0 × 0.721 × 0.010 ≈ **USD 3.61** | 5,000 × 1.0 × 0.721 × 0.010 ≈ **USD 36.05** |
+| Other infra | USD 0.00 not modeled | USD 0.00 not modeled | USD 0.00 not modeled; see thresholds |
+| `variable_infrastructure` | encode + storage + CDN + other ≈ **USD 0.15** | ≈ **USD 3.65** | ≈ **USD 36.09** |
 
-- Acquired users:
-- Catalog source minutes:
-- Watch hours/user:
-- Payer conversion and average net payer revenue: (**P7** IAP scenario; ads-only MVP uses rewarded ads/user and net eCPM)
-- Rewarded ads/user and net eCPM:
-- Content cost:
-- Expected monthly variable infrastructure:
-- Acquisition spend:
-- Contribution/user:
+Arithmetic shape (required, same every scenario):
 
-### Controlled storefront launch
+```text
+net_store_revenue = 0  (P7)
+net_ad_revenue = (users × ads_per_user / 1000) × hypothetical_eCPM
+content_cost = 0  (pending catalog terms)
+variable_infrastructure = video_transcoding + video_storage + CDN_delivery
+                         + API_and_background_compute [not modeled]
+                         + database_variable_cost [not modeled]
+                         + analytics_and_observability_variable_cost [not modeled]
+                         + transactional_notifications [not modeled]
+                         + payment_or_MMP_variable_fees [not modeled]
+acquisition_spend = pending D-017 (not assumed; excluded from the numeric result)
+cohort_contribution_before_acquisition
+  = net_ad_revenue - content_cost - variable_infrastructure
+LTV:CAC = not claimed (acquisition_spend not approved)
+```
 
-Use the same fields with the approved budget, expected country/storefront/platform mix, customer-currency mix, EUR settlement assumptions, and first real provider quotes.
+Rounding trail (verifier replay). Storage uses 4.13 × 0.01 = **0.0413**. CDN uses the 0.721 GB/watch-hour assumption. Displayed `variable_infrastructure` is rounded to 2 d.p. USD; contribution uses that rounded infra total. EUR = USD × 0.85734.
 
-### 10× scale
+### Small closed beta (hypothetical)
 
-Apply measured behavior rather than assuming linear payer conversion. Identify the first provider, quota, database, observability, and support thresholds that change price or architecture.
+```text
+CDN_delivery = 30 × 0.5 × 0.721 × 0.010 = 0.10815  → table ≈ USD 0.108 (EUR 0.09272)
+video_storage = 4.13 × 0.01 = 0.0413                 → table ≈ USD 0.041 (EUR 0.03541)
+video_transcoding = 0.00
+other infra terms = 0.00  (not modeled / pending quotes)
+variable_infrastructure = 0.00 + 0.0413 + 0.10815 + 0.00 = 0.14945 ≈ USD 0.15 (EUR 0.12860)
+ads impressions = 30 × 3 = 90
+net_ad_revenue = (90 / 1000) × 8.00 = USD 0.72 (EUR 0.61728)
+content_cost = 0.00 (pending catalog terms)
+acquisition_spend = pending D-017 (Decision required; not assumed; no dollar/euro UA figure)
+cohort_contribution_before_acquisition = 0.72 − 0.15 = USD 0.57 (EUR 0.48868)
+  unrounded check: 0.72 − 0.14945 = 0.57055 ≈ 0.57
+LTV:CAC = not claimed
+```
+
+### Controlled storefront launch (hypothetical)
+
+```text
+CDN_delivery = 500 × 1.0 × 0.721 × 0.010 = 3.605 (EUR 3.09071) → table ≈ USD 3.61 (EUR 3.09500)
+video_storage = 0.0413                            → table ≈ USD 0.041 (EUR 0.03541)
+video_transcoding = 0.00
+other infra terms = 0.00  (not modeled / pending quotes)
+variable_infrastructure = 0.00 + 0.0413 + 3.605 + 0.00 = 3.6463 ≈ USD 3.65 (EUR 3.12929)
+ads impressions = 500 × 8 = 4,000
+net_ad_revenue = (4000 / 1000) × 8.00 = USD 32.00 (EUR 27.43488)
+content_cost = 0.00 (pending catalog terms)
+acquisition_spend = pending D-017 (Decision required; not an approved budget; no dollar/euro UA figure)
+cohort_contribution_before_acquisition = 32.00 − 3.65 = USD 28.35 (EUR 24.30559)
+  unrounded check: 32.00 − 3.6463 = 28.3537 ≈ 28.35
+LTV:CAC = not claimed
+```
+
+### 10× scale (hypothetical 10× launch volumes)
+
+Headcount ×10 only. Do not assume linear engagement quality or linear payer conversion (P7 / N/A ads-only).
+
+```text
+CDN_delivery = 5,000 × 1.0 × 0.721 × 0.010 = 36.05  → USD 36.05 (EUR 30.90710)
+video_storage = 0.0413                              → table ≈ USD 0.041 (EUR 0.03541)
+video_transcoding = 0.00
+other infra terms = 0.00  (not modeled / pending quotes)
+variable_infrastructure = 0.00 + 0.0413 + 36.05 + 0.00 = 36.0913 ≈ USD 36.09 (EUR 30.94140)
+ads impressions = 5,000 × 8 = 40,000
+net_ad_revenue = (40000 / 1000) × 8.00 = USD 320.00 (EUR 274.34880)
+content_cost = 0.00 (pending catalog terms)
+acquisition_spend = pending D-017 (Decision required; not assumed; no dollar/euro UA figure)
+cohort_contribution_before_acquisition = 320.00 − 36.09 = USD 283.91 (EUR 243.40740)
+  unrounded check: 320.00 − 36.0913 = 283.9087 ≈ 283.91
+LTV:CAC = not claimed
+```
+
+### GCP-path sensitivity (modeling only; fallback unplugged)
+
+Not production. Same **hypothetical** GB. Replace Bunny CDN USD 0.010/GB with Cloud CDN Europe cache egress USD 0.08/GiB (list-price modeling; GB and GiB treated as the same modeling unit, not metered). Replace Bunny encode USD 0.00 with Transcoder portrait-ladder example **USD 0.105 / source minute** × 60 ≈ **USD 6.30** (EUR 5.40124). GCS Frankfurt Standard storage remains a **pending exact cell** (see GCP table); it is not invented here.
+
+| Scenario | Bunny CDN (USD) | GCP Cloud CDN Europe egress (USD) | GCP encode (USD) |
+| --- | --- | --- | --- |
+| Beta | 0.10815 | 30 × 0.5 × 0.721 × 0.08 = **0.8652** | 6.30 |
+| Launch | 3.605 | 500 × 1.0 × 0.721 × 0.08 = **28.84** | 6.30 |
+| 10× | 36.05 | 5,000 × 1.0 × 0.721 × 0.08 = **288.40** | 6.30 |
+
+This illustrates ADR 0005 “several times more expensive” without activating the fallback. Cache fill (USD 0.01/GiB within Europe) and cache lookup (USD 0.0075 / 10,000) are **not** added; request counts are not invented.
+
+### 10× thresholds
+
+Reuse existing gates only; no new ADRs.
+
+- **CDN volume:** 5,000 × 0.721 GB ≈ **3,605 GB ≈ 3.6 TB** (≈ 3.52 TiB) month CDN — still inside Cloud CDN’s first **10 TiB** Europe tier. **No volume-discount trigger.**
+- **Unit-price gap:** Bunny USD 0.010/GB vs GCP Europe USD 0.08/GiB remains the existing **Bunny → GCP / DRM** gate (Reconsideration gates / ADR 0005), not a new decision.
+- **Supabase → paid/non-pausing production DB** (ADR 0004 + existing gate) is the first realistic infra threshold before public traffic.
+- **MMP:** existing gate + D-018; does not fire while D-017 spend is unset.
+- **Firebase/observability quotas, Cloud Run, support/fraud:** watch existing cost-control bullets / pending quotes; no new architecture.
+- **Encode:** Bunny Standard stays USD 0/source min at this catalog size; GCP Transcoder scales with output minutes if the fallback were ever activated.
 
 ## Cost controls
 
@@ -189,3 +302,23 @@ EUR conversion uses the Frankfurter API (ECB reference rates): https://api.frank
 | Spike-measured delivered GB | absent (not metered) | absent | n/a | No billing-export byte count; do not invent GB | 2026-08-25 |
 
 Premium encoding (not the intended default path for this spike): HD 1080p/720p is USD 0.050 per output minute per codec (EUR 0.042867). Standard encoding remains USD 0.00 per source minute.
+
+## GCP list-price modeling (unplugged fallback; not production)
+
+**Public list price / modeling; GCP path not spiked; GB not metered.** Retrieved **2026-08-28** from the public pages cited in Sources to refresh. EUR uses the existing Frankfurter rate **1 USD = 0.85734 EUR** on **2026-08-24**. These rows are **not** billing-export measurements and **not** production configuration. P2-T05 did not activate this path.
+
+**Portrait classifier note (modeling, not a vendor quote):** spike ladder 240/360/480/720/1080. Treat 240p–480p as SD (`< 1280×720`) and 720p–1080p as HD (`1280×720` to `1920×1080`) unless the live Transcoder page says otherwise. The live page (2026-08-28) matches that classifier; UHD is unused if the ladder stays ≤1080. Example **hypothetical** encode if that full ladder is always produced: `3 × 0.015 + 2 × 0.030 = USD 0.105` per source minute of output (EUR 0.09002) — contrast with Bunny Standard **USD 0.00 / source minute**. List-price comparison, not a production job.
+
+| Input | Original | EUR | Rate | Source | Timestamp | Label |
+| --- | --- | --- | --- | --- | --- | --- |
+| Transcoder SD (`< 1280×720`) | USD 0.015 / output minute | EUR 0.0128601 / output minute | 1 USD = 0.85734 EUR | https://cloud.google.com/transcoder/pricing | 2026-08-28 | public list price / modeling; GCP path not spiked; GB not metered |
+| Transcoder HD (`1280×720` to `1920×1080`) | USD 0.030 / output minute | EUR 0.0257202 / output minute | 1 USD = 0.85734 EUR | https://cloud.google.com/transcoder/pricing | 2026-08-28 | public list price / modeling; GCP path not spiked; GB not metered |
+| Transcoder UHD (`> 1920×1080` to `4096×2160`) | USD 0.060 / output minute | EUR 0.0514404 / output minute | 1 USD = 0.85734 EUR | https://cloud.google.com/transcoder/pricing | 2026-08-28 | cited; unused if ladder stays ≤1080; public list price / modeling; GCP path not spiked |
+| Hypothetical full-ladder encode (3×SD + 2×HD) | USD 0.105 / source minute of output | EUR 0.0900207 / source minute of output | 1 USD = 0.85734 EUR | derived from Transcoder list prices above | 2026-08-28 | modeling, not a vendor quote / not a production job |
+| Cloud CDN cache egress, Europe, 0–10 TiB | USD 0.08 / GiB | EUR 0.0685872 / GiB | 1 USD = 0.85734 EUR | https://cloud.google.com/cdn/pricing | 2026-08-28 | public list price / modeling; GCP path not spiked; GB not metered |
+| Cloud CDN cache fill, within Europe | USD 0.01 / GiB | EUR 0.0085734 / GiB | 1 USD = 0.85734 EUR | https://cloud.google.com/cdn/pricing | 2026-08-28 | public list price / modeling; GCP path not spiked; GB not metered |
+| Cloud CDN cache lookup | USD 0.0075 / 10,000 | EUR 0.00643005 / 10,000 | 1 USD = 0.85734 EUR | https://cloud.google.com/cdn/pricing | 2026-08-28 | public list price / modeling; GCP path not spiked; GB not metered |
+| Cloud Storage Standard, named EU region Frankfurt (`europe-west3`) | **pending exact cell** | pending | n/a | https://cloud.google.com/storage/pricing | 2026-08-28 | public page is a region picker; this retrieval could not select Frankfurt. **Do not invent a GB-month number.** GB not metered. |
+| Cloud Storage Standard, default-loaded Region cell on that page (Iowa `us-central1` selected in the picker) | USD 0.000027397 / 1 gibibyte hour | EUR 0.0000234885 / 1 gibibyte hour | 1 USD = 0.85734 EUR | https://cloud.google.com/storage/pricing | 2026-08-28 | exact loaded hourly cell; **not claimed as Frankfurt**. Labeled conversion only: 0.000027397 × 730 = USD 0.01999981 / GiB-month. Not a metered GB-month and not an europe-west3 quote. |
+
+Hypothetical catalog encode on the GCP path if the unplugged fallback were modeled at the full ladder: 60 × USD 0.105 = **USD 6.30** (EUR 5.40124). Contrast Bunny Standard 60 × USD 0.00 = **USD 0.00**.
