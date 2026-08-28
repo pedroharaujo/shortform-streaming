@@ -63,7 +63,7 @@ def test_episode_override_add_ignores_submitted_series_window(
     admin_client: Client,
 ) -> None:
     series, episode = make_published_title(title="Override Add Inherit", territory="FR")
-    AccessPolicy.objects.create(series=series, free_episode_order_max=3)
+    AccessPolicy.objects.create(series=series, free_episode_order_max=3, rewarded_ad_enabled=False)
     add_url = reverse("admin:entitlements_accesspolicy_add")
     response = admin_client.post(
         add_url,
@@ -79,7 +79,7 @@ def test_episode_override_add_ignores_submitted_series_window(
     assert response.status_code in {302, 200}
     override = AccessPolicy.objects.get(series=series, episode=episode)
     assert override.free_episode_order_max == 3
-    assert override.rewarded_ad_enabled is True
+    assert override.rewarded_ad_enabled is False
 
 
 @pytest.mark.django_db
