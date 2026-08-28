@@ -12,6 +12,8 @@ REQUIRED_PATHS = (
     ".github/workflows/ai-governance.yml",
     ".github/workflows/api-contract.yml",
     ".github/workflows/application-ci.yml",
+    ".github/workflows/deploy-production.yml",
+    ".github/workflows/deploy-staging.yml",
     ".github/workflows/repository-safety.yml",
     "backend/Dockerfile",
     "backend/apps/README.md",
@@ -27,6 +29,7 @@ REQUIRED_PATHS = (
     "docs/runbooks/repository-controls.md",
     "docs/runbooks/compatible-dependency-set.md",
     "docs/runbooks/django-container.md",
+    "docs/runbooks/staging-deploy.md",
     "scripts/check_repository_foundation.py",
     "scripts/scan_secrets.py",
     "tests/repository/test_secret_scanner.py",
@@ -95,18 +98,21 @@ class RepositoryFoundationTests(unittest.TestCase):
         self.assertIn("application-ci.yml", workflows)
         self.assertIn("repository-safety.yml", workflows)
 
+        DEPLOY_WORKFLOWS = frozenset({"deploy-staging.yml", "deploy-production.yml"})
+
         for name, workflow in workflows.items():
             with self.subTest(workflow=name):
                 self.assertIn("permissions:\n  contents: read", workflow)
                 self.assertNotIn("pull_request_target", workflow)
-                self.assertNotIn("id-token", workflow)
-                self.assertNotIn("docker push", workflow)
                 self.assertNotIn("docker/login-action", workflow)
                 self.assertIsNone(re.search(r"docker\s+login", workflow))
                 self.assertNotIn("${{ secrets.", workflow)
                 self.assertIn("persist-credentials: false", workflow)
                 self._assert_every_action_is_pinned(workflow)
                 self._assert_every_job_has_timeout(name, workflow)
+                if name not in DEPLOY_WORKFLOWS:
+                    self.assertNotIn("id-token", workflow)
+                    self.assertNotIn("docker push", workflow)
 
             if "actions/checkout" in workflow:
                 self.assertRegex(
