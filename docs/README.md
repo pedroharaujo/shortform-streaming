@@ -1,5 +1,15 @@
 # Documentation Index
 
+## Authority
+
+Current product and architecture documents below are the source of truth.
+`MICRODRAMA_IMPLEMENTATION_PLAN.md` is the delivery plan (task IDs, sequencing,
+acceptance). If a plan or historical runbook conflicts with an approved product
+brief, decision-register entry, or ADR, the approved document wins.
+
+AI agents start at the root `AGENTS.md`. Operating notes are in
+`AI_DEVELOPMENT.md`.
+
 ## Product and delivery
 
 - `product/MVP_PRODUCT_BRIEF.md` — thinner MVP: 1 series, ads-only monetization; Public Release Readiness remains open.

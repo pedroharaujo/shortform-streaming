@@ -10,7 +10,7 @@
 
 ## 1. How to Use This Plan
 
-This file is the source of truth for product scope, architecture, delivery order, and acceptance. It is designed to be given directly to Codex or Cursor.
+This file is the delivery plan: phases, task IDs, sequencing, and per-task acceptance. Codex and Cursor start from `AGENTS.md`. If this plan conflicts with `docs/product/MVP_PRODUCT_BRIEF.md`, `docs/product/DECISION_REGISTER.md`, or an accepted ADR, those documents win.
 
 Execution rules:
 

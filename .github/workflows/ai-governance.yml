@@ -5,28 +5,30 @@ on:
     paths:
       - "AGENTS.md"
       - "ai/**"
-      - ".codex/**"
-      - ".cursor/**"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/labels.yml"
       - ".github/pull_request_template.md"
       - ".github/workflows/ai-governance.yml"
       - "docs/AI_DEVELOPMENT.md"
+      - "docs/README.md"
       - "scripts/validate_ai_governance.py"
+      - "tests/repository/test_ai_governance_validator.py"
+      - ".gitignore"
   push:
     branches:
       - main
     paths:
       - "AGENTS.md"
       - "ai/**"
-      - ".codex/**"
-      - ".cursor/**"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/labels.yml"
       - ".github/pull_request_template.md"
       - ".github/workflows/ai-governance.yml"
       - "docs/AI_DEVELOPMENT.md"
+      - "docs/README.md"
       - "scripts/validate_ai_governance.py"
+      - "tests/repository/test_ai_governance_validator.py"
+      - ".gitignore"
   workflow_dispatch:
 
 permissions:

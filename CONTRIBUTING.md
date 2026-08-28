@@ -9,7 +9,7 @@
 
 ## Branch and pull-request workflow
 
-- AI-driven changes must follow `AGENTS.md` and `ai/workflows/development-loop.md`, including independent reviewer and verifier contexts.
+- Follow `AGENTS.md` for workflow routing. Use Superpowers for substantial work; do trivial changes directly. Do not create extra git worktrees.
 - Use a short-lived branch from `main`.
 - Name branches by task and purpose, for example `p1-t02/backend-bootstrap`.
 - One pull request should normally satisfy one plan task or a clearly explained subtask.

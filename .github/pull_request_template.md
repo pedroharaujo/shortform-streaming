@@ -2,7 +2,6 @@
 
 - Task ID:
 - Issue:
-- AI state: `ai-review` / `ai-verified`
 - Objective:
 - Dependencies satisfied:
 
@@ -14,15 +13,10 @@ Describe the user/business outcome and the smallest implementation used to achie
 
 - [ ] Copy each applicable criterion from the plan/task and record the result.
 
-## Validation Manifest
+## Workflow
 
-- Owner: orchestrator:
-- Base revision:
-- Change surface (scope, behavior, consumers/boundaries) and risk (`R0` / `R1` / `R2` / `R3`) with triggers:
-- Checks/observations: `required`; `selected`; `not-applicable` with reasons:
-- Specialized agents/reviews; justified expected omissions from surface/triggers/`AGENTS.md`/CI, grouped when reasons match:
-- Reused evidence (result, SHA, environment/configuration, review scope, run/time, expiration):
-- Escalation/replanning conditions:
+- Complexity: Level 1 (direct) / Level 2 (normal) / Level 3 (Superpowers)
+- Superpowers used: yes / no / user override
 
 ## Validation evidence
 
@@ -32,18 +26,6 @@ Describe the user/business outcome and the smallest implementation used to achie
 - Commands run:
 - Screenshots/log/query evidence (redacted):
 - Tested revision:
-
-## Independent agent gates
-
-- Implementer agent/thread:
-- Reviewer agent/thread:
-- Reviewer result: `APPROVE` / `CHANGES_REQUESTED`
-- Blocking findings remaining:
-- Verifier agent/thread:
-- Verifier result: `VERIFIED` / `FAILED` / `BLOCKED`
-- [ ] Implementer, reviewer, and verifier used separate contexts.
-- [ ] The final reviewed revision is the revision that was verified.
-- [ ] Required CI checks pass.
 
 ## Risk review
 
