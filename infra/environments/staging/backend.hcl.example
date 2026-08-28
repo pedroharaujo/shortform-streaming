@@ -1,0 +1,9 @@
+# Example-only partial GCS backend config.
+# Copy to backend.hcl locally (gitignored). Do not commit a real bucket name.
+#
+# GCS encrypts objects at rest by default. Optional CMEK/KMS for state is
+# P5-T01-B / GitHub issue #71. The state bucket is NOT managed by this
+# staging composition.
+
+bucket = "example-only-tofu-state-changeme"
+prefix = "environments/staging"

@@ -1,0 +1,27 @@
+# Example-only values for reviewing this composition with
+# `tofu fmt` / `tofu validate`. Copy to a gitignored staging.tfvars
+# before any apply.
+#
+# This file is NOT a D-020 (residency/retention), D-024 (legal-entity
+# country), or D-025 (registration details) approval.
+# These are NOT a real GCP project ID or billing account ID.
+# Do not tofu apply from this slice (P5-T01-A / #70). Apply is P5-T01-B / #71.
+
+project_id         = "example-only"
+region             = "changeme"
+billing_account_id = "canonical-placeholder-only"
+
+artifact_registry_repository_id = "example-only"
+private_bucket_name             = "example-only-nonvideo-changeme"
+cloud_run_service_name          = "example-only"
+
+# Artifact Registry path form with an unapplied placeholder tag.
+# Not a public hello-world image. The hostname prefix is not a D-020 region.
+cloud_run_image = "changeme-docker.pkg.dev/example-only/example-only/shortform-api:unapplied-placeholder"
+
+secret_ids       = ["bunny-stream-api-key"]
+extra_secret_ids = []
+
+# Tiny example-only amount. Currency code is not a D-022 EUR approval.
+budget_amount_units  = "1"
+budget_currency_code = "XXX"
