@@ -1,9 +1,10 @@
 /**
  * Local/Jest Firebase Auth stand-in.
  *
- * `@react-native-firebase/auth` cannot run in Jest without a native module.
- * This mock implements email/password and issues `mock.<uid>` ID tokens that
- * the Django local verifier accepts. It never sends a backend user id.
+ * `@react-native-firebase/auth` and `@react-native-google-signin/*` cannot run
+ * in Jest without a native module. This mock implements email/password and
+ * Google Sign-In and issues `mock.<uid>` ID tokens that the Django local
+ * verifier accepts. It never sends a backend user id.
  *
  * Device and simulator runtimes use `createNativeFirebaseAuth` instead
  * (`createEmailPasswordAuth` selects the implementation).
@@ -15,11 +16,13 @@ export interface AuthUserSession {
 
 export type AuthOutcome =
   | { readonly outcome: 'ok'; readonly session: AuthUserSession }
+  | { readonly outcome: 'cancelled' }
   | { readonly outcome: 'error'; readonly message: string };
 
-export interface EmailPasswordAuth {
+export interface AppAuth {
   signIn(email: string, password: string): Promise<AuthOutcome>;
   signUp(email: string, password: string): Promise<AuthOutcome>;
+  signInWithGoogle(): Promise<AuthOutcome>;
   signOut(): Promise<void>;
   getCredential(): string | null;
 }
@@ -38,7 +41,7 @@ function issueCredential(email: string): string {
   return `mock.${uidFromEmail(email)}`;
 }
 
-export function createLocalMockFirebaseAuth(): EmailPasswordAuth {
+export function createLocalMockFirebaseAuth(): AppAuth {
   const passwords = new Map<string, string>();
   let currentCredential: string | null = null;
 
@@ -76,6 +79,10 @@ export function createLocalMockFirebaseAuth(): EmailPasswordAuth {
         return { outcome: 'error', message: 'Email or password is incorrect.' };
       }
       currentCredential = issueCredential(email);
+      return { outcome: 'ok', session: { credential: currentCredential } };
+    },
+    async signInWithGoogle(): Promise<AuthOutcome> {
+      currentCredential = 'mock.google_user';
       return { outcome: 'ok', session: { credential: currentCredential } };
     },
     async signOut(): Promise<void> {

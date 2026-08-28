@@ -31,7 +31,7 @@ Local Django already allows `10.0.2.2` so the Android emulator `Host` header is 
 mobile/
   app/                 Expo Router routes (`app/index.tsx` is the home catalog)
   app/health.tsx       Backend availability screen (secondary route)
-  app/sign-in.tsx      Isolated email/password sign-in (not a login wall)
+  app/sign-in.tsx      Isolated email/password and Android Google sign-in (not a login wall)
   app/playback-spike.tsx Isolated HLS spike (not the catalog episode screen)
   app/play/[id].tsx     Product 9:16 player (progress, resume, autoplay)
   src/api/catalog/     Thin catalog wrapper over `@shortform/api-client`
@@ -39,7 +39,7 @@ mobile/
   src/api/progress/    Thin watch-progress wrapper over `@shortform/api-client`
   src/api/health/      Thin health wrapper over `@shortform/api-client`
   src/api/me/          Authenticated `GET /v1/me` (Bearer ID token only)
-  src/auth/            Email/password factory (Jest mock; native Firebase on device) and session holder
+  src/auth/            Auth factory (Jest mock; native Firebase + Google on device) and session holder
   src/device/          Anonymous device UUID in SecureStore (`X-Device-Id`)
   src/config/          Environment selection and manifest reads
   src/features/catalog Home, series detail, and episode-selected screens
@@ -47,6 +47,7 @@ mobile/
   src/features/playback Product player and isolated expo-video spike
   src/features/health/ Backend availability screen
   maestro/             Local Maestro flow (not a CI job)
+  modules/             Android-only Expo module reading default_web_client_id
   scripts/             Expo public-config check
   app.config.ts        Expo config and the single environment resolver
 ```
@@ -65,11 +66,12 @@ against the Auth emulator when `extra.api.environment` is `local`. Jest and CI k
 the local mock in `src/auth/localMockFirebaseAuth.ts` (`mock.<uid>` tokens,
 `FIREBASE_AUTH_MODE=mock`). The factory in `src/auth/createEmailPasswordAuth.ts`
 selects mock whenever `JEST_WORKER_ID` is set and never statically imports
-`@react-native-firebase/*` from modules Jest loads.
+`@react-native-firebase/*` or `@react-native-google-signin/*` from modules Jest loads.
 
 Expo Go remains unsupported (ADR 0003). Catalog, health, and playback stay anonymous;
-**Sign in** is a separate route (`/sign-in`) and is not a login wall (D-005 stays
-Proposed). Apple and Google providers are out of scope for P2-T01-F1.
+**Sign in** is a separate route (`/sign-in`) and is not a login wall (D-005 is
+Founder approved 2026-08-27). Google Sign-In is Android-only in this slice.
+Apple and iOS Google observation are a later D-026 follow-up, not waived.
 
 ### Local Android identity loop (development client)
 
@@ -113,6 +115,48 @@ already lists them). Missing iOS plist must not block Android or CI JavaScript e
 
 5. On `/sign-in`, create an account or sign in, confirm `GET /v1/me`, use **Sign out**,
    then sign in again. The same `public_id` should return. Do not use Expo Go.
+
+## Firebase Auth (Android Google)
+
+Android Google Sign-In uses native `@react-native-google-signin/google-signin` plus
+Firebase `GoogleAuthProvider.credential` with the Google ID token. The Android Google
+Services plugin turns `oauth_client` `client_type` 3 into `default_web_client_id`.
+A local Android-only Expo module reads that resource at device runtime and passes it to
+`GoogleSignin.configure({ webClientId })` so the native SDK can call `requestIdToken`.
+Empty `GoogleSignin.configure({})` is not enough. Do **not** put a web client ID in
+`EXPO_PUBLIC_*` or `extra` (those ship in the JS bundle). Do **not** commit
+`google-services.json`, OAuth client secrets, or real SHA-1 fingerprints. Apple Sign-In
+and iOS Google observation are a later D-026 follow-up (not waived). Do not set
+`ios.googleServicesFile`. Do not add the official google-signin Expo config plugin.
+
+1. Use a **non-production** Firebase project whose project id matches Django
+   (`FIREBASE_PROJECT_ID=demo-shortform-local` in `.env.example`, or the same id your
+   local Django uses).
+2. Enable the Google sign-in method in that Firebase project.
+3. Register the Android app `com.shortformstreaming.app`.
+4. Add the debug SHA-1 with:
+
+   ```shell
+   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
+   ```
+
+   Record a placeholder fingerprint such as `AA:AA:AA:AA:…:FF`. Never commit a real SHA-1.
+
+5. Re-download `google-services.json`. It must include an `oauth_client` with
+   `client_type` 3 (web client). That client is what the Google Services plugin
+   writes to `default_web_client_id` and what `requestIdToken` needs. Copy the
+   file to `mobile/google-services.json` (gitignored). Do not add
+   `ios.googleServicesFile`. SHA-1 and a type-3 client together are required;
+   re-download alone does not help if `configure({})` never requests an ID token.
+6. The Auth emulator path is unchanged (`firebase emulators:start --only auth`). Google
+   ID tokens still come from Play Services; use a Google APIs / Google Play AVD.
+7. Django device loop: `FIREBASE_AUTH_MODE=admin` and `FIREBASE_AUTH_EMULATOR_HOST`.
+   Keep `FIREBASE_AUTH_MODE=mock` for Jest and Application CI.
+8. Rebuild the development client after adding the native package
+   (`pnpm --filter @shortform/mobile android` / `expo run:android`). Metro reload is not
+   enough.
+9. On `/sign-in`: Google → `GET /v1/me` → Sign out → Google again → same `public_id`.
+   Email/password still works. Home catalog still loads without signing in.
 
 ## Commands
 
