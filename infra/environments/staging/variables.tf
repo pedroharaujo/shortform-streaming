@@ -65,10 +65,54 @@ variable "runtime_service_account_id" {
   default     = "shortform-runtime"
 }
 
+variable "django_allowed_hosts" {
+  type        = string
+  description = "Comma-separated DJANGO_ALLOWED_HOSTS for Cloud Run and jobs. Required with no default."
+}
+
+variable "firebase_project_id" {
+  type        = string
+  description = "FIREBASE_PROJECT_ID for Cloud Run and jobs. Required with no default."
+}
+
+variable "video_provider" {
+  type        = string
+  description = "Optional video provider. Empty default injects no Bunny env into Cloud Run or jobs."
+  default     = ""
+
+  validation {
+    condition     = var.video_provider == "" || var.video_provider == "bunny"
+    error_message = "video_provider must be empty or bunny."
+  }
+}
+
+variable "github_repository" {
+  type        = string
+  description = "GitHub owner/repo allowed to federate. Real name belongs in gitignored tfvars and the runbook, not committed .tf."
+}
+
+variable "github_environment" {
+  type        = string
+  description = "GitHub Environment name required on the OIDC token."
+  default     = "staging"
+}
+
+variable "migrate_job_name" {
+  type        = string
+  description = "Cloud Run Job that runs the image migrate entrypoint before traffic."
+  default     = "shortform-migrate"
+}
+
+variable "smoke_job_name" {
+  type        = string
+  description = "Cloud Run Job that smokes an untrafficked candidate revision from inside the project."
+  default     = "shortform-smoke"
+}
+
 variable "secret_ids" {
   type        = list(string)
   description = "Secret Manager secret_id values to create (names only, including Bunny Stream credential names). No versions or values."
-  default     = ["bunny-stream-api-key"]
+  default     = ["bunny-stream-api-key", "django-secret-key", "database-url"]
 }
 
 variable "extra_secret_ids" {

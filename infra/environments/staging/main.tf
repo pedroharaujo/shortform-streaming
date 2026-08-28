@@ -10,19 +10,72 @@ locals {
     concat(var.secret_ids, var.extra_secret_ids)
   )
 
-  # Enable only APIs this composition uses. Do not enable transcoder, dns,
-  # sqladmin, cloudtasks, cloudscheduler, compute, or iamcredentials.
+  # Enable only APIs this composition uses. Enable iamcredentials and sts for
+  # WIF. Do not enable transcoder, dns, sqladmin, cloudtasks, cloudscheduler,
+  # or compute.
   required_services = toset([
     "run.googleapis.com",
     "artifactregistry.googleapis.com",
     "secretmanager.googleapis.com",
     "storage.googleapis.com",
     "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "sts.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "serviceusage.googleapis.com",
     "billingbudgets.googleapis.com",
     "cloudbilling.googleapis.com",
   ])
+
+  # Stdlib-only in-project smoke. SMOKE_BASE_URL is supplied at job execute
+  # time by CI; it is not baked into this composition.
+  smoke_script = <<-PY
+import os
+import sys
+import urllib.error
+import urllib.request
+
+fail = os.environ.get("FAIL_SMOKE", "").strip().lower()
+if fail in ("1", "true", "yes"):
+    sys.exit(1)
+
+base = os.environ.get("SMOKE_BASE_URL", "").strip().rstrip("/")
+if not base:
+    sys.stderr.write("SMOKE_BASE_URL is required\n")
+    sys.exit(1)
+
+meta = (
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity"
+    "?audience=" + base
+)
+req = urllib.request.Request(meta, headers={"Metadata-Flavor": "Google"})
+try:
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        token = resp.read().decode("utf-8").strip()
+except Exception as exc:
+    sys.stderr.write("identity token failed: %s\n" % exc)
+    sys.exit(1)
+
+def check(path):
+    request = urllib.request.Request(
+        base + path,
+        headers={
+            "Authorization": "Bearer " + token,
+            "X-Forwarded-Proto": "https",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as resp:
+            if resp.status != 200:
+                sys.stderr.write("%s returned %s\n" % (path, resp.status))
+                sys.exit(1)
+    except urllib.error.HTTPError as exc:
+        sys.stderr.write("%s returned %s\n" % (path, exc.code))
+        sys.exit(1)
+
+check("/health/ready")
+check("/health/live")
+PY
 }
 
 resource "google_project_service" "required" {
@@ -75,6 +128,55 @@ module "cloud_run" {
   image                         = var.cloud_run_image
   runtime_service_account_email = google_service_account.runtime.email
   labels                        = local.labels
+  django_allowed_hosts          = var.django_allowed_hosts
+  firebase_project_id           = var.firebase_project_id
+  video_provider                = var.video_provider
 
-  depends_on = [google_project_service.required]
+  depends_on = [
+    google_project_service.required,
+    module.secret_names,
+  ]
+}
+
+module "migrate_job" {
+  source = "../../modules/cloud_run_job"
+
+  project_id                    = var.project_id
+  region                        = var.region
+  job_name                      = var.migrate_job_name
+  image                         = var.cloud_run_image
+  runtime_service_account_email = google_service_account.runtime.email
+  labels                        = local.labels
+  args                          = ["migrate"]
+  max_retries                   = 0
+  django_allowed_hosts          = var.django_allowed_hosts
+  firebase_project_id           = var.firebase_project_id
+  video_provider                = var.video_provider
+
+  depends_on = [
+    google_project_service.required,
+    module.secret_names,
+  ]
+}
+
+module "smoke_job" {
+  source = "../../modules/cloud_run_job"
+
+  project_id                    = var.project_id
+  region                        = var.region
+  job_name                      = var.smoke_job_name
+  image                         = var.cloud_run_image
+  runtime_service_account_email = google_service_account.runtime.email
+  labels                        = local.labels
+  command                       = ["python"]
+  args                          = ["-c", local.smoke_script]
+  max_retries                   = 0
+  django_allowed_hosts          = var.django_allowed_hosts
+  firebase_project_id           = var.firebase_project_id
+  video_provider                = var.video_provider
+
+  depends_on = [
+    google_project_service.required,
+    module.secret_names,
+  ]
 }

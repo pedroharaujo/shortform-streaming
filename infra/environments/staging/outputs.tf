@@ -47,3 +47,23 @@ output "budget_name" {
   description = "Billing budget resource name."
   value       = google_billing_budget.staging.name
 }
+
+output "wif_provider_name" {
+  description = "Set GitHub Environment variable WIF_PROVIDER to this value. Not a GitHub secret."
+  value       = module.github_wif.provider_name
+}
+
+output "deploy_service_account_email" {
+  description = "Set GitHub Environment variable WIF_SERVICE_ACCOUNT to this value. Not a GitHub secret."
+  value       = google_service_account.deploy.email
+}
+
+output "migrate_job_name" {
+  description = "Cloud Run migrate job name for GitHub Environment variable MIGRATE_JOB."
+  value       = module.migrate_job.job_name
+}
+
+output "smoke_job_name" {
+  description = "Cloud Run smoke job name for GitHub Environment variable SMOKE_JOB."
+  value       = module.smoke_job.job_name
+}

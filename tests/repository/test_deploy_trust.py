@@ -308,8 +308,8 @@ class DeployTrustTests(unittest.TestCase):
         staging = _concat(STAGING_MAIN, ROOT / "infra/environments/staging/wif.tf")
         job_module = _concat(CLOUD_RUN_JOB_MAIN, CLOUD_RUN_JOB_VARS)
         combined = staging + "\n" + job_module
-        self.assertIn('args = ["migrate"]', combined)
-        self.assertIn("max_retries = 0", combined)
+        self.assertRegex(combined, r'args\s*=\s*\["migrate"\]')
+        self.assertRegex(combined, r"max_retries\s*=\s*0")
         self.assertIn(
             "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity",
             combined,

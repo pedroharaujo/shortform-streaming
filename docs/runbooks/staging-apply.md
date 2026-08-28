@@ -212,3 +212,15 @@ internet. Do not create DNS.
 Keep public activation off: Cloud Run `INGRESS_TRAFFIC_INTERNAL_ONLY` (gcloud
 annotation `run.googleapis.com/ingress: internal`), invoker IAM enabled, no
 `allUsers` / `allAuthenticatedUsers`.
+
+## WIF and CI deploy (P5-T03)
+
+After this composition includes the GitHub OIDC pool, deploy SA, migrate job,
+and smoke job, follow `docs/runbooks/staging-deploy.md` for Environment
+variables, secret **versions**, fail-smoke, and traffic-only rollback. CI
+never `tofu apply`. Image digest is CI-owned; do not apply to change the
+running image.
+
+Secret versions for `django-secret-key` and `database-url` must exist before
+Cloud Run/Job secret refs. Preferred: `-target=module.secret_names`, add
+versions with gcloud (values never committed), then full apply.

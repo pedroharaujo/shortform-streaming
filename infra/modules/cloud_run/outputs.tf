@@ -12,3 +12,8 @@ output "location" {
   description = "Cloud Run service location."
   value       = google_cloud_run_v2_service.this.location
 }
+
+output "uri" {
+  description = "Cloud Run service URI exported by the resource."
+  value       = google_cloud_run_v2_service.this.uri
+}

@@ -5,17 +5,17 @@ variable "project_id" {
 
 variable "region" {
   type        = string
-  description = "Cloud Run location. Required with no default; not a D-020 residency approval."
+  description = "Cloud Run job location. Required with no default; not a D-020 residency approval."
 }
 
-variable "service_name" {
+variable "job_name" {
   type        = string
-  description = "Cloud Run service name. No custom domain or DNS is attached."
+  description = "Cloud Run job name."
 }
 
 variable "image" {
   type        = string
-  description = "Container image URI from Artifact Registry. No public hello-world default."
+  description = "Container image URI from Artifact Registry. CI owns the digest after apply."
 
   validation {
     condition = !contains(
@@ -25,13 +25,13 @@ variable "image" {
       ],
       var.image
     )
-    error_message = "Cloud Run image must not be a public Cloud Run hello-world image."
+    error_message = "Cloud Run job image must not be a public Cloud Run hello-world image."
   }
 }
 
 variable "runtime_service_account_email" {
   type        = string
-  description = "Dedicated runtime service account email. Deploy/WIF identities are a separate SA."
+  description = "Dedicated runtime service account email. Jobs must not run as the deploy/WIF SA."
 }
 
 variable "labels" {
@@ -40,26 +40,27 @@ variable "labels" {
   default     = {}
 }
 
-variable "min_instance_count" {
-  type        = number
-  description = "Minimum instances. Staging stays at zero unless scaled by traffic."
-  default     = 0
+variable "command" {
+  type        = list(string)
+  description = "Optional container command. Empty keeps the image entrypoint."
+  default     = []
 }
 
-variable "ingress" {
-  type        = string
-  description = "Ingress restriction. Public activation stays off."
-  default     = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+variable "args" {
+  type        = list(string)
+  description = "Optional container args. Empty keeps the image command."
+  default     = []
+}
 
-  validation {
-    condition     = var.ingress == "INGRESS_TRAFFIC_INTERNAL_ONLY"
-    error_message = "Public ingress is out of scope; ingress must remain INGRESS_TRAFFIC_INTERNAL_ONLY."
-  }
+variable "max_retries" {
+  type        = number
+  description = "Task retries. Deploy migrate and smoke use 0."
+  default     = 0
 }
 
 variable "django_settings_module" {
   type        = string
-  description = "Django settings module injected as plain env. Do not set PORT."
+  description = "Django settings module injected as plain env."
   default     = "config.settings.production"
 }
 

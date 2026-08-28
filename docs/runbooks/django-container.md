@@ -1,6 +1,6 @@
 # Django container (P5-T02)
 
-Issue: [#77](https://github.com/pedroharaujo/shortform-streaming/issues/77). This runbook is the local image and migration-vs-web contract. Live staging deploy, Artifact Registry push, Cloud Run traffic, and “deploy a backward-compatible migration and rollback a revision” are **deferred to P5-T03**. Do not treat a successful local Compose run as a Cloud Run deploy.
+Issue: [#77](https://github.com/pedroharaujo/shortform-streaming/issues/77). This runbook is the local image and migration-vs-web contract. Live staging deploy, Artifact Registry push from GitHub, Cloud Run traffic, fail-smoke, and “deploy a backward-compatible migration and rollback a revision” are documented in [`staging-deploy.md`](staging-deploy.md) (P5-T03 / #81) and remain **unchecked founder follow-up** until live evidence exists. Do not treat a successful local Compose run as a Cloud Run deploy.
 
 ## Build
 
@@ -96,13 +96,23 @@ Migrations-before-traffic is enforced by the **release contract** (run `migrate`
 
 ## Cloud Run probe mapping (P5-T03)
 
-Do not edit `infra/**` here. When P5-T03 wires Cloud Run:
+Cloud Run probes and the migrate/smoke jobs live in `infra/modules/cloud_run`,
+`infra/modules/cloud_run_job`, and `infra/environments/staging`. Deploy
+sequence, WIF, fail-smoke, and traffic-only rollback are in
+[`staging-deploy.md`](staging-deploy.md).
 
-- Startup/readiness: HTTP GET `/health/ready` with `X-Forwarded-Proto: https` and the service Host.
-- Liveness: HTTP GET `/health/live` with the same forwarded proto (do not require Postgres).
-- Run `migrate` as a **separate** release step (Cloud Run Job or equivalent) against the same image tag/digest **before** shifting request traffic to a new `web` revision.
-- Inject production secrets at process start (Secret Manager), never as image `ENV`.
-- Optional operator override: `CONN_MAX_AGE=60` (see below). Default remains `0`.
+- Startup/readiness: HTTP GET `/health/ready` on port 8080 with
+  `X-Forwarded-Proto: https`.
+- Liveness: HTTP GET `/health/live` with the same forwarded proto (do not
+  require Postgres).
+- Run `migrate` as a **separate** Cloud Run Job (`args = ["migrate"]`) against
+  the same image digest **before** shifting request traffic to a new `web`
+  revision.
+- Inject production secrets at process start (Secret Manager), never as image
+  `ENV`. Do not set `PORT`. Do not inject `CONN_MAX_AGE` or Gunicorn knobs
+  unless an operator later opts in.
+- Optional operator override: `CONN_MAX_AGE=60` (see below). Default remains
+  `0`. The Cloud Run module does not set it.
 
 ## Connection pooling
 
@@ -116,13 +126,27 @@ Scan-ready: run a local scanner against the built tag when the tool is installed
 trivy image --severity HIGH,CRITICAL shortform-backend:ci
 ```
 
-This repository does not add a paid SaaS scanner or an unpinned `aquasecurity/trivy-action`. Absence of Trivy on a developer machine is not a pass for HIGH/CRITICAL findings; record that the command was unavailable. P5-T03/P5-T05 may attach scanning to deploy CI later.
+This repository does not add a paid SaaS scanner. Deploy CI pins
+`aquasecurity/trivy-action` and fails the staging/production deploy jobs on
+HIGH/CRITICAL. Absence of Trivy on a developer machine is not a pass for
+HIGH/CRITICAL findings; record that the command was unavailable.
 
-## Deferred to P5-T03
+## Landed in P5-T03 (see staging-deploy.md)
 
-- Workload Identity Federation and Artifact Registry push
-- Staging Cloud Run deploy of this image
-- Deploying a backward-compatible migration and rolling back a revision without schema corruption
-- Production approval gates
-- `tofu apply` and edits under `infra/**`
-- Wiring `scripts/verify_backend_container.sh` into the Application CI Container job (that edit ALWAYS_RUNs Mobile; expo pins are owned by P2-T08)
+Workflows, WIF IaC, Cloud Run probes/env, migrate+smoke jobs, and the gated
+production workflow are in [`staging-deploy.md`](staging-deploy.md). Live
+apply, Environment protection, fail-smoke, and revision rollback stay
+**required follow-up** and must not be marked not-applicable.
+
+- Workload Identity Federation and Artifact Registry push (CI)
+- Staging Cloud Run deploy workflow of this image
+- Production approval-gated dispatch workflow
+- Pin Trivy on the deploy path
+- `tofu` modules under `infra/**` for WIF, jobs, and Cloud Run env/probes
+
+## Still follow-up
+
+- Live `tofu apply` / GitHub Environment evidence (unchecked in
+  [`staging-deploy.md`](staging-deploy.md))
+- Wiring `scripts/verify_backend_container.sh` into the Application CI
+  Container job (that edit ALWAYS_RUNs Mobile; expo pins are owned by P2-T08)
