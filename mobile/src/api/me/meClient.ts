@@ -37,11 +37,14 @@ export function createMeClient(options: MeClientOptions): MeClient {
         };
       }
 
-      const result = await mapJsonRequest<CurrentUserProfile>(timeoutMs, UNKNOWN_MESSAGE, (signal) =>
-        api.GET('/v1/me' satisfies keyof paths, {
-          headers: { Authorization: `Bearer ${bearer}` },
-          signal,
-        }),
+      const result = await mapJsonRequest<CurrentUserProfile>(
+        timeoutMs,
+        UNKNOWN_MESSAGE,
+        (signal) =>
+          api.GET('/v1/me' satisfies keyof paths, {
+            headers: { Authorization: `Bearer ${bearer}` },
+            signal,
+          }),
       );
       if (result.outcome === 'ok') {
         return { outcome: 'ok', data: result.data };
