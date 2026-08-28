@@ -1,3 +1,5 @@
+import { getOrCreateDeviceId } from './deviceId';
+
 const mockStore = new Map<string, string>();
 
 jest.mock('expo-secure-store', () => ({
@@ -13,7 +15,6 @@ describe('getOrCreateDeviceId', () => {
   });
 
   it('creates a UUID once and reuses the stored value', async () => {
-    const { getOrCreateDeviceId } = await import('./deviceId');
     const first = await getOrCreateDeviceId();
     const second = await getOrCreateDeviceId();
     expect(first).toMatch(

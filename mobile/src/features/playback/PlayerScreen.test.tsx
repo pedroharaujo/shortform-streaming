@@ -13,22 +13,7 @@ import { PlayerScreen } from './PlayerScreen';
 
 const GRANTED_URI = 'https://video.example.test/hls/a/playlist.m3u8?token=secret';
 
-jest.mock('./HlsVideoView', () => {
-  const { createElement } = require('react') as typeof import('react');
-  const { Pressable, Text, View } = require('react-native') as typeof import('react-native');
-  return {
-    HlsVideoView: ({ onEnded, testID }: { onEnded?: () => void; testID?: string }) =>
-      createElement(
-        View,
-        { testID: testID ?? 'player-video' },
-        createElement(
-          Pressable,
-          { onPress: () => onEnded?.(), testID: 'player-simulate-end' },
-          createElement(Text, null, 'Simulate end'),
-        ),
-      ),
-  };
-});
+jest.mock('./HlsVideoView');
 
 const harborEpisode: CatalogEpisodeDetail = {
   id: 'ep_harbor_1',
