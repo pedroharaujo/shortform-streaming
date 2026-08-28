@@ -149,6 +149,25 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     assert "completed" in progress_properties
     assert "updated_at" in progress_properties
 
+    offers = paths["/v1/offers/{episode_id}"]["get"]
+    assert offers.get("security") == [{}, {"FirebaseIdToken": []}]
+    for status_code in ("400", "401", "404"):
+        assert status_code in offers["responses"]
+        assert _response_schema_ref(offers["responses"][status_code]).endswith("/ErrorEnvelope")
+    assert "503" not in offers["responses"]
+    locked_offers = schema["components"]["schemas"]["EpisodeOffersLocked"]
+    locked_offer_properties = locked_offers.get("properties", {})
+    assert "playback_url" not in locked_offer_properties
+    assert "expires_at" not in locked_offer_properties
+    granted_offers = schema["components"]["schemas"]["EpisodeOffersGranted"]
+    granted_offer_properties = granted_offers.get("properties", {})
+    assert "playback_url" not in granted_offer_properties
+    offer_method = schema["components"]["schemas"]["OfferMethod"]
+    method_type = _enum_values(offer_method["properties"]["type"], schema["components"]["schemas"])
+    assert set(method_type) == {"entitlement", "free", "rewarded_ad"}
+    assert "coin" not in method_type
+    assert "subscription" not in method_type
+
 
 def _response_schema_ref(response: dict[str, Any]) -> str:
     content = response.get("content", {}).get("application/json", {})
@@ -167,3 +186,17 @@ def _resolve_schema(schema: dict[str, Any], components: dict[str, Any]) -> dict[
         if isinstance(resolved, dict):
             return resolved
     return schema
+
+
+def _enum_values(schema: dict[str, Any], components: dict[str, Any]) -> list[str]:
+    resolved = _resolve_schema(schema, components)
+    if "allOf" in resolved:
+        values: list[str] = []
+        for part in resolved["allOf"]:
+            if isinstance(part, dict):
+                values.extend(_enum_values(part, components))
+        return values
+    enum = resolved.get("enum")
+    if isinstance(enum, list):
+        return [str(item) for item in enum]
+    return []

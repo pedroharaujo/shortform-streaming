@@ -15,7 +15,7 @@ from apps.accounts.models import UserProfile
 from apps.accounts.profiles import get_or_create_profile
 from apps.accounts.verification import MOCK_TOKEN_PREFIX
 from apps.catalog.models import PublicationStatus
-from apps.entitlements.models import EpisodeEntitlement
+from apps.entitlements.models import AccessPolicy, EpisodeEntitlement
 from apps.playback.models import MediaAssetState
 from apps.playback.providers.factory import reset_provider_cache
 from apps.playback.providers.fake import FakeVideoProvider
@@ -27,7 +27,11 @@ from tests.catalog.builders import (
     make_season,
     make_series,
 )
-from tests.entitlements.builders import grant_staff_entitlement
+from tests.entitlements.builders import (
+    grant_staff_entitlement,
+    make_episode_access_policy,
+    make_series_access_policy,
+)
 
 AUTHORIZE = "/v1/playback/{episode_id}/authorize"
 HMAC_KEY = "synthetic-hmac-for-tests"
@@ -527,3 +531,111 @@ def test_client_cannot_create_entitlement_via_authorize(
     assert missing_collection.status_code == 404
     missing_me = client.get("/v1/me/entitlements")
     assert missing_me.status_code == 404
+
+
+@pytest.mark.django_db
+def test_series_policy_free_max_three_locks_order_four(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    series, episode = _published_episode(order=4, title="Tight Window")
+    _seed_ready(fake_provider, episode)
+    make_series_access_policy(series, free_episode_order_max=3)
+    response = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        data='{"free_episode_order_max": 10}',
+        content_type="application/json",
+        **_headers(),
+    )
+    assert response.status_code == 200
+    _assert_locked(response.json(), "login_required")
+    assert "playback_url" not in response.json()
+
+
+@pytest.mark.django_db
+def test_episode_force_free_grants_order_six(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    series, episode = _published_episode(order=6, title="Force Free")
+    _seed_ready(fake_provider, episode)
+    AccessPolicy.objects.create(series=series, episode=episode, force_free=True)
+    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert response.status_code == 200
+    _assert_granted(response.json(), fake_provider)
+
+
+@pytest.mark.django_db
+def test_episode_force_lock_locks_order_one_unless_entitled(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    series, episode = _published_episode(order=1, title="Force Lock")
+    _seed_ready(fake_provider, episode)
+    AccessPolicy.objects.create(series=series, episode=episode, force_lock=True)
+    locked = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert locked.status_code == 200
+    _assert_locked(locked.json(), "login_required")
+
+    profile = get_or_create_profile(VALID_UID)
+    grant_staff_entitlement(profile, episode)
+    granted = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    assert granted.status_code == 200
+    _assert_granted(granted.json(), fake_provider)
+
+
+@pytest.mark.django_db
+def test_ads_disabled_does_not_grant_past_window(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    series, episode = _published_episode(order=6, title="Ads Off")
+    _seed_ready(fake_provider, episode)
+    make_series_access_policy(series, rewarded_ad_enabled=False)
+    response = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    assert response.status_code == 200
+    _assert_locked(response.json(), "entitlement_required")
+
+
+@pytest.mark.django_db
+def test_episode_override_defaults_do_not_restore_series_free_max(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    series, episode = _published_episode(order=4, title="Override Defaults")
+    _seed_ready(fake_provider, episode)
+    make_series_access_policy(series, free_episode_order_max=3, rewarded_ad_enabled=True)
+    make_episode_access_policy(episode)
+    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert response.status_code == 200
+    _assert_locked(response.json(), "login_required")
+    assert "playback_url" not in response.json()
+
+
+@pytest.mark.django_db
+def test_episode_force_lock_keeps_series_ads_off_and_locks_unless_entitled(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    series, episode = _published_episode(order=1, title="Force Lock Ads Off")
+    _seed_ready(fake_provider, episode)
+    make_series_access_policy(series, rewarded_ad_enabled=False)
+    make_episode_access_policy(episode, force_lock=True)
+    locked = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert locked.status_code == 200
+    _assert_locked(locked.json(), "login_required")
+
+    profile = get_or_create_profile(VALID_UID)
+    grant_staff_entitlement(profile, episode)
+    granted = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    assert granted.status_code == 200
+    _assert_granted(granted.json(), fake_provider)

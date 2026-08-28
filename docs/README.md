@@ -44,6 +44,7 @@ AI agents start at the root `AGENTS.md`. Operating notes are in
 - `runbooks/compatible-dependency-set.md` — Expo SDK 57 / Django 6.1 compatible versions and Dependabot ignore policy (P1-T05A).
 - `runbooks/django-container.md` — non-root Django image, gunicorn, collectstatic, migrate-vs-web, Compose evidence (P5-T02). Live staging deploy is P5-T03.
 - `runbooks/staging-apply.md` — OpenTofu 1.11.14 install, session project override, state-bucket bootstrap, and staging apply (P5-T01-B).
+- `runbooks/access-policy.md` — D-006 defaults, Admin live saves, offers vs authorize, rollback of `0003` then `0002` (P3-T01).
 
 ## Future documentation locations
 
