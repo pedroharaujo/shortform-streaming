@@ -1,0 +1,116 @@
+name: Deploy staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      fail_smoke:
+        description: Fail in-project smoke so traffic is not promoted
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+      WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      ARTIFACT_REGISTRY_REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
+      CLOUD_RUN_SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
+      MIGRATE_JOB: ${{ vars.MIGRATE_JOB }}
+      SMOKE_JOB: ${{ vars.SMOKE_JOB }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Fail closed when required vars are empty
+        run: |
+          missing=0
+          for name in WIF_PROVIDER WIF_SERVICE_ACCOUNT GCP_PROJECT_ID GCP_REGION ARTIFACT_REGISTRY_REPOSITORY CLOUD_RUN_SERVICE MIGRATE_JOB SMOKE_JOB; do
+            if [ -z "${!name}" ]; then
+              echo "Required GitHub Environment variable ${name} is empty." >&2
+              missing=1
+            fi
+          done
+          if [ "${missing}" -ne 0 ]; then
+            exit 1
+          fi
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
+      - name: Build image
+        run: docker build -f backend/Dockerfile -t shortform-backend:ci .
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: shortform-backend:ci
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+      - name: Configure Artifact Registry docker auth
+        run: gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
+      - name: Push image digest
+        run: |
+          set -euo pipefail
+          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPOSITORY}/shortform-backend"
+          docker tag shortform-backend:ci "${IMAGE}:${GITHUB_SHA}"
+          docker push "${IMAGE}:${GITHUB_SHA}"
+          DIGEST="$(gcloud artifacts docker images describe "${IMAGE}:${GITHUB_SHA}" --project="${GCP_PROJECT_ID}" --format='get(image_summary.digest)')"
+          IMAGE_DIGEST="${IMAGE}@${DIGEST}"
+          echo "commit=${GITHUB_SHA}"
+          echo "image=${IMAGE_DIGEST}"
+          echo "IMAGE=${IMAGE}" >> "${GITHUB_ENV}"
+          echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> "${GITHUB_ENV}"
+      - name: Update and execute migrate job
+        run: |
+          set -euo pipefail
+          gcloud run jobs update "${MIGRATE_JOB}" --image="${IMAGE_DIGEST}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
+          gcloud run jobs execute "${MIGRATE_JOB}" --wait --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
+      - name: Update Cloud Run service with no traffic
+        run: |
+          set -euo pipefail
+          PREVIOUS="$(gcloud run services describe "${CLOUD_RUN_SERVICE}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}" --format='value(status.traffic[0].revisionName)')"
+          SERVICE_URL="$(gcloud run services describe "${CLOUD_RUN_SERVICE}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}" --format='value(status.url)')"
+          echo "previous_revision=${PREVIOUS}"
+          echo "service_url=${SERVICE_URL}"
+          echo "PREVIOUS_REVISION=${PREVIOUS}" >> "${GITHUB_ENV}"
+          echo "SERVICE_URL=${SERVICE_URL}" >> "${GITHUB_ENV}"
+          gcloud run services update "${CLOUD_RUN_SERVICE}" --image="${IMAGE_DIGEST}" --no-traffic --tag=candidate --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
+          CANDIDATE="$(gcloud run services describe "${CLOUD_RUN_SERVICE}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}" --format='value(status.traffic.filter(tag:candidate).revisionName)')"
+          CANDIDATE_URL="$(gcloud run services describe "${CLOUD_RUN_SERVICE}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}" --format='value(status.traffic.filter(tag:candidate).url)')"
+          echo "candidate_revision=${CANDIDATE}"
+          echo "candidate_url=${CANDIDATE_URL}"
+          echo "CANDIDATE=${CANDIDATE}" >> "${GITHUB_ENV}"
+          echo "CANDIDATE_URL=${CANDIDATE_URL}" >> "${GITHUB_ENV}"
+      - name: Update and execute smoke job
+        env:
+          FAIL_SMOKE: ${{ inputs.fail_smoke == true }}
+        run: |
+          set -euo pipefail
+          gcloud run jobs update "${SMOKE_JOB}" --image="${IMAGE_DIGEST}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
+          gcloud run jobs execute "${SMOKE_JOB}" --wait --update-env-vars="SMOKE_BASE_URL=${CANDIDATE_URL},SMOKE_AUDIENCE=${SERVICE_URL},FAIL_SMOKE=${FAIL_SMOKE}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
+      - name: Promote revision
+        run: |
+          set -euo pipefail
+          gcloud run services update-traffic "${CLOUD_RUN_SERVICE}" --to-revisions="${CANDIDATE}=100" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"

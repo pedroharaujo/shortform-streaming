@@ -6,6 +6,9 @@
 # country), or D-025 (registration details) approval.
 # These are NOT a real GCP project ID or billing account ID.
 # Copy to a gitignored staging.tfvars before apply (P5-T01-B / #71).
+#
+# The real GitHub owner/repo belongs in that gitignored copy and in
+# docs/runbooks/staging-deploy.md, not in committed .tf files.
 
 project_id         = "example-only"
 region             = "changeme"
@@ -19,7 +22,15 @@ cloud_run_service_name          = "example-only"
 # Not a public hello-world image. The hostname prefix is not a D-020 region.
 cloud_run_image = "changeme-docker.pkg.dev/example-only/example-only/shortform-api:unapplied-placeholder"
 
-secret_ids       = ["bunny-stream-api-key"]
+# Probe Host is localhost. Include 127.0.0.1 and localhost so Django does not 400.
+django_allowed_hosts = "127.0.0.1,localhost,.a.run.app,example-only.example"
+firebase_project_id  = "example-only"
+video_provider       = ""
+
+github_repository  = "example-org/example-repo"
+github_environment = "staging"
+
+secret_ids       = ["bunny-stream-api-key", "django-secret-key", "database-url"]
 extra_secret_ids = []
 
 # Tiny example-only amount. Currency code is not a D-022 EUR approval.
