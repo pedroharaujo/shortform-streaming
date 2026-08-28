@@ -788,14 +788,16 @@ Evidence (2026-08-27): PR #56 merged; Fake CI ingest tests; optional Bunny smoke
 
 **Acceptance criteria:**
 
-- [ ] Response grants only eligible playback and otherwise returns machine-readable lock reasons/offers.
-- [ ] Signed access is short-lived, HTTPS-only, and never persisted in analytics or logs.
-- [ ] Authorization decisions are consistent under concurrent requests and clock boundaries.
+- [x] Response grants only eligible playback and otherwise returns machine-readable lock reasons/offers.
+- [x] Signed access is short-lived, HTTPS-only, and never persisted in analytics or logs.
+- [x] Authorization decisions are consistent under concurrent requests and clock boundaries.
 
 **Validation and integration tests:**
 
-- [ ] Decision-table tests cover free, entitled, expired rights, wrong territory, unpublished, takedown, and anonymous cases. Subscription cases wait for P7.
-- [ ] Integration test confirms a granted URL plays and the same path fails after expiry or rights removal.
+- [x] Decision-table tests cover free, entitled, expired rights, wrong territory, unpublished, takedown, and anonymous cases. Subscription cases wait for P7.
+- [x] Integration test confirms a granted URL plays and the same path fails after expiry or rights removal.
+
+Evidence (2026-08-28): P2-T07 / #68; Fake provider decision-table authorize tests; D-006 hardcoded `Episode.order` 1–5 per season; optional Firebase on authorize; no AccessPolicy/offers/AdMob.
 
 #### P2-T08 — Build vertical player, progress, and autoplay
 

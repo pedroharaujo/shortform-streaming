@@ -115,7 +115,7 @@ export interface paths {
         put?: never;
         /**
          * Authorize episode playback
-         * @description Anonymous free playback. Requires the same catalog context headers as catalog reads. Unknown, ineligible, unpublished, or episodes without a ready MediaAsset return 404 ErrorEnvelope, never 403. An unset or disabled VideoProvider returns 503 ErrorEnvelope and never mints unsigned access. Success looks up the episode's ready MediaAsset and returns an opaque HTTPS HLS URL that is not served by Django.
+         * @description Authorize playback for a catalog-eligible episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished, takedown, wrong-territory, or missing-ready-asset ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and no playback_url. Grant looks up the episode's ready MediaAsset and returns an opaque HTTPS HLS URL that is not served by Django. An unset or disabled VideoProvider returns 503 ErrorEnvelope on the grant path only and never mints unsigned access. Client-supplied user identifiers are ignored.
          */
         post: operations["v1_playback_authorize_create"];
         delete?: never;
@@ -242,7 +242,20 @@ export interface components {
              */
             status: components["schemas"]["StatusEnum"];
         };
-        PlaybackAuthorizeResponse: {
+        /**
+         * @description * `login_required` - login_required
+         *     * `entitlement_required` - entitlement_required
+         * @enum {string}
+         */
+        LockReasonsEnum: "login_required" | "entitlement_required";
+        PlaybackAuthorizeGranted: {
+            /**
+             * @description granted when playback is authorized and a short-lived URL is returned.
+             *
+             *     * `granted` - granted (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            decision: "granted";
             /**
              * Format: uri
              * @description Opaque HTTPS HLS playlist URL. Short-lived. Does not include Bunny library ids, video ids as separate fields, or an embed player URL. Django never serves these bytes.
@@ -254,6 +267,28 @@ export interface components {
              */
             expires_at: string;
         };
+        /**
+         * @description * `granted` - granted
+         * @enum {string}
+         */
+        PlaybackAuthorizeGrantedDecisionEnum: "granted";
+        PlaybackAuthorizeLocked: {
+            /**
+             * @description locked when the episode is catalog-eligible but not playable.
+             *
+             *     * `locked` - locked (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            decision: "locked";
+            /** @description Non-empty machine-readable lock reasons. Closed set: login_required, entitlement_required. Offers are omitted until P3. */
+            lock_reasons: components["schemas"]["LockReasonsEnum"][];
+        };
+        /**
+         * @description * `locked` - locked
+         * @enum {string}
+         */
+        PlaybackAuthorizeLockedDecisionEnum: "locked";
+        PlaybackAuthorizeResponse: components["schemas"]["PlaybackAuthorizeGranted"] | components["schemas"]["PlaybackAuthorizeLocked"];
         /**
          * @description Opaque public identifier. Sequential database integers are never used as public IDs.
          * @example ser_1a2b3c4d5e6f
@@ -467,6 +502,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
             404: {
                 headers: {
@@ -476,7 +520,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Playback provider is unset or disabled. Fail-closed: no URL is minted. HTTP 503, never an unsigned playlist. */
+            /** @description Playback provider is unset or disabled. Fail-closed: no URL is minted. HTTP 503, never an unsigned playlist. Returned only on the grant mint path. */
             503: {
                 headers: {
                     [name: string]: unknown;

@@ -42,21 +42,34 @@ admin-mode local work: `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`. Never commi
 service-account JSON.
 
 `playback` is the video-provider, MediaAsset ingestion, and authorize bounded
-application (P2-T05 / P2-T06). Django never serves video bytes. Staff upload a
-vertical master through Django Admin; `VideoProvider` encodes it. Anonymous
-clients request a short-lived opaque HLS URL from:
+application (P2-T05 / P2-T06 / P2-T07). Django never serves video bytes. Staff
+upload a vertical master through Django Admin; `VideoProvider` encodes it.
+Clients request a short-lived opaque HLS URL from:
 
 - `POST /v1/playback/{episode_id}/authorize`
 
-The same catalog context headers are required. Unknown, ineligible, unpublished,
+The same catalog context headers are required. Firebase ID token is optional: a
+missing header is anonymous; a present invalid token is HTTP 401
+`ErrorEnvelope`. Unknown, ineligible, unpublished, takedown, wrong-territory,
 or episodes without a ready MediaAsset return HTTP 404 `ErrorEnvelope`, never
-403. An unset or disabled `VideoProvider` returns HTTP 503 `ErrorEnvelope` and
-never mints unsigned access. Local settings default to `VIDEO_PROVIDER=fake`.
-Production rejects `fake`. Authorize looks up the episode's ready MediaAsset;
+403. Catalog-eligible lock returns HTTP 200 `decision=locked` with
+`lock_reasons` (`login_required` or `entitlement_required`) and no
+`playback_url`. Grant mints only after existing entitlement or the D-006 free
+window (`Episode.order` 1–5 per season). An unset or disabled `VideoProvider`
+returns HTTP 503 `ErrorEnvelope` on the grant path only and never mints
+unsigned access. Local settings default to `VIDEO_PROVIDER=fake`. Production
+rejects `fake`. Authorize looks up the episode's ready MediaAsset;
 `PLAYBACK_SPIKE_ASSETS` is obsolete and is not consulted.
 
-Later plan tasks own `entitlements`, `commerce`, `advertising`, `experiments`,
-and `notifications`.
+`entitlements` is the episode-entitlement bounded application created by
+P2-T07. `EpisodeEntitlement` is unique per `(user_profile, episode)` with
+source `staff` or `rewarded_ad`. Staff grant in Django Admin (default
+`staff`). There is no public POST that creates rows and no
+`GET /v1/me/entitlements` in this slice. `rewarded_ad` is stored for P3 and is
+not written by a public API here.
+
+Later plan tasks own `commerce`, `advertising`, `experiments`, and
+`notifications`.
 
 Generate 9:16 test media and submit it to Bunny Stream (requires non-production
 credentials; missing credentials are not a Bunny failure). The command is a
