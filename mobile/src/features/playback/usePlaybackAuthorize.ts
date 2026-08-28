@@ -15,6 +15,7 @@ export interface PlaybackAuthorizeQuery {
 }
 
 const EMPTY_EPISODE_MESSAGE = 'Episode id is required for the playback spike.';
+const MISSING_URL_MESSAGE = 'Playback authorization did not return a URL.';
 
 export function usePlaybackAuthorize(
   client: PlaybackClient,
@@ -25,7 +26,10 @@ export function usePlaybackAuthorize(
       return { phase: 'error', message: EMPTY_EPISODE_MESSAGE };
     }
     const result = await client.authorize(episodeId);
-    if (result.outcome === 'ok' && result.data.playback_url !== '') {
+    if (result.outcome === 'ok') {
+      if (result.data.playback_url === '') {
+        return { phase: 'error', message: MISSING_URL_MESSAGE };
+      }
       return {
         phase: 'loaded',
         playbackUrl: result.data.playback_url,
