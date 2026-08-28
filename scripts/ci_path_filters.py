@@ -55,6 +55,7 @@ CONTAINER_PATHS = (
     "Dockerfile",
     "backend/Dockerfile",
     ".dockerignore",
+    "scripts/verify_backend_container.sh",
 )
 
 JOB_PATTERNS = {

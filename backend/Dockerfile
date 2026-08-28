@@ -1,7 +1,8 @@
-# CI smoke image only. P5-T02 owns production hardening (non-root user,
-# image scanning, static files, and runtime process shape).
-# Build must succeed without production secrets: this file never imports
-# production Django settings and never bakes credentials into layers.
+# Production Cloud Run image (P5-T02 / #77). Deterministic, non-root, no
+# build secrets. Runtime production settings are injected at process start.
+# Build: docker build -f backend/Dockerfile -t shortform-backend:ci .
+# This file never imports production Django settings and never bakes
+# credentials into layers.
 
 FROM python:3.14-slim-bookworm AS builder
 
@@ -28,7 +29,15 @@ WORKDIR /app
 COPY --from=builder /src/.venv /app/.venv
 COPY --from=builder /src/backend /app/backend
 
-# Runtime production settings still require env at process start. The default
-# command only proves the interpreter and Django import work without secrets.
 WORKDIR /app/backend
-CMD ["python", "-c", "import django; print(django.get_version())"]
+
+RUN DJANGO_SETTINGS_MODULE=config.settings.staticbuild \
+    python manage.py collectstatic --noinput --skip-checks \
+    && chmod +x /app/backend/docker-entrypoint.sh \
+    && groupadd --gid 1000 app \
+    && useradd --uid 1000 --gid 1000 --home-dir /app --no-create-home app \
+    && chown -R app:app /app
+
+USER app
+ENTRYPOINT ["/app/backend/docker-entrypoint.sh"]
+CMD ["web"]

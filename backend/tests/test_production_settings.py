@@ -23,6 +23,7 @@ PLAYBACK_ENVIRONMENT = (
 CONFIGURATION_ENVIRONMENT = (
     *REQUIRED_ENVIRONMENT,
     "DATABASE_CONNECT_TIMEOUT",
+    "CONN_MAX_AGE",
     "FIREBASE_AUTH_MODE",
     "FIREBASE_PROJECT_ID",
     "FIREBASE_AUTH_EMULATOR_HOST",
@@ -36,14 +37,17 @@ IMPORT_VALID_ENVIRONMENT = {
 }
 
 
-def run_settings_import(overrides: dict[str, str]) -> subprocess.CompletedProcess[str]:
+def run_settings_import(
+    overrides: dict[str, str],
+    code: str = "import config.settings.production",
+) -> subprocess.CompletedProcess[str]:
     environment = os.environ.copy()
     for name in CONFIGURATION_ENVIRONMENT:
         environment.pop(name, None)
     environment.update(overrides)
     environment["PYTHONPATH"] = str(ROOT / "backend")
     return subprocess.run(
-        [sys.executable, "-c", "import config.settings.production"],
+        [sys.executable, "-c", code],
         cwd=ROOT,
         env=environment,
         capture_output=True,
@@ -121,3 +125,33 @@ def test_production_settings_gcs_staff_upload_without_bucket_fails() -> None:
 
     assert result.returncode != 0
     assert "STAFF_UPLOAD_GCS_BUCKET" in result.stderr
+
+
+CONN_MAX_AGE_CODE = (
+    "from config.settings import production; print(production.DATABASES['default']['CONN_MAX_AGE'])"
+)
+
+
+def test_production_settings_conn_max_age_defaults_to_zero() -> None:
+    result = run_settings_import(IMPORT_VALID_ENVIRONMENT, code=CONN_MAX_AGE_CODE)
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "0"
+
+
+def test_production_settings_conn_max_age_accepts_sixty() -> None:
+    result = run_settings_import(
+        {**IMPORT_VALID_ENVIRONMENT, "CONN_MAX_AGE": "60"},
+        code=CONN_MAX_AGE_CODE,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "60"
+
+
+@pytest.mark.parametrize("value", ["abc", "-1", "3601"])
+def test_production_settings_conn_max_age_rejects_invalid(value: str) -> None:
+    result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "CONN_MAX_AGE": value})
+
+    assert result.returncode != 0
+    assert "CONN_MAX_AGE" in result.stderr

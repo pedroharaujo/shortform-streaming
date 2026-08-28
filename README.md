@@ -39,7 +39,8 @@ non-sensitive payload `{"status":"unavailable"}` if PostgreSQL cannot be reached
 Stop local services without deleting their named data volume with `docker compose down`.
 
 Staff catalog management uses Django Admin at `http://127.0.0.1:8000/admin/` (local
-`DEBUG` + `runserver`; production collectstatic is P5-T02). Create a staff user and
+`DEBUG` + `runserver`; the production image collects Admin static files — see
+[docs/runbooks/django-container.md](./docs/runbooks/django-container.md)). Create a staff user and
 optional synthetic FR/DE titles (generated metadata only):
 
 ```shell
@@ -112,11 +113,18 @@ CI collects a coverage report without a failing floor. Reproduce that locally wi
 pnpm backend:test:coverage
 ```
 
-Build the backend CI smoke image (no registry login or push; P5-T02 owns hardening):
+Build the backend image (no registry login or push) and run the local container
+evidence profile (migrations as a separate step, then gunicorn). Dummy production
+values live in `compose.yaml`; do not use `.env.example` for that profile:
 
 ```shell
 docker build -f backend/Dockerfile -t shortform-backend:ci .
+docker compose --profile container up -d --wait
+scripts/verify_backend_container.sh
 ```
+
+See [docs/runbooks/django-container.md](./docs/runbooks/django-container.md). Live
+staging deploy remains P5-T03.
 
 Regenerate the OpenAPI document and TypeScript client, then fail if git shows drift:
 
@@ -211,7 +219,9 @@ Production settings fail immediately unless all of these values are non-empty:
 - `DATABASE_URL`: a standard PostgreSQL connection URL.
 
 `DATABASE_CONNECT_TIMEOUT` defaults to two seconds so readiness does not hang on an
-unreachable database and accepts only an integer from 1 through 10. SQLite, MySQL, and
+unreachable database and accepts only an integer from 1 through 10. `CONN_MAX_AGE`
+defaults to 0 (a connection per request) and accepts only an integer from 0 through
+3600; operators may set `CONN_MAX_AGE=60` on Cloud Run. SQLite, MySQL, and
 other database engines are rejected in every environment. Production enables HTTPS
 redirect, secure cookies, proxy HTTPS handling, HSTS, and related Django deployment
 protections. Do not reuse the local example values or commit a populated `.env`.

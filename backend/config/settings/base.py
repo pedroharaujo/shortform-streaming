@@ -35,6 +35,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -63,6 +64,14 @@ ASGI_APPLICATION = "config.asgi.application"
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 database_url = os.environ.get("DATABASE_URL", "").strip()
 try:
@@ -72,8 +81,18 @@ except ValueError:
 if database_scheme not in {"postgres", "postgresql"}:
     raise ImproperlyConfigured("DATABASE_URL must use the PostgreSQL postgres:// scheme")
 
+conn_max_age_value = os.environ.get("CONN_MAX_AGE", "0")
 try:
-    database_config = dj_database_url.parse(database_url, conn_max_age=0, conn_health_checks=True)
+    database_conn_max_age = int(conn_max_age_value)
+except ValueError:
+    raise ImproperlyConfigured("CONN_MAX_AGE must be an integer") from None
+if not 0 <= database_conn_max_age <= 3600:
+    raise ImproperlyConfigured("CONN_MAX_AGE must be between 0 and 3600 seconds")
+
+try:
+    database_config = dj_database_url.parse(
+        database_url, conn_max_age=database_conn_max_age, conn_health_checks=True
+    )
 except (KeyError, ValueError):
     raise ImproperlyConfigured("DATABASE_URL must be a valid PostgreSQL URL") from None
 DATABASES = {"default": database_config}

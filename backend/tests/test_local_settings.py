@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_local_allowed_hosts_defaults_and_override(override: str | None, expected: str) -> None:
     environment = os.environ.copy()
     for name in (
+        "CONN_MAX_AGE",
         "DATABASE_CONNECT_TIMEOUT",
         "DATABASE_URL",
         "DJANGO_ALLOWED_HOSTS",

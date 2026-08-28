@@ -22,6 +22,13 @@ path_filters = load_path_filters()
 
 
 class PathFilterTests(unittest.TestCase):
+    def test_container_verify_script_runs_container_job(self) -> None:
+        selected = path_filters.classify(["scripts/verify_backend_container.sh"])
+        self.assertEqual(
+            selected,
+            {"backend": False, "mobile": False, "container": True},
+        )
+
     def test_docs_only_skips_expensive_jobs(self) -> None:
         selected = path_filters.classify(
             [
