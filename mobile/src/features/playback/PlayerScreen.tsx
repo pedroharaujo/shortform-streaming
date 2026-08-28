@@ -76,15 +76,20 @@ export function PlayerScreen({
     async (completed: boolean) => {
       const currentId = activeEpisodeRef.current;
       const positionSeconds = clampResumePosition(positionRef.current, durationRef.current);
-      const payload = { positionSeconds, completed };
+      const payload = {
+        positionSeconds,
+        completed: completed || isCompleteByPosition(positionSeconds, durationRef.current),
+      };
       if (shouldSkipProgressPut(lastProgressRef.current, payload)) {
         return;
       }
-      lastProgressRef.current = payload;
-      await progress.put(currentId, {
-        position_seconds: positionSeconds,
-        completed,
+      const result = await progress.put(currentId, {
+        position_seconds: payload.positionSeconds,
+        completed: payload.completed,
       });
+      if (result.outcome === 'ok') {
+        lastProgressRef.current = payload;
+      }
     },
     [progress],
   );
@@ -171,14 +176,17 @@ export function PlayerScreen({
   }, [flushProgress]);
 
   const handleEnded = useCallback(async () => {
+    playingRef.current = false;
+    positionRef.current = durationRef.current;
+    await flushProgress(true);
+    if (lastProgressRef.current?.completed !== true) {
+      await flushProgress(true);
+    }
     if (completingRef.current) {
       return;
     }
     completingRef.current = true;
-    playingRef.current = false;
     clearThrottle();
-    positionRef.current = durationRef.current;
-    await flushProgress(true);
     const nextId =
       seriesRef.current === null
         ? null
@@ -207,10 +215,10 @@ export function PlayerScreen({
     (seconds: number) => {
       positionRef.current = seconds;
       if (isCompleteByPosition(seconds, durationRef.current)) {
-        void handleEnded();
+        void flushProgress(true);
       }
     },
-    [handleEnded],
+    [flushProgress],
   );
 
   const displayed = nextGate ?? phase;

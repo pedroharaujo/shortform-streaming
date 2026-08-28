@@ -153,6 +153,29 @@ def test_anonymous_put_get_free_episode_does_not_create_profile(
 
 
 @pytest.mark.django_db
+def test_anonymous_device_cannot_read_another_device_row(
+    client: Client, freeze_catalog_clock: None
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=1, title="Device Isolation")
+    written = _put(
+        client,
+        episode.public_id,
+        {"position_seconds": 12, "completed": False},
+        **_headers(device_id=DEVICE_ID),
+    )
+    assert written.status_code == 200
+    other = _get(client, episode.public_id, **_headers(device_id=OTHER_DEVICE))
+    assert other.status_code == 404
+    assert "playback_url" not in other.json()
+    assert WatchProgress.objects.filter(device_id=OTHER_DEVICE).count() == 0
+    own = _get(client, episode.public_id, **_headers(device_id=DEVICE_ID))
+    assert own.status_code == 200
+    assert own.json()["position_seconds"] == 12
+    assert UserProfile.objects.count() == 0
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     ("position", "client_completed", "expected_completed"),
     (
