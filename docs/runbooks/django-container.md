@@ -31,7 +31,9 @@ docker run --rm shortform-backend:ci web
 - Runtime still uses `config.wsgi` → production settings, injected at **process start** (Compose, Cloud Run, or the entrypoint default `DJANGO_SETTINGS_MODULE=config.settings.production`).
 - Do not put placeholders on `ENV` or `RUN KEY=...` for secrets; they would appear in `docker history`.
 
-## Process shape (gunicorn)
+Console scripts such as gunicorn are created with shebangs that point at the
+venv path. The builder sets `UV_PROJECT_ENVIRONMENT=/app/.venv` so those
+shebangs remain valid after the venv is copied into the runtime image.
 
 Default `CMD ["web"]` runs gunicorn only. It never migrates.
 

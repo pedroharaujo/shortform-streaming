@@ -173,6 +173,7 @@ class RepositoryFoundationTests(unittest.TestCase):
         self.assertIn('CMD ["web"]', dockerfile)
         self.assertIn("collectstatic", dockerfile)
         self.assertIn("config.settings.staticbuild", dockerfile)
+        self.assertIn("UV_PROJECT_ENVIRONMENT=/app/.venv", dockerfile)
         self.assertIn("gunicorn", entrypoint)
         self.assertIn("exec gunicorn", entrypoint)
         self.assertIn("migrate --noinput", entrypoint)

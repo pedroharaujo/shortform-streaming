@@ -11,7 +11,8 @@ COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /bin/uv
 WORKDIR /src
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
-    UV_PYTHON_DOWNLOADS=never
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PROJECT_ENVIRONMENT=/app/.venv
 
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project
@@ -26,7 +27,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
-COPY --from=builder /src/.venv /app/.venv
+COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /src/backend /app/backend
 
 WORKDIR /app/backend
