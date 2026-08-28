@@ -108,7 +108,11 @@ describe('createPlaybackClient', () => {
   it('maps 401 to unauthenticated', async () => {
     const performRequest = jest.fn(async () =>
       jsonResponse(
-        { code: 'authentication_required', message: 'Authentication is required.', request_id: 'r0' },
+        {
+          code: 'authentication_required',
+          message: 'Authentication is required.',
+          request_id: 'r0',
+        },
         401,
       ),
     );
