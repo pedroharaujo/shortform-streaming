@@ -82,9 +82,14 @@ CANONICAL_PLACEHOLDERS = frozenset(
         "replace-me",
     }
 )
-# This exact public phrase existed in the first P1-T01 scanner regression commit.
-# It is not a substring marker and cannot make an arbitrary assigned value safe.
-SAFE_NON_SECRET_LITERALS = frozenset({"replace-with-provider-value"})
+# Exact public phrases that are not secrets. They are not substring markers
+# and cannot make an arbitrary assigned value safe.
+SAFE_NON_SECRET_LITERALS = frozenset(
+    {
+        "replace-with-provider-value",
+        "local-compose-not-a-production-secret",
+    }
+)
 EXAMPLE_FILE_NAMES = frozenset({".env.example", "env.example"})
 
 PRIVATE_ROOT_DIRECTORIES = frozenset(

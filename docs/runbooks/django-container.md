@@ -74,7 +74,7 @@ Compose serializes them: `migrate` waits for healthy Postgres; `api` waits for `
 
 ## Compose local evidence
 
-Production settings with **explicit dummy** values in `compose.yaml` (not `.env.example`, which sets `VIDEO_PROVIDER=fake`). Leave `VIDEO_PROVIDER` and `STAFF_UPLOAD_STORE` unset. Publish `127.0.0.1:8080:8080`.
+Production settings with **explicit dummy** values in `compose.yaml` (not `.env.example`, which sets `VIDEO_PROVIDER=fake`). `DJANGO_SECRET_KEY` is the scanner-safe public literal `local-compose-not-a-production-secret` (same class of dummy as `replace-with-provider-value`; not a production secret). Leave `VIDEO_PROVIDER` and `STAFF_UPLOAD_STORE` unset. Publish `127.0.0.1:8080:8080`.
 
 Production enables `SECURE_SSL_REDIRECT`. Host curls and probes must send `X-Forwarded-Proto: https` and a matching `Host` (`127.0.0.1` or `localhost`). Do not add a production flag to disable SSL redirect.
 
