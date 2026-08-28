@@ -30,6 +30,7 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 | Mobile runtime | `expo-video` | ~57.0.3 |
 | Mobile runtime | `@react-native-firebase/app` | ^26.3.2 (Expo 57 / RN 0.86 `expo install`; Android Auth first) |
 | Mobile runtime | `@react-native-firebase/auth` | ^26.3.2 (same pin as app; email/password + Auth emulator) |
+| Mobile runtime | `@react-native-google-signin/google-signin` | `^16.1.4` (public npm; Expo 57 / RN 0.86; Android Google ID token for RN Firebase 26) |
 | Mobile runtime | `react-native-worklets` | 0.10.1 (workspace override; SDK 57 table) |
 | Mobile runtime | `react-native-reanimated` | 4.5.1 (workspace override; SDK 57 table) |
 | Mobile runtime | `react-native-gesture-handler` | 2.32.0 (workspace override; SDK 57 table ~2.32.0) |

@@ -679,6 +679,8 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **P2-T01-F1** (GitHub issue #50) wires native `@react-native-firebase/auth` on the Android development build against the Auth emulator. Jest and CI keep `createLocalMockFirebaseAuth` / `FIREBASE_AUTH_MODE=mock`. Missing `GoogleService-Info.plist` must not fail Android or CI JavaScript export (D-026). Do not commit `google-services.json`.
 
+**P2-T01-F2** (GitHub issue #85) adds Android Google Sign-In on the same native Auth path; Jest/CI remain mock; iOS Apple/Google observation is a later D-026 ship pass.
+
 #### P2-T02 — Implement account lifecycle, consent, and deletion
 
 **Description:** Add locale/country/consent state, profile API, logout behavior, data export request placeholder, and a verifiable deletion workflow spanning Django and Firebase.
