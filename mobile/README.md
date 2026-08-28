@@ -33,15 +33,18 @@ mobile/
   app/health.tsx       Backend availability screen (secondary route)
   app/sign-in.tsx      Isolated email/password sign-in (not a login wall)
   app/playback-spike.tsx Isolated HLS spike (not the catalog episode screen)
+  app/play/[id].tsx     Product 9:16 player (progress, resume, autoplay)
   src/api/catalog/     Thin catalog wrapper over `@shortform/api-client`
   src/api/playback/    Thin playback authorize wrapper over `@shortform/api-client`
+  src/api/progress/    Thin watch-progress wrapper over `@shortform/api-client`
   src/api/health/      Thin health wrapper over `@shortform/api-client`
   src/api/me/          Authenticated `GET /v1/me` (Bearer ID token only)
   src/auth/            Email/password factory (Jest mock; native Firebase on device) and session holder
+  src/device/          Anonymous device UUID in SecureStore (`X-Device-Id`)
   src/config/          Environment selection and manifest reads
   src/features/catalog Home, series detail, and episode-selected screens
   src/features/auth/   Sign-in screen
-  src/features/playback Isolated expo-video spike screen
+  src/features/playback Product player and isolated expo-video spike
   src/features/health/ Backend availability screen
   maestro/             Local Maestro flow (not a CI job)
   scripts/             Expo public-config check
@@ -51,7 +54,9 @@ mobile/
 `src/api/catalog` and `src/api/health` map generated OpenAPI calls onto mobile outcomes
 (timeout, 4xx, network failure). Do not expand them into a second handwritten HTTP client.
 `src/api/me` attaches a Firebase ID token as `Authorization: Bearer` on `GET /v1/me` only.
-Catalog and playback authorize stay unauthenticated even when a session exists.
+Catalog stays unauthenticated even when a session exists. Product playback authorize and
+progress attach the session credential when present; missing/empty Bearer remains
+anonymous (D-005). Anonymous progress also sends `X-Device-Id` from SecureStore.
 
 ## Firebase Auth (email/password)
 

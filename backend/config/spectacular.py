@@ -95,9 +95,9 @@ BEARER_SCHEME: dict[str, object] = {
         "Firebase Authentication ID token presented as an HTTP Bearer credential. "
         "Django verifies the token and maps the UID to one local profile. "
         "Health probes and anonymous catalog reads do not use this scheme. "
-        "POST /v1/playback/{episode_id}/authorize accepts this scheme optionally: "
-        "a missing token is anonymous; a present invalid token is 401. "
-        "Client-supplied user or profile identifiers are ignored."
+        "POST /v1/playback/{episode_id}/authorize and GET/PUT /v1/progress/{episode_id} "
+        "accept this scheme optionally: a missing token is anonymous; a present "
+        "invalid token is 401. Client-supplied user or profile identifiers are ignored."
     ),
 }
 
@@ -111,7 +111,7 @@ UNAUTHENTICATED_PATH_PREFIXES = (
     "/v1/series/",
     "/v1/episodes/",
 )
-OPTIONAL_FIREBASE_PATH_PREFIXES = ("/v1/playback/",)
+OPTIONAL_FIREBASE_PATH_PREFIXES = ("/v1/playback/", "/v1/progress/")
 
 
 def inject_shared_components(
@@ -161,11 +161,14 @@ SPECTACULAR_SETTINGS: dict[str, object] = {
         "unauthenticated. POST /v1/playback/{episode_id}/authorize accepts an optional "
         "Firebase ID token: a missing token is anonymous, and a present invalid token "
         "is 401 ErrorEnvelope. Catalog-eligible locked episodes return HTTP 200 with "
-        "decision locked and lock_reasons, never a playback URL. Catalog and playback "
-        "operations require explicit X-Territory, X-Platform, and X-Language headers; "
-        "those values are never inferred from Accept-Language. GET /v1/me requires "
-        "FirebaseIdToken; missing or invalid tokens return 401 ErrorEnvelope. "
-        "firebase_uid is never returned. Django never serves video bytes."
+        "decision locked and lock_reasons, never a playback URL. GET/PUT "
+        "/v1/progress/{episode_id} accepts the same optional Firebase ID token plus "
+        "an anonymous X-Device-Id header; lock is HTTP 403 and the response never "
+        "includes a playback URL. Catalog, playback, and progress operations require "
+        "explicit X-Territory, X-Platform, and X-Language headers; those values are "
+        "never inferred from Accept-Language. GET /v1/me requires FirebaseIdToken; "
+        "missing or invalid tokens return 401 ErrorEnvelope. firebase_uid is never "
+        "returned. Django never serves video bytes."
     ),
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,

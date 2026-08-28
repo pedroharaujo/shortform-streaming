@@ -40,21 +40,21 @@ allowBuilds:
 # and matching packages were published inside that window. Exclude only these
 # exact versions so frozen CI installs succeed without disabling the age gate.
 minimumReleaseAgeExclude:
-  - '@expo/cli@57.0.18 || 57.0.19'
+  - '@expo/cli@57.0.18 || 57.0.19 || 57.0.20'
   - '@expo/config-plugins@57.0.9'
   - '@expo/config@57.0.9'
-  - '@expo/fingerprint@0.20.10'
+  - '@expo/fingerprint@0.20.10 || 0.20.11'
   - '@expo/image-utils@0.11.5'
-  - '@expo/metro-config@57.0.10 || 57.0.11'
+  - '@expo/metro-config@57.0.10 || 57.0.11 || 57.0.12'
   - '@expo/metro-file-map@57.0.2'
   - '@expo/prebuild-config@57.0.14 || 57.0.15'
   - '@expo/require-utils@57.0.5'
   - babel-preset-expo@57.0.8 || 57.0.9
   - expo-asset@57.0.14 || 57.0.15
-  - expo-constants@57.0.14 || 57.0.15
+  - expo-constants@57.0.14 || 57.0.15 || 57.0.16
   - expo-modules-autolinking@57.0.11 || 57.0.12
   - expo-modules-core@57.0.13 || 57.0.14
-  - expo@57.0.16 || 57.0.17
+  - expo@57.0.16 || 57.0.17 || 57.0.18
   - '@expo/metro-runtime@57.0.13 || 57.0.14'
   - '@expo/ui@57.0.13 || 57.0.14'
   - expo-router@57.0.16 || 57.0.17
@@ -70,3 +70,6 @@ minimumReleaseAgeExclude:
   - '@expo/router-server@57.0.8'
   - expo-file-system@57.0.6
   - expo-modules-jsi@57.0.6
+  - '@expo/env@2.4.3'
+  - expo-font@57.0.2
+  - expo-secure-store@57.0.2

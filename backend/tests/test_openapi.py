@@ -128,6 +128,27 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     assert "expires_at" in granted["properties"]
     assert "lock_reasons" not in granted["properties"]
 
+    progress_get = paths["/v1/progress/{episode_id}"]["get"]
+    progress_put = paths["/v1/progress/{episode_id}"]["put"]
+    for operation in (progress_get, progress_put):
+        assert operation.get("security") == [{}, {"FirebaseIdToken": []}]
+        for status_code in ("400", "401", "404"):
+            assert status_code in operation["responses"]
+            assert _response_schema_ref(operation["responses"][status_code]).endswith(
+                "/ErrorEnvelope"
+            )
+    assert "403" in progress_put["responses"]
+    assert _response_schema_ref(progress_put["responses"]["403"]).endswith("/ErrorEnvelope")
+    progress_schema = schema["components"]["schemas"]["WatchProgress"]
+    progress_properties = progress_schema.get("properties", {})
+    assert "playback_url" not in progress_properties
+    assert "expires_at" not in progress_properties
+    assert "lock_reasons" not in progress_properties
+    assert "episode_id" in progress_properties
+    assert "position_seconds" in progress_properties
+    assert "completed" in progress_properties
+    assert "updated_at" in progress_properties
+
 
 def _response_schema_ref(response: dict[str, Any]) -> str:
     content = response.get("content", {}).get("application/json", {})

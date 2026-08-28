@@ -163,7 +163,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       googleServicesFile: './google-services.json',
     },
     ios: { bundleIdentifier: 'com.shortformstreaming.app', supportsTablet: false },
-    plugins: ['expo-router', 'expo-video', '@react-native-firebase/app'],
+    plugins: ['expo-router', 'expo-video', 'expo-secure-store', '@react-native-firebase/app'],
     experiments: { typedRoutes: true },
     extra: { api },
   };

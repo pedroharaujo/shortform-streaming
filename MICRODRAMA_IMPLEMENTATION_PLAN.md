@@ -809,14 +809,16 @@ Evidence (2026-08-28): P2-T07 / #68; Fake provider decision-table authorize test
 
 **Acceptance criteria:**
 
-- [ ] Playback handles buffering, interruption, background/foreground, seek, orientation lock, and next-episode transition.
-- [ ] Progress writes are throttled and idempotent; completion is server-recorded.
-- [ ] Player exposes safe error states and does not reveal signed URLs.
+- [x] Playback handles buffering, interruption, background/foreground, seek, orientation lock, and next-episode transition (full-screen 9:16 `expo-video` player, native controls, portrait lock, AppState pause/resume, autoplay next only after a second authorize grant).
+- [x] Progress writes are throttled and idempotent; completion is server-recorded (`WatchProgress` + `GET`/`PUT /v1/progress/{episode_id}`).
+- [x] Player exposes safe error states and does not reveal signed URLs.
 
 **Validation and integration tests:**
 
-- [ ] Unit tests cover progress thresholds and resume logic.
-- [ ] Maestro watches a free episode, resumes near the saved position on a second session, completes it, and advances to the next episode.
+- [x] Unit tests cover progress thresholds and resume logic.
+- [ ] Maestro watches a free episode, resumes near the saved position on a second session, completes it, and advances to the next episode. Maestro/iOS is not a close-out gate for this PR (D-026). Android emulator observation is recorded as an environment limitation when a development build cannot run.
+
+Evidence (P2-T08 / #78): anonymous device-scoped progress without `UserProfile`; authenticated profile subject ignores `X-Device-Id`; lock is HTTP 403 and never mints; autoplay next is a second authorize; Harbor Lights seed episodes 1–6.
 
 ### Checkpoint 2 — First playable product
 
