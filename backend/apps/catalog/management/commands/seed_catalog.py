@@ -84,44 +84,48 @@ class Command(BaseCommand):
             defaults={"title": title, "synopsis": synopsis},
         )
         season, _ = Season.objects.update_or_create(series=series, number=1, defaults={})
-        episode, _ = Episode.objects.update_or_create(
-            public_id=_stable_id("ep", f"{name}-e1"),
-            defaults={
-                "series": series,
-                "season": season,
-                "order": 1,
-                "duration_seconds": 90,
-                "publication_status": PublicationStatus.DRAFT,
-                "window_starts_at": None,
-                "window_ends_at": None,
-            },
-        )
-        EpisodeTranslation.objects.update_or_create(
-            episode=episode,
-            language=REQUIRED_CATALOG_LANGUAGE,
-            defaults={
-                "title": f"{title} · Episode 1",
-                "synopsis": "Synthetic episode synopsis.",
-            },
-        )
-        checksum = hashlib.sha256(f"synthetic-seed:{name}".encode()).hexdigest()
-        ready_asset = MediaAsset.objects.filter(
-            episode=episode, state=MediaAssetState.READY
-        ).first()
-        if ready_asset is None:
-            ready_asset = MediaAsset(episode=episode, checksum=checksum)
-        ready_asset.checksum = checksum
-        ready_asset.provider_name = "fake"
-        ready_asset.provider_asset_id = _stable_id("asset", f"{name}-e1")
-        ready_asset.state = MediaAssetState.READY
-        ready_asset.captions_language = REQUIRED_CATALOG_LANGUAGE
-        ready_asset.has_captions = True
-        ready_asset.thumbnail_count = 1
-        ready_asset.duration_seconds = 90.0
-        ready_asset.renditions = ["360p", "540p", "720p"]
-        ready_asset.diagnostic_message = ""
-        ready_asset.full_clean()
-        ready_asset.save()
+        episode_count = 6 if name == "harbor_lights" else 1
+        published_episodes: list[Episode] = []
+        for order in range(1, episode_count + 1):
+            episode, _ = Episode.objects.update_or_create(
+                public_id=_stable_id("ep", f"{name}-e{order}"),
+                defaults={
+                    "series": series,
+                    "season": season,
+                    "order": order,
+                    "duration_seconds": 90,
+                    "publication_status": PublicationStatus.DRAFT,
+                    "window_starts_at": None,
+                    "window_ends_at": None,
+                },
+            )
+            EpisodeTranslation.objects.update_or_create(
+                episode=episode,
+                language=REQUIRED_CATALOG_LANGUAGE,
+                defaults={
+                    "title": f"{title} · Episode {order}",
+                    "synopsis": "Synthetic episode synopsis.",
+                },
+            )
+            checksum = hashlib.sha256(f"synthetic-seed:{name}-e{order}".encode()).hexdigest()
+            ready_asset = MediaAsset.objects.filter(
+                episode=episode, state=MediaAssetState.READY
+            ).first()
+            if ready_asset is None:
+                ready_asset = MediaAsset(episode=episode, checksum=checksum)
+            ready_asset.checksum = checksum
+            ready_asset.provider_name = "fake"
+            ready_asset.provider_asset_id = _stable_id("asset", f"{name}-e{order}")
+            ready_asset.state = MediaAssetState.READY
+            ready_asset.captions_language = REQUIRED_CATALOG_LANGUAGE
+            ready_asset.has_captions = True
+            ready_asset.thumbnail_count = 1
+            ready_asset.duration_seconds = 90.0
+            ready_asset.renditions = ["360p", "540p", "720p"]
+            ready_asset.diagnostic_message = ""
+            ready_asset.full_clean()
+            ready_asset.save()
+            published_episodes.append(episode)
         ContentRight.objects.update_or_create(
             series=series,
             contract_reference=f"synthetic-contract-{name}",
@@ -140,9 +144,10 @@ class Command(BaseCommand):
                 "promotional_clip_permission": True,
             },
         )
-        episode.publication_status = PublicationStatus.PUBLISHED
-        episode.full_clean()
-        episode.save()
+        for episode in published_episodes:
+            episode.publication_status = PublicationStatus.PUBLISHED
+            episode.full_clean()
+            episode.save()
         series.publication_status = PublicationStatus.PUBLISHED
         series.full_clean()
         series.save()

@@ -10,10 +10,13 @@ info:
     POST /v1/playback/{episode_id}/authorize accepts an optional Firebase ID token:
     a missing token is anonymous, and a present invalid token is 401 ErrorEnvelope.
     Catalog-eligible locked episodes return HTTP 200 with decision locked and lock_reasons,
-    never a playback URL. Catalog and playback operations require explicit X-Territory,
-    X-Platform, and X-Language headers; those values are never inferred from Accept-Language.
-    GET /v1/me requires FirebaseIdToken; missing or invalid tokens return 401 ErrorEnvelope.
-    firebase_uid is never returned. Django never serves video bytes.'
+    never a playback URL. GET/PUT /v1/progress/{episode_id} accepts the same optional
+    Firebase ID token plus an anonymous X-Device-Id header; lock is HTTP 403 and the
+    response never includes a playback URL. Catalog, playback, and progress operations
+    require explicit X-Territory, X-Platform, and X-Language headers; those values
+    are never inferred from Accept-Language. GET /v1/me requires FirebaseIdToken;
+    missing or invalid tokens return 401 ErrorEnvelope. firebase_uid is never returned.
+    Django never serves video bytes.'
 paths:
   /health/live:
     get:
@@ -272,6 +275,197 @@ paths:
           description: 'Playback provider is unset or disabled. Fail-closed: no URL
             is minted. HTTP 503, never an unsigned playlist. Returned only on the
             grant mint path.'
+  /v1/progress/{episode_id}:
+    get:
+      operationId: v1_progress_retrieve
+      description: 'Read or upsert watch progress for a catalog-eligible granted episode.
+        Optional Firebase ID token: a missing Authorization header is anonymous; a
+        present invalid, expired, or revoked token is 401 ErrorEnvelope. Anonymous
+        subjects are identified only by X-Device-Id (a client-generated UUID). Authenticated
+        requests use the verified profile and ignore X-Device-Id. Catalog-ineligible,
+        unpublished, takedown, or unknown ids return 404 ErrorEnvelope, never 403.
+        Catalog-eligible lock returns HTTP 403 playback_locked and does not write.
+        Grant upserts progress and never calls the video provider. Django never serves
+        video bytes. Client-supplied user identifiers are ignored.'
+      summary: Get watch progress
+      parameters:
+      - in: header
+        name: X-Device-Id
+        schema:
+          type: string
+        description: Anonymous device UUID (36-character hyphenated form). Required
+          when no Authorization header is present. Ignored when a verified profile
+          is present. Never a user id, profile public id, or Firebase UID.
+      - in: header
+        name: X-Language
+        schema:
+          type: string
+        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
+          from Accept-Language.'
+        required: true
+      - in: header
+        name: X-Platform
+        schema:
+          type: string
+          enum:
+          - android
+          - ios
+        description: 'Client platform. Required. Values: ios, android.'
+        required: true
+      - in: header
+        name: X-Territory
+        schema:
+          type: string
+        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
+          inferred from Accept-Language or UI language.
+        required: true
+      - in: path
+        name: episode_id
+        schema:
+          $ref: '#/components/schemas/PublicId'
+        description: Opaque episode public identifier. Sequential database integers
+          are never used as public IDs.
+        required: true
+      tags:
+      - progress
+      security:
+      - {}
+      - FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchProgress'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing or malformed catalog context headers.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Catalog-eligible lock. Progress is not written. No playback
+            URL is minted. HTTP 403, never a signed playlist.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or ineligible public id. Does not confirm whether the
+            id exists.
+    put:
+      operationId: v1_progress_update
+      description: 'Read or upsert watch progress for a catalog-eligible granted episode.
+        Optional Firebase ID token: a missing Authorization header is anonymous; a
+        present invalid, expired, or revoked token is 401 ErrorEnvelope. Anonymous
+        subjects are identified only by X-Device-Id (a client-generated UUID). Authenticated
+        requests use the verified profile and ignore X-Device-Id. Catalog-ineligible,
+        unpublished, takedown, or unknown ids return 404 ErrorEnvelope, never 403.
+        Catalog-eligible lock returns HTTP 403 playback_locked and does not write.
+        Grant upserts progress and never calls the video provider. Django never serves
+        video bytes. Client-supplied user identifiers are ignored.'
+      summary: Upsert watch progress
+      parameters:
+      - in: header
+        name: X-Device-Id
+        schema:
+          type: string
+        description: Anonymous device UUID (36-character hyphenated form). Required
+          when no Authorization header is present. Ignored when a verified profile
+          is present. Never a user id, profile public id, or Firebase UID.
+      - in: header
+        name: X-Language
+        schema:
+          type: string
+        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
+          from Accept-Language.'
+        required: true
+      - in: header
+        name: X-Platform
+        schema:
+          type: string
+          enum:
+          - android
+          - ios
+        description: 'Client platform. Required. Values: ios, android.'
+        required: true
+      - in: header
+        name: X-Territory
+        schema:
+          type: string
+        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
+          inferred from Accept-Language or UI language.
+        required: true
+      - in: path
+        name: episode_id
+        schema:
+          $ref: '#/components/schemas/PublicId'
+        description: Opaque episode public identifier. Sequential database integers
+          are never used as public IDs.
+        required: true
+      tags:
+      - progress
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WatchProgressWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WatchProgressWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WatchProgressWriteRequest'
+        required: true
+      security:
+      - {}
+      - FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchProgress'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing or malformed catalog context headers.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Catalog-eligible lock. Progress is not written. No playback
+            URL is minted. HTTP 403, never a signed playlist.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or ineligible public id. Does not confirm whether the
+            id exists.
   /v1/series/{public_id}:
     get:
       operationId: v1_series_retrieve
@@ -648,6 +842,38 @@ components:
       description: |-
         * `ok` - ok
         * `unavailable` - unavailable
+    WatchProgress:
+      type: object
+      properties:
+        episode_id:
+          type: string
+          description: Opaque episode public id.
+        position_seconds:
+          type: integer
+        completed:
+          type: boolean
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - completed
+      - episode_id
+      - position_seconds
+      - updated_at
+    WatchProgressWriteRequest:
+      type: object
+      properties:
+        position_seconds:
+          type: integer
+          description: Playback position in seconds. Clamped to the episode duration
+            on the server.
+        completed:
+          type: boolean
+          default: false
+          description: Client completion flag. The server also records completion
+            at 95% of duration. Once true, completed stays true.
+      required:
+      - position_seconds
   securitySchemes:
     FirebaseIdToken:
       type: http
@@ -656,5 +882,6 @@ components:
       description: 'Firebase Authentication ID token presented as an HTTP Bearer credential.
         Django verifies the token and maps the UID to one local profile. Health probes
         and anonymous catalog reads do not use this scheme. POST /v1/playback/{episode_id}/authorize
-        accepts this scheme optionally: a missing token is anonymous; a present invalid
-        token is 401. Client-supplied user or profile identifiers are ignored.'
+        and GET/PUT /v1/progress/{episode_id} accept this scheme optionally: a missing
+        token is anonymous; a present invalid token is 401. Client-supplied user or
+        profile identifiers are ignored.'

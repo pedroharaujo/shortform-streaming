@@ -75,6 +75,25 @@ source `staff` or `rewarded_ad`. Staff grant in Django Admin (default
 `GET /v1/me/entitlements` in this slice. `rewarded_ad` is stored for P3 and is
 not written by a public API here.
 
+`progress` is the watch-progress bounded application created by P2-T08.
+`WatchProgress` is one row per granted episode for either a verified
+`UserProfile` or an anonymous device UUID (`X-Device-Id`). Exactly one subject
+is set. Clients call:
+
+- `GET /v1/progress/{episode_id}`
+- `PUT /v1/progress/{episode_id}`
+
+The same catalog context headers are required. Firebase ID token is optional: a
+missing header is anonymous; a present invalid token is HTTP 401
+`ErrorEnvelope`. Anonymous writes require `X-Device-Id` (a client-generated
+UUID, never a user id). Authenticated writes use the verified profile and
+ignore `X-Device-Id`. Catalog-ineligible ids return HTTP 404. Catalog-eligible
+lock returns HTTP 403 `playback_locked` and does not write. Grant upserts
+position and server-authoritative completion (client flag or 95% of duration)
+and never mints a playback URL. Django never serves video bytes. There is no
+Django Admin for `WatchProgress`. Anonymous free play does not create a
+`UserProfile`.
+
 Later plan tasks own `commerce`, `advertising`, `experiments`, and
 `notifications`.
 

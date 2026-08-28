@@ -10,12 +10,14 @@ export interface EpisodeSelectedScreenProps {
   readonly client: CatalogClient;
   readonly episodeId: string;
   readonly onBack: () => void;
+  readonly onPlay: (episodeId: string) => void;
 }
 
 export function EpisodeSelectedScreen({
   client,
   episodeId,
   onBack,
+  onPlay,
 }: EpisodeSelectedScreenProps): JSX.Element {
   const { state, refresh } = useCatalogEpisode(client, episodeId);
 
@@ -53,6 +55,15 @@ export function EpisodeSelectedScreen({
           </Text>
           <Text style={styles.title}>{state.episode.title}</Text>
           <Text style={styles.synopsis}>{state.episode.synopsis}</Text>
+          <Pressable
+            accessibilityLabel="Play"
+            accessibilityRole="button"
+            onPress={() => onPlay(episodeId)}
+            style={styles.play}
+            testID="episode-selected-play"
+          >
+            <Text style={styles.playLabel}>Play</Text>
+          </Pressable>
         </View>
       ) : null}
     </SafeAreaView>
@@ -66,6 +77,15 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', flex: 1, gap: 12, justifyContent: 'center' },
   container: { backgroundColor: '#09090b', flex: 1, padding: 24 },
   kicker: { color: '#a1a1aa', fontSize: 14, marginBottom: 8 },
+  play: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fafafa',
+    borderRadius: 8,
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  playLabel: { color: '#09090b', fontSize: 16, fontWeight: '600' },
   synopsis: { color: '#a1a1aa', fontSize: 15, marginTop: 8 },
   title: { color: '#fafafa', fontSize: 22, fontWeight: '600' },
 });

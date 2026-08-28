@@ -124,6 +124,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/progress/{episode_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get watch progress
+         * @description Read or upsert watch progress for a catalog-eligible granted episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Anonymous subjects are identified only by X-Device-Id (a client-generated UUID). Authenticated requests use the verified profile and ignore X-Device-Id. Catalog-ineligible, unpublished, takedown, or unknown ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 403 playback_locked and does not write. Grant upserts progress and never calls the video provider. Django never serves video bytes. Client-supplied user identifiers are ignored.
+         */
+        get: operations["v1_progress_retrieve"];
+        /**
+         * Upsert watch progress
+         * @description Read or upsert watch progress for a catalog-eligible granted episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Anonymous subjects are identified only by X-Device-Id (a client-generated UUID). Authenticated requests use the verified profile and ignore X-Device-Id. Catalog-ineligible, unpublished, takedown, or unknown ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 403 playback_locked and does not write. Grant upserts progress and never calls the video provider. Django never serves video bytes. Client-supplied user identifiers are ignored.
+         */
+        put: operations["v1_progress_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/series/{public_id}": {
         parameters: {
             query?: never;
@@ -300,6 +324,23 @@ export interface components {
          * @enum {string}
          */
         StatusEnum: "ok" | "unavailable";
+        WatchProgress: {
+            /** @description Opaque episode public id. */
+            episode_id: string;
+            position_seconds: number;
+            completed: boolean;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        WatchProgressWriteRequest: {
+            /** @description Playback position in seconds. Clamped to the episode duration on the server. */
+            position_seconds: number;
+            /**
+             * @description Client completion flag. The server also records completion at 95% of duration. Once true, completed stays true.
+             * @default false
+             */
+            completed: boolean;
+        };
     };
     responses: never;
     parameters: never;
@@ -522,6 +563,146 @@ export interface operations {
             };
             /** @description Playback provider is unset or disabled. Fail-closed: no URL is minted. HTTP 503, never an unsigned playlist. Returned only on the grant mint path. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_progress_retrieve: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Anonymous device UUID (36-character hyphenated form). Required when no Authorization header is present. Ignored when a verified profile is present. Never a user id, profile public id, or Firebase UID. */
+                "X-Device-Id"?: string;
+                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
+                "X-Language": string;
+                /** @description Client platform. Required. Values: ios, android. */
+                "X-Platform": "android" | "ios";
+                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
+                "X-Territory": string;
+            };
+            path: {
+                /** @description Opaque episode public identifier. Sequential database integers are never used as public IDs. */
+                episode_id: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchProgress"];
+                };
+            };
+            /** @description Missing or malformed catalog context headers. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Catalog-eligible lock. Progress is not written. No playback URL is minted. HTTP 403, never a signed playlist. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_progress_update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Anonymous device UUID (36-character hyphenated form). Required when no Authorization header is present. Ignored when a verified profile is present. Never a user id, profile public id, or Firebase UID. */
+                "X-Device-Id"?: string;
+                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
+                "X-Language": string;
+                /** @description Client platform. Required. Values: ios, android. */
+                "X-Platform": "android" | "ios";
+                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
+                "X-Territory": string;
+            };
+            path: {
+                /** @description Opaque episode public identifier. Sequential database integers are never used as public IDs. */
+                episode_id: components["schemas"]["PublicId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchProgressWriteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["WatchProgressWriteRequest"];
+                "multipart/form-data": components["schemas"]["WatchProgressWriteRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchProgress"];
+                };
+            };
+            /** @description Missing or malformed catalog context headers. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Catalog-eligible lock. Progress is not written. No playback URL is minted. HTTP 403, never a signed playlist. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

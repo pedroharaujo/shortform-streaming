@@ -59,6 +59,7 @@ describe('EpisodeSelectedScreen', () => {
         client={stubEpisodeClient({ outcome: 'ok', data: harborEpisode })}
         episodeId="ep_harbor_1"
         onBack={() => {}}
+        onPlay={() => {}}
       />,
     );
 
@@ -66,6 +67,7 @@ describe('EpisodeSelectedScreen', () => {
     expect(view.getByText('Selected episode')).toBeTruthy();
     expect(view.getByText('Harbor Lights · Episode 1')).toBeTruthy();
     expect(view.getByText('Synthetic episode synopsis.')).toBeTruthy();
+    expect(view.getByLabelText('Play')).toBeTruthy();
     expectNoFreeOrLockedBadges(view);
   });
 
@@ -80,6 +82,7 @@ describe('EpisodeSelectedScreen', () => {
         })}
         episodeId="ep_missing"
         onBack={() => {}}
+        onPlay={() => {}}
       />,
     );
 

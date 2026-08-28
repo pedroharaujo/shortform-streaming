@@ -12,6 +12,11 @@ export default function EpisodeSelectedRoute(): JSX.Element {
   const client = useMemo(() => createAppCatalogClient(), []);
 
   return (
-    <EpisodeSelectedScreen client={client} episodeId={episodeId} onBack={() => router.back()} />
+    <EpisodeSelectedScreen
+      client={client}
+      episodeId={episodeId}
+      onBack={() => router.back()}
+      onPlay={(id) => router.push(`/play/${id}`)}
+    />
   );
 }
