@@ -1,0 +1,83 @@
+# Cursor Agent, Tab, Inline Edit, @-mentions, and indexing.
+# Keep source, docs, lockfiles, OpenAPI, and packages/api-client visible.
+# Terminal and MCP are not blocked by this file.
+
+# Python environments and bytecode
+.venv/
+venv/
+.virtualenv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python/
+
+# Type checkers, linters, tests, coverage
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.pytest_cache/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.cache/
+
+# Node / pnpm / Expo
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+.npm/
+.yarn/
+.yarn-cache/
+.pnp.*
+.expo/
+.expo-shared/
+web-build/
+.metro-health-check*
+.eas-build-*/
+.eslintcache
+.prettiercache
+*.tsbuildinfo
+.turbo/
+.parcel-cache/
+.next/
+.nuxt/
+
+# Generated native projects (Expo CNG)
+mobile/android/
+mobile/ios/
+
+# Local scratch, graphs, and build output
+.tmp/
+tmp/
+artifacts/
+graphify-out/
+dist/
+build/
+coverage/
+
+# Terraform / OpenTofu state (never useful as chat context)
+.terraform/
+.tofu/
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# Secrets and local env (keep .env.example)
+.env
+.env.*
+!.env.example
+/credentials/
+/secrets/
+
+# Editor and OS noise
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
