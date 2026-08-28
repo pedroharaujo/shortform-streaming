@@ -1,17 +1,90 @@
-"""Validate the repository's tool-neutral and tool-specific AI contracts."""
+"""Validate shared agent instructions and that Superpowers is not vendored."""
 
 from __future__ import annotations
 
-import re
 import sys
-import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CORE_ROLES = ("orchestrator", "planner", "implementer", "reviewer", "verifier")
-ROLES = CORE_ROLES
-READ_ONLY_ROLES = ("orchestrator", "planner", "reviewer")
-STATES = ("ai-ready", "ai-in-progress", "ai-review", "ai-verified")
+
+OBSOLETE_PATHS = (
+    "ai/README.md",
+    "ai/STATES.md",
+    "ai/roles/orchestrator.md",
+    "ai/roles/planner.md",
+    "ai/roles/implementer.md",
+    "ai/roles/reviewer.md",
+    "ai/roles/verifier.md",
+    "ai/roles/validation-planner.md",
+    "ai/workflows/development-loop.md",
+    ".codex/agents/orchestrator.toml",
+    ".codex/agents/planner.toml",
+    ".codex/agents/implementer.toml",
+    ".codex/agents/reviewer.toml",
+    ".codex/agents/verifier.toml",
+    ".codex/agents/validation-planner.toml",
+    ".cursor/agents/orchestrator.md",
+    ".cursor/agents/planner.md",
+    ".cursor/agents/implementer.md",
+    ".cursor/agents/reviewer.md",
+    ".cursor/agents/verifier.md",
+    ".cursor/agents/validation-planner.md",
+    ".cursor/rules/ai-native-workflow.mdc",
+)
+
+VENDORED_SUPERPOWERS = (
+    "skills/using-superpowers/SKILL.md",
+    "skills/brainstorming/SKILL.md",
+    "skills/writing-plans/SKILL.md",
+    "skills/subagent-driven-development/SKILL.md",
+    ".cursor-plugin/plugin.json",
+    ".codex-plugin/plugin.json",
+)
+
+REQUIRED_DOCS = (
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "MICRODRAMA_IMPLEMENTATION_PLAN.md",
+    "docs/AI_DEVELOPMENT.md",
+    "docs/README.md",
+    "docs/product/MVP_PRODUCT_BRIEF.md",
+    "docs/product/DECISION_REGISTER.md",
+    ".cursor/BUGBOT.md",
+)
+
+AGENTS_TOKENS = (
+    "Repository map",
+    "Documentation authority",
+    "Project constraints",
+    "High-risk surfaces",
+    "Commands",
+    "Development workflow",
+    "Direct Codex / Cursor workflow",
+    "Superpowers workflow",
+    "Explicit user override",
+    "Task complexity",
+    "Level 1",
+    "Level 2",
+    "Level 3",
+    "Do not create extra git worktrees",
+    "python scripts/validate_ai_governance.py",
+    "pnpm backend:test",
+    "pnpm contract:check",
+    "pnpm mobile:test",
+    "docs/product/DECISION_REGISTER.md",
+    "docs/product/MVP_PRODUCT_BRIEF.md",
+    "MICRODRAMA_IMPLEMENTATION_PLAN.md",
+    "playback-authorize",
+    "OpenAPI",
+)
+
+AGENTS_FORBIDDEN = (
+    "ai/roles/orchestrator.md",
+    "ai/workflows/development-loop.md",
+    "never implements or fixes production code",
+    "Validation Manifest",
+)
 
 
 def read(relative: str) -> str:
@@ -21,368 +94,107 @@ def read(relative: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def markdown_section(content: str, heading: str, location: str) -> str:
-    match = re.search(
-        rf"^## {re.escape(heading)}\s*$\n(?P<body>.*?)(?=^## |\Z)",
-        content,
-        re.MULTILINE | re.DOTALL,
-    )
-    if not match:
-        raise AssertionError(f"{location} is missing the {heading} section")
-    return match.group("body")
-
-
-def normalized(content: str) -> str:
-    return re.sub(r"[-\s]+", " ", content.casefold())
-
-
-def risk_entry(content: str, level: str, location: str) -> str:
-    patterns = (
-        rf"^\|\s*`{re.escape(level)}`\s*\|\s*(?P<body>.*?)\s*\|\s*$",
-        rf"^-\s*`{re.escape(level)}`\s*:\s*(?P<body>.+)$",
-    )
-    matches = [
-        match.group("body")
-        for pattern in patterns
-        for match in re.finditer(pattern, content, re.MULTILINE)
-    ]
-    if len(matches) != 1:
-        raise AssertionError(f"{location} must define exactly one {level} entry")
-    return matches[0]
-
-
-def validate_manifest_ownership(
-    orchestrator: str, planner: str, loop: str
-) -> None:
-    sections = (
-        (
-            "orchestrator Procedure",
-            markdown_section(orchestrator, "Procedure", "orchestrator contract"),
-        ),
-        (
-            "planner Invocation",
-            markdown_section(planner, "Invocation", "planner contract"),
-        ),
-        (
-            "workflow Validation planning",
-            markdown_section(loop, "Validation planning", "development workflow"),
-        ),
-    )
-    planner_invocation = sections[1][1]
-    planner_ownership = re.compile(
-        r"(?:\b(?:the )?(?:validation )?planner (?:owns|"
-        r"is (?:accountable|responsible) for) (?:the )?"
-        r"(?:validation )?manifest\b|"
-        r"\b(?:validation )?manifest (?:is )?owned by (?:the )?"
-        r"(?:validation )?planner\b)",
-        re.IGNORECASE,
-    )
-    if planner_ownership.search(planner_invocation):
-        raise AssertionError("planner must not own the Validation Manifest")
-
-    responsibility = re.compile(
-        r"(?:\borchestrator\b (?:owns|produces|prepares) (?:the )?"
-        r"validation manifest\b|"
-        r"\borchestrator\b (?:remains |is )?(?:accountable|responsible) "
-        r"for (?:the )?(?:validation )?manifest\b|"
-        r"\bvalidation manifest\b (?:is )?(?:owned|produced|prepared) by "
-        r"(?:the )?orchestrator\b)",
-        re.IGNORECASE,
-    )
-    for location, section in sections:
-        if not responsibility.search(normalized(section)):
-            raise AssertionError(
-                f"{location} must keep the orchestrator responsible for the "
-                "Validation Manifest"
-            )
-
-
-def validate_semantic_classification(loop: str) -> None:
-    sections = (
-        (
-            "workflow Validation planning",
-            markdown_section(loop, "Validation planning", "development workflow"),
-        ),
-    )
-    direct_prohibition = re.compile(
-        r"\b(?:never|do not|must not|cannot|may not)\s+classify\b"
-        r"(?:[^.\n]{0,60}\b(?:only|solely|primarily)\b"
-        r"[^.\n]{0,100}\b(?:from|by|based on)\b"
-        r"[^.\n]{0,80}\b(?:file extensions?|paths?)\b|"
-        r"[^.\n]{0,60}\b(?:from|by|based on)\b"
-        r"[^.\n]{0,80}\b(?:file extensions?|paths?)\b"
-        r"[^.\n]{0,30}\balone\b)",
-        re.IGNORECASE,
-    )
-    passive_prohibition = re.compile(
-        r"\b(?:risk )?classification\b[^.\n]{0,50}"
-        r"\b(?:must not|cannot|may not)\b[^.\n]{0,60}"
-        r"\bbased (?:only|solely|primarily) on\b[^.\n]{0,80}"
-        r"\b(?:file extensions?|paths?)\b",
-        re.IGNORECASE,
-    )
-    secondary_signal_prohibition = re.compile(
-        r"\bfile paths?\s+(?:are|remain)\s+only\s+a\s+secondary\s+signal,\s*"
-        r"never\s+the\s+primary\s+basis\s+for\s+(?:risk\s+)?classification\b",
-        re.IGNORECASE,
-    )
-    primary_classifier = re.compile(
-        r"(?:\bclassif(?:y|ied|ying|ication)\b[^.\n]{0,60}"
-        r"\b(?:primary|primarily|sole|solely|only|alone|first)\b"
-        r"[^.\n]{0,80}\b(?:from|by|based on)\b[^.\n]{0,80}"
-        r"\b(?:file extensions?|paths?)\b|"
-        r"\bclassif(?:y|ied|ying|ication)\b[^.\n]{0,60}"
-        r"\b(?:from|by|based on)\b[^.\n]{0,80}"
-        r"\b(?:file extensions?|paths?)\b[^.\n]{0,40}"
-        r"\b(?:primary|primarily|sole|solely|only|alone|first)\b|"
-        r"\b(?:file extensions?|paths?)\b\s+"
-        r"(?:is|are|remain|become|serve as|act as)\s+(?:the\s+)?"
-        r"(?:primary|sole|only)\s+"
-        r"\b(?:classifier|basis|criterion|input|signal)\b)",
-        re.IGNORECASE,
-    )
-    direct_negation = re.compile(
-        r"\b(?:never|do not|must not|cannot|may not)\s+classify\b",
-        re.IGNORECASE,
-    )
-    semantic_terms = (
-        "semantic impact",
-        "intended behavior",
-        "affected consumers",
-        "data flow",
-        "failure impact",
-    )
-    for location, section in sections:
-        folded = section.casefold()
-        statements = re.split(r"(?<=[.;!?])\s+|\n+", section)
-        path_first = any(
-            primary_classifier.search(statement)
-            and not direct_negation.search(statement)
-            and not passive_prohibition.search(statement)
-            for statement in statements
+def validate_obsolete_files_removed() -> None:
+    present = [path for path in OBSOLETE_PATHS if (ROOT / path).exists()]
+    if present:
+        raise AssertionError(
+            "obsolete custom agent files must be removed: " + ", ".join(present)
         )
-        has_prohibition = (
-            direct_prohibition.search(section)
-            or passive_prohibition.search(section)
-            or secondary_signal_prohibition.search(section)
+
+
+def validate_superpowers_not_vendored() -> None:
+    present = [path for path in VENDORED_SUPERPOWERS if (ROOT / path).is_file()]
+    if present:
+        raise AssertionError(
+            "Superpowers must not be vendored in the repository: "
+            + ", ".join(present)
         )
-        if (
-            not any(term in folded for term in semantic_terms)
-            or not has_prohibition
-            or path_first
-        ):
-            raise AssertionError(
-                f"{location} must classify semantic risk and prohibit "
-                "classification from path or extension alone"
-            )
 
 
-def validate_omission_scope(loop: str, pr: str) -> None:
-    sections = (
-        (
-            "workflow Validation planning",
-            markdown_section(loop, "Validation planning", "development workflow"),
-        ),
-        (
-            "PR template Validation Manifest",
-            markdown_section(pr, "Validation Manifest", "PR template"),
-        ),
-    )
-    concepts = (
-        ("expected omission scope", ("expected",)),
-        ("change surface", ("change surface", "surface")),
-        ("risk triggers", ("risk triggers", "triggers")),
-        ("AGENTS.md validation matrix", ("agents.md",)),
-        ("required CI", ("required ci", "ci")),
-        ("grouping by shared reason", ("grouped", "group")),
-    )
-    for location, section in sections:
-        folded = normalized(section)
-        for concept, alternatives in concepts:
-            if not any(alternative in folded for alternative in alternatives):
-                raise AssertionError(f"{location} is missing {concept}")
+def validate_required_docs() -> None:
+    for path in REQUIRED_DOCS:
+        read(path)
 
 
-def validate_codex_agents() -> None:
-    config = tomllib.loads(read(".codex/config.toml"))
-    maximum = config.get("agents", {}).get("max_concurrent_threads_per_session", 0)
-    if maximum < 3:
-        raise AssertionError("Codex must allow implementer, reviewer, and verifier threads")
-
-    for role in ROLES:
-        data = tomllib.loads(read(f".codex/agents/{role}.toml"))
-        for key in ("name", "description", "developer_instructions"):
-            if not data.get(key):
-                raise AssertionError(f".codex agent {role} is missing {key}")
-        if data["name"] != role:
-            raise AssertionError(f".codex agent name mismatch for {role}")
-
-    for role in READ_ONLY_ROLES:
-        data = tomllib.loads(read(f".codex/agents/{role}.toml"))
-        if data.get("sandbox_mode") != "read-only":
-            raise AssertionError(f"{role} must be read-only")
-
-    planner = tomllib.loads(read(".codex/agents/planner.toml"))
-    planner_instructions = planner["developer_instructions"].lower()
-    for token in ("read-only", "ai/roles/planner.md"):
-        if token not in (planner["description"] + planner_instructions).lower():
-            raise AssertionError(f"Codex planner is missing {token}")
+def validate_agents_md() -> None:
+    agents = read("AGENTS.md")
+    folded = agents.casefold()
+    for token in AGENTS_TOKENS:
+        if token.casefold() not in folded:
+            raise AssertionError(f"AGENTS.md is missing {token}")
+    for token in AGENTS_FORBIDDEN:
+        if token.casefold() in folded:
+            raise AssertionError(f"AGENTS.md must not contain {token}")
 
 
-def validate_cursor_agents() -> None:
-    for role in ROLES:
-        content = read(f".cursor/agents/{role}.md")
-        match = re.match(r"^---\n(?P<header>.*?)\n---\n", content, re.DOTALL)
-        if not match:
-            raise AssertionError(f"Cursor agent {role} has invalid frontmatter")
-        header = match.group("header")
-        if f"name: {role}" not in header or "description:" not in header:
-            raise AssertionError(f"Cursor agent {role} is missing name or description")
+def validate_operating_docs() -> None:
+    operating = read("docs/AI_DEVELOPMENT.md")
+    for token in (
+        "Superpowers",
+        "/add-plugin superpowers",
+        "AGENTS.md",
+        "no extra git worktrees",
+    ):
+        if token.casefold() not in operating.casefold():
+            raise AssertionError(f"docs/AI_DEVELOPMENT.md is missing {token}")
 
-    planner = read(".cursor/agents/planner.md")
-    for token in ("read-only", "ai/roles/planner.md"):
-        if token not in planner.lower():
-            raise AssertionError(f"Cursor planner is missing {token}")
+    contributing = read("CONTRIBUTING.md")
+    if "AGENTS.md" not in contributing:
+        raise AssertionError("CONTRIBUTING.md must reference AGENTS.md")
+    if "ai/workflows/development-loop.md" in contributing:
+        raise AssertionError("CONTRIBUTING.md still references the removed workflow")
+
+    bugbot = read(".cursor/BUGBOT.md")
+    for token in (
+        "decision-register",
+        "purchases, coins, rewards",
+        "territory",
+        "OpenAPI",
+    ):
+        if token.casefold() not in bugbot.casefold():
+            raise AssertionError(f".cursor/BUGBOT.md is missing {token}")
+
+    pr = read(".github/pull_request_template.md")
+    for token in (
+        "Purchase/coin/reward/entitlement",
+        "Rights/territory/takedown",
+        "Level 1",
+        "Superpowers",
+    ):
+        if token not in pr and token.casefold() not in pr.casefold():
+            raise AssertionError(f"PR template is missing {token}")
+    if "Validation Manifest" in pr:
+        raise AssertionError("PR template still requires a Validation Manifest")
+
+    issue = read(".github/ISSUE_TEMPLATE/implementation-task.yml")
+    if "Ready to implement" not in issue:
+        raise AssertionError("issue template does not enforce the ready-to-implement gate")
+    for token in (
+        "Acceptance criteria are observable and bounded",
+        "decision-register",
+        "No unapproved legal, rights, market, price, or budget decision",
+    ):
+        if token not in issue:
+            raise AssertionError(f"issue template is missing {token}")
+
+    labels = read(".github/labels.yml")
+    for state in ("ai-ready", "ai-in-progress", "ai-review", "ai-verified"):
+        if state not in labels:
+            raise AssertionError(f"{state} missing from labels")
 
 
 def validate_contracts() -> None:
-    agents = read("AGENTS.md")
-    loop = read("ai/workflows/development-loop.md")
-    states = read("ai/STATES.md")
-    labels = read(".github/labels.yml")
-    issue = read(".github/ISSUE_TEMPLATE/implementation-task.yml")
-    pr = read(".github/pull_request_template.md")
-    pr_manifest = markdown_section(pr, "Validation Manifest", "PR template")
-    role_contracts = {role: read(f"ai/roles/{role}.md") for role in ROLES}
-    orchestrator = role_contracts["orchestrator"]
-    planner = role_contracts["planner"]
-
-    for role in ROLES:
-        if role not in agents:
-            raise AssertionError(f"AGENTS.md does not reference {role}")
-
-    for role in CORE_ROLES:
-        if role not in loop:
-            raise AssertionError(f"core role {role} is missing from the development loop")
-
-    planner_folded = planner.casefold()
-    for token in ("overengineering", "reuse", "refactor", "implementation plan"):
-        if token not in planner_folded:
-            raise AssertionError(f"planner contract is missing {token}")
-    if not any(
-        token in planner_folded
-        for token in (
-            "unnecessary tests",
-            "unnecessary test",
-            "redundant tests",
-            "tests to skip",
-        )
-    ):
-        raise AssertionError("planner contract is missing unnecessary tests or equivalent")
-
-    validate_manifest_ownership(orchestrator, planner, loop)
-    validate_semantic_classification(loop)
-    validate_omission_scope(loop, pr)
-
-    workflow_planning = markdown_section(
-        loop, "Validation planning", "development workflow"
-    )
-    for level in ("R0", "R1", "R2", "R3"):
-        risk_entry(workflow_planning, level, "workflow validation planning")
-        if level not in pr_manifest:
-            raise AssertionError(f"validation risk level {level} is missing from PR template")
-
-    workflow_r3 = normalized(
-        risk_entry(workflow_planning, "R3", "workflow validation planning")
-    )
-    for trigger in (
-        "authentication",
-        "authorization",
-        "security controls",
-        "trust boundaries",
-        "secrets",
-        "privacy",
-        "rights",
-        "commerce",
-        "payments",
-        "entitlements",
-        "dependencies",
-        "supply chain",
-        "infrastructure",
-        "destructive migrations",
-        "data deletion",
-    ):
-        if trigger not in workflow_r3:
-            raise AssertionError(f"R3 trigger {trigger} is missing")
-
-    if "plan -> implement -> review -> fix -> verify -> PR" not in loop:
-        raise AssertionError("development loop order is missing")
-    flow_match = re.search(r"## Loop\s+```text(?P<flow>.*?)```", loop, re.DOTALL)
-    if not flow_match:
-        raise AssertionError("development loop state flow is missing")
-    flow = flow_match.group("flow")
-    if "plan" not in flow:
-        raise AssertionError("development loop state flow must include plan")
-    if "validation-planner" in flow:
-        raise AssertionError("validation-planner must not appear in the development loop state flow")
-    if "never implements or fixes production code" not in agents.lower():
-        raise AssertionError("orchestrator write boundary is missing")
-    if "python scripts/validate_ai_governance.py" not in agents:
-        raise AssertionError("governance validation command is missing")
-
-    for gate in (
-        "independent review",
-        "independent verification on the final revision",
-        "passing required CI",
-    ):
-        if gate.lower() not in loop.lower():
-            raise AssertionError(f"mandatory gate is missing: {gate}")
-
-    for policy in (
-        "full suite is not the default",
-        "does not repeat valid CI without a recorded reason",
-        "required, missing, or failing check cannot become `not-applicable`",
-        "material fix or elevated risk invalidates",
-    ):
-        if policy.lower() not in loop.lower():
-            raise AssertionError(f"proportional validation policy is missing: {policy}")
-
-    for state in STATES:
-        for location, content in (("states", states), ("labels", labels)):
-            if state not in content:
-                raise AssertionError(f"{state} missing from {location}")
-
-    if "ai-ready" not in issue or "AI-ready gate" not in issue:
-        raise AssertionError("issue template does not enforce the ai-ready gate")
-    for token in ("Reviewer result", "Verifier result", "separate contexts"):
-        if token not in pr:
-            raise AssertionError(f"PR template is missing {token}")
-    for token in (
-        "Base revision:",
-        "scope",
-        "behavior",
-        "consumers/boundaries",
-        "required",
-        "selected",
-        "not-applicable",
-        "justified",
-        "omissions",
-        "SHA",
-        "environment/configuration",
-        "review scope",
-        "expiration",
-        "Escalation/replanning",
-    ):
-        if token not in pr_manifest:
-            raise AssertionError(f"PR template Validation Manifest is missing {token}")
+    validate_obsolete_files_removed()
+    validate_superpowers_not_vendored()
+    validate_required_docs()
+    validate_agents_md()
+    validate_operating_docs()
 
 
 def main() -> int:
     try:
-        validate_codex_agents()
-        validate_cursor_agents()
         validate_contracts()
-    except (AssertionError, OSError, tomllib.TOMLDecodeError) as error:
+    except (AssertionError, OSError) as error:
         print(f"AI governance validation failed: {error}", file=sys.stderr)
         return 1
 

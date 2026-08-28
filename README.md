@@ -233,7 +233,7 @@ The approved geographic scope is not final launch clearance. Territorial content
 - [Store and privacy compliance matrix](./docs/product/STORE_COMPLIANCE_MATRIX.md)
 - [Unit-cost model](./docs/product/COST_MODEL.md)
 - [Architecture decision records](./docs/adr/)
-- [AI-native development workflow](./docs/AI_DEVELOPMENT.md)
+- [AI development workflow](./docs/AI_DEVELOPMENT.md) (shared `AGENTS.md`; Superpowers for substantial work)
 
 ## Repository safety
 

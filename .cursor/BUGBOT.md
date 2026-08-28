@@ -1,6 +1,6 @@
 # Bugbot review rules
 
-Read `AGENTS.md`, the linked task/acceptance criteria, and applicable product documents/ADRs before reviewing.
+Read `AGENTS.md`, the linked task or acceptance criteria, and applicable product documents and ADRs before reviewing.
 
 Prioritize actionable correctness findings over style:
 
@@ -13,4 +13,4 @@ Prioritize actionable correctness findings over style:
 - flag secrets, licensed assets, confidential data, provider payloads, or personal/production data in code and evidence;
 - flag missing tests for acceptance criteria and failure paths.
 
-Classify findings as BLOCKER, MAJOR, MINOR, or NIT. Do not approve while BLOCKER or MAJOR findings remain. Bugbot approval does not replace the independent verifier.
+Classify findings as BLOCKER, MAJOR, MINOR, or NIT. Do not approve while BLOCKER or MAJOR findings remain. Bugbot approval does not replace required CI checks.

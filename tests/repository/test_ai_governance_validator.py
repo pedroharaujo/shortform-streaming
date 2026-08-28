@@ -7,45 +7,53 @@ from scripts import validate_ai_governance as governance
 
 
 class AiGovernanceValidatorTests(unittest.TestCase):
-    def assert_contract_regression(
-        self,
-        path: str,
-        old: str,
-        new: str,
-        expected_error: str,
-    ) -> None:
+    def test_current_governance_contracts_pass(self) -> None:
+        governance.validate_contracts()
+
+    def test_rejects_agents_missing_direct_workflow(self) -> None:
         actual_read = governance.read
-        original = actual_read(path)
-        self.assertIn(old, original, f"probe fixture drifted in {path}")
-        regressed = original.replace(old, new, 1)
+        original = actual_read("AGENTS.md")
+        self.assertIn("Direct Codex / Cursor workflow", original)
+        regressed = original.replace(
+            "Direct Codex / Cursor workflow", "Always use Superpowers"
+        )
 
         with mock.patch.object(
             governance,
             "read",
             side_effect=lambda relative: (
-                regressed if relative == path else actual_read(relative)
+                regressed if relative == "AGENTS.md" else actual_read(relative)
             ),
         ):
-            with self.assertRaisesRegex(AssertionError, expected_error):
-                governance.validate_contracts()
+            with self.assertRaisesRegex(AssertionError, "AGENTS.md is missing"):
+                governance.validate_agents_md()
 
-    def test_current_governance_contracts_pass(self) -> None:
-        governance.validate_contracts()
+    def test_rejects_obsolete_role_file_if_present(self) -> None:
+        fake_path = mock.Mock()
+        fake_path.exists.return_value = True
+        fake_root = mock.MagicMock()
+        fake_root.__truediv__.return_value = fake_path
 
-    def test_rejects_orchestrator_manifest_responsibility_regression(self) -> None:
-        self.assert_contract_regression(
-            "ai/roles/orchestrator.md",
-            (
-                "2. Before implementation, produce the Validation Manifest defined in "
-                "`ai/workflows/development-loop.md`. The orchestrator owns the "
-                "Validation Manifest and remains accountable for it."
-            ),
-            (
-                "2. The orchestrator records task state. Before implementation, the "
-                "planner owns and produces the Validation Manifest."
-            ),
-            "orchestrator Procedure must keep the orchestrator responsible",
-        )
+        with mock.patch.object(governance, "ROOT", fake_root):
+            with mock.patch.object(
+                governance, "OBSOLETE_PATHS", ("ai/roles/orchestrator.md",)
+            ):
+                with self.assertRaisesRegex(
+                    AssertionError, "obsolete custom agent files must be removed"
+                ):
+                    governance.validate_obsolete_files_removed()
+
+    def test_rejects_vendored_superpowers(self) -> None:
+        fake_path = mock.Mock()
+        fake_path.is_file.return_value = True
+        fake_root = mock.MagicMock()
+        fake_root.__truediv__.return_value = fake_path
+
+        with mock.patch.object(governance, "ROOT", fake_root):
+            with self.assertRaisesRegex(
+                AssertionError, "Superpowers must not be vendored"
+            ):
+                governance.validate_superpowers_not_vendored()
 
 
 if __name__ == "__main__":

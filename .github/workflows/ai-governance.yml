@@ -12,7 +12,9 @@ on:
       - ".github/pull_request_template.md"
       - ".github/workflows/ai-governance.yml"
       - "docs/AI_DEVELOPMENT.md"
+      - "docs/README.md"
       - "scripts/validate_ai_governance.py"
+      - "tests/repository/test_ai_governance_validator.py"
   push:
     branches:
       - main
@@ -26,7 +28,9 @@ on:
       - ".github/pull_request_template.md"
       - ".github/workflows/ai-governance.yml"
       - "docs/AI_DEVELOPMENT.md"
+      - "docs/README.md"
       - "scripts/validate_ai_governance.py"
+      - "tests/repository/test_ai_governance_validator.py"
   workflow_dispatch:
 
 permissions:

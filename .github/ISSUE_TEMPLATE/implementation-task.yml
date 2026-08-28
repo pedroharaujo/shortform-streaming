@@ -62,10 +62,10 @@ body:
     validations:
       required: true
   - type: checkboxes
-    id: ai_ready_gate
+    id: ready_to_implement
     attributes:
-      label: AI-ready gate
-      description: All boxes must be true before keeping the ai-ready label.
+      label: Ready to implement
+      description: All boxes must be true before implementation starts.
       options:
         - label: Acceptance criteria are observable and bounded.
           required: true
