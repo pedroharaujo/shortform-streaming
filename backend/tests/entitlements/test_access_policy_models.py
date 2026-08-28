@@ -50,6 +50,17 @@ def test_clean_rejects_coins_subscription_and_force_both() -> None:
 
 
 @pytest.mark.django_db
+def test_series_level_force_flags_rejected_by_database() -> None:
+    series, _episode = make_published_title(title="Series Force Db", territory="FR")
+    with pytest.raises(IntegrityError):
+        with transaction.atomic():
+            AccessPolicy.objects.create(series=series, episode=None, force_free=True)
+    with pytest.raises(IntegrityError):
+        with transaction.atomic():
+            AccessPolicy.objects.create(series=series, episode=None, force_lock=True)
+
+
+@pytest.mark.django_db
 def test_clean_rejects_episode_series_mismatch() -> None:
     series_a, episode_a = make_published_title(title="Series A", territory="FR")
     series_b, _episode_b = make_published_title(title="Series B", territory="FR")

@@ -4,7 +4,7 @@ from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 
 
@@ -72,9 +72,18 @@ class AccessPolicy(models.Model):
     )
     free_episode_order_max = models.PositiveIntegerField(
         default=5,
-        help_text="1-based max Episode.order treated as free per season. Series-wide rows only.",
+        help_text=(
+            "Series-wide: 1-based max Episode.order treated as free per season. "
+            "Ignored on episode override rows; the series-level value (or D-006 default) applies."
+        ),
     )
-    rewarded_ad_enabled = models.BooleanField(default=True)
+    rewarded_ad_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Series-wide: whether rewarded-ad offers may appear. "
+            "Ignored on episode override rows; the series-level value (or D-006 default) applies."
+        ),
+    )
     force_free = models.BooleanField(
         default=False,
         help_text="Episode override only: treat as free regardless of order.",
@@ -113,6 +122,10 @@ class AccessPolicy(models.Model):
                 condition=~(Q(force_free=True) & Q(force_lock=True)),
                 name="entitlements_accesspolicy_not_force_free_and_lock",
             ),
+            models.CheckConstraint(
+                condition=Q(episode__isnull=False) | (Q(force_free=False) & Q(force_lock=False)),
+                name="entitlements_accesspolicy_series_level_no_force_flags",
+            ),
         ]
         ordering = ("series_id", "episode_id", "id")
 
@@ -126,19 +139,20 @@ class AccessPolicy(models.Model):
         if episode is not None and not self.series_id:
             self.series_id = episode.series_id
         actor = getattr(self, "_revision_actor", None)
-        super().save(*args, **kwargs)
-        AccessPolicyRevision.objects.create(
-            policy=self,
-            series=self.series,
-            episode=self.episode,
-            free_episode_order_max=self.free_episode_order_max,
-            rewarded_ad_enabled=self.rewarded_ad_enabled,
-            force_free=self.force_free,
-            force_lock=self.force_lock,
-            coin_unlock_enabled=self.coin_unlock_enabled,
-            subscription_unlock_enabled=self.subscription_unlock_enabled,
-            changed_by=actor if getattr(actor, "pk", None) else None,
-        )
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            AccessPolicyRevision.objects.create(
+                policy=self,
+                series=self.series,
+                episode=self.episode,
+                free_episode_order_max=self.free_episode_order_max,
+                rewarded_ad_enabled=self.rewarded_ad_enabled,
+                force_free=self.force_free,
+                force_lock=self.force_lock,
+                coin_unlock_enabled=self.coin_unlock_enabled,
+                subscription_unlock_enabled=self.subscription_unlock_enabled,
+                changed_by=actor if getattr(actor, "pk", None) else None,
+            )
 
     def clean(self) -> None:
         super().clean()

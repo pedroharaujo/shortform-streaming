@@ -26,3 +26,18 @@ def make_series_access_policy(
         free_episode_order_max=free_episode_order_max,
         rewarded_ad_enabled=rewarded_ad_enabled,
     )
+
+
+def make_episode_access_policy(
+    episode: Episode,
+    *,
+    force_free: bool = False,
+    force_lock: bool = False,
+) -> AccessPolicy:
+    """Episode override using model defaults for series-wide fields (max 5, ads on)."""
+    return AccessPolicy.objects.create(
+        series=episode.series,
+        episode=episode,
+        force_free=force_free,
+        force_lock=force_lock,
+    )

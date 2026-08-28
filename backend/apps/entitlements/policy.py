@@ -61,7 +61,10 @@ def resolve_access_policy(episode: Episode) -> ResolvedAccessPolicy:
     """Load at most the series-level row and the episode override.
 
     Empty table → D-006 defaults (order 1–5 free, rewarded ads on).
-    Episode override, when present, replaces the series-level row.
+    Episode override contributes only force_free and force_lock.
+    free_episode_order_max and rewarded_ad_enabled always come from the
+    series-level row, else DEFAULT_FREE_EPISODE_ORDER_MAX /
+    DEFAULT_REWARDED_AD_ENABLED.
     """
     rows = AccessPolicy.objects.filter(
         Q(series_id=episode.series_id, episode_id__isnull=True) | Q(episode_id=episode.pk)
@@ -73,19 +76,17 @@ def resolve_access_policy(episode: Episode) -> ResolvedAccessPolicy:
             override = row
         elif row.episode_id is None:
             series_row = row
-    chosen = override or series_row
-    if chosen is None:
-        return ResolvedAccessPolicy(
-            free_episode_order_max=DEFAULT_FREE_EPISODE_ORDER_MAX,
-            rewarded_ad_enabled=DEFAULT_REWARDED_AD_ENABLED,
-            force_free=False,
-            force_lock=False,
-        )
+    if series_row is None:
+        free_episode_order_max = DEFAULT_FREE_EPISODE_ORDER_MAX
+        rewarded_ad_enabled = DEFAULT_REWARDED_AD_ENABLED
+    else:
+        free_episode_order_max = series_row.free_episode_order_max
+        rewarded_ad_enabled = series_row.rewarded_ad_enabled
     return ResolvedAccessPolicy(
-        free_episode_order_max=chosen.free_episode_order_max,
-        rewarded_ad_enabled=chosen.rewarded_ad_enabled,
-        force_free=chosen.force_free,
-        force_lock=chosen.force_lock,
+        free_episode_order_max=free_episode_order_max,
+        rewarded_ad_enabled=rewarded_ad_enabled,
+        force_free=override.force_free if override is not None else False,
+        force_lock=override.force_lock if override is not None else False,
     )
 
 

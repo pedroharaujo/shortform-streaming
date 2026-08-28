@@ -78,6 +78,19 @@ class AccessPolicyAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     inlines = (AccessPolicyRevisionInline,)
     ordering = ("series_id", "episode_id", "id")
 
+    def get_readonly_fields(
+        self, request: HttpRequest, obj: AccessPolicy | None = None
+    ) -> list[str]:
+        del request
+        readonly = list(self.readonly_fields)
+        if obj is not None and obj.episode_id:
+            readonly.extend(["free_episode_order_max", "rewarded_ad_enabled"])
+        return readonly
+
+    def has_delete_permission(self, request: HttpRequest, obj: AccessPolicy | None = None) -> bool:
+        del request, obj
+        return False
+
     def save_model(self, request: HttpRequest, obj: AccessPolicy, form: Any, change: bool) -> None:
         obj._revision_actor = request.user
         obj.full_clean()

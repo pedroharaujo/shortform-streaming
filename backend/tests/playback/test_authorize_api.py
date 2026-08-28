@@ -27,7 +27,11 @@ from tests.catalog.builders import (
     make_season,
     make_series,
 )
-from tests.entitlements.builders import grant_staff_entitlement, make_series_access_policy
+from tests.entitlements.builders import (
+    grant_staff_entitlement,
+    make_episode_access_policy,
+    make_series_access_policy,
+)
 
 AUTHORIZE = "/v1/playback/{episode_id}/authorize"
 HMAC_KEY = "synthetic-hmac-for-tests"
@@ -597,3 +601,41 @@ def test_ads_disabled_does_not_grant_past_window(
     )
     assert response.status_code == 200
     _assert_locked(response.json(), "entitlement_required")
+
+
+@pytest.mark.django_db
+def test_episode_override_defaults_do_not_restore_series_free_max(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    series, episode = _published_episode(order=4, title="Override Defaults")
+    _seed_ready(fake_provider, episode)
+    make_series_access_policy(series, free_episode_order_max=3, rewarded_ad_enabled=True)
+    make_episode_access_policy(episode)
+    response = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert response.status_code == 200
+    _assert_locked(response.json(), "login_required")
+    assert "playback_url" not in response.json()
+
+
+@pytest.mark.django_db
+def test_episode_force_lock_keeps_series_ads_off_and_locks_unless_entitled(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    series, episode = _published_episode(order=1, title="Force Lock Ads Off")
+    _seed_ready(fake_provider, episode)
+    make_series_access_policy(series, rewarded_ad_enabled=False)
+    make_episode_access_policy(episode, force_lock=True)
+    locked = client.post(AUTHORIZE.format(episode_id=episode.public_id), **_headers())
+    assert locked.status_code == 200
+    _assert_locked(locked.json(), "login_required")
+
+    profile = get_or_create_profile(VALID_UID)
+    grant_staff_entitlement(profile, episode)
+    granted = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    assert granted.status_code == 200
+    _assert_granted(granted.json(), fake_provider)

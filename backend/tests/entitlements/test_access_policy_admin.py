@@ -47,6 +47,33 @@ def test_staff_save_creates_revision_with_actor(admin_client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_staff_cannot_delete_live_access_policy(admin_client: Client) -> None:
+    series, _episode = make_published_title(title="No Delete Policy", territory="FR")
+    policy = AccessPolicy.objects.create(series=series, free_episode_order_max=3)
+    assert AccessPolicyRevision.objects.filter(policy=policy).exists()
+    delete_url = reverse("admin:entitlements_accesspolicy_delete", args=[policy.pk])
+    response = admin_client.post(delete_url, {"post": "yes"})
+    assert response.status_code == 403
+    assert AccessPolicy.objects.filter(pk=policy.pk).exists()
+    assert AccessPolicyRevision.objects.filter(policy=policy).exists()
+
+
+@pytest.mark.django_db
+def test_episode_override_change_form_marks_series_fields_readonly(
+    admin_client: Client,
+) -> None:
+    series, episode = make_published_title(title="Override Form", territory="FR")
+    policy = AccessPolicy.objects.create(series=series, episode=episode)
+    change_url = reverse("admin:entitlements_accesspolicy_change", args=[policy.pk])
+    response = admin_client.get(change_url)
+    assert response.status_code == 200
+    assert b'name="free_episode_order_max"' not in response.content
+    assert b'name="rewarded_ad_enabled"' not in response.content
+    assert b'name="force_free"' in response.content
+    assert b'name="force_lock"' in response.content
+
+
+@pytest.mark.django_db
 def test_staff_cannot_enable_coin_unlock(admin_client: Client) -> None:
     series, _episode = make_published_title(title="Coin Reject", territory="FR")
     add_url = reverse("admin:entitlements_accesspolicy_add")

@@ -18,7 +18,11 @@ from tests.catalog.builders import (
     make_season,
     make_series,
 )
-from tests.entitlements.builders import grant_staff_entitlement, make_series_access_policy
+from tests.entitlements.builders import (
+    grant_staff_entitlement,
+    make_episode_access_policy,
+    make_series_access_policy,
+)
 
 OFFERS = "/v1/offers/{episode_id}"
 VALID_UID = "firebase-user-1"
@@ -200,6 +204,55 @@ def test_series_free_max_three_locks_order_four_anonymous(
     payload = response.json()
     assert payload["decision"] == "locked"
     assert payload["lock_reasons"] == ["login_required"]
+    assert payload["methods"] == []
+    _assert_no_playback_or_commerce(payload)
+
+
+@pytest.mark.django_db
+def test_episode_override_defaults_do_not_grant_past_series_free_max(
+    client: Client, freeze_catalog_clock: None
+) -> None:
+    del freeze_catalog_clock
+    series, episode = _published_episode(order=4, title="Override Offers")
+    make_series_access_policy(series, free_episode_order_max=3, rewarded_ad_enabled=True)
+    make_episode_access_policy(episode)
+
+    anonymous = client.get(OFFERS.format(episode_id=episode.public_id), **_headers())
+    assert anonymous.status_code == 200
+    anonymous_payload = anonymous.json()
+    assert anonymous_payload["decision"] == "locked"
+    assert anonymous_payload["lock_reasons"] == ["login_required"]
+    assert anonymous_payload["methods"] == []
+    _assert_no_playback_or_commerce(anonymous_payload)
+
+    authenticated = client.get(
+        OFFERS.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    assert authenticated.status_code == 200
+    authenticated_payload = authenticated.json()
+    assert authenticated_payload["decision"] != "granted"
+    assert authenticated_payload["decision"] == "locked"
+    assert _method_types(authenticated_payload) == ["rewarded_ad"]
+    _assert_no_playback_or_commerce(authenticated_payload)
+
+
+@pytest.mark.django_db
+def test_episode_force_lock_does_not_reenable_series_ads(
+    client: Client, freeze_catalog_clock: None
+) -> None:
+    del freeze_catalog_clock
+    series, episode = _published_episode(order=1, title="Force Lock Ads Off Offers")
+    make_series_access_policy(series, rewarded_ad_enabled=False)
+    make_episode_access_policy(episode, force_lock=True)
+    response = client.get(
+        OFFERS.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["decision"] == "locked"
+    assert payload["lock_reasons"] == ["entitlement_required"]
     assert payload["methods"] == []
     _assert_no_playback_or_commerce(payload)
 
