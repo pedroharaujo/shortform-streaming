@@ -11,8 +11,10 @@ import '@react-native-firebase/app';
 import {
   connectAuthEmulator,
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   getAuth,
   GoogleAuthProvider,
+  reauthenticateWithCredential,
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut as nativeSignOut,
@@ -217,6 +219,73 @@ export function createNativeFirebaseAuth(): AppAuth {
           // Swallow: the user may never have used Google Sign-In.
         }
         currentCredential = null;
+      }
+    },
+    async reauthenticate(request): Promise<AuthOutcome> {
+      const user = getAuth().currentUser;
+      if (user === null) {
+        return { outcome: 'error', message: 'Sign in again before deleting your account.' };
+      }
+      const mismatch = {
+        outcome: 'error' as const,
+        message: 'Verify the account you are currently signed in to.',
+      };
+      try {
+        let credential;
+        if (request.provider === 'password') {
+          if (
+            user.email === null ||
+            request.password === '' ||
+            !user.providerData.some((provider) => provider.providerId === 'password')
+          ) {
+            return mismatch;
+          }
+          credential = EmailAuthProvider.credential(user.email, request.password);
+        } else {
+          const googleProvider = user.providerData.find(
+            (provider) => provider.providerId === 'google.com',
+          );
+          if (Platform.OS !== 'android' || googleProvider === undefined) {
+            return mismatch;
+          }
+          const webClientId = androidWebClientId();
+          if (webClientId === null) {
+            return { outcome: 'error', message: 'Google account verification is unavailable.' };
+          }
+          configureGoogleSignIn(webClientId);
+          await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+          const result = await GoogleSignin.signIn();
+          if (result.type === 'cancelled') {
+            return { outcome: 'cancelled' };
+          }
+          if (result.data.user.id !== googleProvider.uid) {
+            return mismatch;
+          }
+          if (typeof result.data.idToken !== 'string' || result.data.idToken === '') {
+            return { outcome: 'error', message: 'Google account verification failed.' };
+          }
+          credential = GoogleAuthProvider.credential(result.data.idToken);
+        }
+        if (getAuth().currentUser?.uid !== user.uid) {
+          return mismatch;
+        }
+        // Reauthentication, unlike sign-in, cannot replace the Firebase account.
+        const verified = await reauthenticateWithCredential(user, credential);
+        if (verified.user.uid !== user.uid || getAuth().currentUser?.uid !== user.uid) {
+          return mismatch;
+        }
+        const token = await verified.user.getIdToken(true);
+        if (getAuth().currentUser?.uid !== user.uid) {
+          return mismatch;
+        }
+        currentCredential = token;
+        return { outcome: 'ok', session: { credential: token } };
+      } catch (error: unknown) {
+        if (isErrorWithCode(error) && error.code === statusCodes.SIGN_IN_CANCELLED) {
+          return { outcome: 'cancelled' };
+        }
+        // Never surface provider errors or credentials in account-deletion UI.
+        return { outcome: 'error', message: 'Account verification failed. Try again.' };
       }
     },
     getCredential(): string | null {

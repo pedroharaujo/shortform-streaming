@@ -9,6 +9,11 @@ const PROFILE = {
   public_id: 'usr_from_server',
   created_at: '2026-08-25T00:00:00Z',
   updated_at: '2026-08-25T00:00:00Z',
+  locale: 'en',
+  country: '',
+  analytics_consent: false,
+  ads_consent: false,
+  consent_updated_at: null,
 };
 
 function okMeClient(): { getMe: jest.Mock; meClient: MeClient } {

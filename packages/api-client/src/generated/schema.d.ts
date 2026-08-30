@@ -101,6 +101,50 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Update account preferences
+         * @description Preferences do not activate tracking SDKs or override content eligibility.
+         */
+        patch: operations["v1_me_partial_update"];
+        trace?: never;
+    };
+    "/v1/me/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete the authenticated account
+         * @description Requires explicit confirmation and Firebase auth_time within five minutes. Durably removes local data and blocks account access before provider cleanup. Pending receipts require operator retry; completed receipts erase the raw UID.
+         */
+        post: operations["v1_me_deletion_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Account export placeholder
+         * @description Explicitly unavailable; does not enqueue or claim to fulfill an export.
+         */
+        post: operations["v1_me_export_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -192,6 +236,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccountDeletion: {
+            public_id: string;
+            status: components["schemas"]["AccountDeletionStatusEnum"];
+        };
+        AccountDeletionRequestRequest: {
+            confirmation: boolean;
+        };
+        /**
+         * @description * `pending` - pending
+         *     * `completed` - completed
+         * @enum {string}
+         */
+        AccountDeletionStatusEnum: "pending" | "completed";
         CatalogEpisodeDetail: {
             id: string;
             title: string;
@@ -245,6 +302,12 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            locale: string;
+            country: string;
+            analytics_consent: boolean;
+            ads_consent: boolean;
+            /** Format: date-time */
+            consent_updated_at: string | null;
         };
         /** @description Cursor-paginated list envelope. `cursor` and `next` are opaque strings, never numeric offsets. Concrete list operations replace `results` item types. */
         CursorPage: {
@@ -313,8 +376,19 @@ export interface components {
              *     * `ok` - ok
              *     * `unavailable` - unavailable
              */
-            status: components["schemas"]["StatusEnum"];
+            status: components["schemas"]["HealthStatusStatusEnum"];
         };
+        /**
+         * @description * `ok` - ok
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        HealthStatusStatusEnum: "ok" | "unavailable";
+        /**
+         * @description * `en` - en
+         * @enum {string}
+         */
+        LocaleEnum: "en";
         /**
          * @description * `login_required` - login_required
          *     * `entitlement_required` - entitlement_required
@@ -334,6 +408,12 @@ export interface components {
             title: string;
             /** @description English display description. Not legal or store copy. */
             description: string;
+        };
+        PatchedAccountPreferencesRequest: {
+            locale?: components["schemas"]["LocaleEnum"];
+            country?: string;
+            analytics_consent?: boolean;
+            ads_consent?: boolean;
         };
         PlaybackAuthorizeGranted: {
             /**
@@ -381,12 +461,6 @@ export interface components {
          * @example ser_1a2b3c4d5e6f
          */
         PublicId: string;
-        /**
-         * @description * `ok` - ok
-         *     * `unavailable` - unavailable
-         * @enum {string}
-         */
-        StatusEnum: "ok" | "unavailable";
         /**
          * @description * `entitlement` - entitlement
          *     * `free` - free
@@ -568,6 +642,126 @@ export interface operations {
             };
             /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_me_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedAccountPreferencesRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAccountPreferencesRequest"];
+                "multipart/form-data": components["schemas"]["PatchedAccountPreferencesRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUserProfile"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_me_deletion_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountDeletionRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AccountDeletionRequestRequest"];
+                "multipart/form-data": components["schemas"]["AccountDeletionRequestRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletion"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_me_export_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            501: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -11,6 +11,26 @@ Owner boxes that remain open for the **ads-only** P0-T03 slice: legal/privacy ju
 
 ## How to read status labels
 
+### P2-T02 implementation update (2026-08-31)
+
+The historical rows below are superseded for the following consumer-account
+fields by P2-T02. See `../runbooks/account-lifecycle.md` for operation and rollback.
+
+| Field | Purpose / access | Deletion and retention |
+|---|---|---|
+| UserProfile locale, optional country, analytics/ads preferences, consent_updated_at | Account-owned preferences through GET/PATCH `/v1/me`; no SDK activation or eligibility override | Removed with the profile. Defaults are off; D-020 remains required before production processing. |
+| UserProfile UID/public ID/timestamps; authenticated progress and episode entitlements | Existing authenticated account data; never expose UID through the API | Locally cascade-deleted when a deletion request is accepted; Firebase identity cleanup is retried until completed. |
+| AccountDeletion UID fingerprint, public receipt ID, status, request/completion/attempt timestamps and attempt count | Backend replay prevention and operational audit only; fingerprint is pseudonymous, not anonymous | Raw UID is held only while pending and cleared at completion. Operational fingerprint/receipt retention requires D-020 approval; not analytics or financial records. |
+| Firebase auth_time | Verify recent same-account sign-in before deletion | Checked in memory only; not copied into receipts, profiles, or logs. |
+
+Unlinked guest-device progress is not associated with a consumer profile and is
+not deleted as if it belonged to the signed-in user. Future push/analytics/ad
+processors and P7 financial records must specify their own deletion propagation
+before shipping. No legal, privacy-label, residency, or retention approval is
+implied by this update.
+
+### Historical status labels
+
 Every inventory row uses one of:
 
 | Label | Meaning |

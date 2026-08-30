@@ -693,14 +693,26 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **Acceptance criteria:**
 
-- [ ] User can initiate deletion in-app with reauthentication where required.
-- [ ] Personal profile and push identifiers are deleted or irreversibly anonymized; financial audit records retain only legally necessary pseudonymous fields.
-- [ ] Deletion is idempotent and has an auditable status.
+- [x] User can initiate deletion in-app with reauthentication where required.
+- [x] Personal profile and push identifiers are deleted or irreversibly anonymized; financial audit records retain only legally necessary pseudonymous fields.
+- [x] Deletion is idempotent and has an auditable status.
 
 **Validation and integration tests:**
 
-- [ ] Integration test creates an account with progress/entitlements, deletes it, and verifies inaccessible/anonymized data.
-- [ ] Repeating the deletion command does not recreate or corrupt the account.
+- [x] Integration test creates an account with progress/entitlements, deletes it, and verifies inaccessible/anonymized data.
+- [x] Repeating the deletion command does not recreate or corrupt the account.
+
+Evidence (2026-08-31, P2-T02): preferences and opt-in defaults, same-account
+password/Google reauthentication, recent-auth deletion, local cascading, durable
+Firebase cleanup/retry, and an explicit export-unavailable placeholder. The
+Android development build on Pixel_9 completed synthetic signup → preference
+save → password reauthentication → deletion against isolated PostgreSQL and the
+Firebase Auth emulator. Profile/progress/entitlement and Firebase user counts
+were zero afterward; the completed receipt erased its raw UID. Full `pnpm check`
+and Android JS export pass. See `docs/runbooks/account-lifecycle.md` for exact
+checks, operational follow-ups, retention gates, and rollback restrictions.
+Push identifiers and financial audit models are not implemented yet; their
+processor-specific deletion/retention integration is required before they ship.
 
 #### P2-T03 — Implement catalog, rights, localization, and Django Admin
 

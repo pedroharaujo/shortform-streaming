@@ -33,7 +33,7 @@ def _authorization_header(request: Request) -> str | None:
     return stripped if stripped else None
 
 
-def verify_firebase_bearer(request: Request) -> tuple[UserProfile, VerifiedToken]:
+def verify_firebase_token(request: Request) -> VerifiedToken:
     """Verify a present Bearer Firebase ID token and map UID to one profile.
 
     Missing, empty, malformed, expired, revoked, or otherwise unverifiable
@@ -54,7 +54,15 @@ def verify_firebase_bearer(request: Request) -> tuple[UserProfile, VerifiedToken
     except TokenVerificationError as exc:
         raise FirebaseAuthenticationFailed() from exc
 
-    profile = get_or_create_profile(verified.uid)
+    return verified
+
+
+def verify_firebase_bearer(request: Request) -> tuple[UserProfile, VerifiedToken]:
+    verified = verify_firebase_token(request)
+    try:
+        profile = get_or_create_profile(verified.uid)
+    except TokenVerificationError as exc:
+        raise FirebaseAuthenticationFailed() from exc
     return (profile, verified)
 
 
@@ -65,7 +73,9 @@ class FirebaseIdTokenAuthentication(BaseAuthentication):
     query string, or headers are ignored. Missing credentials are 401.
     """
 
-    def authenticate(self, request: Request) -> tuple[UserProfile, VerifiedToken] | None:
+    def authenticate(
+        self, request: Request
+    ) -> tuple[UserProfile | VerifiedToken, VerifiedToken] | None:
         return verify_firebase_bearer(request)
 
     def authenticate_header(self, request: Request) -> str:
@@ -80,10 +90,20 @@ class OptionalFirebaseIdTokenAuthentication(FirebaseIdTokenAuthentication):
     or revoked token is 401, never treated as anonymous.
     """
 
-    def authenticate(self, request: Request) -> tuple[UserProfile, VerifiedToken] | None:
+    def authenticate(
+        self, request: Request
+    ) -> tuple[UserProfile | VerifiedToken, VerifiedToken] | None:
         if _authorization_header(request) is None:
             return None
         return super().authenticate(request)
+
+
+class DeletionFirebaseAuthentication(FirebaseIdTokenAuthentication):
+    """Verify identity without provisioning/recreating a profile on a deletion retry."""
+
+    def authenticate(self, request: Request) -> tuple[VerifiedToken, VerifiedToken]:
+        verified = verify_firebase_token(request)
+        return verified, verified
 
 
 class FirebaseIdTokenScheme(OpenApiAuthenticationExtension):  # type: ignore[no-untyped-call]
@@ -94,3 +114,9 @@ class FirebaseIdTokenScheme(OpenApiAuthenticationExtension):  # type: ignore[no-
     def get_security_definition(self, auto_schema: object) -> dict[str, Any]:
         del auto_schema
         return dict(BEARER_SCHEME)
+
+
+class DeletionFirebaseScheme(FirebaseIdTokenScheme):  # type: ignore[no-untyped-call]
+    target_class = DeletionFirebaseAuthentication
+    name = "FirebaseDeletionIdToken"
+    priority = 1

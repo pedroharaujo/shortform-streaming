@@ -193,6 +193,119 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Missing, malformed, expired, revoked, or otherwise unverifiable
             Firebase ID token. The response never includes the token or firebase_uid.
+    patch:
+      operationId: v1_me_partial_update
+      description: Preferences do not activate tracking SDKs or override content eligibility.
+      summary: Update account preferences
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAccountPreferencesRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAccountPreferencesRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAccountPreferencesRequest'
+      security:
+      - FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserProfile'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+  /v1/me/deletion:
+    post:
+      operationId: v1_me_deletion_create
+      description: Requires explicit confirmation and Firebase auth_time within five
+        minutes. Durably removes local data and blocks account access before provider
+        cleanup. Pending receipts require operator retry; completed receipts erase
+        the raw UID.
+      summary: Delete the authenticated account
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountDeletionRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AccountDeletionRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AccountDeletionRequestRequest'
+        required: true
+      security:
+      - FirebaseDeletionIdToken: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDeletion'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
+  /v1/me/export:
+    post:
+      operationId: v1_me_export_create
+      description: Explicitly unavailable; does not enqueue or claim to fulfill an
+        export.
+      summary: Account export placeholder
+      tags:
+      - accounts
+      security:
+      - FirebaseIdToken: []
+      responses:
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '501':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
   /v1/offers/{episode_id}:
     get:
       operationId: v1_offers_retrieve
@@ -606,6 +719,31 @@ paths:
       security: []
 components:
   schemas:
+    AccountDeletion:
+      type: object
+      properties:
+        public_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/AccountDeletionStatusEnum'
+      required:
+      - public_id
+      - status
+    AccountDeletionRequestRequest:
+      type: object
+      properties:
+        confirmation:
+          type: boolean
+      required:
+      - confirmation
+    AccountDeletionStatusEnum:
+      enum:
+      - pending
+      - completed
+      type: string
+      description: |-
+        * `pending` - pending
+        * `completed` - completed
     CatalogEpisodeDetail:
       type: object
       properties:
@@ -751,8 +889,25 @@ components:
         updated_at:
           type: string
           format: date-time
+        locale:
+          type: string
+        country:
+          type: string
+        analytics_consent:
+          type: boolean
+        ads_consent:
+          type: boolean
+        consent_updated_at:
+          type: string
+          format: date-time
+          nullable: true
       required:
+      - ads_consent
+      - analytics_consent
+      - consent_updated_at
+      - country
       - created_at
+      - locale
       - public_id
       - updated_at
     CursorPage:
@@ -890,7 +1045,7 @@ components:
       properties:
         status:
           allOf:
-          - $ref: '#/components/schemas/StatusEnum'
+          - $ref: '#/components/schemas/HealthStatusStatusEnum'
           description: |-
             ok when the probe succeeds; unavailable when readiness fails.
 
@@ -898,6 +1053,19 @@ components:
             * `unavailable` - unavailable
       required:
       - status
+    HealthStatusStatusEnum:
+      enum:
+      - ok
+      - unavailable
+      type: string
+      description: |-
+        * `ok` - ok
+        * `unavailable` - unavailable
+    LocaleEnum:
+      enum:
+      - en
+      type: string
+      description: '* `en` - en'
     LockReasonsEnum:
       enum:
       - login_required
@@ -928,6 +1096,21 @@ components:
       - description
       - title
       - type
+    PatchedAccountPreferencesRequest:
+      type: object
+      properties:
+        locale:
+          $ref: '#/components/schemas/LocaleEnum'
+        country:
+          oneOf:
+          - type: string
+            pattern: ^[A-Za-z]{2}$
+          - type: string
+            maxLength: 0
+        analytics_consent:
+          type: boolean
+        ads_consent:
+          type: boolean
     PlaybackAuthorizeGranted:
       type: object
       properties:
@@ -998,14 +1181,6 @@ components:
       description: Opaque public identifier. Sequential database integers are never
         used as public IDs.
       example: ser_1a2b3c4d5e6f
-    StatusEnum:
-      enum:
-      - ok
-      - unavailable
-      type: string
-      description: |-
-        * `ok` - ok
-        * `unavailable` - unavailable
     TypeEnum:
       enum:
       - entitlement
@@ -1049,6 +1224,16 @@ components:
       required:
       - position_seconds
   securitySchemes:
+    FirebaseDeletionIdToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'Firebase Authentication ID token presented as an HTTP Bearer credential.
+        Django verifies the token and maps the UID to one local profile. Health probes
+        and anonymous catalog reads do not use this scheme. POST /v1/playback/{episode_id}/authorize
+        and GET/PUT /v1/progress/{episode_id} and GET /v1/offers/{episode_id} accept
+        this scheme optionally: a missing token is anonymous; a present invalid token
+        is 401. Client-supplied user or profile identifiers are ignored.'
     FirebaseIdToken:
       type: http
       scheme: bearer
