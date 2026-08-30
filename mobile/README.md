@@ -110,7 +110,7 @@ already lists them). Missing iOS plist must not block Android or CI JavaScript e
    keys or service-account JSON in `EXPO_PUBLIC_*`.
 
 4. After adding native Firebase packages, rebuild the development client
-   (`pnpm --filter @shortform/mobile android` / `expo run:android`). Metro reload is not
+   (`pnpm mobile:android` / `make emulate`). Metro reload is not
    enough.
 
 5. On `/sign-in`, create an account or sign in, confirm `GET /v1/me`, use **Sign out**,
@@ -153,14 +153,14 @@ and iOS Google observation are a later D-026 follow-up (not waived). Do not set
 7. Django device loop: `FIREBASE_AUTH_MODE=admin` and `FIREBASE_AUTH_EMULATOR_HOST`.
    Keep `FIREBASE_AUTH_MODE=mock` for Jest and Application CI.
 8. Rebuild the development client after adding the native package
-   (`pnpm --filter @shortform/mobile android` / `expo run:android`). Metro reload is not
+   (`pnpm mobile:android` / `make emulate`). Metro reload is not
    enough.
 9. On `/sign-in`: Google → `GET /v1/me` → Sign out → Google again → same `public_id`.
    Email/password still works. Home catalog still loads without signing in.
 
 ## Commands
 
-From the repository root, after `export PATH="$HOME/.local/bin:$PATH"` (corepack pnpm shim on this machine):
+From the repository root:
 
 ```shell
 pnpm install
@@ -178,10 +178,15 @@ pnpm mobile:check
 Package scripts (same checks, plus the development client):
 
 ```shell
+make help                                  # local loops (sql, backend, emulate)
 pnpm --filter @shortform/mobile start      # Metro with --dev-client
-pnpm --filter @shortform/mobile android    # expo run:android (generates native project)
+make start-avd                             # boot Pixel_9 without Android Studio
+make emulate                               # start AVD if needed, then expo run:android
+pnpm mobile:android                        # same as make emulate
 pnpm --filter @shortform/mobile ios        # expo run:ios (macOS only)
 ```
+
+`make start-avd` launches the AVD as a detached process so you do not need Android Studio open and waits until adb sees it. `make emulate` runs `start-avd` first, then selects a JDK 17+ (Android Studio's JBR on this machine) so Gradle is not stuck on Oracle Java 8. Do not export `JAVA_HOME` by hand. Recreating the Python virtualenv does not change Gradle's JVM.
 
 `pnpm check` includes the mobile gate.
 
@@ -206,16 +211,24 @@ This is the sequence that proves the app can reach the local API. It was **not**
    EXPO_PUBLIC_CATALOG_TERRITORY=FR
    ```
 
-3. Install the Android SDK, create an AVD, and start the emulator.
+3. Boot the AVD without Android Studio:
+
+   ```shell
+   make start-avd
+   ```
+
+   Wait until the emulator home screen is up. Override the AVD with `ANDROID_AVD=Medium_Phone_API_36.1 make start-avd` if needed.
 
 4. From the repository root:
 
    ```shell
-   export PATH="$HOME/.local/bin:$PATH"
-   pnpm --filter @shortform/mobile android
+   make emulate
    ```
 
-   The first run generates `mobile/android/` (gitignored) and installs the development client on the emulator.
+   `make emulate` starts the AVD if needed, pins JDK 17+, and runs `expo run:android`.
+   `pnpm mobile:android` is the same install step when the emulator is already booted.
+   The first run generates `mobile/android/` (gitignored) and installs the development
+   client. Do not export `JAVA_HOME` by hand.
 
 5. The launch route is Home. After seeding the local catalog, it should show the featured rail (Harbor Lights for territory `FR`). Open **Sign in** for email/password against native Firebase Auth and the Auth emulator on a rebuilt development client (optional; Jest still uses the local mock). Isolated HLS play uses `/playback-spike?episodeId=<id>` (see `docs/runbooks/playback-spike.md`). Open **Backend availability** from Home to probe `/health/live` and `/health/ready`. Use **Check again** after restarting or stopping the API.
 

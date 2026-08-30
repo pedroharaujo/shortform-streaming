@@ -23,4 +23,24 @@ describe('getOrCreateDeviceId', () => {
     expect(second).toBe(first);
     expect(first).not.toMatch(/usr_|firebase|EXPO_PUBLIC/i);
   });
+
+  it('creates a UUID when Web crypto is missing', async () => {
+    mockStore.clear();
+    const original = globalThis.crypto;
+    Object.defineProperty(globalThis, 'crypto', {
+      configurable: true,
+      value: undefined,
+    });
+    try {
+      const created = await getOrCreateDeviceId();
+      expect(created).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+    } finally {
+      Object.defineProperty(globalThis, 'crypto', {
+        configurable: true,
+        value: original,
+      });
+    }
+  });
 });

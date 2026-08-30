@@ -84,10 +84,20 @@ function stubCatalog(series: CatalogSeriesDetail = harborSeries): CatalogClient 
   return {
     getHome: async () => ({ outcome: 'ok', data: { rails: [] } }),
     getSeries: async () => ({ outcome: 'ok', data: series }),
-    getEpisode: async (id: string) => ({
-      outcome: 'ok',
-      data: { ...harborEpisode, id },
-    }),
+    getEpisode: async (id: string) => {
+      const match = series.seasons
+        .flatMap((season) => season.episodes)
+        .find((episode) => episode.id === id);
+      return {
+        outcome: 'ok',
+        data: {
+          ...harborEpisode,
+          id,
+          order: match?.order ?? harborEpisode.order,
+          title: match ? `${series.title} · Episode ${match.order}` : harborEpisode.title,
+        },
+      };
+    },
   };
 }
 
@@ -150,6 +160,7 @@ describe('PlayerScreen', () => {
     );
 
     expect(await view.findByTestId('player-loaded')).toBeTruthy();
+    expect(view.getByTestId('player-now-playing')).toHaveTextContent('Harbor Lights · Episode 1');
     expect(view.getByTestId('player-video')).toBeTruthy();
     expect(view.getByTestId('player-initial-position')).toHaveTextContent('0');
     visibleHasSecrets(view);
@@ -195,7 +206,32 @@ describe('PlayerScreen', () => {
     expect(missing.queryByTestId('player-error')).toBeNull();
   });
 
-  it('resumes at 86s without autoplaying the next episode', async () => {
+  it('resumes a mid-rewatch even when completed is still sticky', async () => {
+    const view = await renderPlayer(
+      <PlayerScreen
+        catalog={stubCatalog()}
+        episodeId="ep_harbor_1"
+        onClose={() => {}}
+        playback={stubPlayback()}
+        progress={stubProgress({
+          get: {
+            outcome: 'ok',
+            data: {
+              episode_id: 'ep_harbor_1',
+              position_seconds: 12,
+              completed: true,
+              updated_at: '2026-08-28T12:00:00Z',
+            },
+          },
+        })}
+      />,
+    );
+
+    expect(await view.findByTestId('player-loaded')).toBeTruthy();
+    expect(view.getByTestId('player-initial-position')).toHaveTextContent('12');
+  });
+
+  it('replays a completed episode from the start without autoplaying the next episode', async () => {
     const authorize = jest.fn(async (id: string) => grantedAuthorize(id));
     const view = await renderPlayer(
       <PlayerScreen
@@ -218,7 +254,7 @@ describe('PlayerScreen', () => {
     );
 
     expect(await view.findByTestId('player-loaded')).toBeTruthy();
-    expect(view.getByTestId('player-initial-position')).toHaveTextContent('86');
+    expect(view.getByTestId('player-initial-position')).toHaveTextContent('0');
     expect(view.queryByTestId('player-locked')).toBeNull();
     expect(authorize.mock.calls.map((call) => call[0])).toEqual(['ep_harbor_1']);
   });
@@ -281,6 +317,7 @@ describe('PlayerScreen', () => {
     });
     expect(await view.findByTestId('player-loaded')).toBeTruthy();
     expect(view.queryByTestId('player-locked')).toBeNull();
+    expect(view.getByTestId('player-now-playing')).toHaveTextContent('Harbor Lights · Episode 2');
     visibleHasSecrets(view);
   });
 
