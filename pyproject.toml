@@ -10,7 +10,7 @@ dependencies = [
     "drf-spectacular>=0.28,<1",
     "firebase-admin>=6.8,<8",
     "google-cloud-storage>=2.14,<4",
-    "gunicorn>=23,<26",
+    "gunicorn>=23,<27",
     "psycopg[binary]>=3.2,<3.4",
     "whitenoise>=6.8,<7",
 ]
