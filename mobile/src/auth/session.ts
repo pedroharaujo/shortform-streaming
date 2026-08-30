@@ -8,9 +8,16 @@
 import type { AuthUserSession } from './localMockFirebaseAuth';
 
 let session: AuthUserSession | null = null;
+let revision = 0;
 
 export function setAuthSession(next: AuthUserSession | null): void {
   session = next;
+  revision += 1;
+}
+
+/** Distinguishes session replacement even when Firebase reuses the same token. */
+export function getAuthSessionRevision(): number {
+  return revision;
 }
 
 export function getSessionCredential(): string | null {

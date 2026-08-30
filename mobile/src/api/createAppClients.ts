@@ -6,6 +6,8 @@
 import { getSessionCredential } from '../auth/session';
 import { getApiConfiguration } from '../config/appConfiguration';
 import { getOrCreateDeviceId } from '../device/deviceId';
+import { createAccountClient } from './account/accountClient';
+import type { AccountClient } from './account/types';
 import { createCatalogClient } from './catalog/catalogClient';
 import type { CatalogClient } from './catalog/types';
 import { MVP_CLIENT_PLATFORM } from './context';
@@ -63,4 +65,11 @@ export function createAppMeClient(): MeClient {
 
 export function createAppHealthClient(): HealthClient {
   return createHealthClient({ baseUrl: getApiConfiguration().baseUrl });
+}
+
+export function createAppAccountClient(): AccountClient {
+  return createAccountClient({
+    baseUrl: getApiConfiguration().baseUrl,
+    getCredential: getSessionCredential,
+  });
 }

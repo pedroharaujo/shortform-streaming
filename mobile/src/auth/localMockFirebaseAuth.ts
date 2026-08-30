@@ -19,10 +19,14 @@ export type AuthOutcome =
   | { readonly outcome: 'cancelled' }
   | { readonly outcome: 'error'; readonly message: string };
 
+export type ReauthenticationRequest =
+  { readonly provider: 'password'; readonly password: string } | { readonly provider: 'google' };
+
 export interface AppAuth {
   signIn(email: string, password: string): Promise<AuthOutcome>;
   signUp(email: string, password: string): Promise<AuthOutcome>;
   signInWithGoogle(): Promise<AuthOutcome>;
+  reauthenticate(request: ReauthenticationRequest): Promise<AuthOutcome>;
   signOut(): Promise<void>;
   getCredential(): string | null;
 }
@@ -44,6 +48,7 @@ function issueCredential(email: string): string {
 export function createLocalMockFirebaseAuth(): AppAuth {
   const passwords = new Map<string, string>();
   let currentCredential: string | null = null;
+  let currentEmail: string | null = null;
 
   function requireCredentials(email: string, password: string): string | null {
     if (normalizeEmail(email) === '' || password.trim() === '') {
@@ -64,6 +69,7 @@ export function createLocalMockFirebaseAuth(): AppAuth {
       }
       passwords.set(key, password);
       currentCredential = issueCredential(email);
+      currentEmail = key;
       return { outcome: 'ok', session: { credential: currentCredential } };
     },
     async signIn(email: string, password: string): Promise<AuthOutcome> {
@@ -79,14 +85,30 @@ export function createLocalMockFirebaseAuth(): AppAuth {
         return { outcome: 'error', message: 'Email or password is incorrect.' };
       }
       currentCredential = issueCredential(email);
+      currentEmail = key;
       return { outcome: 'ok', session: { credential: currentCredential } };
     },
     async signInWithGoogle(): Promise<AuthOutcome> {
       currentCredential = 'mock.google_user';
+      currentEmail = null;
+      return { outcome: 'ok', session: { credential: currentCredential } };
+    },
+    async reauthenticate(request): Promise<AuthOutcome> {
+      if (currentCredential === null) {
+        return { outcome: 'error', message: 'Sign in again before deleting your account.' };
+      }
+      if (
+        request.provider === 'password'
+          ? currentEmail === null || passwords.get(currentEmail) !== request.password
+          : currentCredential !== 'mock.google_user'
+      ) {
+        return { outcome: 'error', message: 'Verify the account you are currently signed in to.' };
+      }
       return { outcome: 'ok', session: { credential: currentCredential } };
     },
     async signOut(): Promise<void> {
       currentCredential = null;
+      currentEmail = null;
     },
     getCredential(): string | null {
       return currentCredential;

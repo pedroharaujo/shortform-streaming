@@ -61,3 +61,14 @@ def test_admin_verifier_returns_uid() -> None:
     verifier = _force_ready(AdminFirebaseTokenVerifier())
     with patch("firebase_admin.auth.verify_id_token", return_value={"uid": "firebase-uid-9"}):
         assert verifier.verify_id_token("token-value").uid == "firebase-uid-9"
+
+
+@pytest.mark.parametrize("auth_time", [None, "123", True, 123])
+def test_admin_verifier_preserves_only_verified_integer_auth_time(auth_time: object) -> None:
+    verifier = _force_ready(AdminFirebaseTokenVerifier())
+    with patch(
+        "firebase_admin.auth.verify_id_token",
+        return_value={"uid": "synthetic-user", "auth_time": auth_time, "iat": 999999},
+    ):
+        verified = verifier.verify_id_token("synthetic-token")
+    assert verified.auth_time == (auth_time if type(auth_time) is int else None)

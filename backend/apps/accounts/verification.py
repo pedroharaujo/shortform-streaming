@@ -8,6 +8,7 @@ from typing import Protocol
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.utils import timezone
 
 from apps.accounts.exceptions import TokenFailure, TokenVerificationError
 
@@ -21,6 +22,11 @@ _admin_lock = Lock()
 @dataclass(frozen=True, slots=True)
 class VerifiedToken:
     uid: str
+    auth_time: int | None = None
+
+    @property
+    def is_authenticated(self) -> bool:
+        return True
 
 
 class FirebaseTokenVerifier(Protocol):
@@ -113,7 +119,7 @@ class AdminFirebaseTokenVerifier:
                 if firebase_admin._apps:
                     self._app_ready = True
                     return True
-                firebase_admin.initialize_app(options={"projectId": project_id})
+                firebase_admin.initialize_app(options={"projectId": project_id, "httpTimeout": 10})
                 self._app_ready = True
                 return True
             except Exception:
@@ -151,7 +157,13 @@ class AdminFirebaseTokenVerifier:
         uid = decoded.get("uid") if isinstance(decoded, dict) else None
         if not isinstance(uid, str) or not uid.strip():
             raise TokenVerificationError(TokenFailure.MALFORMED)
-        return _verified_uid(uid.strip())
+        verified = _verified_uid(uid.strip())
+        auth_time = decoded.get("auth_time")
+        # Missing claims must never acquire a fresh server timestamp.
+        return VerifiedToken(
+            uid=verified.uid,
+            auth_time=auth_time if type(auth_time) is int else None,
+        )
 
 
 def get_token_verifier() -> FirebaseTokenVerifier:
@@ -186,4 +198,4 @@ def _verified_uid(uid: str) -> VerifiedToken:
         raise TokenVerificationError(TokenFailure.MALFORMED)
     if not candidate.isprintable() or any(ch.isspace() for ch in candidate):
         raise TokenVerificationError(TokenFailure.MALFORMED)
-    return VerifiedToken(uid=candidate)
+    return VerifiedToken(uid=candidate, auth_time=int(timezone.now().timestamp()))

@@ -63,7 +63,16 @@ def test_valid_token_creates_profile_without_firebase_uid(client: Client) -> Non
     response = client.get(ME, **_bearer(VALID_CREDENTIAL))
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {"public_id", "created_at", "updated_at"}
+    assert set(body) == {
+        "public_id",
+        "created_at",
+        "updated_at",
+        "locale",
+        "country",
+        "analytics_consent",
+        "ads_consent",
+        "consent_updated_at",
+    }
     assert body["public_id"].startswith("usr_")
     assert body["public_id"] != str(UserProfile.objects.get().pk)
     assert VALID_UID not in response.content.decode()
