@@ -132,10 +132,7 @@ export function PlayerScreen({
     const progressResult = await progress.get(activeEpisodeId);
     let resumeSeconds = 0;
     if (progressResult.outcome === 'ok') {
-      resumeSeconds = resumePlaybackPosition(
-        progressResult.data.position_seconds,
-        durationSeconds,
-      );
+      resumeSeconds = resumePlaybackPosition(progressResult.data.position_seconds, durationSeconds);
       lastProgressRef.current = {
         positionSeconds: progressResult.data.position_seconds,
         completed: progressResult.data.completed,
