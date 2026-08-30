@@ -7,6 +7,7 @@ import { StyleSheet } from 'react-native';
 export interface HlsVideoViewProps {
   readonly uri: string;
   readonly testID?: string;
+  readonly accessibilityLabel?: string;
   readonly initialPositionSeconds?: number;
   readonly paused?: boolean;
   readonly onEnded?: () => void;
@@ -17,6 +18,7 @@ export interface HlsVideoViewProps {
 export function HlsVideoView({
   uri,
   testID = 'hls-video',
+  accessibilityLabel = 'Episode player',
   initialPositionSeconds = 0,
   paused = false,
   onEnded,
@@ -54,7 +56,7 @@ export function HlsVideoView({
 
   return (
     <VideoView
-      accessibilityLabel="Episode player"
+      accessibilityLabel={accessibilityLabel}
       contentFit="contain"
       nativeControls
       player={player}

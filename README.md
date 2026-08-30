@@ -7,8 +7,22 @@ The MVP consists of a Django REST backend/Django Admin and one React Native/Expo
 ## Local backend bootstrap
 
 P1-T02 provides a runnable Django 6.1 backend and local PostgreSQL. Install Git,
-Python 3.12–3.14, [uv](https://docs.astral.sh/uv/), pnpm, and Docker with Compose, then
-run:
+Python 3.12–3.14, [uv](https://docs.astral.sh/uv/), pnpm, Docker with Compose, and
+(on Windows) [GNU Make](https://chocolatey.org/packages/make). Then from the
+repository root:
+
+```shell
+uv sync --locked
+make start-sql
+make start-backend
+```
+
+`make start-sql` starts PostgreSQL and waits until it is healthy. `make start-backend`
+runs migrations and `runserver` on `127.0.0.1:8000` in the foreground. If a gitignored
+`.env` exists, both Compose and Django load it (`uv --env-file .env`), so
+`VIDEO_PROVIDER=bunny` and a non-5432 `POSTGRES_PORT` actually apply.
+
+Equivalent commands without Make:
 
 ```shell
 git clone https://github.com/pedroharaujo/shortform-streaming.git
@@ -36,7 +50,8 @@ curl http://127.0.0.1:8000/health/ready
 Both return `{"status":"ok"}` with HTTP 200 while PostgreSQL is available. Liveness is
 process-only. Readiness performs a bounded `SELECT 1` and returns HTTP 503 with the
 non-sensitive payload `{"status":"unavailable"}` if PostgreSQL cannot be reached.
-Stop local services without deleting their named data volume with `docker compose down`.
+Stop local services without deleting their named data volume with `make stop-sql`
+(`docker compose down`).
 
 Staff catalog management uses Django Admin at `http://127.0.0.1:8000/admin/` (local
 `DEBUG` + `runserver`; the production image collects Admin static files — see
@@ -169,9 +184,10 @@ pnpm mobile:bundle:check
 
 `pnpm mobile:bundle:check` runs `expo export` for Android and iOS JavaScript bundles using the same public `EXPO_PUBLIC_*` fixtures as the config check. It does not compile native apps or invoke EAS.
 
-The first Android development client is `pnpm --filter @shortform/mobile android`
-with the emulator already running. P1-T03 did **not** execute that emulator path;
-record it as an **omission**, not a pass.
+The first Android development client is `make emulate` (boots Pixel_9 if needed,
+then `expo run:android` with JDK 17+ so Gradle does not use Oracle Java 8 from
+PATH). `pnpm mobile:android` is the same install step without starting the AVD.
+P1-T03 did **not** execute that emulator path; record it as an **omission**, not a pass.
 
 Run backend checks independently:
 

@@ -13,6 +13,7 @@ import {
   isCompleteByPosition,
   nextOpaqueEpisodeId,
   PROGRESS_THROTTLE_MS,
+  resumePlaybackPosition,
   shouldSkipProgressPut,
 } from './playbackProgress';
 
@@ -35,6 +36,7 @@ type PlayerPhase =
   | {
       readonly phase: 'playing';
       readonly episodeId: string;
+      readonly episodeTitle: string;
       readonly durationSeconds: number;
       readonly resumeSeconds: number;
       readonly playbackUri: string;
@@ -130,7 +132,10 @@ export function PlayerScreen({
     const progressResult = await progress.get(activeEpisodeId);
     let resumeSeconds = 0;
     if (progressResult.outcome === 'ok') {
-      resumeSeconds = clampResumePosition(progressResult.data.position_seconds, durationSeconds);
+      resumeSeconds = resumePlaybackPosition(
+        progressResult.data.position_seconds,
+        durationSeconds,
+      );
       lastProgressRef.current = {
         positionSeconds: progressResult.data.position_seconds,
         completed: progressResult.data.completed,
@@ -140,6 +145,7 @@ export function PlayerScreen({
     return {
       phase: 'playing',
       episodeId: activeEpisodeId,
+      episodeTitle: episodeResult.data.title,
       durationSeconds,
       resumeSeconds,
       playbackUri: authorizeResult.data.playback_url,
@@ -245,6 +251,16 @@ export function PlayerScreen({
       >
         <Text style={styles.closeLabel}>Close</Text>
       </Pressable>
+      {displayed.phase === 'playing' ? (
+        <Text
+          accessibilityRole="header"
+          numberOfLines={2}
+          style={styles.nowPlaying}
+          testID="player-now-playing"
+        >
+          {displayed.episodeTitle}
+        </Text>
+      ) : null}
 
       {displayed.phase === 'loading' ? (
         <View accessibilityLiveRegion="polite" style={styles.centered} testID="player-loading">
@@ -264,6 +280,7 @@ export function PlayerScreen({
       {displayed.phase === 'playing' ? (
         <View style={styles.playerWrap} testID="player-loaded">
           <HlsVideoView
+            accessibilityLabel={displayed.episodeTitle}
             initialPositionSeconds={displayed.resumeSeconds}
             onEnded={() => {
               void handleEnded();
@@ -288,9 +305,10 @@ export function PlayerScreen({
 const styles = StyleSheet.create({
   body: { color: '#fafafa', fontSize: 16, textAlign: 'center' },
   centered: { alignItems: 'center', flex: 1, gap: 12, justifyContent: 'center' },
-  close: { alignSelf: 'flex-start', marginBottom: 12, paddingVertical: 4 },
+  close: { alignSelf: 'flex-start', paddingVertical: 4 },
   closeLabel: { color: '#a1a1aa', fontSize: 16 },
   container: { backgroundColor: '#09090b', flex: 1, padding: 24 },
   muted: { color: '#a1a1aa', fontSize: 14 },
+  nowPlaying: { color: '#fafafa', fontSize: 16, fontWeight: '600', marginBottom: 4, marginTop: 8 },
   playerWrap: { flex: 1, marginTop: 12 },
 });

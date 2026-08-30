@@ -5,7 +5,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start --dev-client",
-    "android": "expo run:android",
+    "android": "uv run python ../scripts/run_mobile_android.py",
     "ios": "expo run:ios",
     "lint": "eslint .",
     "format:check": "prettier --check .",

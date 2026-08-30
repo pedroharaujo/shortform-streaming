@@ -1,6 +1,7 @@
 import {
   nextOpaqueEpisodeId,
   clampResumePosition,
+  resumePlaybackPosition,
   shouldSkipProgressPut,
 } from './playbackProgress';
 
@@ -25,6 +26,13 @@ describe('playbackProgress', () => {
     expect(clampResumePosition(12, 90)).toBe(12);
     expect(clampResumePosition(-4, 90)).toBe(0);
     expect(clampResumePosition(120, 90)).toBe(90);
+  });
+
+  it('replays from the start after a completed or near-end position', () => {
+    expect(resumePlaybackPosition(12, 90)).toBe(12);
+    expect(resumePlaybackPosition(85, 90)).toBe(85);
+    expect(resumePlaybackPosition(86, 90)).toBe(0);
+    expect(resumePlaybackPosition(90, 90)).toBe(0);
   });
 
   it('takes the next opaque id from the series list, not a free-window order filter', () => {

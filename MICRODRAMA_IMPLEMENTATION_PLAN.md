@@ -818,9 +818,9 @@ Evidence (2026-08-28): P2-T07 / #68; Fake provider decision-table authorize test
 **Validation and integration tests:**
 
 - [x] Unit tests cover progress thresholds and resume logic.
-- [ ] Maestro watches a free episode, resumes near the saved position on a second session, completes it, and advances to the next episode. Maestro/iOS is not a close-out gate for this PR (D-026). Android emulator observation is recorded as an environment limitation when a development build cannot run.
+- [x] Android emulator/development-build observation: free play, mid-watch resume, completion, autoplay next on grant, locked season order 6 does not play and does not mint (P2-T08-F1 / #82; Pixel_9, anonymous FR, local Django + non-production Bunny). Maestro/iOS is not a close-out gate (D-026 iOS ship pass).
 
-Evidence (P2-T08 / #78): anonymous device-scoped progress without `UserProfile`; authenticated profile subject ignores `X-Device-Id`; lock is HTTP 403 and never mints; autoplay next is a second authorize; Harbor Lights seed episodes 1–6.
+Evidence (P2-T08 / #78): anonymous device-scoped progress without `UserProfile`; authenticated profile subject ignores `X-Device-Id`; lock is HTTP 403 and never mints; autoplay next is a second authorize; Harbor Lights seed episodes 1–6. On-device (#82): completed episodes replay from 0; mid-watch still resumes.
 
 ### Checkpoint 2 — First playable product
 

@@ -26,6 +26,13 @@ export function isCompleteByPosition(positionSeconds: number, durationSeconds: n
   return positionSeconds >= durationSeconds * COMPLETION_RATIO;
 }
 
+export function resumePlaybackPosition(positionSeconds: number, durationSeconds: number): number {
+  if (isCompleteByPosition(positionSeconds, durationSeconds)) {
+    return 0;
+  }
+  return clampResumePosition(positionSeconds, durationSeconds);
+}
+
 export function shouldSkipProgressPut(
   previous: { readonly positionSeconds: number; readonly completed: boolean } | null,
   next: { readonly positionSeconds: number; readonly completed: boolean },
