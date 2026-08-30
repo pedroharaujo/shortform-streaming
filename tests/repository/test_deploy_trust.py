@@ -22,8 +22,8 @@ CLOUD_RUN_JOB_VARS = ROOT / "infra/modules/cloud_run_job/variables.tf"
 
 PINNED_ACTIONS = (
     "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
-    "google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13",
-    "google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1",
+    "google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0",
+    "google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1",
     "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0",
 )
 
