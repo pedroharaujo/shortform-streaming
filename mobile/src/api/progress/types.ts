@@ -7,9 +7,7 @@
 
 import type { components } from '@shortform/api-client';
 
-import type { CatalogPlatform } from '../catalog/types';
-
-export const PROGRESS_LANGUAGE = 'en';
+import type { EnvelopeOutcome, UnreachableOutcome } from '../outcomes';
 
 export type WatchProgress = components['schemas']['WatchProgress'];
 
@@ -20,35 +18,10 @@ export interface WatchProgressWrite {
 
 export type ProgressRequestOutcome =
   | { readonly outcome: 'ok'; readonly data: WatchProgress }
-  | {
-      readonly outcome: 'locked';
-      readonly httpStatus: 403;
-      readonly code: string;
-      readonly message: string;
-    }
-  | {
-      readonly outcome: 'unauthenticated';
-      readonly httpStatus: 401;
-      readonly code: string;
-      readonly message: string;
-    }
-  | {
-      readonly outcome: 'error';
-      readonly httpStatus: number;
-      readonly code: string;
-      readonly message: string;
-    }
-  | {
-      readonly outcome: 'not-found';
-      readonly httpStatus: 404;
-      readonly code: string;
-      readonly message: string;
-    }
-  | { readonly outcome: 'unreachable'; readonly reason: string };
+  | EnvelopeOutcome<'locked' | 'unauthenticated' | 'error' | 'not-found'>
+  | UnreachableOutcome;
 
 export interface ProgressClient {
   get(episodeId: string): Promise<ProgressRequestOutcome>;
   put(episodeId: string, body: WatchProgressWrite): Promise<ProgressRequestOutcome>;
 }
-
-export type { CatalogPlatform };

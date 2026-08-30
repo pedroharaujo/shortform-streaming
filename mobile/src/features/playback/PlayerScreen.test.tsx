@@ -1,6 +1,4 @@
-import type { ReactElement } from 'react';
-import { render, userEvent, waitFor } from '@testing-library/react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { userEvent, waitFor } from '@testing-library/react-native';
 
 import type {
   CatalogClient,
@@ -13,6 +11,7 @@ import type {
   ProgressRequestOutcome,
   WatchProgressWrite,
 } from '../../api/progress/types';
+import { renderWithSafeArea } from '../../testUtils';
 import { PlayerScreen } from './PlayerScreen';
 
 const GRANTED_URI = 'https://video.example.test/hls/a/playlist.m3u8?token=secret';
@@ -60,25 +59,12 @@ const grantedNextSeries: CatalogSeriesDetail = {
   ],
 };
 
-const safeAreaMetrics = {
-  frame: { x: 0, y: 0, width: 390, height: 844 },
-  insets: { top: 0, left: 0, right: 0, bottom: 0 },
-};
-
 const missingProgress: ProgressRequestOutcome = {
   outcome: 'not-found',
   httpStatus: 404,
   code: 'not_found',
   message: 'Resource not found.',
 };
-
-function renderPlayer(ui: ReactElement) {
-  return render(ui, {
-    wrapper: ({ children }) => (
-      <SafeAreaProvider initialMetrics={safeAreaMetrics}>{children}</SafeAreaProvider>
-    ),
-  });
-}
 
 function stubCatalog(series: CatalogSeriesDetail = harborSeries): CatalogClient {
   return {
@@ -140,7 +126,7 @@ function stubProgress(options?: {
   };
 }
 
-function visibleHasSecrets(view: Awaited<ReturnType<typeof renderPlayer>>): void {
+function visibleHasSecrets(view: Awaited<ReturnType<typeof renderWithSafeArea>>): void {
   expect(view.queryByText(GRANTED_URI)).toBeNull();
   expect(view.queryByText(/https:\/\//)).toBeNull();
   expect(view.queryByText(/token=/)).toBeNull();
@@ -149,7 +135,7 @@ function visibleHasSecrets(view: Awaited<ReturnType<typeof renderPlayer>>): void
 
 describe('PlayerScreen', () => {
   it('plays a granted episode without displaying the playback URI', async () => {
-    const view = await renderPlayer(
+    const view = await renderWithSafeArea(
       <PlayerScreen
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
@@ -169,7 +155,7 @@ describe('PlayerScreen', () => {
   });
 
   it('resumes GET progress at 12s and treats GET 404 as start, not unavailable', async () => {
-    const resumed = await renderPlayer(
+    const resumed = await renderWithSafeArea(
       <PlayerScreen
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
@@ -192,7 +178,7 @@ describe('PlayerScreen', () => {
     expect(resumed.getByTestId('player-initial-position')).toHaveTextContent('12');
     expect(resumed.queryByTestId('player-error')).toBeNull();
 
-    const missing = await renderPlayer(
+    const missing = await renderWithSafeArea(
       <PlayerScreen
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
@@ -207,7 +193,7 @@ describe('PlayerScreen', () => {
   });
 
   it('resumes a mid-rewatch even when completed is still sticky', async () => {
-    const view = await renderPlayer(
+    const view = await renderWithSafeArea(
       <PlayerScreen
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
@@ -233,7 +219,7 @@ describe('PlayerScreen', () => {
 
   it('replays a completed episode from the start without autoplaying the next episode', async () => {
     const authorize = jest.fn(async (id: string) => grantedAuthorize(id));
-    const view = await renderPlayer(
+    const view = await renderWithSafeArea(
       <PlayerScreen
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
@@ -264,7 +250,7 @@ describe('PlayerScreen', () => {
     const put = jest.fn(async (episodeId: string, body: WatchProgressWrite) =>
       okPut(episodeId, body),
     );
-    const view = await renderPlayer(
+    const view = await renderWithSafeArea(
       <PlayerScreen
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
@@ -294,7 +280,7 @@ describe('PlayerScreen', () => {
     const put = jest.fn(async (episodeId: string, body: WatchProgressWrite) =>
       okPut(episodeId, body),
     );
-    const view = await renderPlayer(
+    const view = await renderWithSafeArea(
       <PlayerScreen
         catalog={stubCatalog(grantedNextSeries)}
         episodeId="ep_harbor_1"
@@ -334,7 +320,7 @@ describe('PlayerScreen', () => {
       }
       return okPut(episodeId, body);
     });
-    const view = await renderPlayer(
+    const view = await renderWithSafeArea(
       <PlayerScreen
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
@@ -362,7 +348,7 @@ describe('PlayerScreen', () => {
       }
       return grantedAuthorize(id);
     });
-    const view = await renderPlayer(
+    const view = await renderWithSafeArea(
       <PlayerScreen
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
@@ -385,7 +371,7 @@ describe('PlayerScreen', () => {
   });
 
   it('uses static error copy without host or query tokens', async () => {
-    const view = await renderPlayer(
+    const view = await renderWithSafeArea(
       <PlayerScreen
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"

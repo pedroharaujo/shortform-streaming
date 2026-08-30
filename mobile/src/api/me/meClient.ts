@@ -3,10 +3,10 @@
  * on GET /v1/me only. Never sends a backend user id, public_id, or firebase_uid.
  */
 
-import { createApiClient } from '@shortform/api-client';
 import type { paths } from '@shortform/api-client';
 
-import { DEFAULT_TIMEOUT_MS, mapJsonRequest } from '../http';
+import { bearerHeaders, createOpenApiClient } from '../context';
+import { DEFAULT_TIMEOUT_MS, mapJsonDomain, mapJsonRequest } from '../http';
 import type { CurrentUserProfile, MeClient, MeRequestOutcome } from './types';
 
 const UNKNOWN_MESSAGE = 'Account request failed.';
@@ -20,15 +20,15 @@ export interface MeClientOptions {
 
 export function createMeClient(options: MeClientOptions): MeClient {
   const { baseUrl, getCredential, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  const api = createApiClient({
+  const api = createOpenApiClient({
     baseUrl,
-    ...(options.fetchImplementation === undefined ? {} : { fetch: options.fetchImplementation }),
+    fetchImplementation: options.fetchImplementation,
   });
 
   return {
     async getMe(): Promise<MeRequestOutcome> {
-      const bearer = getCredential();
-      if (bearer === null || bearer === '') {
+      const headers = bearerHeaders(getCredential);
+      if (headers.Authorization === undefined) {
         return {
           outcome: 'unauthenticated',
           httpStatus: 401,
@@ -37,35 +37,12 @@ export function createMeClient(options: MeClientOptions): MeClient {
         };
       }
 
-      const result = await mapJsonRequest<CurrentUserProfile>(
-        timeoutMs,
-        UNKNOWN_MESSAGE,
-        (signal) =>
-          api.GET('/v1/me' satisfies keyof paths, {
-            headers: { Authorization: `Bearer ${bearer}` },
-            signal,
-          }),
+      return mapJsonDomain(
+        await mapJsonRequest<CurrentUserProfile>(timeoutMs, UNKNOWN_MESSAGE, (signal) =>
+          api.GET('/v1/me' satisfies keyof paths, { headers, signal }),
+        ),
+        { 401: 'unauthenticated' },
       );
-      if (result.outcome === 'ok') {
-        return { outcome: 'ok', data: result.data };
-      }
-      if (result.outcome === 'unreachable') {
-        return { outcome: 'unreachable', reason: result.reason };
-      }
-      if (result.status === 401) {
-        return {
-          outcome: 'unauthenticated',
-          httpStatus: 401,
-          code: result.envelope.code,
-          message: result.envelope.message,
-        };
-      }
-      return {
-        outcome: 'error',
-        httpStatus: result.status,
-        code: result.envelope.code,
-        message: result.envelope.message,
-      };
     },
   };
 }

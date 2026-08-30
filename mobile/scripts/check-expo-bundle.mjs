@@ -1,7 +1,8 @@
 /**
- * Produce Android and iOS JavaScript bundles with `expo export` and assert
- * that both platform outputs exist. This is a production JS check only: it
- * does not compile native Android/iOS projects or invoke EAS.
+ * Produce the Android JavaScript bundle with `expo export` and assert that
+ * the platform output exists. Ads-only MVP ships Google Play only (D-027).
+ * This is a production JS check only: it does not compile native Android
+ * projects or invoke EAS.
  *
  * Public environment fixtures match `scripts/check-expo-config.mjs`.
  */
@@ -76,7 +77,7 @@ const outputDir = mkdtempSync(path.join(tmpdir(), 'shortform-expo-export-'));
 try {
   const result = spawnSync(
     process.execPath,
-    [EXPO_CLI, 'export', '--platform', 'android', '--platform', 'ios', '--output-dir', outputDir],
+    [EXPO_CLI, 'export', '--platform', 'android', '--output-dir', outputDir],
     {
       cwd: MOBILE_ROOT,
       encoding: 'utf8',
@@ -89,19 +90,15 @@ try {
   } else {
     const files = walkFiles(outputDir);
     const androidOk = hasPlatformBundle(files, outputDir, 'android');
-    const iosOk = hasPlatformBundle(files, outputDir, 'ios');
-    if (!androidOk || !iosOk) {
+    if (!androidOk) {
       const listing = files
         .map((filePath) => path.relative(outputDir, filePath))
         .sort()
         .join('\n');
-      fail(
-        `expo export did not produce Android and iOS JavaScript bundles.\n` +
-          `android=${androidOk} ios=${iosOk}\n${listing}`,
-      );
+      fail(`expo export did not produce an Android JavaScript bundle.\n${listing}`);
     } else {
       process.stdout.write(
-        'Expo production JavaScript bundles written for android and ios; ' +
+        'Expo production JavaScript bundle written for android; ' +
           'native compile and EAS were not invoked.\n',
       );
     }

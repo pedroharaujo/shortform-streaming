@@ -1,7 +1,7 @@
 /**
  * App auth factory (email/password and Google).
  *
- * Jest always receives the local mock. Device/simulator runtimes load native
+ * Jest always receives the local mock. Android device/emulator runtimes load native
  * Firebase Auth through a runtime require so `@react-native-firebase/*` and
  * `@react-native-google-signin/*` are never statically imported from a module
  * Jest evaluates. Google Sign-In JS lives only in nativeFirebaseAuth, behind

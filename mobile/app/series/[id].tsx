@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import type { JSX } from 'react';
 import { useMemo } from 'react';
 
-import { createAppCatalogClient } from '../../src/features/catalog/createAppCatalogClient';
+import { createAppCatalogClient } from '../../src/api/createAppClients';
 import { readRouteId } from '../../src/features/catalog/readRouteId';
 import { SeriesDetailScreen } from '../../src/features/catalog/SeriesDetailScreen';
 

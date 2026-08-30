@@ -32,7 +32,7 @@ Phase 1 repository/backend bootstrap is authorized now using local services, emu
 - **Audience:** Adults who already consume romance, revenge, fantasy, and cliffhanger-driven short-form video.
 - **Content rating:** 16+ provisional — **Decision required after the launch catalog is known**.
 - **Catalog:** English-language microdramas — **Approved 2026-08-23**. Launch catalog is **1** licensed (or self-owned/generated test) series — **Founder approved 2026-08-27 (D-004)**. The catalog data model still supports N series. Expansion after ads-only unit-economics validation. Development uses only self-owned, generated, or purpose-made test media. Every public title remains subject to rights approval for every launch territory.
-- **Platforms:** iOS and Android. Django Admin is the only web interface in MVP.
+- **Platforms:** **Android / Google Play for the ads-only MVP** — **Founder approved 2026-08-30 (D-027)**. iOS remains in the rights and API model and is required before an iOS public storefront / TestFlight-quality pass (D-026). Sign in with Apple is deferred with that pass, not waived. Django Admin is the only web interface in MVP.
 - **Acquisition:** Small, capped Meta and TikTok creative tests with traceable campaign and creative IDs (D-017 still required before paid spend).
 - **Guest boundary:** Anonymous discovery and free playback; authentication required before a monetized unlock (rewarded ad) or cross-device sync — **Founder approved 2026-08-27 (D-005)**.
 - **Default free window:** First five episodes, hardcoded / admin-configured, not Remote Config or experiment cohorts in MVP — **Founder approved 2026-08-27 (D-006)**; experimentable in P7.

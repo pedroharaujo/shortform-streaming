@@ -6,7 +6,7 @@
  * Google Sign-In and issues `mock.<uid>` ID tokens that the Django local
  * verifier accepts. It never sends a backend user id.
  *
- * Device and simulator runtimes use `createNativeFirebaseAuth` instead
+ * Android device/emulator runtimes use `createNativeFirebaseAuth` instead
  * (`createEmailPasswordAuth` selects the implementation).
  */
 

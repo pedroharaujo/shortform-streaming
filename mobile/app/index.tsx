@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import type { JSX } from 'react';
 import { useMemo } from 'react';
 
-import { createAppCatalogClient } from '../src/features/catalog/createAppCatalogClient';
+import { createAppCatalogClient } from '../src/api/createAppClients';
 import { HomeCatalogScreen } from '../src/features/catalog/HomeCatalogScreen';
 
 export default function HomeRoute(): JSX.Element {

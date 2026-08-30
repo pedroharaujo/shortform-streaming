@@ -159,7 +159,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       package: 'com.shortformstreaming.app',
       // Path only; Expo JS export does not read the gitignored file. Prebuild
-      // copies it when present. Do not set ios.googleServicesFile (D-026).
+      // copies it when present. Ads-only MVP is Android (D-027); do not set
+      // ios.googleServicesFile until an iOS storefront pass.
       googleServicesFile: './google-services.json',
     },
     ios: { bundleIdentifier: 'com.shortformstreaming.app', supportsTablet: false },

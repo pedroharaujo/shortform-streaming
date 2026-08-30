@@ -154,10 +154,11 @@ Run the current repository-wide aggregate gate with `pnpm check` (includes `cont
 
 ## Local mobile bootstrap
 
-P1-T03 provides a strict TypeScript Expo app with Expo Router, an Android/iOS
+P1-T03 provides a strict TypeScript Expo app with Expo Router, an Android
 development-build configuration (not Expo Go), and a backend-availability screen.
 P2-T04 makes Home the launch route (`app/index.tsx`) and keeps health at `/health`.
-Details, including the emulator sequence, are in [mobile/README.md](./mobile/README.md).
+Ads-only MVP is Google Play only (D-027). Details, including the emulator sequence,
+are in [mobile/README.md](./mobile/README.md).
 
 `EXPO_PUBLIC_*` values are compiled into the public JavaScript bundle. Never place a
 secret, key, token, or credential in `EXPO_PUBLIC_API_ENVIRONMENT`,
@@ -165,8 +166,8 @@ secret, key, token, or credential in `EXPO_PUBLIC_API_ENVIRONMENT`,
 names from `.env.example` into `mobile/.env` (gitignored). All three are required;
 the app does not default an environment or infer territory from device locale.
 
-Use `http://10.0.2.2:8000` as `EXPO_PUBLIC_API_BASE_URL` on the Android emulator and
-`http://127.0.0.1:8000` on the iOS simulator. Set `EXPO_PUBLIC_CATALOG_TERRITORY=FR`
+Use `http://10.0.2.2:8000` as `EXPO_PUBLIC_API_BASE_URL` on the Android emulator.
+Set `EXPO_PUBLIC_CATALOG_TERRITORY=FR`
 for the synthetic FR-only Harbor Lights seed.
 
 From the repository root (`export PATH="$HOME/.local/bin:$PATH"` if `pnpm` is the
@@ -182,7 +183,7 @@ pnpm mobile:config:check
 pnpm mobile:bundle:check
 ```
 
-`pnpm mobile:bundle:check` runs `expo export` for Android and iOS JavaScript bundles using the same public `EXPO_PUBLIC_*` fixtures as the config check. It does not compile native apps or invoke EAS.
+`pnpm mobile:bundle:check` runs `expo export` for the Android JavaScript bundle using the same public `EXPO_PUBLIC_*` fixtures as the config check. It does not compile native apps or invoke EAS. Ads-only MVP is Google Play only (D-027).
 
 The first Android development client is `make emulate` (boots Pixel_9 if needed,
 then `expo run:android` with JDK 17+ so Gradle does not use Oracle Java 8 from

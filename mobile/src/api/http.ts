@@ -1,9 +1,9 @@
 /**
- * Shared timeout, envelope, and failure helpers for OpenAPI fetch wrappers.
- *
- * Domain outcome unions stay in each client. This module does not unify
- * catalog, playback, me, or health mapping.
+ * Shared timeout, envelope, and HTTP-status mapping for OpenAPI fetch wrappers.
+ * Domain outcome unions stay in each client.
  */
+
+import type { EnvelopeOutcome, UnreachableOutcome } from './outcomes';
 
 export const DEFAULT_TIMEOUT_MS = 5_000;
 export const UNKNOWN_CODE = 'unknown';
@@ -52,7 +52,7 @@ export type JsonRequestResult<T> =
       readonly status: number;
       readonly envelope: { readonly code: string; readonly message: string };
     }
-  | { readonly outcome: 'unreachable'; readonly reason: string };
+  | UnreachableOutcome;
 
 export async function mapJsonRequest<T>(
   timeoutMs: number,
@@ -83,4 +83,22 @@ export async function mapJsonRequest<T>(
   } catch (caught: unknown) {
     return { outcome: 'unreachable', reason: describeFailure(caught) };
   }
+}
+
+export function mapJsonDomain<T, TStatus extends string>(
+  result: JsonRequestResult<T>,
+  byStatus: Readonly<Partial<Record<number, TStatus>>>,
+):
+  | { readonly outcome: 'ok'; readonly data: T }
+  | UnreachableOutcome
+  | EnvelopeOutcome<TStatus | 'error'> {
+  if (result.outcome === 'ok' || result.outcome === 'unreachable') {
+    return result;
+  }
+  return {
+    outcome: byStatus[result.status] ?? 'error',
+    httpStatus: result.status,
+    code: result.envelope.code,
+    message: result.envelope.message,
+  };
 }

@@ -1,5 +1,5 @@
 /**
- * Device/simulator Firebase Auth using the native SDK.
+ * Android Firebase Auth using the native SDK.
  *
  * This module statically imports `@react-native-firebase/*`,
  * `@react-native-google-signin/*`, and the Android `default_web_client_id`
@@ -108,50 +108,28 @@ function nativeAuthErrorCode(error: unknown): string | undefined {
   return typeof code === 'string' ? code : undefined;
 }
 
-function describeNativeAuthError(error: unknown): string {
-  const code = nativeAuthErrorCode(error);
-  switch (code) {
-    case 'auth/email-already-in-use':
-    case 'auth/account-exists-with-different-credential':
-      return 'That account already exists.';
-    case 'auth/invalid-email':
-      return 'Email or password is incorrect.';
-    case 'auth/user-not-found':
-    case 'auth/wrong-password':
-    case 'auth/invalid-credential':
-    case 'auth/invalid-login-credentials':
-      return 'Email or password is incorrect.';
-    case 'auth/weak-password':
-      return 'Password is too weak.';
-    case 'auth/network-request-failed':
-      return 'Network request failed.';
-    case 'auth/too-many-requests':
-      return 'Too many attempts. Try again later.';
-    default:
-      break;
-  }
-  if (error instanceof Error && error.message !== '') {
-    return error.message;
-  }
-  return 'Sign-in failed.';
-}
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  'auth/email-already-in-use': 'That account already exists.',
+  'auth/account-exists-with-different-credential': 'That account already exists.',
+  'auth/invalid-email': 'Email or password is incorrect.',
+  'auth/user-not-found': 'Email or password is incorrect.',
+  'auth/wrong-password': 'Email or password is incorrect.',
+  'auth/invalid-credential': 'Email or password is incorrect.',
+  'auth/invalid-login-credentials': 'Email or password is incorrect.',
+  'auth/weak-password': 'Password is too weak.',
+  'auth/network-request-failed': 'Network request failed.',
+  'auth/too-many-requests': 'Too many attempts. Try again later.',
+};
 
-function describeGoogleAuthError(error: unknown): string {
+function describeAuthError(error: unknown, fallback: string): string {
   const code = nativeAuthErrorCode(error);
-  switch (code) {
-    case 'auth/account-exists-with-different-credential':
-      return 'That account already exists.';
-    case 'auth/network-request-failed':
-      return 'Network request failed.';
-    case 'auth/too-many-requests':
-      return 'Too many attempts. Try again later.';
-    default:
-      break;
+  if (code !== undefined && AUTH_ERROR_MESSAGES[code] !== undefined) {
+    return AUTH_ERROR_MESSAGES[code];
   }
   if (error instanceof Error && error.message !== '') {
     return error.message;
   }
-  return 'Google Sign-In failed.';
+  return fallback;
 }
 
 async function sessionFromCurrentUser(): Promise<AuthOutcome> {
@@ -167,34 +145,35 @@ export function createNativeFirebaseAuth(): AppAuth {
   attachLocalAuthEmulator();
   let currentCredential: string | null = null;
 
+  async function withEmailPassword(
+    email: string,
+    password: string,
+    run: () => Promise<unknown>,
+  ): Promise<AuthOutcome> {
+    const invalid = requireCredentials(email, password);
+    if (invalid !== null) {
+      return { outcome: 'error', message: invalid };
+    }
+    try {
+      await run();
+      const outcome = await sessionFromCurrentUser();
+      currentCredential = outcome.outcome === 'ok' ? outcome.session.credential : null;
+      return outcome;
+    } catch (error: unknown) {
+      return { outcome: 'error', message: describeAuthError(error, 'Sign-in failed.') };
+    }
+  }
+
   return {
     async signUp(email: string, password: string): Promise<AuthOutcome> {
-      const invalid = requireCredentials(email, password);
-      if (invalid !== null) {
-        return { outcome: 'error', message: invalid };
-      }
-      try {
-        await createUserWithEmailAndPassword(getAuth(), email.trim(), password);
-        const outcome = await sessionFromCurrentUser();
-        currentCredential = outcome.outcome === 'ok' ? outcome.session.credential : null;
-        return outcome;
-      } catch (error: unknown) {
-        return { outcome: 'error', message: describeNativeAuthError(error) };
-      }
+      return withEmailPassword(email, password, () =>
+        createUserWithEmailAndPassword(getAuth(), email.trim(), password),
+      );
     },
     async signIn(email: string, password: string): Promise<AuthOutcome> {
-      const invalid = requireCredentials(email, password);
-      if (invalid !== null) {
-        return { outcome: 'error', message: invalid };
-      }
-      try {
-        await signInWithEmailAndPassword(getAuth(), email.trim(), password);
-        const outcome = await sessionFromCurrentUser();
-        currentCredential = outcome.outcome === 'ok' ? outcome.session.credential : null;
-        return outcome;
-      } catch (error: unknown) {
-        return { outcome: 'error', message: describeNativeAuthError(error) };
-      }
+      return withEmailPassword(email, password, () =>
+        signInWithEmailAndPassword(getAuth(), email.trim(), password),
+      );
     },
     async signInWithGoogle(): Promise<AuthOutcome> {
       if (Platform.OS !== 'android') {
@@ -225,7 +204,7 @@ export function createNativeFirebaseAuth(): AppAuth {
         if (isErrorWithCode(error) && error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
           return { outcome: 'error', message: 'Google Play services are not available.' };
         }
-        return { outcome: 'error', message: describeGoogleAuthError(error) };
+        return { outcome: 'error', message: describeAuthError(error, 'Google Sign-In failed.') };
       }
     },
     async signOut(): Promise<void> {

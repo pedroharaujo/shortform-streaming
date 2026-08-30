@@ -24,16 +24,3 @@ export function requestHeaders(input: RequestInfo | URL, init?: RequestInit): He
   }
   return new Headers(init?.headers);
 }
-
-export function abortSignal(
-  input: unknown,
-  init?: { signal?: AbortSignal },
-): AbortSignal | undefined {
-  if (init?.signal !== undefined) {
-    return init.signal;
-  }
-  if (typeof Request !== 'undefined' && input instanceof Request) {
-    return input.signal;
-  }
-  return undefined;
-}
