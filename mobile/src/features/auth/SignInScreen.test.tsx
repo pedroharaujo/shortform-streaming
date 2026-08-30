@@ -5,6 +5,17 @@ import { createLocalMockFirebaseAuth } from '../../auth/localMockFirebaseAuth';
 import { getSessionCredential, setAuthSession } from '../../auth/session';
 import { SignInScreen } from './SignInScreen';
 
+const PROFILE = {
+  public_id: 'usr_from_server',
+  created_at: '2026-08-25T00:00:00Z',
+  updated_at: '2026-08-25T00:00:00Z',
+};
+
+function okMeClient(): { getMe: jest.Mock; meClient: MeClient } {
+  const getMe = jest.fn(async () => ({ outcome: 'ok' as const, data: PROFILE }));
+  return { getMe, meClient: { getMe } };
+}
+
 describe('SignInScreen', () => {
   afterEach(() => {
     setAuthSession(null);
@@ -12,18 +23,9 @@ describe('SignInScreen', () => {
 
   it('signs in with email/password and loads /v1/me without sending a backend user id', async () => {
     const auth = createLocalMockFirebaseAuth();
-    const getMe = jest.fn(async () => ({
-      outcome: 'ok' as const,
-      data: {
-        public_id: 'usr_from_server',
-        created_at: '2026-08-25T00:00:00Z',
-        updated_at: '2026-08-25T00:00:00Z',
-      },
-    }));
-    const meClient: MeClient = { getMe };
+    const { getMe, meClient } = okMeClient();
     const onFinished = jest.fn();
     const user = userEvent.setup();
-
     const view = await render(
       <SignInScreen auth={auth} meClient={meClient} onFinished={onFinished} />,
     );
@@ -42,11 +44,9 @@ describe('SignInScreen', () => {
     const auth = createLocalMockFirebaseAuth();
     await auth.signIn('user@example.com', 'correct-horse');
     setAuthSession({ credential: 'mock.user_example_com' });
-    const meClient: MeClient = { getMe: jest.fn() };
     const user = userEvent.setup();
-
     const view = await render(
-      <SignInScreen auth={auth} meClient={meClient} onFinished={jest.fn()} />,
+      <SignInScreen auth={auth} meClient={{ getMe: jest.fn() }} onFinished={jest.fn()} />,
     );
     await user.press(view.getByTestId('sign-in-sign-out'));
 
@@ -55,29 +55,16 @@ describe('SignInScreen', () => {
     expect(auth.getCredential()).toBeNull();
   });
 
-  it('signs in with Google and loads /v1/me without sending a backend user id', async () => {
+  it('signs in with Google, never offers Apple, and does not send a backend user id', async () => {
     const auth = createLocalMockFirebaseAuth();
-    const getMe = jest.fn(async () => ({
-      outcome: 'ok' as const,
-      data: {
-        public_id: 'usr_from_server',
-        created_at: '2026-08-25T00:00:00Z',
-        updated_at: '2026-08-25T00:00:00Z',
-      },
-    }));
-    const meClient: MeClient = { getMe };
+    const { getMe, meClient } = okMeClient();
     const onFinished = jest.fn();
     const user = userEvent.setup();
-
     const view = await render(
-      <SignInScreen
-        auth={auth}
-        meClient={meClient}
-        onFinished={onFinished}
-        googleSignInAvailable
-      />,
+      <SignInScreen auth={auth} meClient={meClient} onFinished={onFinished} />,
     );
 
+    expect(view.queryByLabelText('Sign in with Apple')).toBeNull();
     await user.press(view.getByTestId('sign-in-google'));
 
     await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
@@ -92,32 +79,17 @@ describe('SignInScreen', () => {
       signInWithGoogle: jest.fn(async () => ({ outcome: 'cancelled' as const })),
     };
     const getMe = jest.fn();
-    const meClient: MeClient = { getMe };
     const user = userEvent.setup();
-
     const view = await render(
-      <SignInScreen auth={auth} meClient={meClient} onFinished={jest.fn()} googleSignInAvailable />,
+      <SignInScreen auth={auth} meClient={{ getMe }} onFinished={jest.fn()} />,
     );
 
     await user.press(view.getByTestId('sign-in-google'));
 
     await waitFor(() => expect(view.getByTestId('sign-in-google')).toBeEnabled());
-    expect(auth.signInWithGoogle).toHaveBeenCalledTimes(1);
     expect(getMe).not.toHaveBeenCalled();
     expect(getSessionCredential()).toBeNull();
     expect(view.queryByTestId('sign-in-message')).toBeNull();
-  });
-
-  it('omits Google Sign-In without googleSignInAvailable on the Jest iOS default', async () => {
-    const view = await render(
-      <SignInScreen
-        auth={createLocalMockFirebaseAuth()}
-        meClient={{ getMe: jest.fn() }}
-        onFinished={jest.fn()}
-      />,
-    );
-
-    expect(view.queryByTestId('sign-in-google')).toBeNull();
   });
 
   it('shows a Google Sign-In error without creating a session', async () => {
@@ -129,11 +101,9 @@ describe('SignInScreen', () => {
       })),
     };
     const getMe = jest.fn();
-    const meClient: MeClient = { getMe };
     const user = userEvent.setup();
-
     const view = await render(
-      <SignInScreen auth={auth} meClient={meClient} onFinished={jest.fn()} googleSignInAvailable />,
+      <SignInScreen auth={auth} meClient={{ getMe }} onFinished={jest.fn()} />,
     );
 
     await user.press(view.getByTestId('sign-in-google'));

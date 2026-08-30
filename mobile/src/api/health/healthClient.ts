@@ -6,8 +6,7 @@
  * come from `@shortform/api-client`.
  */
 
-import { createApiClient } from '@shortform/api-client';
-
+import { createOpenApiClient } from '../context';
 import { DEFAULT_TIMEOUT_MS, describeFailure, withTimeout } from '../http';
 import type {
   BackendHealthSnapshot,
@@ -50,9 +49,9 @@ function parseStatus(rawBody: string): string {
 
 export function createHealthClient(options: HealthClientOptions): HealthClient {
   const { baseUrl, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  const api = createApiClient({
+  const api = createOpenApiClient({
     baseUrl,
-    ...(options.fetchImplementation === undefined ? {} : { fetch: options.fetchImplementation }),
+    fetchImplementation: options.fetchImplementation,
   });
 
   async function probe(name: HealthProbeName): Promise<HealthProbeResult> {

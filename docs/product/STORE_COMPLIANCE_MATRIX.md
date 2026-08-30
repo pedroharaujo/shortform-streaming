@@ -46,12 +46,14 @@ MVP monetization path (D-007). IAP matrix above remains required before P7.
 | Privacy/consent | Gate personalized advertising and SDK initialization according to market consent requirements. | Consent-mode/network inspection. |
 | Invalid traffic | Do not ask users to click ads or automate impressions. Add anomaly monitoring and provider-policy runbook. | Abuse review and alert exercise. |
 
-Primary reference: https://developers.google.com/admob/ios/rewarded
+Primary reference: https://developers.google.com/admob/android/rewarded
+
+Ads-only MVP ships Android / Google Play only (D-027). iOS AdMob remains relevant for a later iOS storefront, not this launch.
 
 ## Authentication and account rules
 
-- Offer email/password plus Apple and Google where configured.
-- If a third-party/social login is offered on iOS, include Sign in with Apple where required by current Apple rules.
+- Ads-only MVP (D-027): offer email/password and Google Sign-In on Android. Do not ship Sign in with Apple in this client.
+- If a third-party/social login is offered on a later iOS storefront, include Sign in with Apple where required by current Apple rules.
 - Never use phone/SMS auth in MVP without a cost, abuse, and privacy decision.
 - Allow anonymous browsing/free playback, but require authentication before permanent entitlements (rewarded-ad unlock in MVP; purchases in P7).
 - Provide in-app account deletion and a support/privacy path accessible without purchase.

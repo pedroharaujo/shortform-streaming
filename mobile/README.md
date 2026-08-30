@@ -1,6 +1,8 @@
 # Mobile application
 
-Expo SDK 57 / React Native development client for Shortform Streaming. Expo Go is not a supported target (ADR 0003): native modules require an Android or iOS **development build**.
+Expo SDK 57 / React Native development client for Shortform Streaming. Ads-only MVP
+ships **Google Play / Android only** (D-027). Expo Go is not a supported target
+(ADR 0003): native modules require an Android **development build**.
 
 Configuration lives in `app.config.ts`. There is no `app.json`.
 
@@ -18,12 +20,11 @@ The resolver in `app.config.ts` reads only these public variables and refuses to
 
 Copy the three `EXPO_PUBLIC_*` lines from the repository-root `.env.example` into `mobile/.env` (gitignored). Expo CLI loads `mobile/.env` automatically. A populated `.env` must never be committed. Catalog language is frozen to `en` in code (D-002) and is not an environment variable.
 
-Local hostnames from the emulator or simulator:
+Local hostname from the Android emulator:
 
 - Android emulator → `http://10.0.2.2:8000` (`10.0.2.2` is the host loopback)
-- iOS simulator → `http://127.0.0.1:8000`
 
-Local Django already allows `10.0.2.2` so the Android emulator `Host` header is accepted. Keep the backend bound to `127.0.0.1:8000`; the emulator alias still reaches it.
+Local Django already allows `10.0.2.2` so the Android emulator `Host` header is accepted. Keep the backend bound to `127.0.0.1:8000`; the emulator alias still reaches it. iOS simulator is not an ads-only MVP target (D-027).
 
 ## Layout
 
@@ -31,7 +32,7 @@ Local Django already allows `10.0.2.2` so the Android emulator `Host` header is 
 mobile/
   app/                 Expo Router routes (`app/index.tsx` is the home catalog)
   app/health.tsx       Backend availability screen (secondary route)
-  app/sign-in.tsx      Isolated email/password and Android Google sign-in (not a login wall)
+  app/sign-in.tsx      Isolated email/password and Google sign-in (not a login wall)
   app/playback-spike.tsx Isolated HLS spike (not the catalog episode screen)
   app/play/[id].tsx     Product 9:16 player (progress, resume, autoplay)
   src/api/catalog/     Thin catalog wrapper over `@shortform/api-client`
@@ -70,14 +71,14 @@ selects mock whenever `JEST_WORKER_ID` is set and never statically imports
 
 Expo Go remains unsupported (ADR 0003). Catalog, health, and playback stay anonymous;
 **Sign in** is a separate route (`/sign-in`) and is not a login wall (D-005 is
-Founder approved 2026-08-27). Google Sign-In is Android-only in this slice.
-Apple and iOS Google observation are a later D-026 follow-up, not waived.
+Founder approved 2026-08-27). Google Sign-In is the social provider for this
+Android client. Apple Sign-In is deferred to an iOS storefront (D-027), not waived.
 
 ### Local Android identity loop (development client)
 
 Do **not** commit `google-services.json` or `GoogleService-Info.plist` (root `.gitignore`
 already lists them). Missing iOS plist must not block Android or CI JavaScript export
-(D-026).
+(D-027).
 
 1. From a **non-production** Firebase project whose project id matches Django
    (`FIREBASE_PROJECT_ID=demo-shortform-local` in `.env.example`, or the same id your
@@ -86,7 +87,7 @@ already lists them). Missing iOS plist must not block Android or CI JavaScript e
    `android.googleServicesFile` at that relative path; the file stays gitignored.
    `pnpm mobile:config:check` and `pnpm mobile:bundle:check` pass in CI without the
    file because they never read it. Native prebuild (`expo run:android`) needs a
-   local copy. Do not set `ios.googleServicesFile` in this slice (D-026).
+   local copy. Do not set `ios.googleServicesFile` until an iOS storefront pass (D-027).
 
 2. Start the Auth emulator from the repository root (see `firebase.json`; host
    `127.0.0.1:9099`):
@@ -126,7 +127,7 @@ A local Android-only Expo module reads that resource at device runtime and passe
 Empty `GoogleSignin.configure({})` is not enough. Do **not** put a web client ID in
 `EXPO_PUBLIC_*` or `extra` (those ship in the JS bundle). Do **not** commit
 `google-services.json`, OAuth client secrets, or real SHA-1 fingerprints. Apple Sign-In
-and iOS Google observation are a later D-026 follow-up (not waived). Do not set
+is deferred to an iOS storefront (D-027), not waived. Do not set
 `ios.googleServicesFile`. Do not add the official google-signin Expo config plugin.
 
 1. Use a **non-production** Firebase project whose project id matches Django
@@ -173,7 +174,7 @@ pnpm mobile:bundle:check
 pnpm mobile:check
 ```
 
-`pnpm mobile:bundle:check` exports production Android and iOS JavaScript bundles. Native compile, Gradle, Xcode, and EAS are out of scope for this check.
+`pnpm mobile:bundle:check` exports a production Android JavaScript bundle. Native compile, Gradle, Xcode, and EAS are out of scope for this check.
 
 Package scripts (same checks, plus the development client):
 
@@ -183,8 +184,9 @@ pnpm --filter @shortform/mobile start      # Metro with --dev-client
 make start-avd                             # boot Pixel_9 without Android Studio
 make emulate                               # start AVD if needed, then expo run:android
 pnpm mobile:android                        # same as make emulate
-pnpm --filter @shortform/mobile ios        # expo run:ios (macOS only)
 ```
+
+iOS `expo run:ios` is not an ads-only MVP target (D-027). Keep the Expo `ios.bundleIdentifier` in `app.config.ts` for a later storefront pass; do not treat a missing Mac or iOS simulator as a blocker.
 
 `make start-avd` launches the AVD as a detached process so you do not need Android Studio open and waits until adb sees it. `make emulate` runs `start-avd` first, then selects a JDK 17+ (Android Studio's JBR on this machine) so Gradle is not stuck on Oracle Java 8. Do not export `JAVA_HOME` by hand. Recreating the Python virtualenv does not change Gradle's JVM.
 
@@ -230,11 +232,7 @@ This is the sequence that proves the app can reach the local API. It was **not**
    The first run generates `mobile/android/` (gitignored) and installs the development
    client. Do not export `JAVA_HOME` by hand.
 
-5. The launch route is Home. After seeding the local catalog, it should show the featured rail (Harbor Lights for territory `FR`). Open **Sign in** for email/password against native Firebase Auth and the Auth emulator on a rebuilt development client (optional; Jest still uses the local mock). Isolated HLS play uses `/playback-spike?episodeId=<id>` (see `docs/runbooks/playback-spike.md`). Open **Backend availability** from Home to probe `/health/live` and `/health/ready`. Use **Check again** after restarting or stopping the API.
-
-### iOS simulator equivalent
-
-Use `EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8000` in `mobile/.env`, then `pnpm --filter @shortform/mobile ios` on macOS.
+5. The launch route is Home. After seeding the local catalog, it should show the featured rail (Harbor Lights for territory `FR`). Open **Sign in** for email/password or Google Sign-In against native Firebase Auth and the Auth emulator on a rebuilt development client (optional; Jest still uses the local mock). Isolated HLS play uses `/playback-spike?episodeId=<id>` (see `docs/runbooks/playback-spike.md`). Open **Backend availability** from Home to probe `/health/live` and `/health/ready`. Use **Check again** after restarting or stopping the API.
 
 ## Local Maestro flow
 

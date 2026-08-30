@@ -6,18 +6,17 @@
  * never holds Bunny keys.
  */
 
-import { createApiClient } from '@shortform/api-client';
 import type { paths } from '@shortform/api-client';
 
 import type { CatalogPlatform } from '../catalog/types';
-import { DEFAULT_TIMEOUT_MS, mapJsonRequest } from '../http';
+import { bearerHeaders, catalogContextHeaders, createOpenApiClient } from '../context';
+import { DEFAULT_TIMEOUT_MS, mapJsonDomain, mapJsonRequest } from '../http';
 import type {
   PlaybackAuthorizeGranted,
   PlaybackAuthorizeResponse,
   PlaybackClient,
   PlaybackRequestOutcome,
 } from './types';
-import { PLAYBACK_LANGUAGE } from './types';
 
 const UNKNOWN_MESSAGE = 'Playback request failed.';
 
@@ -36,31 +35,22 @@ function isGranted(body: PlaybackAuthorizeResponse): body is PlaybackAuthorizeGr
 
 export function createPlaybackClient(options: PlaybackClientOptions): PlaybackClient {
   const { baseUrl, territory, platform, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  const contextHeaders = {
-    'X-Language': PLAYBACK_LANGUAGE,
-    'X-Platform': platform,
-    'X-Territory': territory,
-  } as const;
-
-  const api = createApiClient({
+  const contextHeaders = catalogContextHeaders(territory, platform);
+  const api = createOpenApiClient({
     baseUrl,
-    headers: contextHeaders,
-    ...(options.fetchImplementation === undefined ? {} : { fetch: options.fetchImplementation }),
+    headers: { ...contextHeaders },
+    fetchImplementation: options.fetchImplementation,
   });
 
   return {
     async authorize(episodeId: string): Promise<PlaybackRequestOutcome> {
-      const bearer = options.getCredential === undefined ? null : options.getCredential();
-      const authorizationHeaders =
-        bearer === null || bearer === '' ? {} : { Authorization: `Bearer ${bearer}` };
-
       const result = await mapJsonRequest<PlaybackAuthorizeResponse>(
         timeoutMs,
         UNKNOWN_MESSAGE,
         (signal) =>
           api.POST('/v1/playback/{episode_id}/authorize' satisfies keyof paths, {
             params: { path: { episode_id: episodeId }, header: contextHeaders },
-            headers: authorizationHeaders,
+            headers: bearerHeaders(options.getCredential),
             signal,
           }),
       );
@@ -72,46 +62,13 @@ export function createPlaybackClient(options: PlaybackClientOptions): PlaybackCl
         if (body.decision === 'locked') {
           return { outcome: 'locked', lockReasons: body.lock_reasons };
         }
-        return {
-          outcome: 'error',
-          httpStatus: 200,
-          code: 'unknown',
-          message: UNKNOWN_MESSAGE,
-        };
+        return { outcome: 'error', httpStatus: 200, code: 'unknown', message: UNKNOWN_MESSAGE };
       }
-      if (result.outcome === 'unreachable') {
-        return { outcome: 'unreachable', reason: result.reason };
-      }
-      if (result.status === 401) {
-        return {
-          outcome: 'unauthenticated',
-          httpStatus: 401,
-          code: result.envelope.code,
-          message: result.envelope.message,
-        };
-      }
-      if (result.status === 404) {
-        return {
-          outcome: 'not-found',
-          httpStatus: 404,
-          code: result.envelope.code,
-          message: result.envelope.message,
-        };
-      }
-      if (result.status === 503) {
-        return {
-          outcome: 'unavailable',
-          httpStatus: 503,
-          code: result.envelope.code,
-          message: result.envelope.message,
-        };
-      }
-      return {
-        outcome: 'error',
-        httpStatus: result.status,
-        code: result.envelope.code,
-        message: result.envelope.message,
-      };
+      return mapJsonDomain(result, {
+        401: 'unauthenticated',
+        404: 'not-found',
+        503: 'unavailable',
+      });
     },
   };
 }

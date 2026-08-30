@@ -1,49 +1,23 @@
 import type { JSX } from 'react';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { MeClient } from '../../api/me/types';
-import type { AppAuth, AuthOutcome, AuthUserSession } from '../../auth/localMockFirebaseAuth';
+import type { AppAuth, AuthOutcome } from '../../auth/localMockFirebaseAuth';
 import { setAuthSession } from '../../auth/session';
 
 export interface SignInScreenProps {
   readonly auth: AppAuth;
   readonly meClient: MeClient;
   readonly onFinished: () => void;
-  readonly googleSignInAvailable?: boolean;
 }
 
-export function SignInScreen({
-  auth,
-  meClient,
-  onFinished,
-  googleSignInAvailable = Platform.OS === 'android',
-}: SignInScreenProps): JSX.Element {
+export function SignInScreen({ auth, meClient, onFinished }: SignInScreenProps): JSX.Element {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  async function finishWithSession(session: AuthUserSession): Promise<void> {
-    setAuthSession(session);
-    const me = await meClient.getMe();
-    setBusy(false);
-    if (me.outcome === 'ok') {
-      setMessage(`Signed in as ${me.data.public_id}`);
-      onFinished();
-      return;
-    }
-    if (me.outcome === 'unauthenticated') {
-      setMessage(me.message);
-      return;
-    }
-    if (me.outcome === 'error') {
-      setMessage(me.message);
-      return;
-    }
-    setMessage(me.reason);
-  }
 
   async function applyAuthOutcome(outcome: AuthOutcome): Promise<void> {
     if (outcome.outcome === 'cancelled') {
@@ -55,33 +29,21 @@ export function SignInScreen({
       setMessage(outcome.message);
       return;
     }
-    await finishWithSession(outcome.session);
-  }
-
-  async function complete(kind: 'signIn' | 'signUp'): Promise<void> {
-    setBusy(true);
-    setMessage(null);
-    const outcome =
-      kind === 'signUp' ? await auth.signUp(email, password) : await auth.signIn(email, password);
-    await applyAuthOutcome(outcome);
-  }
-
-  async function completeGoogle(): Promise<void> {
-    setBusy(true);
-    setMessage(null);
-    await applyAuthOutcome(await auth.signInWithGoogle());
-  }
-
-  async function signOut(): Promise<void> {
-    setBusy(true);
-    setMessage(null);
-    try {
-      await auth.signOut();
-    } finally {
-      setAuthSession(null);
-      setBusy(false);
-      setMessage('Signed out');
+    setAuthSession(outcome.session);
+    const me = await meClient.getMe();
+    setBusy(false);
+    if (me.outcome === 'ok') {
+      setMessage(`Signed in as ${me.data.public_id}`);
+      onFinished();
+      return;
     }
+    setMessage(me.outcome === 'unreachable' ? me.reason : me.message);
+  }
+
+  async function run(task: () => Promise<AuthOutcome>): Promise<void> {
+    setBusy(true);
+    setMessage(null);
+    await applyAuthOutcome(await task());
   }
 
   return (
@@ -90,7 +52,7 @@ export function SignInScreen({
         Sign in
       </Text>
       <Text style={styles.muted}>
-        Email and password through Firebase Authentication, or Google on Android. Catalog stays
+        Email and password, or Google Sign-In, through Firebase Authentication. Catalog stays
         available without an account.
       </Text>
       <TextInput
@@ -120,58 +82,69 @@ export function SignInScreen({
         </Text>
       ) : null}
       <View style={styles.actions}>
-        <Pressable
-          accessibilityLabel="Sign in"
-          accessibilityRole="button"
-          disabled={busy}
-          onPress={() => {
-            void complete('signIn');
-          }}
-          style={styles.button}
+        <ActionButton
+          busy={busy}
+          label="Sign in"
+          onPress={() => void run(() => auth.signIn(email, password))}
           testID="sign-in-submit"
-        >
-          <Text style={styles.buttonLabel}>Sign in</Text>
-        </Pressable>
-        <Pressable
-          accessibilityLabel="Create account"
-          accessibilityRole="button"
-          disabled={busy}
-          onPress={() => {
-            void complete('signUp');
-          }}
-          style={styles.button}
+        />
+        <ActionButton
+          busy={busy}
+          label="Create account"
+          onPress={() => void run(() => auth.signUp(email, password))}
           testID="sign-in-create"
-        >
-          <Text style={styles.buttonLabel}>Create account</Text>
-        </Pressable>
-        {googleSignInAvailable ? (
-          <Pressable
-            accessibilityLabel="Sign in with Google"
-            accessibilityRole="button"
-            disabled={busy}
-            onPress={() => {
-              void completeGoogle();
-            }}
-            style={styles.button}
-            testID="sign-in-google"
-          >
-            <Text style={styles.buttonLabel}>Sign in with Google</Text>
-          </Pressable>
-        ) : null}
-        <Pressable
-          accessibilityLabel="Sign out"
-          accessibilityRole="button"
-          disabled={busy}
+        />
+        <ActionButton
+          busy={busy}
+          label="Sign in with Google"
+          onPress={() => void run(() => auth.signInWithGoogle())}
+          testID="sign-in-google"
+        />
+        <ActionButton
+          busy={busy}
+          label="Sign out"
           onPress={() => {
-            void signOut();
+            void (async () => {
+              setBusy(true);
+              setMessage(null);
+              try {
+                await auth.signOut();
+              } finally {
+                setAuthSession(null);
+                setBusy(false);
+                setMessage('Signed out');
+              }
+            })();
           }}
-          style={styles.button}
           testID="sign-in-sign-out"
-        >
-          <Text style={styles.buttonLabel}>Sign out</Text>
-        </Pressable>
+        />
       </View>
     </SafeAreaView>
+  );
+}
+
+function ActionButton({
+  busy,
+  label,
+  onPress,
+  testID,
+}: {
+  readonly busy: boolean;
+  readonly label: string;
+  readonly onPress: () => void;
+  readonly testID: string;
+}): JSX.Element {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      disabled={busy}
+      onPress={onPress}
+      style={styles.button}
+      testID={testID}
+    >
+      <Text style={styles.buttonLabel}>{label}</Text>
+    </Pressable>
   );
 }
 

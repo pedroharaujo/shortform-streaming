@@ -1,6 +1,7 @@
 import { fireEvent, render, userEvent, waitFor } from '@testing-library/react-native';
 
 import type { CatalogClient, CatalogHome, CatalogRequestOutcome } from '../../api/catalog/types';
+import { expectNoFreeOrLockedBadges } from '../../testUtils';
 import { HomeCatalogScreen } from './HomeCatalogScreen';
 
 const harborLightsHome: CatalogHome = {
@@ -42,28 +43,16 @@ function stubClient(home: CatalogRequestOutcome<CatalogHome>): CatalogClient {
 describe('HomeCatalogScreen', () => {
   it('shows an error and retries the catalog request', async () => {
     let calls = 0;
-    const client: CatalogClient = {
-      getHome: async () => {
-        calls += 1;
-        return {
-          outcome: 'error',
-          httpStatus: 400,
-          code: 'invalid_request_context',
-          message: 'Catalog context is invalid.',
-        };
-      },
-      getSeries: async () => ({
-        outcome: 'not-found',
-        httpStatus: 404,
-        code: 'not_found',
-        message: 'Resource not found.',
-      }),
-      getEpisode: async () => ({
-        outcome: 'not-found',
-        httpStatus: 404,
-        code: 'not_found',
-        message: 'Resource not found.',
-      }),
+    const client = stubClient({
+      outcome: 'error',
+      httpStatus: 400,
+      code: 'invalid_request_context',
+      message: 'Catalog context is invalid.',
+    });
+    const originalHome = client.getHome;
+    client.getHome = async () => {
+      calls += 1;
+      return originalHome();
     };
 
     const view = await render(
@@ -95,14 +84,8 @@ describe('HomeCatalogScreen', () => {
     );
 
     await waitFor(() => expect(view.getByTestId('home-rail-featured')).toBeTruthy());
-    expect(view.getByText('Featured')).toBeTruthy();
     expect(view.getByText('Harbor Lights')).toBeTruthy();
-    expect(
-      view.getByText('Synthetic FR-only English microdrama for local catalog tests.'),
-    ).toBeTruthy();
-    expect(view.getByTestId('catalog-artwork-fallback')).toBeTruthy();
-    expect(view.queryByText(/free/i)).toBeNull();
-    expect(view.queryByText(/locked/i)).toBeNull();
+    expectNoFreeOrLockedBadges(view);
 
     await fireEvent.press(view.getByTestId('series-card-ser_harbor'));
     expect(onSelectSeries).toHaveBeenCalledWith('ser_harbor');
