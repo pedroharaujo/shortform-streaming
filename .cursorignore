@@ -69,9 +69,6 @@ coverage/
 *.tfplan
 
 # Secrets and local env (keep .env.example)
-.env
-.env.*
-!.env.example
 /credentials/
 /secrets/
 
