@@ -4,7 +4,7 @@ import base64
 from collections.abc import Iterator
 from datetime import timedelta
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import quote, unquote, urlencode
 from uuid import uuid4
 
 import pytest
@@ -56,19 +56,24 @@ def signed_query(key: ec.EllipticCurvePrivateKey, intent: dict[str, Any], **chan
         "user_id": intent["ssv_user_id"],
     }
     fields.update(changes)
-    raw = urlencode(fields)
+    raw = urlencode(fields, quote_via=quote)
+    # Google's reference verifier uses URI.getQuery(): percent-decode once,
+    # retain literal plus signs, then verify UTF-8 bytes without reordering.
+    signed = unquote(raw, errors="strict").encode("utf-8")
     signature = (
-        base64.urlsafe_b64encode(key.sign(raw.encode(), ec.ECDSA(hashes.SHA256())))
-        .decode()
-        .rstrip("=")
+        base64.urlsafe_b64encode(key.sign(signed, ec.ECDSA(hashes.SHA256()))).decode().rstrip("=")
     )
     return f"{raw}&signature={signature}&key_id=7"
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "unit_id",
-    ["ca-app-pub-3940256099942544/5224354917", "ca-app-pub-1111111111111111/2222222222"],
+    "unit_id,reward_item",
+    [
+        ("ca-app-pub-3940256099942544/5224354917", "test reward"),
+        ("ca-app-pub-1111111111111111/2222222222", "test reward"),
+        ("ca-app-pub-1111111111111111/2222222222", "bonus+\u00e9%20"),
+    ],
 )
 def test_verified_callback_unlocks_once_and_playback_still_checks_rights(
     client: Client,
@@ -77,6 +82,7 @@ def test_verified_callback_unlocks_once_and_playback_still_checks_rights(
     monkeypatch: pytest.MonkeyPatch,
     settings: Any,
     unit_id: str,
+    reward_item: str,
 ) -> None:
     from apps.playback.providers.fake import FakeVideoProvider
 
@@ -89,7 +95,7 @@ def test_verified_callback_unlocks_once_and_playback_still_checks_rights(
     assert data["ad_unit_id"] == unit_id
     before = client.post(f"/v1/playback/{episode.public_id}/authorize", **headers())
     assert before.json()["decision"] == "locked"
-    query = signed_query(ephemeral_signer, data)
+    query = signed_query(ephemeral_signer, data, reward_item=reward_item)
     assert client.get(f"{CALLBACK}?{query}").status_code == 200
     assert client.get(f"{CALLBACK}?{query}").status_code == 200
     assert client.get(f"/v1/rewards/{data['id']}", **headers()).json()["status"] == "granted"
@@ -165,7 +171,7 @@ def test_forgery_and_ambiguous_query_fail_closed(
     elif attack == "missing":
         query = query.split("&signature=")[0]
     elif attack == "encoding":
-        query = query.replace("reward_item=test+reward", "reward_item=%ZZ")
+        query = query.replace("reward_item=test%20reward", "reward_item=%ZZ")
     else:
         query = signed_query(ec.generate_private_key(ec.SECP256R1()), data)
     assert client.get(f"{CALLBACK}?{query}").status_code == 400

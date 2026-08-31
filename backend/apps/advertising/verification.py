@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from threading import Lock
 from time import monotonic
 from typing import Any
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, unquote
 from urllib.request import HTTPRedirectHandler, build_opener
 
 from cryptography.exceptions import InvalidSignature
@@ -155,8 +155,11 @@ def verify_callback(raw_query: str) -> VerifiedReward:
         signature_bytes = base64.b64decode(
             signature + "=" * (-len(signature) % 4), altchars=b"-_", validate=True
         )
+        # Match Google's reference verifier (URI.getQuery() then UTF-8):
+        # decode percent escapes exactly once, retaining literal '+' and order.
+        signed_content = unquote(parts[0], errors="strict").encode("utf-8")
         _public_key(fields["key_id"]).verify(
-            signature_bytes, parts[0].encode("ascii"), ec.ECDSA(hashes.SHA256())
+            signature_bytes, signed_content, ec.ECDSA(hashes.SHA256())
         )
     except (InvalidSignature, ValueError, binascii.Error):
         raise InvalidCallback() from None

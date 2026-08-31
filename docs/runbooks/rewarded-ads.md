@@ -183,9 +183,63 @@ its drip-fed upstream regression failed before the fix and passed afterward.
 Reviewer rechecked with no remaining P1/P2; independent bridge/settings run:
 50 passed. No native publisher-unit ad or genuine Google grant is claimed yet.
 
+## Dashboard verification diagnosis (P3-T07-F1, 2026-08-31)
+
+The first genuine dashboard request returned 400. Metadata-only diagnostics
+identified an ECDSA input-encoding defect: Google's signature verified against
+the percent-decoded UTF-8 prefix, not the raw URL-encoded prefix. The verifier
+now matches Google's reference `URI.getQuery()` behavior: decode percent escapes
+once, preserve literal plus signs and parameter order, and verify with the same
+fixed Google key source. Do not decode twice or use form-style plus conversion.
+The bridge still forwards the original query unchanged. No provider request,
+signature, or binding was recorded in diagnostics or committed fixtures.
+
+The corrected genuine signature then passed, but the dashboard supplied a
+placeholder ad unit rather than the configured publisher unit. The unchanged
+reward service correctly rejected that mismatch. Dashboard setup therefore uses
+a session-only local challenge handler, not a reward intent: both random
+bindings, Google signature, placeholder unit, timestamp and short expiry must
+match before an empty acknowledgement. It cannot grant or modify application
+data. Normal callbacks retain the existing handler and exact unit binding.
+The temporary challenge expires within the original supervisor lifetime; remove
+the override and restore the normal backend immediately after saving the URL.
+This is transport/signature setup evidence only, never proof of a completed ad,
+an entitlement or device playback. The original synthetic intent grants nothing.
+
+The callback API regression failed twice before the encoding fix and passed
+afterward. Its generated fixtures now cover spaces plus a reward name containing
+a literal plus, UTF-8 and an encoded percent sequence. Advertising tests:
+`uv run pytest backend/tests/advertising -q` **85 passed**. Independent review
+found no P1/P2 and independently passed 12 generated encoding/ambiguity checks.
+The temporary launcher's isolated tests passed 10 cases, including bad signatures,
+partial bindings, wrong units, expiry, future timestamps, disabled/production
+mode and normal-handler fallback; no application database access was allowed.
+
+Observed result: AdMob displayed successful URL verification. Applied the
+verified URL and saved it on the development rewarded unit; mediation-wide
+verification remained unchecked. The challenge reported a valid Google
+signature and no grant attempt. Read-only database checks confirmed zero
+entitlements, no intent for the setup challenge, and no grant for the original
+synthetic dashboard intent. The supervisor then restarted the normal backend
+without the diagnostic/probe launcher, retaining its original shutdown deadline;
+the temporary binding files were removed. Unsigned HTTP probes returned 400
+at the backend, bridge and public endpoint; bridge/public bodies were empty
+with no-store. The original grant service and configured-unit check are unchanged.
+After these checks, the temporary tunnel/bridge/backend were stopped. Start a
+new supervised test window before native publisher-unit testing; a saved AdMob
+callback URL does not keep the local endpoint running.
+
+Final `$env:EXPO_NO_DOTENV='1'; pnpm check` **passed**: repository 49, backend
+280, mobile 18 suites/82 tests, including the regenerated OpenAPI/client contract
+and all lint/type/config checks. The first full run correctly stopped at contract
+drift after regenerating the revised API description; staging those generated
+artifacts and repeating the complete gate passed. Independent temporary-probe
+review found no P1/P2 and repeated all 10 isolated checks successfully.
+
 ## Provider references
 
 - [Google SSV verification and keys](https://developers.google.com/admob/android/ssv)
+- [Google reference signature verifier](https://github.com/tink-crypto/tink-java-apps/blob/main/rewardedads/src/main/java/com/google/crypto/tink/apps/rewardedads/RewardedAdsVerifier.java)
 - [Google test ad units](https://developers.google.com/admob/android/test-ads)
 - [React Native rewarded ads and SSV](https://docs.page/invertase/react-native-google-mobile-ads/displaying-ads)
 - [UMP consent integration](https://docs.page/invertase/react-native-google-mobile-ads/european-user-consent)

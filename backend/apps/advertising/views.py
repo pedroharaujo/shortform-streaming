@@ -102,9 +102,10 @@ class AdMobCallbackView(APIView):
         tags=["rewards"],
         auth=[],
         description=(
-            "Provider-only AdMob ECDSA verification. Raw signed query required; "
-            "never a client grant. Test mode only. Preserve the exact query prefix before "
-            "signature and key_id (last, in that order). Duplicate verified delivery is "
+            "Provider-only AdMob ECDSA verification. Original URL query required; "
+            "never a client grant. Test mode only. The verifier percent-decodes the prefix "
+            "once to UTF-8, preserving order and literal plus signs, before signature and "
+            "key_id (last, in that order). Duplicate verified delivery is "
             "acknowledged without granting again. Invalid/mismatched/expired callbacks return 400."
         ),
         parameters=[
