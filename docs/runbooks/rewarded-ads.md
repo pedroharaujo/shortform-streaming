@@ -8,8 +8,9 @@ evidence is still a release blocker, never a passed check. Remaining setup and
 validation moved from #96 to
 [P6-T05A / #98](https://github.com/pedroharaujo/shortform-streaming/issues/98).
 D-005 requires login and D-007 grants one permanent episode entitlement per
-verified ad. P3-T08 implements the fuller offer-sheet experience; its required
-native Maestro validation remains blocked as recorded below.
+verified ad. P3-T08 implements the fuller offer-sheet experience. D-029 accepts
+its development merge while transferring the required native Maestro validation
+to the consolidated P6-T03 final pass; the check remains unpassed.
 
 ## P3-T08 offer sheet evidence (2026-08-31)
 
@@ -67,12 +68,14 @@ Required native check:
 maestro test -e LOCKED_EPISODE_ID=ep_synthetic -e AD_CLOSE_LABEL=Close mobile/maestro/locked-episode-reward.yaml
 ```
 
-**Blocked, not passed:** the command failed before running a flow because
+**Deferred under D-029, not passed:** the command failed before running a flow because
 `maestro` is unavailable. `adb devices` returned no connected devices. The
 values above are synthetic placeholders, not a claim that the device fixture or
 creative was observed. No ad request or provider callback was generated here.
 Native sheet layout, large-text/TalkBack behavior and native return navigation
-still require Android observation alongside this required test.
+still require Android observation alongside this required test. The founder
+approved merging the development slice on 2026-08-31 so it does not block later
+MVP coding. It remains a release/production-enablement blocker in P6-T03.
 
 To rerun, install the [official Maestro CLI](https://docs.maestro.dev/maestro-cli/how-to-install-maestro-cli),
 connect an Android development client and use a generated eligible locked episode
@@ -83,7 +86,8 @@ completed test creative and requires the authorized native player. It deliberate
 fails if genuine server verification never arrives; no synthetic grant hook is
 provided. Shared demo-unit display cannot prove SSV delivery. Publisher-owned
 tests still require #98's operator/privacy/UMP setup first. #98 and production
-enablement remain untouched; D-028 does not waive P3-T08's unchecked Maestro test.
+enablement remain untouched. D-029 changes this check's timing, not its result;
+P6-T03 must execute it and #98 must prove the provider journey before release.
 
 Rollback: revert the P3-T08 mobile changes. No migration, persisted entitlement
 mutation, new dependency or provider configuration is part of this slice.

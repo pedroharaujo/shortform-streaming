@@ -907,14 +907,15 @@ proceed with production ads disabled.
 
 #### P3-T08 — Build locked-episode offer sheet (ads-only)
 
-**Implemented; native validation blocked (2026-08-31):** The mobile offer sheet,
+**Development complete (founder-approved deferral, 2026-08-31, D-029):** The mobile offer sheet,
 current-access refresh, playback authorization, and login/preferences return
 navigation are implemented and independently reviewed. `pnpm check` passes
 (280 backend, 104 mobile, 49 repository tests); Android JS export passes.
-The required Maestro attempt cannot run in this environment (CLI unavailable,
-no connected Android device); it is **not passed**. Genuine provider success
-and release setup remain #98/D-028. Existing cross-remount reward recovery is
-tracked separately in #99. See `docs/runbooks/rewarded-ads.md` for evidence.
+The required Maestro attempt could not run in the implementation environment
+(CLI unavailable, no connected Android device); it is **deferred, not passed**, to
+the consolidated P6-T03 final validation pass. Genuine provider success and
+release setup remain #98/D-028/P6-T05A. Existing cross-remount reward recovery
+is tracked separately in #99. See `docs/runbooks/rewarded-ads.md` for evidence.
 
 **Description:** Present the rewarded-ad unlock offer from the API, including loading, accessibility, errors, and post-success transition to playback. Coin and subscription offers wait for P7.
 
@@ -931,7 +932,7 @@ tracked separately in #99. See `docs/runbooks/rewarded-ads.md` for evidence.
 **Validation and integration tests:**
 
 - [x] Component tests cover the ad offer, unavailable ads, offline, and success.
-- [ ] Maestro validates the ad unlock path from a locked episode.
+- [ ] Maestro validates the ad unlock path from a locked episode. **Deferred to P6-T03 under D-029; required before release/production enablement.**
 
 ### Checkpoint 3 — Ads-only integrity
 
@@ -1198,7 +1199,7 @@ tracked separately in #99. See `docs/runbooks/rewarded-ads.md` for evidence.
 
 #### P6-T03 — Build full regression and device matrix
 
-**Description:** Define supported OS/device/network matrix and automate critical paths in Maestro, with manual coverage for store dialogs, ads, captions, accessibility, and background behavior.
+**Description:** Define supported OS/device/network matrix and automate critical paths in Maestro, with manual coverage for store dialogs, ads, captions, accessibility, and background behavior. Maintain the consolidated, step-by-step deferred-validation register in `docs/runbooks/final-validation.md`; every D-029 deferral must identify prerequisites, exact commands/actions, expected evidence, owner, and the release/enablement gate it blocks.
 
 **Objective:** Make releases repeatable across the riskiest combinations.
 
@@ -1209,6 +1210,7 @@ tracked separately in #99. See `docs/runbooks/rewarded-ads.md` for evidence.
 - [ ] Automated suite covers anonymous free viewing, login at lock, progress, rewarded-ad unlock, deletion, takedown, and campaign deep link. Coin, subscription, store restore, and push are P7 regression.
 - [ ] Matrix includes low/mid/high Android, supported iPhones, poor network, and current/oldest supported OS.
 - [ ] Flaky tests have owners and cannot silently pass via unlimited retries.
+- [ ] Every D-029 deferral is present in the consolidated runbook and is either passed with evidence or remains an explicit blocker; P3-T08 Android Maestro and #98 genuine provider validation are included.
 
 **Validation and integration tests:**
 

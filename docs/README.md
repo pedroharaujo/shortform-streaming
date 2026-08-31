@@ -49,6 +49,7 @@ AI agents start at the root `AGENTS.md`. Operating notes are in
 - `runbooks/account-lifecycle.md` — account preferences, recent-auth deletion, provider retries, and privacy-safe rollback (P2-T02).
 - `runbooks/rewarded-ads.md` — test-only reward intents, authentic SSV, consent, grant/deletion safety, production gates and validation evidence (P3-T07).
 - `runbooks/development-privacy-setup.md` — privacy notice and AdMob setup moved to release blocker #98 (D-028); does not block P3-T07 development completion.
+- `runbooks/final-validation.md` — consolidated P6-T03 execution guide and register for device/manual/provider checks deferred under D-029; unchecked items still block applicable release/production enablement.
 - `privacy/DEVELOPMENT_PRIVACY_NOTICE_DRAFT.md` — inactive notice draft; not an AdMob policy URL until the operator facts and publication checks are completed.
 
 ## Future documentation locations
