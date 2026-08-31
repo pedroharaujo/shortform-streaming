@@ -54,9 +54,12 @@ in gitignored `infra/environments/staging/staging.tfvars` as
 ## Secret versions before Cloud Run secret refs
 
 The composition creates Secret Manager **names** only. Cloud Run and the
-migrate/smoke jobs reference `django-secret-key` and `database-url` at version
-`latest`. Those **versions must exist** before a full apply that creates the
-secret refs.
+migrate/smoke jobs reference `django-secret-key` and `database-url`. P5-T04 adds
+`secret_versions` selectors; omitted entries retain `latest` for compatibility.
+The selected **versions must exist** before a full apply that creates the secret
+refs. Pin numeric versions before rotation; follow
+[secrets-and-rotation.md](secrets-and-rotation.md) for candidate adoption,
+job-template rollback and revocation. A full apply is not a no-traffic rotation.
 
 Preferred live apply:
 

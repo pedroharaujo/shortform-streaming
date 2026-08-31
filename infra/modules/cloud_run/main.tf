@@ -42,7 +42,7 @@ resource "google_cloud_run_v2_service" "this" {
         value_source {
           secret_key_ref {
             secret  = format("%s", "django-secret-key")
-            version = "latest"
+            version = lookup(var.secret_versions, "DJANGO_SECRET_KEY", "latest")
           }
         }
       }
@@ -52,7 +52,7 @@ resource "google_cloud_run_v2_service" "this" {
         value_source {
           secret_key_ref {
             secret  = format("%s", "database-url")
-            version = "latest"
+            version = lookup(var.secret_versions, "DATABASE_URL", "latest")
           }
         }
       }
@@ -88,7 +88,7 @@ resource "google_cloud_run_v2_service" "this" {
           value_source {
             secret_key_ref {
               secret  = format("%s", var.bunny_stream_api_key_secret)
-              version = "latest"
+              version = lookup(var.secret_versions, "BUNNY_STREAM_API_KEY", "latest")
             }
           }
         }
@@ -101,7 +101,7 @@ resource "google_cloud_run_v2_service" "this" {
           value_source {
             secret_key_ref {
               secret  = format("%s", var.bunny_stream_token_key_secret)
-              version = "latest"
+              version = lookup(var.secret_versions, "BUNNY_STREAM_TOKEN_KEY", "latest")
             }
           }
         }

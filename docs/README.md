@@ -45,6 +45,7 @@ AI agents start at the root `AGENTS.md`. Operating notes are in
 - `runbooks/django-container.md` — non-root Django image, gunicorn, collectstatic, migrate-vs-web, Compose evidence (P5-T02). Live staging deploy evidence is P5-T03 follow-up.
 - `runbooks/staging-apply.md` — OpenTofu 1.11.14 install, session project override, state-bucket bootstrap, and staging apply (P5-T01-B).
 - `runbooks/staging-deploy.md` — GitHub OIDC/WIF, Environment variables, migrate-before-traffic, in-project smoke, fail-smoke, and traffic-only rollback (P5-T03).
+- `runbooks/secrets-and-rotation.md` — secret/configuration inventory, numeric version adoption, consumed-secret IAM, rotation/rollback procedure and pending live validation (P5-T04 foundation).
 - `runbooks/access-policy.md` — D-006 defaults, Admin live saves, offers vs authorize, rollback of `0003` then `0002` (P3-T01).
 - `runbooks/account-lifecycle.md` — account preferences, recent-auth deletion, provider retries, and privacy-safe rollback (P2-T02).
 - `runbooks/rewarded-ads.md` — test-only reward intents, authentic SSV, consent, grant/deletion safety, production gates and validation evidence (P3-T07).

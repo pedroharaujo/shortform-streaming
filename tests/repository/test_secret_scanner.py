@@ -132,6 +132,39 @@ class SecretScannerIntegrationTests(unittest.TestCase):
         self.assertIn("github-token", result.stderr)
         self.assert_redacted(result, generated_pattern)
 
+    def test_rotation_inventory_patterns_are_blocked_without_echoing_values(self) -> None:
+        # Synthetic fragments only: no usable provider keys or database accounts.
+        generated_value = "synthetic-" + ("x" * 32)
+        fixtures = (
+            ("runtime.env", "DJANGO_SECRET_" + "KEY=" + generated_value, "assigned-secret"),
+            ("Dockerfile", "ENV BUNNY_STREAM_API_" + "KEY=" + generated_value, "assigned-secret"),
+            (
+                "app.config.json",
+                '{"BUNNY_STREAM_TOKEN_' + 'KEY":"' + generated_value + '"}',
+                "assigned-secret",
+            ),
+            (
+                "diagnostic.log",
+                "postgresql://synthetic:" + generated_value + "@example.invalid/db",
+                "database-url-with-password",
+            ),
+            ("provider.txt", "AI" + "za" + ("a" * 35), "google-api-key"),
+            (
+                "provider.json",
+                '{"private_' + 'key":"-----BEGIN ' + 'PRIVATE KEY-----"}',
+                "private-key",
+            ),
+        )
+        for filename, content, rule in fixtures:
+            with self.subTest(filename=filename), temporary_repository() as (_, repository):
+                (repository / filename).write_text(content, encoding="utf-8")
+                result = self.run_scanner(repository, filename)
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn(rule, result.stderr)
+            self.assert_redacted(result, generated_value)
+            self.assert_redacted(result, content)
+
     def test_prefixed_provider_tokens_in_current_paths_are_opaque(self) -> None:
         with temporary_repository() as (_, repository):
             prefixes = (("dash", "-"), ("underscore", "_"), ("alphanumeric", "A"))

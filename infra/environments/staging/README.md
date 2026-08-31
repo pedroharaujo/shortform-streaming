@@ -8,6 +8,13 @@ Environment variables are **P5-T03 / #81**; follow
 `docs/runbooks/staging-deploy.md`. Do not apply to founder projects other than
 staging. CI does not `tofu apply`.
 
+The **P5-T04 foundation** adds `secret_versions` and limits runtime access to
+consumed secret names. See `docs/runbooks/secrets-and-rotation.md` for the
+inventory, safe adoption/rollback procedure and required live follow-up. Pin
+numeric versions before rotation; omitted selectors retain `latest`. Creating
+an extra secret never grants runtime access on its own. Full version-level
+least privilege and per-consumer identity separation remain follow-up work.
+
 Public activation stays off. `europe-west9` (or any `region` value supplied at
 apply time) is **not** a D-020 residency/retention approval.
 
@@ -61,6 +68,7 @@ tofu fmt -check -recursive infra
 cd infra/environments/staging
 tofu init -backend=false -input=false -lockfile=readonly
 tofu validate
+tofu test -no-color # OpenTofu 1.11.14; mocked provider, synthetic plans only
 ```
 
 Live `tofu plan` / `tofu apply` uses a gitignored `staging.tfvars` and

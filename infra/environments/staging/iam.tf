@@ -19,11 +19,20 @@ resource "google_artifact_registry_repository_iam_member" "runtime_reader" {
 }
 
 resource "google_secret_manager_secret_iam_member" "runtime_accessor" {
-  for_each  = toset(module.secret_names.secret_ids)
+  for_each  = local.runtime_secret_ids
   project   = var.project_id
   secret_id = each.value
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.runtime.email}"
+
+  lifecycle {
+    precondition {
+      condition     = length(setsubtract(local.runtime_secret_ids, local.secret_ids)) == 0
+      error_message = "Every consumed runtime secret must be declared in secret_ids or extra_secret_ids."
+    }
+  }
+
+  depends_on = [module.secret_names]
 }
 
 resource "google_storage_bucket_iam_member" "runtime_object_admin" {
