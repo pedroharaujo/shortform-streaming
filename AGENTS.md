@@ -21,6 +21,25 @@ this repository. Do not copy Superpowers into the tree.
 Human setup, bootstrap, and status: `README.md`. Contribution rules:
 `CONTRIBUTING.md`. Documentation index: `docs/README.md`.
 
+## Communication with the founder
+
+Assume the founder is not a mobile-development specialist. In every chat and
+handoff, use plain product language first.
+
+- Lead with: **what the founder needs to do**, **what happens next**, and
+  **what that step unlocks**. If no founder action is needed, say so clearly.
+- Recommend one next action instead of presenting a long menu of technical
+  choices. Make routine engineering and sequencing decisions without asking
+  the founder to choose implementation details.
+- Explain unavoidable mobile, backend, infrastructure, privacy, or store terms
+  in one short sentence. Translate task IDs and acronyms into their practical
+  meaning when first mentioned.
+- Separate founder decisions from engineering work and from external blockers.
+  Do not make a technical checklist look like work the founder must perform.
+- Keep chat summaries short and outcome-focused. Put detailed commands, test
+  evidence, and implementation notes in the issue or pull request unless the
+  founder asks for them.
+
 ## Documentation authority
 
 Read the smallest relevant set. Do not ingest the whole `docs/` tree by default.
