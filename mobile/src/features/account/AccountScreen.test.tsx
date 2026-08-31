@@ -7,6 +7,12 @@ import { createLocalMockFirebaseAuth } from '../../auth/localMockFirebaseAuth';
 import { getSessionCredential, setAuthSession } from '../../auth/session';
 import { AccountScreen } from './AccountScreen';
 
+const mockDeleteSecureItem = jest.fn(async (_key: string) => {});
+
+jest.mock('expo-secure-store', () => ({
+  deleteItemAsync: (key: string) => mockDeleteSecureItem(key),
+}));
+
 const PROFILE = {
   public_id: 'usr_synthetic',
   created_at: '2026-08-31T00:00:00Z',
@@ -117,6 +123,7 @@ it.each(['pending', 'completed'])(
     expect(requests[1]?.headers.get('Authorization')).toBe('Bearer mock.reauthenticated_account');
     expect(await requests[1]?.json()).toEqual({ confirmation: true });
     expect(getSessionCredential()).toBeNull();
+    expect(mockDeleteSecureItem).toHaveBeenCalledWith('shortform.pending_reward_attempt.v1');
     expect(view.queryByLabelText('Current password')).toBeNull();
     expect(view.queryByLabelText('Save preferences')).toBeNull();
     expect(view.getByTestId('account-message')).toHaveTextContent(

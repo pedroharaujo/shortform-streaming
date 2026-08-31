@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { AccountClient, AccountOutcome, AccountPreferences } from '../../api/account/types';
 import type { AppAuth, ReauthenticationRequest } from '../../auth/localMockFirebaseAuth';
 import { getAuthSessionRevision, setAuthSession } from '../../auth/session';
+import { clearPendingRewardAttempt } from '../rewards/pendingRewardAttempt';
 
 export interface AccountScreenProps {
   readonly auth: AppAuth;
@@ -86,6 +87,7 @@ export function AccountScreen({
     setPassword('');
     setConfirming(false);
     setEnded(true);
+    await clearPendingRewardAttempt();
     try {
       await auth.signOut();
       if (!requireSession(clearingRevision)) return false;

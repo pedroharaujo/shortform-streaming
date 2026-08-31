@@ -35,10 +35,35 @@ Existing access may continue without ads preference or ad enablement.
 Repeated taps are guarded synchronously; ambiguous creation retries reuse the
 request UUID. Pending status retries never show another ad. Late grants/access
 responses after close, unmount or account replacement cannot navigate.
-**Known pre-existing limit:** remount/restart loses in-memory request recovery.
-This PR does not claim restart-safe idempotency; follow-up
-[P3-T08-F1 / #99](https://github.com/pedroharaujo/shortform-streaming/issues/99)
-covers it.
+
+P3-T08-F1 / #99 adds remount/restart recovery. Before intent creation, the app
+stores one versioned SecureStore record containing only the current opaque
+profile ID, episode ID and request UUID. Once the server returns, it adds only
+the intent UUID. It never persists the ad unit, `custom_data`, SSV user ID,
+callback/provider material, credential, entitlement, or signed playback URL.
+The current `/v1/me` profile must match before recovery. Another account clears
+the record before any status request; another episode ignores it. Centralized
+sign-out/account-deletion cleanup also clears it. A known intent is status-only
+and cannot display another ad; an ambiguous create reuses the same idempotency
+UUID. Only server `expired`/`unavailable` status plus explicit refresh permits a
+fresh attempt. A verified grant still refreshes offers and requests fresh
+playback authorization.
+
+P3-T08-F1 validation on `codex/p3-t08-f1-reward-recovery` (2026-09-01):
+
+- The new recovery lifecycle cases failed before implementation, then the final
+  RewardScreen suite passed 26 tests. Account cleanup plus reward recovery passed
+  43 focused tests together.
+- `$env:EXPO_NO_DOTENV='1'; pnpm check`: **passed** — repository safety,
+  governance and 50 repository tests; backend lint/format/type/migration checks
+  plus 280 tests; unchanged OpenAPI/generated client; mobile lint/format/type,
+  109 tests and public-config validation.
+- `$env:EXPO_NO_DOTENV='1'; pnpm mobile:bundle:check`: **passed**, Android
+  production JavaScript/Hermes export only. No native compile, provider request,
+  callback or device journey is claimed.
+- Final five-axis review found and fixed local cleanup on sign-out/deletion and
+  preservation of another episode's recovery record. No Critical or remaining
+  required findings; `git diff --check` passed.
 
 Validation on `codex/p3-t08-offer-sheet` from base `e5da0ba`:
 
@@ -89,8 +114,9 @@ tests still require #98's operator/privacy/UMP setup first. #98 and production
 enablement remain untouched. D-029 changes this check's timing, not its result;
 P6-T03 must execute it and #98 must prove the provider journey before release.
 
-Rollback: revert the P3-T08 mobile changes. No migration, persisted entitlement
-mutation, new dependency or provider configuration is part of this slice.
+Rollback: revert the P3-T08/P3-T08-F1 mobile changes. The versioned local recovery
+record is then ignored; no migration, persisted entitlement mutation, new
+dependency or provider configuration is part of these slices.
 
 ## Runtime and contract
 
