@@ -1,6 +1,8 @@
 # Shortform Streaming (Development): privacy notice
 
 **DRAFT — NOT ACTIVE. Do not use this document as the AdMob policy URL yet.**
+Completion is deferred to release issue #98 under D-028; this draft does not
+block MVP coding or P3-T07 development acceptance.
 The operator/contact fields and the publication checks in
 `../runbooks/development-privacy-setup.md` must be completed first. This draft
 describes a restricted development test, not the planned public app. It is not

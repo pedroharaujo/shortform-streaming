@@ -1,5 +1,9 @@
 # Development privacy notice design
 
+**Scope update, 2026-08-31 (D-028):** Drafting is complete. Final operator/contact
+facts, publication and dependent provider observation are deferred to release
+issue #98, superseding #96. They are not PR #97 or further MVP coding blockers.
+
 **Task:** P3-T07-F1 / #96. The founder asked the agents, using Superpowers,
 startup-cto and solo-founder, to choose the setup and prepare the missing notice.
 This delegates drafting and reversible development choices, not fabrication of

@@ -1,5 +1,9 @@
 # Development privacy notice implementation plan
 
+**Scope update, 2026-08-31 (D-028):** Task 1 is complete. Task 2 is deferred to
+release issue #98 (P6-T04/P6-T05A), superseding #96. Missing operator/contact facts
+do not block PR #97 or continued MVP coding. The draft stays inactive.
+
 > **For agentic workers:** Use Superpowers executing-plans for this documentation
 > slice, with the requesting-code-review reviewer template before publication.
 
@@ -50,4 +54,4 @@ approved the inactive draft only. It did not approve activation or production.
   the runbook's settings; do not publish the draft markers or unrelated apps.
 - [ ] Open a new bounded callback-service window and repeat the native test.
   Record consent/refusal, genuine SSV, one entitlement and fresh playback only
-  when observed. Keep #96 open until all its required evidence is complete.
+  when observed. Keep release issue #98 open until its required evidence is complete.

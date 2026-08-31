@@ -79,6 +79,7 @@ The MVP app interface and initial microdrama catalog are in English. The intende
 - [ ] Age rating and content warnings match the most restrictive launch content.
 - [ ] Apple privacy labels and Google Data safety declarations match the binary, SDKs, and network behavior.
 - [ ] Privacy policy, terms, support, and deletion URLs are live.
+- [ ] Actual public operator identity and monitored privacy-contact email are established, with completed notice/UMP setup and genuine rewarded-ad release evidence in #98. D-028 defers these from P3-T07/PR #97 to release readiness; required setup still precedes publisher-owned ad testing.
 - [ ] Reviewer receives a test account and deterministic instructions for free, locked, rewarded-ad, and deletion flows. Coin, subscription, and restore instructions wait for P7.
 - [ ] Review notes explain why rewarded ads are optional and how rewards are verified.
 - [ ] No licensed production content is used in screenshots or review media without promotional rights.

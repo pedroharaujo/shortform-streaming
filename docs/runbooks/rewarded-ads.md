@@ -1,8 +1,12 @@
 # Rewarded ads: P3-T07
 
-This slice implements an Android **test-only** reward path. Production remains
-disabled; provider end-to-end evidence is a release blocker, not a waived check.
-Tracked by [P3-T07-F1 / #96](https://github.com/pedroharaujo/shortform-streaming/issues/96).
+This slice implements an Android **test-only** reward path. Under the founder's
+2026-08-31 decision D-028, P3-T07 development acceptance is complete; PR #97 and
+subsequent MVP coding do not wait for operator identity/privacy contact or the
+dependent provider observation. Production remains disabled. Unobserved provider
+evidence is still a release blocker, never a passed check. Remaining setup and
+validation moved from #96 to
+[P6-T05A / #98](https://github.com/pedroharaujo/shortform-streaming/issues/98).
 D-005 requires login and D-007 grants one permanent episode entitlement per
 verified ad. P3-T08 owns the fuller offer-sheet experience.
 
@@ -287,8 +291,13 @@ remain mandatory; no client grant or signature bypass was added.
   The saved callback URL needs a new bounded service window before the next
   attempt; leaving it saved does not leave a server running.
 
-P3-T07/#96 remain incomplete: a completed publisher Test Ad, genuine Google SSV,
-one entitlement and fresh authorized Android playback have not been observed.
+At this attempt, a completed publisher Test Ad, genuine Google SSV, one entitlement
+and fresh authorized Android playback had not been observed. This remains true.
+D-028 subsequently moved that requirement and operator/privacy setup to release
+issue #98; #96 is superseded and P3-T07 development acceptance is complete.
+Consent setup still blocks a publisher-owned ad test, and #98 must pass before
+public/production activation. No notice, consent message or production mode is
+enabled by this scope decision. The earlier evidence sections are historical.
 
 ## Provider references
 

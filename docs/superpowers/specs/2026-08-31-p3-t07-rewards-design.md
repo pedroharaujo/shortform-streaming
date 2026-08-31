@@ -1,5 +1,12 @@
 # P3-T07 verified rewarded ads
 
+**Acceptance update, 2026-08-31 (D-028):** The founder accepted the tested,
+disabled-by-default development implementation. Operator/privacy setup and the
+unobserved genuine provider/device journey moved from #96 to release blocker
+#98 (P6-T04/P6-T05A). They no longer block PR #97 or subsequent MVP coding.
+Historical observation requirements below remain required release evidence;
+none are represented as passed, and runtime/consent safeguards are unchanged.
+
 Task: P3-T07. Authority: D-005, D-007, D-027, ADR 0002/0003,
 MVP_PRODUCT_BRIEF and STORE_COMPLIANCE_MATRIX. The user authorized implementation
 through a focused PR without routine approval pauses; no public activation.

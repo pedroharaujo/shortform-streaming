@@ -1,5 +1,10 @@
 # P3-T07-F1 native publisher test
 
+**Scope update, 2026-08-31 (D-028):** Completed implementation/build/review work
+satisfies P3-T07 development acceptance. The unchecked genuine provider journey
+below transfers to release issue #98; it no longer blocks PR #97 or later MVP
+coding. #96 is superseded. Setup still precedes any publisher-owned ad attempt.
+
 The user asked to proceed after AdMob dashboard verification. Continue in the
 existing P3-T07 branch/PR; no production activation or automatic merge.
 

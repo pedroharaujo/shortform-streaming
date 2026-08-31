@@ -1,8 +1,11 @@
-# Development privacy setup: P3-T07-F1 / #96
+# Development privacy setup: P6-T04/P6-T05A / #98
 
 This is the execution checklist for the founder-authorized notice/consent work,
-not production approval. The notice remains a draft until all release checks
-below pass. D-020, D-025, public testers and store disclosures are not resolved.
+not production approval. D-028 (2026-08-31) defers this setup from P3-T07/PR #97
+to release issue #98, superseding #96. It does not block subsequent MVP coding.
+The notice remains a draft until the checks below pass; setup still precedes any
+publisher-owned ad test. D-020, D-025, public testers and store disclosures remain
+unresolved. Do not ask for operator/contact facts to continue unrelated coding.
 
 ## Decisions taken for the restricted test
 
@@ -80,7 +83,7 @@ emulator/build, consent, exact-unit and server-signature safeguards. Observe
 accept/refusal/manage/withdrawal behavior; do not equate refusal with no network
 traffic. Complete a labeled Test Ad and verify one genuine Google SSV, one
 entitlement and fresh authorized generated-media playback. No manual grant.
-Record redacted facts only. Stop services afterward. #96 stays open until its
+Record redacted facts only. Stop services afterward. #98 stays open until its
 full evidence requirements are met, including replay/expiry/revocation behavior.
 
 ## Sources and review scope
