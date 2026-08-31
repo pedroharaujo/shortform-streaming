@@ -47,6 +47,15 @@ Use generated, redacted, or self-owned fixtures. When a private resource is requ
 - Documentation and environment examples are current.
 - No secrets or confidential/licensed material are present.
 
+D-029 permits an explicitly recorded device, manual, provider-account, or external-
+system check to move to the consolidated P6-T03 final validation pass when the
+affected production capability remains disabled or fail-closed. The deferred check
+stays unchecked and must have reproducible instructions in
+`docs/runbooks/final-validation.md`. This exception never applies to tests needed
+to prevent credential exposure, private-user-data disclosure, restricted-media
+exposure, authorization or entitlement bypass, financial corruption, destructive
+migrations/data loss, or unsafe production activation.
+
 ## Testing policy
 
 - Write one test at the highest level that would catch the bug.

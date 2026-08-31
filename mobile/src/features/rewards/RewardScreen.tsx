@@ -1,10 +1,11 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { randomUUID } from 'expo-crypto';
 import type { CatalogClient } from '../../api/catalog/types';
 import type { MeClient } from '../../api/me/types';
+import type { PlaybackClient } from '../../api/playback/types';
 import type { RewardIntent, RewardsClient } from '../../api/rewards/types';
 import { getAuthSessionRevision, getSessionCredential } from '../../auth/session';
 import type { RewardedAdPresenter } from './types';
@@ -12,13 +13,19 @@ import { useCatalogQuery } from '../catalog/useCatalog';
 
 type OfferState =
   | { phase: 'loading' }
-  | { phase: 'loaded'; offer: { title: string; description: string } | null; message: string };
+  | {
+      phase: 'loaded';
+      offer: { title: string; description: string; action: string } | null;
+      message: string;
+      unlocked?: boolean;
+    };
 
 export interface RewardScreenProps {
   readonly episodeId: string;
   readonly catalog: CatalogClient;
   readonly me: MeClient;
   readonly rewards: RewardsClient;
+  readonly playback: PlaybackClient;
   readonly presenter: RewardedAdPresenter;
   readonly enabled: boolean;
   readonly onClose: () => void;
@@ -31,6 +38,7 @@ export function RewardScreen({
   catalog,
   me,
   rewards,
+  playback,
   presenter,
   enabled,
   onClose,
@@ -42,6 +50,7 @@ export function RewardScreen({
   const [busy, setBusy] = useState(false);
   const [intent, setIntent] = useState<RewardIntent | null>(null);
   const mounted = useRef(false);
+  const leaving = useRef(false);
   const revision = useRef(getAuthSessionRevision());
   const inFlight = useRef(false);
   const requestId = useRef<string | null>(null);
@@ -51,13 +60,14 @@ export function RewardScreen({
   function isCurrent(): boolean {
     return (
       mounted.current &&
+      !leaving.current &&
       revision.current === getAuthSessionRevision() &&
       getSessionCredential() !== null
     );
   }
   function guard(): boolean {
     if (isCurrent()) return true;
-    if (mounted.current) {
+    if (mounted.current && !leaving.current) {
       setInvalidated(true);
       setIntent(null);
       setMessage('Your session changed. Return to Account and sign in again.');
@@ -75,12 +85,11 @@ export function RewardScreen({
   }, []);
 
   const load = useCallback(async (): Promise<OfferState> => {
-    const unavailable = (message: string): OfferState => ({
+    const unavailable = (message: string): Extract<OfferState, { phase: 'loaded' }> => ({
       phase: 'loaded',
       offer: null,
       message,
     });
-    if (!enabled) return unavailable('Test ads are unavailable in this build.');
     const owner = revision.current;
     if (owner !== getAuthSessionRevision() || getSessionCredential() === null) {
       return unavailable('Sign in through Account before unlocking an episode.');
@@ -93,14 +102,28 @@ export function RewardScreen({
       ]);
       if (owner !== getAuthSessionRevision())
         return unavailable('Your session changed. Return to Account and sign in again.');
-      if (profile.outcome !== 'ok') {
+      if ([episode, available, profile].some((result) => result.outcome === 'unreachable')) {
+        return unavailable('You may be offline. Check your connection and refresh the offer.');
+      }
+      if (profile.outcome === 'unauthenticated' || available.outcome === 'unauthenticated') {
         return unavailable('Sign in through Account before unlocking an episode.');
-      } else if (!profile.data.ads_consent) {
-        return unavailable('Ads preference is off. Manage your choices in Account.');
+      } else if (episode.outcome === 'not-found' || available.outcome === 'not-found') {
+        return unavailable('This episode is no longer available.');
+      } else if (profile.outcome !== 'ok') {
+        return unavailable('The account could not be checked. Refresh the offer to try again.');
       } else if (episode.outcome !== 'ok' || available.outcome !== 'ok') {
         return unavailable('The reward offer is unavailable. Try again later.');
+      } else if (available.data.episode_id !== episodeId) {
+        return unavailable('The reward offer did not match this episode. Refresh to try again.');
       } else if (available.data.decision === 'granted') {
-        return unavailable('This episode is already unlocked. Return to playback.');
+        return {
+          ...unavailable('This episode is already unlocked. Continue to playback.'),
+          unlocked: true,
+        };
+      } else if (!enabled) {
+        return unavailable('Test ads are unavailable in this build.');
+      } else if (!profile.data.ads_consent) {
+        return unavailable('Ads preference is off. Manage your choices in Account.');
       } else {
         const method = available.data.methods.find((value) => value.type === 'rewarded_ad');
         if (!method) {
@@ -108,7 +131,11 @@ export function RewardScreen({
         }
         return {
           phase: 'loaded',
-          offer: { title: episode.data.title, description: method.description },
+          offer: {
+            title: episode.data.title,
+            description: method.description,
+            action: method.title,
+          },
           message: 'Test ads only. Access is confirmed by the server after verification.',
         };
       }
@@ -120,6 +147,52 @@ export function RewardScreen({
   const offer = state.phase === 'loaded' && !invalidated ? state.offer : null;
   const displayMessage =
     message ?? (state.phase === 'loaded' ? state.message : 'Loading reward offer…');
+
+  function leave(action: () => void): void {
+    leaving.current = true;
+    if (retryTimer.current !== null) clearTimeout(retryTimer.current);
+    cancelWait.current?.();
+    action();
+  }
+
+  async function confirmPlayback(): Promise<void> {
+    setMessage('Refreshing episode access…');
+    // A historical reward grant is not current entitlement/rights eligibility.
+    const access = await rewards.offers(episodeId);
+    if (!guard()) return;
+    if (
+      access.outcome !== 'ok' ||
+      access.data.episode_id !== episodeId ||
+      access.data.decision !== 'granted'
+    ) {
+      setMessage('Episode access could not be confirmed. Check your connection and try again.');
+      return;
+    }
+    setMessage('Checking playback availability…');
+    const authorization = await playback.authorize(episodeId);
+    if (!guard()) return;
+    if (authorization.outcome !== 'ok') {
+      setMessage('Playback is not available right now. You can retry without watching another ad.');
+      return;
+    }
+    // Do not pass this short-lived URL to navigation. The player authorizes again on entry.
+    leave(() => onPlay(episodeId));
+  }
+
+  async function continuePlayback(): Promise<void> {
+    if (inFlight.current || !guard()) return;
+    inFlight.current = true;
+    setBusy(true);
+    try {
+      await confirmPlayback();
+    } catch {
+      if (guard())
+        setMessage('Playback could not be checked. Check your connection and try again.');
+    } finally {
+      inFlight.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  }
 
   async function poll(row: RewardIntent): Promise<void> {
     for (let attempt = 0; attempt < 10 && isCurrent(); attempt += 1) {
@@ -136,8 +209,7 @@ export function RewardScreen({
       }
       setIntent(verified);
       if (verified.status === 'granted') {
-        setMessage('Reward verified. Opening playback…');
-        onPlay(episodeId); // The player obtains a fresh server playback authorization.
+        await confirmPlayback();
         return;
       }
       if (verified.status === 'expired' || verified.status === 'unavailable') {
@@ -165,7 +237,7 @@ export function RewardScreen({
   }
 
   async function watch(): Promise<void> {
-    if (inFlight.current || !enabled || !offer || !guard()) return;
+    if (inFlight.current || (!intent && (!enabled || !offer)) || !guard()) return;
     inFlight.current = true;
     setBusy(true);
     let created = intent;
@@ -217,7 +289,8 @@ export function RewardScreen({
 
   async function privacy(): Promise<void> {
     // Privacy withdrawal does not require a reward offer or an account.
-    const isPrivacyCurrent = () => mounted.current && revision.current === getAuthSessionRevision();
+    const isPrivacyCurrent = () =>
+      mounted.current && !leaving.current && revision.current === getAuthSessionRevision();
     if (inFlight.current || !isPrivacyCurrent() || !enabled) return;
     inFlight.current = true;
     setBusy(true);
@@ -236,82 +309,132 @@ export function RewardScreen({
   const terminal = intent?.status === 'expired' || intent?.status === 'unavailable';
   return (
     <SafeAreaView style={styles.container} testID="reward-screen">
-      <ScrollView contentContainerStyle={styles.content}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close reward"
-          onPress={onClose}
-          style={styles.button}
-        >
-          <Text style={styles.body}>Back</Text>
-        </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>
-          {offer?.title ?? 'Episode reward'}
-        </Text>
-        {offer ? <Text style={styles.body}>{offer.description}</Text> : null}
-        <Text accessibilityLiveRegion="polite" style={styles.body} testID="reward-message">
-          {displayMessage}
-        </Text>
-        {offer && !terminal ? (
+      <View style={styles.sheet}>
+        <ScrollView contentContainerStyle={styles.content}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={intent ? 'Check reward status' : 'Watch test ad'}
+            accessibilityLabel="Close reward"
+            onPress={() => leave(onClose)}
+            style={styles.button}
+          >
+            <Text style={styles.body}>Not now</Text>
+          </Pressable>
+          <Text style={styles.eyebrow}>EPISODE ACCESS</Text>
+          <Text accessibilityRole="header" style={styles.title}>
+            {offer?.title ?? 'Unlock this episode'}
+          </Text>
+          {offer ? (
+            <View style={styles.offer}>
+              <Text style={styles.offerTitle}>{offer.action}</Text>
+              <Text style={styles.body}>{offer.description}</Text>
+            </View>
+          ) : null}
+          {state.phase === 'loading' || busy ? (
+            <ActivityIndicator accessibilityLabel="Checking episode access" color="#fafafa" />
+          ) : null}
+          <Text accessibilityLiveRegion="polite" style={styles.body} testID="reward-message">
+            {displayMessage}
+          </Text>
+          {(offer || intent) && !invalidated && !terminal ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={intent ? 'Check reward status' : 'Watch test ad'}
+              disabled={busy}
+              accessibilityState={{ disabled: busy, busy }}
+              onPress={() => {
+                void watch();
+              }}
+              style={[styles.primary, busy && styles.disabled]}
+            >
+              <Text style={styles.primaryText}>
+                {intent ? 'Check reward status' : 'Watch test ad'}
+              </Text>
+            </Pressable>
+          ) : null}
+          {state.phase === 'loaded' && state.unlocked && !intent && !invalidated ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Continue to playback"
+              accessibilityState={{ disabled: busy, busy }}
+              disabled={busy}
+              style={[styles.primary, busy && styles.disabled]}
+              onPress={() => void continuePlayback()}
+            >
+              <Text style={styles.primaryText}>Continue to playback</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              getSessionCredential() === null ? 'Sign in to unlock' : 'Account and preferences'
+            }
             disabled={busy}
-            onPress={() => {
-              void watch();
-            }}
-            style={styles.button}
+            accessibilityState={{ disabled: busy }}
+            onPress={() => leave(onAccount)}
+            style={[styles.button, busy && styles.disabled]}
           >
-            <Text style={styles.body}>{intent ? 'Check reward status' : 'Watch test ad'}</Text>
+            <Text style={styles.body}>
+              {getSessionCredential() === null ? 'Sign in to unlock' : 'Account and preferences'}
+            </Text>
           </Pressable>
-        ) : null}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Account and preferences"
-          disabled={busy}
-          onPress={onAccount}
-          style={styles.button}
-        >
-          <Text style={styles.body}>Account and preferences</Text>
-        </Pressable>
-        {enabled ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Ad privacy choices"
-            disabled={busy}
-            onPress={() => {
-              void privacy();
-            }}
-            style={styles.button}
-          >
-            <Text style={styles.body}>Ad privacy choices</Text>
-          </Pressable>
-        ) : null}
-        {!busy && (!offer || terminal) ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Refresh reward offer"
-            onPress={() => {
-              requestId.current = null;
-              setIntent(null);
-              setInvalidated(false);
-              setMessage(null);
-              refresh();
-            }}
-            style={styles.button}
-          >
-            <Text style={styles.body}>Refresh offer</Text>
-          </Pressable>
-        ) : null}
-      </ScrollView>
+          {enabled ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ad privacy choices"
+              disabled={busy}
+              accessibilityState={{ disabled: busy }}
+              onPress={() => {
+                void privacy();
+              }}
+              style={[styles.button, busy && styles.disabled]}
+            >
+              <Text style={styles.body}>Ad privacy choices</Text>
+            </Pressable>
+          ) : null}
+          {!busy &&
+          state.phase === 'loaded' &&
+          !invalidated &&
+          (!intent || terminal) &&
+          (!offer || terminal) ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Refresh reward offer"
+              onPress={() => {
+                // Only a terminal response proves an old request can no longer grant.
+                if (terminal) {
+                  requestId.current = null;
+                  setIntent(null);
+                }
+                setMessage(null);
+                refresh();
+              }}
+              style={styles.button}
+            >
+              <Text style={styles.body}>Refresh offer</Text>
+            </Pressable>
+          ) : null}
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: '#09090b', flex: 1 },
+  container: { backgroundColor: '#09090b', flex: 1, justifyContent: 'flex-end' },
+  sheet: {
+    maxHeight: '100%',
+    backgroundColor: '#18181b',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
   content: { padding: 24, gap: 20 },
-  title: { color: '#fafafa', fontSize: 22, fontWeight: '600' },
+  eyebrow: { color: '#a1a1aa', fontSize: 12, letterSpacing: 2 },
+  title: { color: '#fafafa', fontSize: 26, fontWeight: '600' },
+  offer: { padding: 20, borderRadius: 16, borderColor: '#52525b', borderWidth: 1, gap: 12 },
+  offerTitle: { color: '#fafafa', fontSize: 20, fontWeight: '600' },
   body: { color: '#fafafa', fontSize: 16 },
-  button: { padding: 16, borderRadius: 8, backgroundColor: '#27272a' },
+  button: { minHeight: 48, padding: 16, borderRadius: 12, backgroundColor: '#27272a' },
+  primary: { minHeight: 48, padding: 16, borderRadius: 12, backgroundColor: '#fafafa' },
+  primaryText: { color: '#18181b', fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  disabled: { opacity: 0.5 },
 });

@@ -75,7 +75,12 @@ decision-register entry.
 - Stop on suspected secret, personal data, licensed-asset, or confidential
   exposure.
 - Never merge automatically.
-- An unavailable required check is a blocker, never a pass.
+- An unavailable required check is never a pass. It blocks the current merge unless
+  the founder has explicitly deferred that device/manual/provider check under D-029
+  to the consolidated P6-T03 final validation pass. Record the deferral and keep the
+  capability disabled or fail-closed. Never defer checks that protect secrets or
+  personal/licensed data, authorization/entitlements, financial integrity,
+  destructive migrations/data, or production activation.
 
 ## High-risk surfaces
 
