@@ -948,6 +948,13 @@ playback URLs. See `docs/runbooks/rewarded-ads.md` for evidence.
 
 #### P4-T01 — Implement analytics governance and event SDK
 
+**Foundation in progress (P4-T01-F1 / #104):** The canonical event dictionary,
+typed mobile schemas, deterministic event IDs, prohibited-value filtering and a
+provider-independent client are implemented first with collection disabled by
+default. Firebase transport, consent/identity lifecycle, screen instrumentation,
+backend boundary and DebugView evidence remain the ordered F2–F4 slices in #104;
+this foundation alone does not mark P4-T01 complete or authorize collection.
+
 **Description:** Publish event dictionary, property schemas, ownership, retention, consent rules, and a typed mobile/backend analytics wrapper with deterministic event IDs for MVP events: `app_open`/campaign, episode start/complete, `lock_shown`, `ad_offer`, `ad_rewarded`, and `playback_error`. Coin, subscription, push, and experiment events wait for P7.
 
 **Objective:** Produce decision-grade events for the ads-only loop instead of inconsistent ad hoc tracking.
