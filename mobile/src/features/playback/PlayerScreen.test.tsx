@@ -342,6 +342,7 @@ describe('PlayerScreen', () => {
   });
 
   it('shows lock reasons for a locked next episode and does not keep a next URI', async () => {
+    const onReward = jest.fn();
     const authorize = jest.fn(async (id: string): Promise<PlaybackRequestOutcome> => {
       if (id === 'ep_harbor_6') {
         return { outcome: 'locked', lockReasons: ['login_required'] };
@@ -353,6 +354,7 @@ describe('PlayerScreen', () => {
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
+        onReward={onReward}
         playback={stubPlayback(authorize)}
         progress={stubProgress()}
       />,
@@ -363,6 +365,8 @@ describe('PlayerScreen', () => {
     await user.press(view.getByTestId('player-simulate-end'));
     expect(await view.findByTestId('player-locked')).toBeTruthy();
     expect(view.getByText('login_required')).toBeTruthy();
+    await user.press(view.getByLabelText('View episode reward'));
+    expect(onReward).toHaveBeenCalledWith('ep_harbor_6');
     expect(view.queryByTestId('player-loaded')).toBeNull();
     expect(view.queryByTestId('player-video')).toBeNull();
     visibleHasSecrets(view);

@@ -21,6 +21,8 @@ PLAYBACK_ENVIRONMENT = (
     "STAFF_UPLOAD_URL_TTL_SECONDS",
 )
 CONFIGURATION_ENVIRONMENT = (
+    "REWARDED_ADS_MODE",
+    "REWARDED_ADS_TEST_UNIT_ID",
     *REQUIRED_ENVIRONMENT,
     "DATABASE_CONNECT_TIMEOUT",
     "CONN_MAX_AGE",
@@ -98,6 +100,20 @@ def test_production_settings_accept_import_complete_postgresql_configuration() -
     result = run_settings_import(IMPORT_VALID_ENVIRONMENT)
 
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("unit_id", ["", "ca-app-pub-1111111111111111/2222222222"])
+def test_production_rejects_test_unit_override_even_when_rewards_disabled(unit_id: str) -> None:
+    result = run_settings_import(
+        {
+            **IMPORT_VALID_ENVIRONMENT,
+            "REWARDED_ADS_MODE": "disabled",
+            "REWARDED_ADS_TEST_UNIT_ID": unit_id,
+        }
+    )
+
+    assert result.returncode != 0
+    assert "REWARDED_ADS_TEST_UNIT_ID" in result.stderr
 
 
 def test_production_settings_reject_fake_video_provider() -> None:

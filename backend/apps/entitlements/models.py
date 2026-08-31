@@ -16,8 +16,8 @@ class EntitlementSource(models.TextChoices):
 class EpisodeEntitlement(models.Model):
     """One entitlement row per (user profile, episode). No playback URL, no expiry.
 
-    Staff and tests grant with source=staff. rewarded_ad is stored for P3 and is
-    never written by a public API in this slice.
+    Staff and tests grant with source=staff. The P3-T07 verified provider callback
+    grants rewarded_ad. A client completion callback never writes this model.
     """
 
     user_profile = models.ForeignKey(

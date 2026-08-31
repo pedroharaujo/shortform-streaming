@@ -29,7 +29,7 @@ def request_account_deletion(verified: VerifiedToken) -> AccountDeletion:
             defaults={"firebase_uid": verified.uid},
         )
         # Every receipt is durable before provider I/O. CASCADE removes progress
-        # and entitlements; no financial or push models exist in this slice.
+        # entitlements and reward intents; no financial or push models exist.
         UserProfile.objects.filter(firebase_uid=verified.uid).delete()
     return record
 

@@ -26,6 +26,7 @@ export interface PlayerScreenProps {
   readonly playback: PlaybackClient;
   readonly progress: ProgressClient;
   readonly onClose: () => void;
+  readonly onReward?: (episodeId: string) => void;
 }
 
 type PlayerPhase =
@@ -49,11 +50,12 @@ export function PlayerScreen({
   playback,
   progress,
   onClose,
+  onReward,
 }: PlayerScreenProps): JSX.Element {
   const [activeEpisodeId, setActiveEpisodeId] = useState(episodeId);
   const [paused, setPaused] = useState(false);
   const [nextGate, setNextGate] = useState<
-    | { readonly phase: 'locked'; readonly reasons: readonly string[] }
+    | { readonly phase: 'locked'; readonly reasons: readonly string[]; readonly episodeId: string }
     | { readonly phase: 'unavailable' }
     | { readonly phase: 'error'; readonly message: string }
     | null
@@ -199,7 +201,7 @@ export function PlayerScreen({
     }
     const nextAuthorize = await playback.authorize(nextId);
     if (nextAuthorize.outcome === 'locked') {
-      setNextGate({ phase: 'locked', reasons: nextAuthorize.lockReasons });
+      setNextGate({ phase: 'locked', reasons: nextAuthorize.lockReasons, episodeId: nextId });
       return;
     }
     if (nextAuthorize.outcome === 'not-found') {
@@ -271,6 +273,18 @@ export function PlayerScreen({
           testID={displayed.phase === 'locked' ? 'player-locked' : 'player-error'}
         >
           <Text style={styles.body}>{errorText}</Text>
+          {displayed.phase === 'locked' && onReward ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="View episode reward"
+              onPress={() =>
+                onReward(nextGate?.phase === 'locked' ? nextGate.episodeId : activeEpisodeId)
+              }
+              style={styles.close}
+            >
+              <Text style={styles.body}>View episode reward</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 

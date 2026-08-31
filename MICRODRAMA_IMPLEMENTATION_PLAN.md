@@ -870,6 +870,17 @@ Evidence (2026-08-28): P3-T01 / #84; AccessPolicy + `GET /v1/offers/{episode_id}
 
 #### P3-T07 — Implement rewarded-ad intent and verified reward grant
 
+**Development complete (founder-approved scope, 2026-08-31, D-028):** Test-only
+backend/Android implementation and independent reviews completed; full repository
+gate passes (280 backend, 90 mobile, 49 repository tests), Android native build
+and JS export pass. Production remains disabled. Operator identity, privacy
+contact, published consent configuration and genuine provider → entitlement →
+device playback evidence are deployment/release gates, not P3-T07/PR #97 merge
+or subsequent MVP coding prerequisites. The unobserved journey is not a pass.
+See `docs/runbooks/rewarded-ads.md` for exact evidence.
+Release work transferred from #96 to
+[P6-T05A / #98](https://github.com/pedroharaujo/shortform-streaming/issues/98).
+
 **Description:** Create a server reward intent bound to user/episode, show an AdMob rewarded ad with custom data, verify server-side callbacks, and grant one idempotent episode entitlement.
 
 **Objective:** Monetize non-payers without allowing fabricated client rewards.
@@ -878,14 +889,21 @@ Evidence (2026-08-28): P3-T01 / #84; AccessPolicy + `GET /v1/offers/{episode_id}
 
 **Acceptance criteria:**
 
-- [ ] User explicitly opts in and sees the exact reward before the ad starts.
-- [ ] Production grant requires a valid, unused, unexpired intent and authentic provider callback; client callback only updates UI optimistically/polls status.
-- [ ] Duplicate, mismatched, expired, and forged callbacks cannot grant access.
+- [x] User explicitly opts in and sees the exact reward before the ad starts: tests and Android demo-device observation.
+- [x] Implemented server grant path requires a valid, unused, unexpired intent and authentic provider callback; client completion only polls status and cannot grant. Verified by signed integration tests; production enablement is separate release work.
+- [x] Duplicate, mismatched, expired, and forged callbacks cannot grant access: cryptographic and transaction/race tests.
 
 **Validation and integration tests:**
 
-- [ ] Use AdMob test units in non-production and verify no live-ad traffic is generated.
-- [ ] End-to-end test creates intent, completes test ad, observes verified entitlement, and plays; security tests replay and forge callbacks.
+- [x] Test-only configuration and native demo Test Ad verified; publisher requests require a local Android development emulator and SDK test-device configuration. Production and unsupported publisher contexts fail closed.
+- [x] Automated reward/API/client, consent, replay/forgery, entitlement and fresh-authorization controls pass; independent reviews complete. No provider end-to-end result is inferred from these checks.
+
+**Deferred release acceptance (D-028):** #98 requires the actual operator/contact,
+final notice/UMP setup, a completed test ad → genuine signed callback → one
+entitlement → authorized Android playback, and production activation review.
+Setup prerequisites still apply before any publisher-owned ad test. P6-T04,
+P6-T05A and the final launch checklist carry these gates; P3-T08 development may
+proceed with production ads disabled.
 
 #### P3-T08 — Build locked-episode offer sheet (ads-only)
 
@@ -1200,6 +1218,7 @@ Evidence (2026-08-28): P3-T01 / #84; AccessPolicy + `GET /v1/offers/{episode_id}
 
 - [ ] Listings disclose that some episodes require a rewarded ad and match actual functionality. IAP/subscription metadata waits for P7.
 - [ ] Privacy declarations match SDK/data inventory and consent behavior.
+- [ ] Actual public operator identity, monitored privacy contact, final notice URL and app-specific UMP setup are verified before the applicable ad test/distribution; deferred P3-T07 setup is tracked in #98 (D-028).
 - [ ] Reviewer can access representative free, locked, and rewarded-ad flows with provided instructions. Test ad units only.
 
 **Validation and integration tests:**
@@ -1241,6 +1260,7 @@ Evidence (2026-08-28): P3-T01 / #84; AccessPolicy + `GET /v1/offers/{episode_id}
 - [ ] The exact catalog passes territorial rights/provenance, DRM/protection, age/content, and promotional-use review for every enabled D-001 market.
 - [ ] GDPR/privacy-by-design, consent, account deletion, security, accessibility, store policy/declarations, national legal/language requirements, support, incident response, and rollback checks pass.
 - [ ] The French entity and required registration/organization data are verified; AdMob production configuration is approved for activation. Store IAP products and store IAP EUR settlement wait for P7.
+- [ ] Release blocker #98 is closed with genuine completed test-ad → signed Google callback → one entitlement → fresh authorized Android playback evidence and independently reviewed production enablement. P3-T07 development completion does not satisfy this gate (D-028).
 - [ ] D-017 defines the paid-acquisition ceiling and D-020 defines approved production data residency/retention before those activities start. D-018 is not an ads-only public-release gate. All other decisions applicable to the ads-only release are Approved rather than Proposed or Decision required.
 
 **Validation and integration tests:**
@@ -1807,6 +1827,7 @@ These do not all block Phase 1. Resolve each before implementing the feature tha
 These are deferred from the Phase 1 coding path but remain hard ads-only release gates. They do **not** include P7 IAP, store EUR settlement, Looker/BigQuery models, Remote Config A/B, push, or MMP adoption:
 
 - French entity legal name and form, incorporation, registered address, D-U-N-S where required, tax/organization enrollment data, and store-account countries.
+- Actual public operator identity and monitored privacy contact, published notice/UMP setup, and genuine rewarded-ad release validation (#98, D-028). These do not block MVP coding or PR #97; required consent setup still precedes any publisher-owned ad test.
 - Per-market territorial rights, GDPR/privacy review, national legal/language requirements, age rating, allowed content categories, store declarations, and consent behavior for the 21 approved launch countries.
 - Final license terms, commercial-media provenance, protection/DRM obligations, and approval of every title before it enters staging or production.
 - AdMob production configuration before real advertising.
@@ -1915,7 +1936,7 @@ When every item in this subsection is satisfied, the platform is suitable for ad
 - [ ] Bunny Stream HLS pipeline and tokenized playback operational (GCP Cloud CDN fallback documented and unused unless activated).
 - [ ] Vertical player, progress, and free episode journey operational.
 - [ ] Rewarded-ad intent, SSV, and ad-grant entitlements operational (MVP ads path).
-- [ ] MVP reward path is server-verified, idempotent, and supportable.
+- [ ] MVP reward path is server-verified, idempotent, and supportable; #98 provides genuine provider/device evidence, operator/privacy setup and production approval (D-028).
 - [ ] Thin Firebase Analytics events and campaign IDs operational (Firebase DebugView; AdMob earnings versus ads-manager spend).
 - [ ] Staging/production IaC, secure CI/CD, backups, observability, security controls, and runbooks operational.
 - [ ] Accessibility, localization, regression matrix, beta, and ads-only store compliance complete.

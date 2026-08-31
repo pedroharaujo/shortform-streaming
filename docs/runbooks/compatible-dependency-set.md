@@ -28,6 +28,8 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 | Mobile runtime | `react-native` | 0.86.3 |
 | Mobile runtime | `react-native-safe-area-context` | ~5.7.0 |
 | Mobile runtime | `expo-video` | ~57.0.3 |
+| Mobile runtime | `expo-crypto` | ~57.0.2 (reward request UUIDs, P3-T07) |
+| Android test ads | `react-native-google-mobile-ads` | 16.0.0 exact (Google Ads 24.6.0 / UMP 3.2.0; P3-T07) |
 | Mobile runtime | `@react-native-firebase/app` | ^26.3.2 (Expo 57 / RN 0.86 `expo install`; Android Auth first) |
 | Mobile runtime | `@react-native-firebase/auth` | ^26.3.2 (same pin as app; email/password + Auth emulator) |
 | Mobile runtime | `@react-native-google-signin/google-signin` | `^16.1.4` (public npm; Expo 57 / RN 0.86; Android Google ID token for RN Firebase 26) |
@@ -43,6 +45,7 @@ These are the versions on `main` after PR #32, later compatible bumps that remai
 | Mobile test | `react-test-renderer` | 19.2.3 |
 | Workspace | `openapi-fetch` | ^0.17.0 |
 | Backend | Django | 6.1 (`>=6.1,<6.2`) |
+| Callback verification | `cryptography` | 50.x (`>=50,<51`, explicit P3-T07 dependency) |
 | Backend stubs | `django-stubs` | 6.1.x (`>=6.1,<6.2`) |
 | Backend stubs | `djangorestframework-stubs` | 3.18.x (matches DRF 3.18) |
 | Backend tooling | mypy | 2.3.1 |

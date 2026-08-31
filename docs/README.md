@@ -47,6 +47,9 @@ AI agents start at the root `AGENTS.md`. Operating notes are in
 - `runbooks/staging-deploy.md` — GitHub OIDC/WIF, Environment variables, migrate-before-traffic, in-project smoke, fail-smoke, and traffic-only rollback (P5-T03).
 - `runbooks/access-policy.md` — D-006 defaults, Admin live saves, offers vs authorize, rollback of `0003` then `0002` (P3-T01).
 - `runbooks/account-lifecycle.md` — account preferences, recent-auth deletion, provider retries, and privacy-safe rollback (P2-T02).
+- `runbooks/rewarded-ads.md` — test-only reward intents, authentic SSV, consent, grant/deletion safety, production gates and validation evidence (P3-T07).
+- `runbooks/development-privacy-setup.md` — privacy notice and AdMob setup moved to release blocker #98 (D-028); does not block P3-T07 development completion.
+- `privacy/DEVELOPMENT_PRIVACY_NOTICE_DRAFT.md` — inactive notice draft; not an AdMob policy URL until the operator facts and publication checks are completed.
 
 ## Future documentation locations
 

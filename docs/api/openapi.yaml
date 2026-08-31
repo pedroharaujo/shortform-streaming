@@ -657,6 +657,208 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Unknown or ineligible public id. Does not confirm whether the
             id exists.
+  /v1/rewards/{reward_id}:
+    get:
+      operationId: v1_rewards_retrieve
+      description: Owner-only status, never a playable URL. granted records a verified
+        entitlement; playback authorization must still recheck current rights and
+        availability.
+      summary: Check the authenticated owner's reward
+      parameters:
+      - in: path
+        name: reward_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - rewards
+      security:
+      - FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardIntent'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or ineligible public id. Does not confirm whether the
+            id exists.
+  /v1/rewards/admob/ssv:
+    get:
+      operationId: v1_rewards_admob_ssv_retrieve
+      description: Provider-only AdMob ECDSA verification. Original URL query required;
+        never a client grant. Test mode only. The verifier percent-decodes the prefix
+        once to UTF-8, preserving order and literal plus signs, before signature and
+        key_id (last, in that order). Duplicate verified delivery is acknowledged
+        without granting again. Invalid/mismatched/expired callbacks return 400.
+      parameters:
+      - in: query
+        name: ad_network
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: ad_unit
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: custom_data
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: key_id
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: reward_amount
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: reward_item
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: signature
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: timestamp
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: transaction_id
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - rewards
+      responses:
+        '200':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
+  /v1/rewards/intents:
+    post:
+      operationId: v1_rewards_intents_create
+      description: Authenticated Android test-only intent. Requires ads preference
+        and current catalog eligibility. The request_id is an account-scoped idempotency
+        UUID. Reuse it after a lost response; changing the episode or context returns
+        409. No client field can grant access. expires_at is 15 minutes after creation.
+      summary: Accept an episode reward offer
+      parameters:
+      - in: header
+        name: X-Language
+        schema:
+          type: string
+        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
+          from Accept-Language.'
+        required: true
+      - in: header
+        name: X-Platform
+        schema:
+          type: string
+          enum:
+          - android
+          - ios
+        description: 'Client platform. Required. Values: ios, android.'
+        required: true
+      - in: header
+        name: X-Territory
+        schema:
+          type: string
+        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
+          inferred from Accept-Language or UI language.
+        required: true
+      tags:
+      - rewards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RewardIntentCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RewardIntentCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RewardIntentCreateRequest'
+        required: true
+      security:
+      - FirebaseIdToken: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardIntent'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardIntent'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing or malformed catalog context headers.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or ineligible public id. Does not confirm whether the
+            id exists.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
   /v1/series/{public_id}:
     get:
       operationId: v1_series_retrieve
@@ -1181,6 +1383,67 @@ components:
       description: Opaque public identifier. Sequential database integers are never
         used as public IDs.
       example: ser_1a2b3c4d5e6f
+    RewardIntent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        episode_id:
+          type: string
+        status:
+          allOf:
+          - $ref: '#/components/schemas/RewardIntentStatusEnum'
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+        reward_description:
+          type: string
+          readOnly: true
+        ad_unit_id:
+          type: string
+        ssv_user_id:
+          type: string
+        custom_data:
+          type: string
+      required:
+      - ad_unit_id
+      - custom_data
+      - episode_id
+      - expires_at
+      - id
+      - reward_description
+      - ssv_user_id
+      - status
+    RewardIntentCreateRequest:
+      type: object
+      properties:
+        episode_id:
+          type: string
+          minLength: 1
+          maxLength: 40
+        request_id:
+          type: string
+          format: uuid
+        accepted:
+          type: boolean
+      required:
+      - accepted
+      - episode_id
+      - request_id
+    RewardIntentStatusEnum:
+      enum:
+      - pending
+      - granted
+      - expired
+      - unavailable
+      type: string
+      description: |-
+        * `pending` - pending
+        * `granted` - granted
+        * `expired` - expired
+        * `unavailable` - unavailable
     TypeEnum:
       enum:
       - entitlement
