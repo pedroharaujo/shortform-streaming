@@ -8,6 +8,13 @@ import type { MeClient } from '../../api/me/types';
 import type { PlaybackClient } from '../../api/playback/types';
 import type { RewardIntent, RewardsClient } from '../../api/rewards/types';
 import { getAuthSessionRevision, getSessionCredential } from '../../auth/session';
+import {
+  clearPendingRewardAttempt,
+  newPendingRewardAttempt,
+  type PendingRewardAttempt,
+  readPendingRewardAttempt,
+  writePendingRewardAttempt,
+} from './pendingRewardAttempt';
 import type { RewardedAdPresenter } from './types';
 import { useCatalogQuery } from '../catalog/useCatalog';
 
@@ -18,6 +25,7 @@ type OfferState =
       offer: { title: string; description: string; action: string } | null;
       message: string;
       unlocked?: boolean;
+      recoveredAttempt?: PendingRewardAttempt;
     };
 
 export interface RewardScreenProps {
@@ -49,11 +57,11 @@ export function RewardScreen({
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [intent, setIntent] = useState<RewardIntent | null>(null);
+  const [attemptOverride, setAttempt] = useState<PendingRewardAttempt | null>();
   const mounted = useRef(false);
   const leaving = useRef(false);
   const revision = useRef(getAuthSessionRevision());
   const inFlight = useRef(false);
-  const requestId = useRef<string | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelWait = useRef<(() => void) | null>(null);
 
@@ -115,7 +123,12 @@ export function RewardScreen({
         return unavailable('The reward offer is unavailable. Try again later.');
       } else if (available.data.episode_id !== episodeId) {
         return unavailable('The reward offer did not match this episode. Refresh to try again.');
-      } else if (available.data.decision === 'granted') {
+      }
+      const recoveredAttempt = await readPendingRewardAttempt(profile.data.public_id, episodeId);
+      if (owner !== getAuthSessionRevision())
+        return unavailable('Your session changed. Return to Account and sign in again.');
+      if (available.data.decision === 'granted') {
+        if (recoveredAttempt !== null) await clearPendingRewardAttempt();
         return {
           ...unavailable('This episode is already unlocked. Continue to playback.'),
           unlocked: true,
@@ -137,6 +150,7 @@ export function RewardScreen({
             action: method.title,
           },
           message: 'Test ads only. Access is confirmed by the server after verification.',
+          ...(recoveredAttempt === null ? {} : { recoveredAttempt }),
         };
       }
     } catch {
@@ -144,6 +158,9 @@ export function RewardScreen({
     }
   }, [catalog, enabled, episodeId, me, rewards]);
   const { state, refresh } = useCatalogQuery(load);
+  const recoveryResolved = state.phase === 'loaded';
+  const recoveredAttempt = state.phase === 'loaded' ? (state.recoveredAttempt ?? null) : null;
+  const attempt = attemptOverride === undefined ? recoveredAttempt : attemptOverride;
   const offer = state.phase === 'loaded' && !invalidated ? state.offer : null;
   const displayMessage =
     message ?? (state.phase === 'loaded' ? state.message : 'Loading reward offer…');
@@ -194,7 +211,7 @@ export function RewardScreen({
     }
   }
 
-  async function poll(row: RewardIntent): Promise<void> {
+  async function poll(row: Pick<RewardIntent, 'id' | 'episode_id'>): Promise<void> {
     for (let attempt = 0; attempt < 10 && isCurrent(); attempt += 1) {
       const result = await rewards.get(row.id);
       if (!guard()) return;
@@ -209,10 +226,14 @@ export function RewardScreen({
       }
       setIntent(verified);
       if (verified.status === 'granted') {
+        await clearPendingRewardAttempt();
+        setAttempt(null);
         await confirmPlayback();
         return;
       }
       if (verified.status === 'expired' || verified.status === 'unavailable') {
+        await clearPendingRewardAttempt();
+        setAttempt(null);
         setMessage(
           'The reward expired or is no longer available. No access was granted by this screen.',
         );
@@ -237,11 +258,21 @@ export function RewardScreen({
   }
 
   async function watch(): Promise<void> {
-    if (inFlight.current || (!intent && (!enabled || !offer)) || !guard()) return;
+    if (
+      inFlight.current ||
+      (!intent && !attempt && (!enabled || !offer)) ||
+      !recoveryResolved ||
+      !guard()
+    )
+      return;
     inFlight.current = true;
     setBusy(true);
     let created = intent;
     try {
+      if (created === null && attempt?.intentId !== undefined) {
+        await poll({ id: attempt.intentId, episode_id: attempt.episodeId });
+        return;
+      }
       // A pending intent is status-only: no duplicate impression on retry.
       if (created === null) {
         const profile = await me.getMe();
@@ -253,11 +284,29 @@ export function RewardScreen({
           );
           return;
         }
+        if (attempt !== null && profile.data.public_id !== attempt.profileId) {
+          await clearPendingRewardAttempt();
+          setAttempt(null);
+          setInvalidated(true);
+          setMessage('Your session changed. Return to Account and sign in again.');
+          return;
+        }
         setMessage('Checking ad consent…');
         await presenter.prepare(isCurrent);
         if (!guard()) return;
-        requestId.current ??= randomUUID();
-        const result = await rewards.create(episodeId, requestId.current);
+        let activeAttempt = attempt;
+        if (activeAttempt === null) {
+          activeAttempt = newPendingRewardAttempt(profile.data.public_id, episodeId, randomUUID());
+          try {
+            await writePendingRewardAttempt(activeAttempt);
+          } catch {
+            setMessage('Secure reward recovery is unavailable. Try again later.');
+            return;
+          }
+          if (!guard()) return;
+          setAttempt(activeAttempt);
+        }
+        const result = await rewards.create(episodeId, activeAttempt.requestId);
         if (!guard()) return;
         if (result.outcome !== 'ok') {
           setMessage('The reward could not start. Check your connection and try again.');
@@ -266,6 +315,17 @@ export function RewardScreen({
         created = result.data;
         if (created.episode_id !== episodeId) throw new Error('Mismatched reward');
         setIntent(created);
+        const identifiedAttempt = { ...activeAttempt, intentId: created.id };
+        try {
+          await writePendingRewardAttempt(identifiedAttempt);
+          setAttempt(identifiedAttempt);
+        } catch {
+          setMessage(
+            'The reward was created, but secure recovery is unavailable. Check reward status.',
+          );
+          return;
+        }
+        if (!guard()) return;
         if (created.status === 'pending') {
           setMessage('Loading test ad…');
           await presenter.present(created, isCurrent);
@@ -329,16 +389,18 @@ export function RewardScreen({
               <Text style={styles.body}>{offer.description}</Text>
             </View>
           ) : null}
-          {state.phase === 'loading' || busy ? (
+          {state.phase === 'loading' || !recoveryResolved || busy ? (
             <ActivityIndicator accessibilityLabel="Checking episode access" color="#fafafa" />
           ) : null}
           <Text accessibilityLiveRegion="polite" style={styles.body} testID="reward-message">
             {displayMessage}
           </Text>
-          {(offer || intent) && !invalidated && !terminal ? (
+          {(offer || intent || attempt) && recoveryResolved && !invalidated && !terminal ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={intent ? 'Check reward status' : 'Watch test ad'}
+              accessibilityLabel={
+                intent || attempt?.intentId ? 'Check reward status' : 'Watch test ad'
+              }
               disabled={busy}
               accessibilityState={{ disabled: busy, busy }}
               onPress={() => {
@@ -347,7 +409,7 @@ export function RewardScreen({
               style={[styles.primary, busy && styles.disabled]}
             >
               <Text style={styles.primaryText}>
-                {intent ? 'Check reward status' : 'Watch test ad'}
+                {intent || attempt?.intentId ? 'Check reward status' : 'Watch test ad'}
               </Text>
             </Pressable>
           ) : null}
@@ -402,10 +464,11 @@ export function RewardScreen({
               onPress={() => {
                 // Only a terminal response proves an old request can no longer grant.
                 if (terminal) {
-                  requestId.current = null;
                   setIntent(null);
+                  setAttempt(null);
                 }
                 setMessage(null);
+                setAttempt(undefined);
                 refresh();
               }}
               style={styles.button}

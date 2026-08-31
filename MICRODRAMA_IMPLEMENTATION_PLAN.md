@@ -914,8 +914,9 @@ navigation are implemented and independently reviewed. `pnpm check` passes
 The required Maestro attempt could not run in the implementation environment
 (CLI unavailable, no connected Android device); it is **deferred, not passed**, to
 the consolidated P6-T03 final validation pass. Genuine provider success and
-release setup remain #98/D-028/P6-T05A. Existing cross-remount reward recovery
-is tracked separately in #99. See `docs/runbooks/rewarded-ads.md` for evidence.
+release setup remain #98/D-028/P6-T05A. P3-T08-F1 / #99 adds account-bound,
+sanitized cross-remount/restart recovery without persisting provider bindings or
+playback URLs. See `docs/runbooks/rewarded-ads.md` for evidence.
 
 **Description:** Present the rewarded-ad unlock offer from the API, including loading, accessibility, errors, and post-success transition to playback. Coin and subscription offers wait for P7.
 
@@ -926,7 +927,7 @@ is tracked separately in #99. See `docs/runbooks/rewarded-ads.md` for evidence.
 **Acceptance criteria:**
 
 - [x] Only server-authorized methods appear. MVP shows rewarded-ad unlock when locked.
-- [x] Repeated taps cannot create duplicate reward intents (same mounted sheet; cross-remount recovery is #99).
+- [x] Repeated taps and remount/restart recovery reuse the account-bound idempotency request; a known pending intent is status-only (P3-T08-F1 / #99).
 - [x] Every success refreshes authoritative entitlement state before playback.
 
 **Validation and integration tests:**

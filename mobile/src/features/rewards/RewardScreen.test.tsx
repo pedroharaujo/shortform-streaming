@@ -7,6 +7,26 @@ import { setAuthSession } from '../../auth/session';
 import { RewardScreen } from './RewardScreen';
 import type { RewardedAdPresenter } from './types';
 
+const mockSecureStore = new Map<string, string>();
+let mockUuidSequence = 0;
+
+jest.mock('expo-crypto', () => ({
+  randomUUID: () => {
+    mockUuidSequence += 1;
+    return `00000000-0000-4000-8000-${String(mockUuidSequence).padStart(12, '0')}`;
+  },
+}));
+
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(async (key: string) => mockSecureStore.get(key) ?? null),
+  setItemAsync: jest.fn(async (key: string, value: string) => {
+    mockSecureStore.set(key, value);
+  }),
+  deleteItemAsync: jest.fn(async (key: string) => {
+    mockSecureStore.delete(key);
+  }),
+}));
+
 const INTENT: RewardIntent = {
   id: '11111111-1111-4111-8111-111111111111',
   episode_id: 'ep_synthetic',
@@ -23,6 +43,7 @@ async function setup(
   enabled = true,
   signedIn = true,
   configure?: (rewards: jest.Mocked<RewardsClient>) => void,
+  profileId = 'usr_synthetic',
 ) {
   setAuthSession(signedIn ? { credential: 'mock.synthetic_rewards' } : null);
   const catalog = {
@@ -35,7 +56,7 @@ async function setup(
     getMe: jest.fn<ReturnType<MeClient['getMe']>, Parameters<MeClient['getMe']>>(async () => ({
       outcome: 'ok',
       data: {
-        public_id: 'usr_synthetic',
+        public_id: profileId,
         created_at: '2026-08-31T00:00:00Z',
         updated_at: '2026-08-31T00:00:00Z',
         locale: 'en',
@@ -114,7 +135,11 @@ async function setup(
   return { view, rewards, presenter, onPlay, me, playback };
 }
 
-afterEach(() => setAuthSession(null));
+afterEach(() => {
+  mockSecureStore.clear();
+  mockUuidSequence = 0;
+  setAuthSession(null);
+});
 
 it.each([true, false])(
   'keeps privacy choices available without an offer (signed in: %s)',
@@ -295,6 +320,97 @@ it('retries a lost creation response with the same request id', async () => {
   expect(presenter.present).toHaveBeenCalledTimes(1);
 });
 
+const PENDING_REWARD_KEY = 'shortform.pending_reward_attempt.v1';
+const PERSISTED_REQUEST_ID = '22222222-2222-4222-8222-222222222222';
+
+function persistAttempt(
+  profileId = 'usr_synthetic',
+  includeIntent = false,
+  episodeId = 'ep_synthetic',
+): void {
+  mockSecureStore.set(
+    PENDING_REWARD_KEY,
+    JSON.stringify({
+      version: 1,
+      profileId,
+      episodeId,
+      requestId: PERSISTED_REQUEST_ID,
+      ...(includeIntent ? { intentId: INTENT.id } : {}),
+    }),
+  );
+}
+
+it('reuses a persisted request id after an ambiguous create response and remount', async () => {
+  persistAttempt();
+  const recovered = await setup();
+  recovered.rewards.get.mockResolvedValue({
+    outcome: 'unreachable',
+    reason: 'Synthetic status interruption',
+  });
+  await waitFor(() => expect(recovered.view.getByLabelText('Watch test ad')).toBeEnabled());
+  await fireEvent.press(recovered.view.getByLabelText('Watch test ad'));
+  await waitFor(() => expect(recovered.view.getByLabelText('Check reward status')).toBeEnabled());
+
+  expect(recovered.rewards.create).toHaveBeenCalledWith('ep_synthetic', PERSISTED_REQUEST_ID);
+  expect(recovered.presenter.present).toHaveBeenCalledTimes(1);
+  expect(Object.keys(JSON.parse(mockSecureStore.get(PENDING_REWARD_KEY) ?? '{}')).sort()).toEqual([
+    'episodeId',
+    'intentId',
+    'profileId',
+    'requestId',
+    'version',
+  ]);
+});
+
+it('recovers a known pending intent with a status check and no second ad impression', async () => {
+  persistAttempt('usr_synthetic', true);
+  const recovered = await setup();
+  recovered.rewards.get.mockResolvedValue({
+    outcome: 'unreachable',
+    reason: 'Synthetic status interruption',
+  });
+  await waitFor(() => expect(recovered.view.getByLabelText('Check reward status')).toBeEnabled());
+  await fireEvent.press(recovered.view.getByLabelText('Check reward status'));
+  await waitFor(() => expect(recovered.rewards.get).toHaveBeenCalledWith(INTENT.id));
+  await waitFor(() => expect(recovered.view.getByLabelText('Check reward status')).toBeEnabled());
+
+  expect(recovered.rewards.create).not.toHaveBeenCalled();
+  expect(recovered.presenter.prepare).not.toHaveBeenCalled();
+  expect(recovered.presenter.present).not.toHaveBeenCalled();
+});
+
+it('allows an explicit fresh attempt after a recovered intent becomes terminal', async () => {
+  persistAttempt('usr_synthetic', true);
+  const recovered = await setup();
+  recovered.rewards.get.mockResolvedValue({
+    outcome: 'ok',
+    data: { ...INTENT, status: 'expired' },
+  });
+  await waitFor(() => expect(recovered.view.getByLabelText('Check reward status')).toBeEnabled());
+  await fireEvent.press(recovered.view.getByLabelText('Check reward status'));
+  await waitFor(() => expect(recovered.view.getByLabelText('Refresh reward offer')).toBeEnabled());
+  await fireEvent.press(recovered.view.getByLabelText('Refresh reward offer'));
+  await waitFor(() => expect(recovered.view.getByLabelText('Watch test ad')).toBeEnabled());
+  recovered.rewards.get.mockResolvedValue({
+    outcome: 'unreachable',
+    reason: 'Synthetic status interruption',
+  });
+  await fireEvent.press(recovered.view.getByLabelText('Watch test ad'));
+  await waitFor(() => expect(recovered.rewards.create).toHaveBeenCalledTimes(1));
+
+  expect(recovered.rewards.create.mock.calls[0]?.[1]).not.toBe(PERSISTED_REQUEST_ID);
+});
+
+it("discards another account's persisted intent before any owner-status request", async () => {
+  persistAttempt('usr_previous', true);
+  const replacement = await setup(true, true, true, undefined, 'usr_replacement');
+  await waitFor(() => expect(replacement.view.getByLabelText('Watch test ad')).toBeEnabled());
+
+  expect(replacement.rewards.get).not.toHaveBeenCalled();
+  expect(replacement.rewards.create).not.toHaveBeenCalled();
+  expect(replacement.view.queryByLabelText('Check reward status')).toBeNull();
+});
+
 it.each(['locked', 'unreachable', 'mismatched'] as const)(
   'does not trust a historical grant when refreshed access is %s',
   async (failure) => {
@@ -366,6 +482,16 @@ it('continues an already unlocked episode without ad consent or an enabled ad bu
   expect(playback.authorize).toHaveBeenCalledTimes(1);
   expect(rewards.create).not.toHaveBeenCalled();
   expect(presenter.prepare).not.toHaveBeenCalled();
+});
+
+it('does not erase another episode recovery when this episode is already unlocked', async () => {
+  persistAttempt('usr_synthetic', true, 'ep_other');
+  const { view } = await setup(false, false, true, (client) =>
+    client.offers.mockResolvedValue(GRANTED_ACCESS),
+  );
+
+  await waitFor(() => expect(view.getByLabelText('Continue to playback')).toBeEnabled());
+  expect(mockSecureStore.has(PENDING_REWARD_KEY)).toBe(true);
 });
 
 it('keeps actions unavailable during loading and can recover from an offline offer', async () => {
