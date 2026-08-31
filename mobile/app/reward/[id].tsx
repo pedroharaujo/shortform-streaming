@@ -7,7 +7,7 @@ import {
   createAppMeClient,
   createAppRewardsClient,
 } from '../../src/api/createAppClients';
-import { getApiConfiguration } from '../../src/config/appConfiguration';
+import { getApiConfiguration, getRewardedAdUnitId } from '../../src/config/appConfiguration';
 import { readRouteId } from '../../src/features/catalog/readRouteId';
 import { RewardScreen } from '../../src/features/rewards/RewardScreen';
 import { createTestAdPresenter } from '../../src/features/rewards/testAdPresenter';
@@ -23,7 +23,10 @@ export default function RewardRoute(): JSX.Element {
     }),
     [],
   );
-  const presenter = useMemo(() => createTestAdPresenter(environment, Platform.OS), [environment]);
+  const presenter = useMemo(
+    () => createTestAdPresenter(environment, Platform.OS, getRewardedAdUnitId()),
+    [environment],
+  );
   return (
     <RewardScreen
       key={readRouteId(params.id)}

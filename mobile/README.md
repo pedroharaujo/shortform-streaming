@@ -237,3 +237,37 @@ This is the sequence that proves the app can reach the local API. It was **not**
 ## Local Maestro flow
 
 `mobile/maestro/home-to-episode.yaml` walks launch → Home → series detail → listed episode. It is a local device check, not a CI emulator job. P2-T04 automation did **not** run Maestro; treat that as an **omission**, not a pass.
+
+## Publisher rewarded test ads (P3-T07-F1)
+
+Default builds use Google's Android demo app and rewarded unit. For a verified
+publisher SSV test, set both `EXPO_PUBLIC_ADMOB_ANDROID_APP_ID` and
+`EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID` in the process environment, alongside
+`EXPO_PUBLIC_API_ENVIRONMENT=local`. The IDs must have the same publisher prefix;
+missing, empty, malformed, or nonlocal overrides fail the Expo build. Examples in
+`.env.example` are fictional. Never put actual test configuration in committed
+files or log provider payloads.
+
+Expo freezes the pair in `extra.ads` and sets the native plugin's Android app ID
+with measurement initialization delayed. Rebuild the Android development client
+when the app ID changes or after adding `expo-device`; a Metro reload alone does
+not update native configuration. The backend reward intent must use exactly the
+configured rewarded unit and supply the server-generated SSV bindings.
+
+Publisher ads require an Android development build, the local API environment,
+and `expo-device.isDevice === false`. Physical or unidentified devices, release
+builds, and staging/production publisher requests fail before CMP/SDK activity.
+The SDK receives `testDeviceIdentifiers: ['EMULATOR']` before initialization.
+Fresh UMP consent and current-session checks still apply. Google's demo path
+remains available on local/staging Android; production rewards remain disabled.
+Client reward events never grant an entitlement: the backend must verify SSV.
+
+The development app also needs its own published AdMob UMP message and approved
+public privacy-policy URL. A missing message fails preparation before creating
+a reward intent; do not bypass consent to make the test proceed. Configure only
+the development app and keep production/privacy approval separate.
+
+References: [Expo Device](https://docs.expo.dev/versions/latest/sdk/device/#deviceisdevice)
+documents emulator detection; [Google test ads](https://developers.google.com/admob/android/test-ads)
+documents automatic Android emulator test-device handling. This configuration
+change alone is not evidence of a native ad request or verified callback.

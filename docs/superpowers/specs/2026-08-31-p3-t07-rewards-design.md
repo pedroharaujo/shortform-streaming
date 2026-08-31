@@ -32,8 +32,9 @@ to the intent; `ssv_user_id` supplies an independent binding. GET
 a playable URL. Static safe errors use the existing ErrorEnvelope.
 
 GET `/v1/rewards/admob/ssv` is unauthenticated at the HTTP layer but verifies
-Google ECDSA/SHA-256 signatures before database effects. Verify the exact raw
-query prefix before `signature` and `key_id`; reject duplicates, malformed
+Google ECDSA/SHA-256 signatures before database effects. Preserve the original
+query prefix before `signature` and `key_id`, percent-decode once to UTF-8 as
+in Google's reference verifier, preserving literal plus signs; reject duplicates, malformed
 encoding, missing fields, unknown keys and untrusted signatures. Keys come only
 from the fixed Google HTTPS key server, with bounded I/O and at most 24-hour
 cache lifetime. No configurable attacker-selected key URL or runtime fake key.
@@ -57,8 +58,11 @@ exercise P3-T07. Load the episode and server offer first. Show the episode title
 and permanent unlock description before the explicit Watch test ad action.
 Check account preference and UMP consent before SDK initialization; use delayed
 app measurement and non-personalized test requests. No analytics SDK activation.
-Use only Google's Android rewarded demo unit and demo app ID. Runtime production
-configuration disables the flow; no live unit configuration is introduced.
+Google's Android rewarded demo unit and demo app ID remain defaults. The approved
+P3-T07-F1 follow-up permits paired publisher app/unit overrides only for local
+development builds on Android emulators, which Google treats as test devices.
+Physical/unknown devices, release builds and non-local overrides fail closed.
+Runtime production configuration disables the flow; live ads remain excluded.
 
 The native adapter sets SSV options before loading/presenting. Reward-earned is
 UI feedback only; dismiss/error paths may poll for an already verified callback.

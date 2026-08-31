@@ -145,8 +145,36 @@ export function resolveApiConfiguration(
   return { environment: rawEnvironment, baseUrl, catalogTerritory };
 }
 
+export const DEMO_REWARDED_UNIT_ID = 'ca-app-pub-3940256099942544/5224354917';
+const DEMO_ANDROID_APP_ID = 'ca-app-pub-3940256099942544~3347511713';
+
+export function resolveAdsConfiguration(
+  source: Readonly<Record<string, string | undefined>>,
+  environment: ApiEnvironment,
+): { readonly androidAppId: string; readonly rewardedUnitId: string } {
+  const androidAppId = source.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID;
+  const rewardedUnitId = source.EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID;
+  if (androidAppId === undefined && rewardedUnitId === undefined) {
+    return { androidAppId: DEMO_ANDROID_APP_ID, rewardedUnitId: DEMO_REWARDED_UNIT_ID };
+  }
+  const appPublisher = /^ca-app-pub-(\d{16})~\d{10}$/.exec(androidAppId ?? '');
+  const unitPublisher = /^ca-app-pub-(\d{16})\/\d{10}$/.exec(rewardedUnitId ?? '');
+  if (
+    environment !== 'local' ||
+    !appPublisher ||
+    !unitPublisher ||
+    appPublisher[1] !== unitPublisher[1]
+  ) {
+    throw new EnvironmentConfigurationError(
+      'EXPO_PUBLIC_ADMOB_ANDROID_APP_ID and EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID must be a complete, valid same-publisher pair, supplied only for local emulator testing.',
+    );
+  }
+  return { androidAppId: androidAppId!, rewardedUnitId: rewardedUnitId! };
+}
+
 export default ({ config }: ConfigContext): ExpoConfig => {
   const api = resolveApiConfiguration(process.env);
+  const ads = resolveAdsConfiguration(process.env, api.environment);
 
   return {
     ...config,
@@ -172,12 +200,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'react-native-google-mobile-ads',
         {
-          androidAppId: 'ca-app-pub-3940256099942544~3347511713',
+          androidAppId: ads.androidAppId,
           delayAppMeasurementInit: true,
         },
       ],
     ],
     experiments: { typedRoutes: true },
-    extra: { api },
+    extra: { api, ads },
   };
 };

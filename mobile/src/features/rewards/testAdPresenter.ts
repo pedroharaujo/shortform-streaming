@@ -1,6 +1,7 @@
+import * as Device from 'expo-device';
+import { DEMO_REWARDED_UNIT_ID } from '../../../app.config';
 import type { RewardedAdPresenter } from './types';
 
-const TEST_UNIT = 'ca-app-pub-3940256099942544/5224354917';
 const failure = () => new Error('Test ad unavailable.');
 
 function loadSdk(): typeof import('react-native-google-mobile-ads') {
@@ -8,11 +9,20 @@ function loadSdk(): typeof import('react-native-google-mobile-ads') {
   return require('react-native-google-mobile-ads') as typeof import('react-native-google-mobile-ads');
 }
 
-export function createTestAdPresenter(environment: string, platform: string): RewardedAdPresenter {
+export function createTestAdPresenter(
+  environment: string,
+  platform: string,
+  rewardedUnitId: string = DEMO_REWARDED_UNIT_ID,
+): RewardedAdPresenter {
   let prepared = false;
   let presenting = false;
   function check(isCurrent: () => boolean): void {
     if (!['local', 'staging'].includes(environment) || platform !== 'android' || !isCurrent())
+      throw failure();
+    if (
+      rewardedUnitId !== DEMO_REWARDED_UNIT_ID &&
+      (!__DEV__ || environment !== 'local' || Device.isDevice !== false)
+    )
       throw failure();
   }
   return {
@@ -37,7 +47,7 @@ export function createTestAdPresenter(environment: string, platform: string): Re
         !prepared ||
         presenting ||
         intent.status !== 'pending' ||
-        intent.ad_unit_id !== TEST_UNIT ||
+        intent.ad_unit_id !== rewardedUnitId ||
         !intent.custom_data ||
         !intent.ssv_user_id ||
         !(Date.parse(intent.expires_at) > Date.now())
@@ -49,7 +59,7 @@ export function createTestAdPresenter(environment: string, platform: string): Re
         check(isCurrent);
         if (!(await sdk.AdsConsent.getConsentInfo()).canRequestAds) throw failure();
         check(isCurrent);
-        const ad = sdk.RewardedAd.createForAdRequest(TEST_UNIT, {
+        const ad = sdk.RewardedAd.createForAdRequest(rewardedUnitId, {
           requestNonPersonalizedAdsOnly: true,
           serverSideVerificationOptions: {
             userId: intent.ssv_user_id,

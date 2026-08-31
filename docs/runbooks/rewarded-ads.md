@@ -14,10 +14,12 @@ verified ad. P3-T08 owns the fuller offer-sheet experience.
   publisher-owned unit for the approved #96 callback test. Unset means Google's
   demo unit. Production rejects the override, including an empty value. Intent
   creation and signed callback processing both bind to the configured unit.
-- Mobile requires Android and a local/staging public environment. It only uses
-  Google's demo app and rewarded unit, with delayed native measurement init.
-  No production ad requests, mediation, client grant endpoint or configurable
-  trust keys. Native publisher-unit configuration remains follow-up work.
+- Mobile defaults to Google's demo Android app/unit in local/staging builds.
+  Paired publisher IDs are allowed only in local configuration, with Android
+  emulator and development-build safeguards before CMP/SDK activity. Measurement
+  initialization remains delayed and emulator test-device configuration precedes
+  SDK initialization. No production ad requests, mediation, client grant endpoint
+  or configurable trust keys. See `mobile/README.md` for rebuild requirements.
 - POST `/v1/rewards/intents` requires Firebase authentication, current account
   ads preference, explicit `accepted=true`, eligible locked episode, and a
   UUID `request_id`. The same user/key/context returns the same intent after a
@@ -33,7 +35,8 @@ verified ad. P3-T08 owns the fuller offer-sheet experience.
   only starts polling. Pending retries check status without another ad.
 - Privacy options remain accessible without a reward offer or an account.
   Changing account preferences alone does not edit UMP's consent record.
-- GET `/v1/rewards/admob/ssv` verifies the exact raw signed query prefix with
+- GET `/v1/rewards/admob/ssv` percent-decodes the signed query prefix once as
+  UTF-8, preserving parameter order and literal plus signs, then verifies it with
   ECDSA/SHA-256 using only Google's fixed HTTPS public-key endpoint. Parsing is
   bounded and rejects ambiguous fields, malformed encodings, invalid bindings,
   network/unit mismatches, bad signatures, stale timestamps and expired intents.
@@ -136,9 +139,9 @@ is a separate authorized operation, never a migration rollback shortcut.
 ## Temporary callback endpoint (P3-T07-F1, 2026-08-31)
 
 The user approved a supervised temporary public **callback-only** endpoint.
-This does not authorize publishing Django or changing staging ingress. Mobile
-still uses Google demo IDs; publisher-owned native configuration/rebuild and
-emulator-only safeguards remain the next slice before requesting those ads.
+This does not authorize publishing Django or changing staging ingress. At this
+stage mobile still used Google demo IDs. Publisher-owned native configuration
+and emulator safeguards were added in the subsequent attempt recorded below.
 
 Run the task-owned local backend on `127.0.0.1:18000` with its dedicated synthetic
 PostgreSQL database, process-only test configuration, and no request output.
@@ -236,6 +239,57 @@ drift after regenerating the revised API description; staging those generated
 artifacts and repeating the complete gate passed. Independent temporary-probe
 review found no P1/P2 and repeated all 10 isolated checks successfully.
 
+## Native publisher attempt (P3-T07-F1, 2026-08-31)
+
+The user approved continuing with the development Android app and rewarded unit.
+The native configuration now accepts a validated same-publisher pair only in
+the local environment. Defaults remain Google's demo pair. Publisher attempts
+require Android, `__DEV__`, and `expo-device.isDevice === false`; physical,
+unknown, release, staging and production contexts fail before CMP/SDK activity.
+Set the emulator test-device configuration before SDK initialization. UMP,
+account preference, session freshness and exact server-selected unit checks
+remain mandatory; no client grant or signature bypass was added.
+
+- `expo prebuild --platform android --no-install` then
+  `expo run:android --no-bundler`, via the repository JDK helper and process-only
+  local variables: **passed**, installed on Pixel_9. Checked emulator identity,
+  embedded app ID matching the supplied configuration and delayed measurement.
+- Reused an existing generated three-second portrait clip, without uploading
+  media. Provider readiness checked in memory; unsigned and expired access both
+  returned 403, valid signed HLS returned 200. Only the dedicated synthetic
+  database's media fixture changed. This is not native post-reward playback proof.
+- Started Firebase Auth emulator, local Django, Metro and the callback-only
+  bridge/tunnel within one supervised test window. No dashboard probe override.
+  Public unsigned callback returned empty no-store 400; admin returned empty
+  no-store 404. Tunnel inspection remained off, captured requests zero.
+- Native locked-player entry showed the episode reward. Synthetic account ads
+  preference was on and analytics off. Tapped **Watch test ad** once. UMP reported
+  publisher misconfiguration because no form was configured for the app ID;
+  the UI showed the safe consent/ad-service error. AdMob's European regulations
+  page also showed first-message setup. No publisher test ad was displayed.
+- Post-failure read-only database observation: **0 intents, 0 verified
+  transaction records, 0 grants, 0 entitlements**. Preparation failed before
+  intent creation. No callback, reward or playback result was fabricated.
+- **Next setup blocker:** configure a European regulations message for only the
+  development app, with its approved public privacy-policy URL. No approved URL
+  was found in the repository. Do not invent legal terms, reuse unrelated apps'
+  policies, bypass UMP or enable account-wide automatic messages. Production
+  disclosure/D-020 approval remains separate. The message has not been published.
+- Independent mobile/config review found no P1/P2. A separate review found an
+  orphan-process cleanup issue in the temporary Windows supervisor. Enrolling
+  the supervisor in a kill-on-close Windows Job before spawning children fixed
+  it; two isolated normal-exit/crash cases passed, and re-review approved it.
+- `$env:EXPO_NO_DOTENV='1'; pnpm check`: **passed**, repository 49, backend 280,
+  mobile 18 suites / 90 tests, including lint/format/types/migrations, API contract
+  and Expo configuration gates. `$env:EXPO_NO_DOTENV='1'; pnpm mobile:check`
+  also passed. Known Windows cache/staticfiles warnings were non-failing.
+- Stopped the temporary supervisor and all five test-service ports were closed.
+  The saved callback URL needs a new bounded service window before the next
+  attempt; leaving it saved does not leave a server running.
+
+P3-T07/#96 remain incomplete: a completed publisher Test Ad, genuine Google SSV,
+one entitlement and fresh authorized Android playback have not been observed.
+
 ## Provider references
 
 - [Google SSV verification and keys](https://developers.google.com/admob/android/ssv)
@@ -243,4 +297,6 @@ review found no P1/P2 and repeated all 10 isolated checks successfully.
 - [Google test ad units](https://developers.google.com/admob/android/test-ads)
 - [React Native rewarded ads and SSV](https://docs.page/invertase/react-native-google-mobile-ads/displaying-ads)
 - [UMP consent integration](https://docs.page/invertase/react-native-google-mobile-ads/european-user-consent)
+- [Create an AdMob European regulations message](https://support.google.com/admob/answer/10113207)
+- [Required app privacy-policy URL](https://support.google.com/admob/answer/10113106)
 - [Adapter 16.0.0 native dependency versions](https://github.com/invertase/react-native-google-mobile-ads/blob/v16.0.0/package.json)

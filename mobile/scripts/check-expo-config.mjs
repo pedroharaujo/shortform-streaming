@@ -43,7 +43,7 @@ function runExpoConfig(environment) {
   return spawnSync(process.execPath, [EXPO_CLI, 'config', '--type', 'public', '--json'], {
     cwd: MOBILE_ROOT,
     encoding: 'utf8',
-    env: { ...baseEnvironment(), ...environment },
+    env: { ...baseEnvironment(), EXPO_NO_DOTENV: '1', ...environment },
   });
 }
 
@@ -102,6 +102,8 @@ function checkResolvedConfiguration() {
     (plugin) => Array.isArray(plugin) && plugin[0] === 'react-native-google-mobile-ads',
   );
   if (
+    resolved.extra?.ads?.androidAppId !== 'ca-app-pub-3940256099942544~3347511713' ||
+    resolved.extra?.ads?.rewardedUnitId !== 'ca-app-pub-3940256099942544/5224354917' ||
     adsPlugin?.[1]?.androidAppId !== 'ca-app-pub-3940256099942544~3347511713' ||
     adsPlugin?.[1]?.delayAppMeasurementInit !== true
   ) {
@@ -196,3 +198,54 @@ checkMissingEnvironmentFails();
 checkInvalidEnvironmentFails();
 checkMissingTerritoryFails();
 checkInvalidTerritoryFails();
+
+const publisher = {
+  EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: 'ca-app-pub-1111111111111111~3333333333',
+  EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID: 'ca-app-pub-1111111111111111/2222222222',
+};
+const publisherResult = runExpoConfig({ ...REQUIRED_ENVIRONMENT, ...publisher });
+if (publisherResult.status !== 0) {
+  fail('local publisher test config must resolve');
+} else {
+  const config = JSON.parse(publisherResult.stdout);
+  const plugin = config.plugins.find(
+    (item) => Array.isArray(item) && item[0] === 'react-native-google-mobile-ads',
+  );
+  if (
+    config.extra?.ads?.androidAppId !== publisher.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID ||
+    config.extra?.ads?.rewardedUnitId !== publisher.EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID ||
+    plugin?.[1]?.androidAppId !== publisher.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID ||
+    plugin?.[1]?.delayAppMeasurementInit !== true
+  )
+    fail('publisher IDs must be frozen in extra.ads and the native plugin');
+}
+for (const overrides of [
+  { ...publisher, EXPO_PUBLIC_API_ENVIRONMENT: 'staging' },
+  { ...publisher, EXPO_PUBLIC_API_ENVIRONMENT: 'production' },
+  { EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: publisher.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID },
+  { EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID: publisher.EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID },
+  {
+    ...publisher,
+    EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: publisher.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID + '\n',
+  },
+  { ...publisher, EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: '' },
+  { ...publisher, EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID: '' },
+  { ...publisher, EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: 'malformed' },
+  { ...publisher, EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID: 'malformed' },
+  { ...publisher, EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID: 'ca-app-pub-9999999999999999/2222222222' },
+  { ...publisher, EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: ' ca-app-pub-1111111111111111~3333333333' },
+  { EXPO_PUBLIC_API_ENVIRONMENT: 'staging', EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: '' },
+]) {
+  const result = runExpoConfig({
+    ...REQUIRED_ENVIRONMENT,
+    EXPO_PUBLIC_API_BASE_URL: 'https://api.example.invalid',
+    ...overrides,
+  });
+  if (result.status === 0 || !`${result.stdout}${result.stderr}`.includes('EXPO_PUBLIC_ADMOB'))
+    fail('invalid publisher scope/pair must fail with an AdMob configuration error');
+}
+
+if (!process.exitCode)
+  process.stdout.write(
+    'Publisher test config embeds paired IDs; invalid pairs and nonlocal overrides fail closed.\n',
+  );
