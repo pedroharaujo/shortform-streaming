@@ -48,6 +48,24 @@ For each deferral, record:
 
 ## Deferred validation register
 
+### P4-T01 F2a — Firebase Analytics native default-off build
+
+- **Source:** P4-T01 F2a; D-029; implementation revision to be recorded after merge.
+- **Disabled/fail-closed state:** every native Analytics collection and advertising
+  identifier default is off, and no application flow calls the consent controller.
+  This slice cannot emit an analytics event.
+- **Prerequisites:** clean Android development build, generated Firebase test
+  project configuration, supported Android device/emulator, and Firebase DebugView.
+  Do not record configuration contents, device identifiers, or provider payloads.
+- **Actions:** install the clean build, clear app data, cold-start it, sign in and
+  sign out with a synthetic account, and inspect DebugView plus device logs.
+- **Expected:** the app builds and starts; no Analytics events or advertising
+  identifiers are emitted; sign-in and sign-out do not change collection state.
+- **Evidence:** redacted build result, device/OS/build revision, DebugView absence
+  observation, date, and independent reviewer.
+- **Blocks:** P6-T03 completion. Consent-on provider observation remains blocked
+  until P4-T01 F2b wires the controller to the server-owned preference.
+
 ### P3-T08 — Android locked-episode rewarded-ad path
 
 - **Source:** PR #100; D-029; implementation revision `dc0c6d7` plus its merge revision.

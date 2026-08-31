@@ -68,7 +68,13 @@ Every event except `account_deleted` also includes the shared context above.
 
 ## Identity and consent sequence
 
-P4-T01-F2 must keep native automatic collection off. After `/v1/me` confirms
+P4-T01-F2a adds the native Analytics module and consent controller while all
+native automatic collection, screen reporting, advertising identifiers, and
+advertising consent default off. Nothing calls the controller in F2a, so this
+slice still sends no analytics. P4-T01-F2b connects the controller to the
+account lifecycle described below.
+
+After `/v1/me` confirms
 analytics consent, the adapter may enable collection and link only the opaque
 profile ID. Anonymous app-instance history may link to that profile only in the
 same consented installation. Withdrawal, sign-out, account deletion, or session
@@ -78,8 +84,10 @@ preference in the current MVP, so collection stays off for them.
 
 ## Deferred work
 
-- P4-T01-F2: Firebase adapter, default-off native settings, consent and identity
-  cleanup.
+- P4-T01-F2a: Firebase adapter, default-off native settings, and the tested
+  consent/identity controller.
+- P4-T01-F2b: connect that controller to sign-in, preference changes, sign-out,
+  deletion, and session replacement.
 - P4-T01-F3: free discovery/playback triggers and ordered trail tests.
 - P4-T01-F4: reward diagnostics and the smallest typed backend boundary.
 - P4-T06: persistence and routing for campaign/deferred-deep-link fields.
