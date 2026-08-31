@@ -870,6 +870,14 @@ Evidence (2026-08-28): P3-T01 / #84; AccessPolicy + `GET /v1/offers/{episode_id}
 
 #### P3-T07 — Implement rewarded-ad intent and verified reward grant
 
+**Engineering evidence (2026-08-31):** Test-only backend/Android implementation
+and independent reviews completed; full repository gate passes (232 backend,
+82 mobile tests), Android native build and JS export pass. Production remains
+disabled. The authentic provider callback → entitlement → on-device playback
+journey is still a blocker, so P3-T07 is not complete. See
+`docs/runbooks/rewarded-ads.md` for controls, exact commands and device evidence.
+Remaining provider evidence: [P3-T07-F1 / #96](https://github.com/pedroharaujo/shortform-streaming/issues/96).
+
 **Description:** Create a server reward intent bound to user/episode, show an AdMob rewarded ad with custom data, verify server-side callbacks, and grant one idempotent episode entitlement.
 
 **Objective:** Monetize non-payers without allowing fabricated client rewards.

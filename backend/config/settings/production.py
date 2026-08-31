@@ -13,6 +13,9 @@ if missing:
 
 from .base import *  # noqa: E402,F403
 
+if os.environ.get("REWARDED_ADS_MODE", "disabled").strip().lower() != "disabled":
+    raise ImproperlyConfigured("Production rewarded ads are disabled pending release approval.")
+
 ALLOWED_HOSTS = [
     host.strip() for host in os.environ["DJANGO_ALLOWED_HOSTS"].split(",") if host.strip()
 ]

@@ -16,6 +16,7 @@ export default function PlayerRoute(): JSX.Element {
       catalog={catalog}
       episodeId={episodeId}
       onClose={() => router.back()}
+      onReward={(id) => router.replace({ pathname: '/reward/[id]', params: { id } })}
       playback={playback}
       progress={progress}
     />

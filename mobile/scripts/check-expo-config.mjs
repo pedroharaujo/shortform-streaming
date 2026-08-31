@@ -98,6 +98,16 @@ function checkResolvedConfiguration() {
   }
 
   const offenders = [];
+  const adsPlugin = resolved.plugins?.find(
+    (plugin) => Array.isArray(plugin) && plugin[0] === 'react-native-google-mobile-ads',
+  );
+  if (
+    adsPlugin?.[1]?.androidAppId !== 'ca-app-pub-3940256099942544~3347511713' ||
+    adsPlugin?.[1]?.delayAppMeasurementInit !== true
+  ) {
+    fail('rewarded ads must use the Google demo app and delay native measurement initialization.');
+    return;
+  }
   walk(resolved, '', (key, value, keyPath) => {
     if (SENSITIVE_NAME.test(key)) {
       offenders.push(`${keyPath} (sensitive key name)`);

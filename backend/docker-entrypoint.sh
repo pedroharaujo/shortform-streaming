@@ -30,6 +30,7 @@ run_web() {
     --graceful-timeout 30 \
     --keep-alive 5 \
     --access-logfile - \
+    --access-logformat '%(t)s %(m)s %(U)s %(s)s %(b)s' \
     --error-logfile - \
     --worker-tmp-dir /dev/shm \
     config.wsgi:application

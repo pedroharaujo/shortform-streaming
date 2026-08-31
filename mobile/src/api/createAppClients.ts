@@ -19,6 +19,8 @@ import { createPlaybackClient } from './playback/playbackClient';
 import type { PlaybackClient } from './playback/types';
 import { createProgressClient } from './progress/progressClient';
 import type { ProgressClient } from './progress/types';
+import { createRewardsClient } from './rewards/rewardsClient';
+import type { RewardsClient } from './rewards/types';
 
 function appCatalogOptions() {
   const configuration = getApiConfiguration();
@@ -72,4 +74,8 @@ export function createAppAccountClient(): AccountClient {
     baseUrl: getApiConfiguration().baseUrl,
     getCredential: getSessionCredential,
   });
+}
+
+export function createAppRewardsClient(): RewardsClient {
+  return createRewardsClient({ ...appCatalogOptions(), getCredential: getSessionCredential });
 }

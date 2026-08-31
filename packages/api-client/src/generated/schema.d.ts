@@ -212,6 +212,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/rewards/{reward_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check the authenticated owner's reward
+         * @description Owner-only status, never a playable URL. granted records a verified entitlement; playback authorization must still recheck current rights and availability.
+         */
+        get: operations["v1_rewards_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/rewards/admob/ssv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Provider-only AdMob ECDSA verification. Raw signed query required; never a client grant. Test mode only. Preserve the exact query prefix before signature and key_id (last, in that order). Duplicate verified delivery is acknowledged without granting again. Invalid/mismatched/expired callbacks return 400. */
+        get: operations["v1_rewards_admob_ssv_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/rewards/intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept an episode reward offer
+         * @description Authenticated Android test-only intent. Requires ads preference and current catalog eligibility. The request_id is an account-scoped idempotency UUID. Reuse it after a lost response; changing the episode or context returns 409. No client field can grant access. expires_at is 15 minutes after creation.
+         */
+        post: operations["v1_rewards_intents_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/series/{public_id}": {
         parameters: {
             query?: never;
@@ -461,6 +518,32 @@ export interface components {
          * @example ser_1a2b3c4d5e6f
          */
         PublicId: string;
+        RewardIntent: {
+            /** Format: uuid */
+            id: string;
+            episode_id: string;
+            readonly status: components["schemas"]["RewardIntentStatusEnum"];
+            /** Format: date-time */
+            expires_at: string;
+            readonly reward_description: string;
+            ad_unit_id: string;
+            ssv_user_id: string;
+            custom_data: string;
+        };
+        RewardIntentCreateRequest: {
+            episode_id: string;
+            /** Format: uuid */
+            request_id: string;
+            accepted: boolean;
+        };
+        /**
+         * @description * `pending` - pending
+         *     * `granted` - granted
+         *     * `expired` - expired
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        RewardIntentStatusEnum: "pending" | "granted" | "expired" | "unavailable";
         /**
          * @description * `entitlement` - entitlement
          *     * `free` - free
@@ -1023,6 +1106,165 @@ export interface operations {
             };
             /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_rewards_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reward_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardIntent"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_rewards_admob_ssv_retrieve: {
+        parameters: {
+            query: {
+                ad_network: string;
+                ad_unit: string;
+                custom_data: string;
+                key_id: string;
+                reward_amount: string;
+                reward_item: string;
+                signature: string;
+                timestamp: string;
+                transaction_id: string;
+                user_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_rewards_intents_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
+                "X-Language": string;
+                /** @description Client platform. Required. Values: ios, android. */
+                "X-Platform": "android" | "ios";
+                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
+                "X-Territory": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewardIntentCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RewardIntentCreateRequest"];
+                "multipart/form-data": components["schemas"]["RewardIntentCreateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardIntent"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardIntent"];
+                };
+            };
+            /** @description Missing or malformed catalog context headers. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

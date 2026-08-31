@@ -11,6 +11,20 @@ Owner boxes that remain open for the **ads-only** P0-T03 slice: legal/privacy ju
 
 ## How to read status labels
 
+### P3-T07 implementation update (2026-08-31)
+
+This update supersedes the historical planned AdMob row for the **test-only
+Android implementation**. Production processing is disabled. It does not approve
+D-020, legal bases, store disclosures or production SDK activation.
+
+| Field / processor | Purpose and controls | Deletion / retention |
+|---|---|---|
+| AdMob / UMP through react-native-google-mobile-ads 16.0.0 (Google Ads 24.6.0, UMP 3.2.0) | Demo app/unit only; explicit episode reward choice and account ads preference; fresh UMP permission before Ads SDK init, delayed native measurement, non-personalized requests. UMP privacy choices are accessible independently of reward eligibility. No new Analytics SDK or events. Device/network/consent processing by these SDKs still needs production disclosure review. | UMP privacy form manages provider consent; account preference blocks new reward attempts but is not provider erasure. Production provider retention, transfer and deletion procedures remain pending D-020. |
+| RewardIntent account/episode/context, random per-intent custom_data and ssv_user_id, request UUID, expiry, verified transaction ID/timestamp and grant time | Owner-only no-store API; opaque binding sent to AdMob instead of UID/email. Django validates authentic callback before a permanent episode grant. Raw query, signature and provider payload are not persisted. Development/gunicorn query logging is suppressed; ingress redaction remains a release gate. | Intents expire for redemption after 15 minutes, which is not a database retention period. Intents and entitlements cascade on account deletion. Automated cleanup/production retention remains pending D-020. |
+
+See `../runbooks/rewarded-ads.md` for callback trust, rollback and the outstanding
+provider end-to-end evidence. Test fixtures and device accounts are synthetic.
+
 ### P2-T02 implementation update (2026-08-31)
 
 The historical rows below are superseded for the following consumer-account

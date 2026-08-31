@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.playback",
     "apps.entitlements",
     "apps.progress",
+    "apps.advertising",
 ]
 
 MIDDLEWARE = [
@@ -123,6 +124,13 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "config.exceptions.exception_handler",
 }
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {"redact_query": {"()": "config.logging.RedactQueryString"}},
+    "loggers": {"django.server": {"filters": ["redact_query"]}},
+}
+
 # Identity: local/CI default is mock verification. Production settings force
 # firebase-admin and fail closed when a token cannot be verified.
 FIREBASE_AUTH_MODE = os.environ.get("FIREBASE_AUTH_MODE", "").strip().lower()
@@ -137,6 +145,11 @@ BUNNY_STREAM_CDN_HOSTNAME = os.environ.get("BUNNY_STREAM_CDN_HOSTNAME", "").stri
 BUNNY_STREAM_TOKEN_KEY = os.environ.get("BUNNY_STREAM_TOKEN_KEY", "").strip()
 PLAYBACK_TOKEN_TTL_SECONDS = 600
 FAKE_PLAYBACK_CDN_HOST = "video.example.test"
+
+# P3-T07 is an explicit local test integration; no live-ad mode is implemented.
+REWARDED_ADS_MODE = os.environ.get("REWARDED_ADS_MODE", "disabled").strip().lower()
+if REWARDED_ADS_MODE not in {"disabled", "test"}:
+    raise ImproperlyConfigured("REWARDED_ADS_MODE must be disabled or test.")
 
 # Staff signed PUT landing zone (P2-T06-F1). Empty disables minting.
 # Local settings default to "fake". Production rejects "fake".

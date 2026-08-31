@@ -11,4 +11,5 @@ urlpatterns = [
     path("", include("apps.playback.urls")),
     path("", include("apps.entitlements.urls")),
     path("", include("apps.progress.urls")),
+    path("", include("apps.advertising.urls")),
 ]
