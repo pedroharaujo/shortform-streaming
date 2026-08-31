@@ -14,7 +14,14 @@ from tests.test_production_settings import IMPORT_VALID_ENVIRONMENT, run_setting
 def test_key_cache_refreshes_and_fails_closed(
     ephemeral_signer: ec.EllipticCurvePrivateKey, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    query = signed_query(ephemeral_signer, {"custom_data": "a" * 43, "ssv_user_id": "b" * 43})
+    query = signed_query(
+        ephemeral_signer,
+        {
+            "custom_data": "a" * 43,
+            "ssv_user_id": "b" * 43,
+            "ad_unit_id": "ca-app-pub-3940256099942544/5224354917",
+        },
+    )
     verification.verify_callback(query)
 
     def outage() -> Any:

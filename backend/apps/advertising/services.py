@@ -20,7 +20,6 @@ from apps.catalog.models import Episode
 from apps.entitlements.models import EntitlementSource, EpisodeEntitlement
 from apps.entitlements.policy import OffersLocked, evaluate_episode_offers
 
-TEST_AD_UNIT = "ca-app-pub-3940256099942544/5224354917"
 REWARD_DESCRIPTION = "Watch one rewarded ad to unlock this episode permanently."
 
 
@@ -88,7 +87,7 @@ def create_reward_intent(
             territory=context.territory,
             platform=context.platform,
             language=context.language,
-            ad_unit_id=TEST_AD_UNIT,
+            ad_unit_id=settings.REWARDED_ADS_TEST_UNIT_ID,
             expires_at=timezone.now() + timedelta(minutes=15),
         ), True
 
@@ -134,7 +133,7 @@ def grant_verified_reward(callback: VerifiedReward) -> None:
             raise InvalidCallback()
         if (
             callback.ad_unit != intent.ad_unit_id.rsplit("/", 1)[-1]
-            or intent.ad_unit_id != TEST_AD_UNIT
+            or intent.ad_unit_id != settings.REWARDED_ADS_TEST_UNIT_ID
         ):
             raise InvalidCallback()
         if intent.granted_at is not None:

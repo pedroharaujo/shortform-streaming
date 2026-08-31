@@ -4,6 +4,10 @@ Task: P3-T07. Authority: D-005, D-007, D-027, ADR 0002/0003,
 MVP_PRODUCT_BRIEF and STORE_COMPLIANCE_MATRIX. The user authorized implementation
 through a focused PR without routine approval pauses; no public activation.
 
+The separately approved [P3-T07-F1 callback test](2026-08-31-p3-t07-callback-test-design.md)
+extends this scope to a temporary callback-only public test and local publisher
+unit configuration. It does not authorize production activation.
+
 ## Design
 
 Use the existing Django modular monolith and PostgreSQL transaction boundary.

@@ -10,9 +10,14 @@ verified ad. P3-T08 owns the fuller offer-sheet experience.
 
 - Default `REWARDED_ADS_MODE=disabled`. Local Django settings with `DEBUG=True`
   may opt into `test`; production settings reject every non-disabled value.
+- Local test mode may explicitly set `REWARDED_ADS_TEST_UNIT_ID` to a
+  publisher-owned unit for the approved #96 callback test. Unset means Google's
+  demo unit. Production rejects the override, including an empty value. Intent
+  creation and signed callback processing both bind to the configured unit.
 - Mobile requires Android and a local/staging public environment. It only uses
   Google's demo app and rewarded unit, with delayed native measurement init.
-  No live ad IDs, mediation, client grant endpoint or configurable trust keys.
+  No production ad requests, mediation, client grant endpoint or configurable
+  trust keys. Native publisher-unit configuration remains follow-up work.
 - POST `/v1/rewards/intents` requires Firebase authentication, current account
   ads preference, explicit `accepted=true`, eligible locked episode, and a
   UUID `request_id`. The same user/key/context returns the same intent after a
@@ -127,6 +132,56 @@ is a separate authorized operation, never a migration rollback shortcut.
 - **Blocked:** genuine Google SSV delivery, entitlement and authorized device
   playback in one journey. Shared demo ad display is not this evidence; #96
   records the approved test-configuration follow-up. Production remains off.
+
+## Temporary callback endpoint (P3-T07-F1, 2026-08-31)
+
+The user approved a supervised temporary public **callback-only** endpoint.
+This does not authorize publishing Django or changing staging ingress. Mobile
+still uses Google demo IDs; publisher-owned native configuration/rebuild and
+emulator-only safeguards remain the next slice before requesting those ads.
+
+Run the task-owned local backend on `127.0.0.1:18000` with its dedicated synthetic
+PostgreSQL database, process-only test configuration, and no request output.
+Run `python backend/config/reward_callback_bridge.py` on `127.0.0.1:18081`.
+Only the bridge may be tunneled. It preserves the exact GET callback query,
+rejects other paths/methods/bodies, strips caller headers, and returns empty
+200/400/503 responses only for accepted requests; validation failures also use
+empty fixed status responses. It never forwards bodies, headers, or redirects
+from Django. No admin/API route, debug page, auth header, or cookie is exposed.
+
+The bridge serializes requests, limits forwarding to 30/minute, bounds headers
+and query size, interrupts client/upstream sockets at absolute deadlines, and
+expires within one hour. Supervise and stop the tunnel/backend process trees too;
+on Windows the Python launcher can have a child process. Do not leave a tunnel
+running after bridge expiry or activate automatic restart. Rollback stops these
+task-owned processes; it does not change production, staging, or any schema.
+
+Before sending real callbacks through ngrok, confirm full capture is disabled,
+there are no log exports, and the agent runs with `--inspect=false --log=false`.
+Probe using harmless markers first and inspect cloud **request details**: the
+request URL/query, headers, body and captured bytes must be absent. A path-only
+table view is not sufficient. Cloud path/status/network metadata remains subject
+to the account's retention window; this is not a production privacy approval.
+
+Observed during this session: matching ngrok account/endpoint, full capture
+disabled, no configured log exports, local captured requests zero. The cloud
+probe detail displayed no Request URL, URL Length 0, Headers Captured 0 and
+Captured Bytes 0; raw display contained method/path/host only. Cloud metadata
+retention was one day. Public probes returned empty no-store 404 for admin and
+intent routes, and 503 for the callback while its backend was disconnected.
+No genuine callback or binding was used to test logging.
+
+After connecting the dedicated synthetic backend, public probes returned empty
+no-store 400 for an unsigned callback, 404 for admin/intent routes and 405 for
+POST to the callback. The one-hour process supervisor shuts down the tunnel,
+bridge and backend together. The live address is session-local, not committed.
+
+Validation: `$env:EXPO_NO_DOTENV='1'; pnpm check` **passed**: repository 49,
+backend 279, mobile 18 suites/82 tests, including contract/config/type/lint gates.
+Independent bridge and publisher-configuration review found one timeout P2;
+its drip-fed upstream regression failed before the fix and passed afterward.
+Reviewer rechecked with no remaining P1/P2; independent bridge/settings run:
+50 passed. No native publisher-unit ad or genuine Google grant is claimed yet.
 
 ## Provider references
 

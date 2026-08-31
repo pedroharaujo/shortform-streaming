@@ -26,6 +26,7 @@ def headers(uid: str = "synthetic-reward-user") -> dict[str, Any]:
 def reward_setup(settings: Any) -> Any:
     settings.DEBUG = True
     settings.REWARDED_ADS_MODE = "test"
+    settings.REWARDED_ADS_TEST_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
     profile = get_or_create_profile("synthetic-reward-user")
     profile.ads_consent = True
     profile.save(update_fields=["ads_consent"])
@@ -111,4 +112,10 @@ def test_intent_fails_closed(client: Client, reward_setup: Any, settings: Any, c
 def test_client_cannot_supply_grant_or_user(client: Client, reward_setup: Any) -> None:
     _, episode = reward_setup
     assert create_intent(client, episode, status="granted", user_id="other").status_code == 400
+    assert (
+        create_intent(
+            client, episode, ad_unit_id="ca-app-pub-1111111111111111/2222222222"
+        ).status_code
+        == 400
+    )
     assert not EpisodeEntitlement.objects.exists()

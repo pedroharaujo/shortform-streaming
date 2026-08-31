@@ -150,6 +150,8 @@ FAKE_PLAYBACK_CDN_HOST = "video.example.test"
 REWARDED_ADS_MODE = os.environ.get("REWARDED_ADS_MODE", "disabled").strip().lower()
 if REWARDED_ADS_MODE not in {"disabled", "test"}:
     raise ImproperlyConfigured("REWARDED_ADS_MODE must be disabled or test.")
+# P3-T07-F1: only local settings may load a publisher-owned test unit override.
+REWARDED_ADS_TEST_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
 
 # Staff signed PUT landing zone (P2-T06-F1). Empty disables minting.
 # Local settings default to "fake". Production rejects "fake".

@@ -47,7 +47,7 @@ def ephemeral_signer(monkeypatch: pytest.MonkeyPatch) -> Iterator[ec.EllipticCur
 def signed_query(key: ec.EllipticCurvePrivateKey, intent: dict[str, Any], **changes: Any) -> str:
     fields = {
         "ad_network": "5450213213286189855",
-        "ad_unit": "5224354917",
+        "ad_unit": intent["ad_unit_id"].rsplit("/", 1)[-1],
         "custom_data": intent["custom_data"],
         "reward_amount": "1",
         "reward_item": "test reward",
@@ -66,19 +66,27 @@ def signed_query(key: ec.EllipticCurvePrivateKey, intent: dict[str, Any], **chan
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    "unit_id",
+    ["ca-app-pub-3940256099942544/5224354917", "ca-app-pub-1111111111111111/2222222222"],
+)
 def test_verified_callback_unlocks_once_and_playback_still_checks_rights(
     client: Client,
     reward_setup: Any,
     ephemeral_signer: ec.EllipticCurvePrivateKey,
     monkeypatch: pytest.MonkeyPatch,
+    settings: Any,
+    unit_id: str,
 ) -> None:
     from apps.playback.providers.fake import FakeVideoProvider
 
     profile, episode = reward_setup
+    settings.REWARDED_ADS_TEST_UNIT_ID = unit_id
     provider = FakeVideoProvider(hmac_key="synthetic-rewards", ttl_seconds=600)
     provider.seed_ready_asset(episode.media_assets.get().provider_asset_id)
     monkeypatch.setattr("apps.playback.views.get_video_provider", lambda: provider)
     data = create_intent(client, episode).json()
+    assert data["ad_unit_id"] == unit_id
     before = client.post(f"/v1/playback/{episode.public_id}/authorize", **headers())
     assert before.json()["decision"] == "locked"
     query = signed_query(ephemeral_signer, data)
@@ -100,13 +108,17 @@ def test_verified_callback_unlocks_once_and_playback_still_checks_rights(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
+    "unit_id",
+    ["ca-app-pub-3940256099942544/5224354917", "ca-app-pub-1111111111111111/2222222222"],
+)
+@pytest.mark.parametrize(
     "field,value",
     [
         ("user_id", "wrong-user"),
         ("user_id", "synthetic-\u00e9"),
         ("custom_data", "unknown-intent"),
         ("custom_data", "synthetic-\x00"),
-        ("ad_unit", "123"),
+        ("ad_unit", "3333333333"),
         ("ad_network", "123"),
         ("timestamp", "0"),
         ("timestamp", "999999999999999999999"),
@@ -121,8 +133,11 @@ def test_signed_mismatch_never_grants(
     ephemeral_signer: ec.EllipticCurvePrivateKey,
     field: str,
     value: str,
+    settings: Any,
+    unit_id: str,
 ) -> None:
     _, episode = reward_setup
+    settings.REWARDED_ADS_TEST_UNIT_ID = unit_id
     data = create_intent(client, episode).json()
     query = signed_query(ephemeral_signer, data, **{field: value})
     assert client.get(f"{CALLBACK}?{query}").status_code == 400
@@ -173,10 +188,17 @@ def test_forgery_and_ambiguous_query_fail_closed(
         "policy",
         "deletion",
         "free",
+        "unit-config",
+        "disabled",
+        "production",
     ],
 )
 def test_rechecks_eligibility_and_deletion_at_grant(
-    client: Client, reward_setup: Any, ephemeral_signer: ec.EllipticCurvePrivateKey, change: str
+    client: Client,
+    reward_setup: Any,
+    ephemeral_signer: ec.EllipticCurvePrivateKey,
+    change: str,
+    settings: Any,
 ) -> None:
     profile, episode = reward_setup
     data = create_intent(client, episode).json()
@@ -205,6 +227,13 @@ def test_rechecks_eligibility_and_deletion_at_grant(
         AccessPolicy.objects.create(series=episode.series, rewarded_ad_enabled=False)
     elif change == "free":
         AccessPolicy.objects.create(series=episode.series, free_episode_order_max=10)
+    elif change == "unit-config":
+        # A different publisher cannot take over an existing intent, even with the same suffix.
+        settings.REWARDED_ADS_TEST_UNIT_ID = "ca-app-pub-1111111111111111/5224354917"
+    elif change == "disabled":
+        settings.REWARDED_ADS_MODE = "disabled"
+    elif change == "production":
+        settings.DEBUG = False
     else:
         request_account_deletion(
             VerifiedToken(uid=profile.firebase_uid, auth_time=int(timezone.now().timestamp()))
