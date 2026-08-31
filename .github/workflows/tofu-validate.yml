@@ -37,3 +37,6 @@ jobs:
       - name: Validate
         working-directory: infra/environments/staging
         run: tofu validate
+      - name: Test secret configuration with a mocked provider
+        working-directory: infra/environments/staging
+        run: tofu test -no-color

@@ -1,3 +1,19 @@
+variable "secret_versions" {
+  type        = map(string)
+  description = "Secret version selectors by runtime env name, never values. Omitted entries use latest for compatibility; pin positive numeric versions before rotation."
+  default     = {}
+  nullable    = false
+
+  validation {
+    condition = length(setsubtract(toset(keys(var.secret_versions)), toset([
+      "DJANGO_SECRET_KEY", "DATABASE_URL", "BUNNY_STREAM_API_KEY", "BUNNY_STREAM_TOKEN_KEY"
+      ]))) == 0 && alltrue([
+      for version in values(var.secret_versions) : can(regex("^(latest|[1-9][0-9]*)$", version))
+    ])
+    error_message = "secret_versions accepts only the four supported runtime env names and latest or positive numeric version strings."
+  }
+}
+
 variable "project_id" {
   type        = string
   description = "GCP project ID. Required with no default. Not a D-020/D-025 approval."
@@ -86,6 +102,30 @@ variable "video_provider" {
   }
 }
 
+variable "bunny_stream_library_id" {
+  type        = string
+  description = "Non-secret Bunny library ID; used only when video_provider is bunny."
+  default     = ""
+}
+
+variable "bunny_stream_cdn_hostname" {
+  type        = string
+  description = "Non-secret Bunny CDN hostname; used only when video_provider is bunny."
+  default     = ""
+}
+
+variable "bunny_stream_api_key_secret" {
+  type        = string
+  description = "Consumed Bunny API secret_id; must be created through secret_ids or extra_secret_ids when Bunny is enabled."
+  default     = "bunny-stream-api-key"
+}
+
+variable "bunny_stream_token_key_secret" {
+  type        = string
+  description = "Consumed Bunny token secret_id; must be created through secret_ids or extra_secret_ids when Bunny is enabled."
+  default     = "bunny-stream-token-key"
+}
+
 variable "github_repository" {
   type        = string
   description = "GitHub owner/repo allowed to federate. Real name belongs in gitignored tfvars and the runbook, not committed .tf."
@@ -117,7 +157,7 @@ variable "secret_ids" {
 
 variable "extra_secret_ids" {
   type        = list(string)
-  description = "Optional additional secret_id values to create (names only)."
+  description = "Optional additional secret_id values to create (names only). Creation never grants runtime access unless explicitly consumed."
   default     = []
 }
 

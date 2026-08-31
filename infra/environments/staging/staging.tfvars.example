@@ -33,6 +33,15 @@ github_environment = "staging"
 secret_ids       = ["bunny-stream-api-key", "django-secret-key", "database-url"]
 extra_secret_ids = []
 
+# P5-T04: selectors only, never secret values. Empty preserves latest.
+# Before rotation, pin EVERY active secret to its verified numeric version.
+# Example: secret_versions = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "2" }
+secret_versions = {}
+# To enable Bunny, also supply bunny_stream_library_id and
+# bunny_stream_cdn_hostname; create the consumed token-key name explicitly via
+# extra_secret_ids. The two configurable *_key_secret inputs select secret IDs.
+# Optional extras are not readable by runtime unless actually consumed.
+
 # Tiny example-only amount. Currency code is not a D-022 EUR approval.
 budget_amount_units  = "1"
 budget_currency_code = "XXX"

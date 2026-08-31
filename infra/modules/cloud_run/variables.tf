@@ -1,3 +1,19 @@
+variable "secret_versions" {
+  type        = map(string)
+  description = "Secret version selectors by runtime env name, never values. Omitted entries use latest for compatibility; pin positive numeric versions before rotation."
+  default     = {}
+  nullable    = false
+
+  validation {
+    condition = length(setsubtract(toset(keys(var.secret_versions)), toset([
+      "DJANGO_SECRET_KEY", "DATABASE_URL", "BUNNY_STREAM_API_KEY", "BUNNY_STREAM_TOKEN_KEY"
+      ]))) == 0 && alltrue([
+      for version in values(var.secret_versions) : can(regex("^(latest|[1-9][0-9]*)$", version))
+    ])
+    error_message = "secret_versions accepts only the four supported runtime env names and latest or positive numeric version strings."
+  }
+}
+
 variable "project_id" {
   type        = string
   description = "GCP project ID. Required with no default; not a D-025 registration decision."
