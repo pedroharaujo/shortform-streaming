@@ -1,0 +1,34 @@
+# P3-T08 native acceptance. Not a synthetic grant test and not a CI job.
+# Requires an Android development client, generated locked episode, local API,
+# signed-in synthetic account with ads preference enabled and allowed test ads.
+# A provider-success run ALSO requires #98 operator/privacy/UMP prerequisites
+# and genuine signed SSV delivery. Shared demo ads cannot establish that result.
+# Supply LOCKED_EPISODE_ID and the observed test creative's AD_CLOSE_LABEL.
+# Never use production accounts, licensed media or a client/synthetic grant hook.
+appId: com.shortformstreaming.app
+---
+- launchApp
+- openLink: 'shortform://play/${LOCKED_EPISODE_ID}'
+- extendedWaitUntil:
+    visible:
+      id: player-locked
+    timeout: 20000
+- tapOn: View episode reward
+- extendedWaitUntil:
+    visible: Watch test ad
+    timeout: 15000
+- assertVisible: Watch one rewarded ad to unlock this episode permanently.
+- tapOn: Watch test ad
+# Wait for the completed test creative to allow dismissal, never skip the ad.
+- extendedWaitUntil:
+    visible: '${AD_CLOSE_LABEL}'
+    timeout: 120000
+- tapOn: '${AD_CLOSE_LABEL}'
+# SDK completion is not success. Only the backend grant/current access and fresh
+# authorization may reach this state. Missing SSV MUST fail this assertion.
+- extendedWaitUntil:
+    visible:
+      id: player-loaded
+    timeout: 30000
+- assertVisible:
+    id: player-video

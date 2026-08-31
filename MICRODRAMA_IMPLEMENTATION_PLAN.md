@@ -907,6 +907,15 @@ proceed with production ads disabled.
 
 #### P3-T08 — Build locked-episode offer sheet (ads-only)
 
+**Implemented; native validation blocked (2026-08-31):** The mobile offer sheet,
+current-access refresh, playback authorization, and login/preferences return
+navigation are implemented and independently reviewed. `pnpm check` passes
+(280 backend, 104 mobile, 49 repository tests); Android JS export passes.
+The required Maestro attempt cannot run in this environment (CLI unavailable,
+no connected Android device); it is **not passed**. Genuine provider success
+and release setup remain #98/D-028. Existing cross-remount reward recovery is
+tracked separately in #99. See `docs/runbooks/rewarded-ads.md` for evidence.
+
 **Description:** Present the rewarded-ad unlock offer from the API, including loading, accessibility, errors, and post-success transition to playback. Coin and subscription offers wait for P7.
 
 **Objective:** Create one coherent ads-only monetization surface for MVP.
@@ -915,13 +924,13 @@ proceed with production ads disabled.
 
 **Acceptance criteria:**
 
-- [ ] Only server-authorized methods appear. MVP shows rewarded-ad unlock when locked.
-- [ ] Repeated taps cannot create duplicate reward intents.
-- [ ] Every success refreshes authoritative entitlement state before playback.
+- [x] Only server-authorized methods appear. MVP shows rewarded-ad unlock when locked.
+- [x] Repeated taps cannot create duplicate reward intents (same mounted sheet; cross-remount recovery is #99).
+- [x] Every success refreshes authoritative entitlement state before playback.
 
 **Validation and integration tests:**
 
-- [ ] Component tests cover the ad offer, unavailable ads, offline, and success.
+- [x] Component tests cover the ad offer, unavailable ads, offline, and success.
 - [ ] Maestro validates the ad unlock path from a locked episode.
 
 ### Checkpoint 3 — Ads-only integrity

@@ -12,6 +12,7 @@ export interface AccountScreenProps {
   readonly client: AccountClient;
   readonly onSignIn: () => void;
   readonly onHome: () => void;
+  readonly onReturnToEpisode?: (() => void) | undefined;
 }
 
 function failureMessage(outcome: Exclude<AccountOutcome<unknown>, { outcome: 'ok' }>): string {
@@ -30,7 +31,13 @@ function failureMessage(outcome: Exclude<AccountOutcome<unknown>, { outcome: 'ok
   return 'The request could not be completed. Please try again.';
 }
 
-export function AccountScreen({ auth, client, onSignIn, onHome }: AccountScreenProps): JSX.Element {
+export function AccountScreen({
+  auth,
+  client,
+  onSignIn,
+  onHome,
+  onReturnToEpisode,
+}: AccountScreenProps): JSX.Element {
   const [preferences, setPreferences] = useState<AccountPreferences | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -335,6 +342,9 @@ export function AccountScreen({ auth, client, onSignIn, onHome }: AccountScreenP
           </>
         ) : null}
         <Action label="Back to home" disabled={busy} onPress={onHome} />
+        {onReturnToEpisode ? (
+          <Action label="Back to episode" disabled={busy} onPress={onReturnToEpisode} />
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

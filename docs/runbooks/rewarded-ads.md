@@ -8,7 +8,85 @@ evidence is still a release blocker, never a passed check. Remaining setup and
 validation moved from #96 to
 [P6-T05A / #98](https://github.com/pedroharaujo/shortform-streaming/issues/98).
 D-005 requires login and D-007 grants one permanent episode entitlement per
-verified ad. P3-T08 owns the fuller offer-sheet experience.
+verified ad. P3-T08 implements the fuller offer-sheet experience; its required
+native Maestro validation remains blocked as recorded below.
+
+## P3-T08 offer sheet evidence (2026-08-31)
+
+The existing RewardScreen now renders a bottom-aligned, scrollable sheet with
+episode/reward disclosure, loading feedback, offline/retry and unavailable states,
+48-point minimum actions, disabled/busy accessibility state and live status text.
+Only a matching server `rewarded_ad` method produces an ad action. Test-only
+Android configuration, fresh account preference and UMP safeguards are unchanged.
+
+Anonymous lock entry goes to sign-in with the opaque episode ID, then returns to
+a new reward screen. Account preferences also provide a return to that episode.
+No arbitrary return URL or signed media URL is carried in navigation. Closing a
+directly opened sheet returns to episode detail if there is no history.
+
+Verified reward status now refreshes `GET /v1/offers/{episode_id}`. This endpoint
+reads current EpisodeEntitlement and rights eligibility; a matching `granted`
+decision is required before a fresh playback authorization request. Failure keeps
+the user on the sheet. The player continues to authorize on entry, so the sheet's
+short-lived URL is discarded. No backend or generated contract change is needed.
+Existing access may continue without ads preference or ad enablement.
+
+Repeated taps are guarded synchronously; ambiguous creation retries reuse the
+request UUID. Pending status retries never show another ad. Late grants/access
+responses after close, unmount or account replacement cannot navigate.
+**Known pre-existing limit:** remount/restart loses in-memory request recovery.
+This PR does not claim restart-safe idempotency; follow-up
+[P3-T08-F1 / #99](https://github.com/pedroharaujo/shortform-streaming/issues/99)
+covers it.
+
+Validation on `codex/p3-t08-offer-sheet` from base `e5da0ba`:
+
+- `pnpm mobile:test --runInBand RewardScreen`: initial red run caught missing
+  current-access refresh, fresh authorization, mismatched offer ID and offline
+  feedback (4 failing/10 passing); subsequent green run passed. Final expanded
+  suite is included in the full gate below.
+- `pnpm mobile:test --runInBand rewardNavigation`: initial red run caught lost
+  episode return and direct-entry close (2 failures); green run passed 2 tests.
+  These are route integration tests with screen/router doubles, not native E2E.
+- `pnpm check`: **passed** — repository safety/governance plus 49 repository
+  tests; backend lint/format/type/migrations plus 280 tests; regenerated OpenAPI
+  contract unchanged; mobile lint/format/type plus 104 tests and public config.
+  Existing missing-staticfiles and pytest-cache warnings do not fail the gate.
+- `pnpm mobile:bundle:check`: **passed**, production Android JavaScript/Hermes
+  export only. This does not compile/install the native application.
+- Initial sandbox runs of `pnpm mobile:check` and `pnpm mobile:bundle:check`
+  failed on parent-directory traversal and Hermes execution permissions. Both
+  affected checks passed on authorized reruns outside the sandbox; no checks
+  or safeguards were weakened.
+- Independent read-only code review found no new Critical/Important findings.
+- `git diff --check`: **passed**.
+
+Required native check:
+
+```text
+maestro test -e LOCKED_EPISODE_ID=ep_synthetic -e AD_CLOSE_LABEL=Close mobile/maestro/locked-episode-reward.yaml
+```
+
+**Blocked, not passed:** the command failed before running a flow because
+`maestro` is unavailable. `adb devices` returned no connected devices. The
+values above are synthetic placeholders, not a claim that the device fixture or
+creative was observed. No ad request or provider callback was generated here.
+Native sheet layout, large-text/TalkBack behavior and native return navigation
+still require Android observation alongside this required test.
+
+To rerun, install the [official Maestro CLI](https://docs.maestro.dev/maestro-cli/how-to-install-maestro-cli),
+connect an Android development client and use a generated eligible locked episode
+and synthetic signed-in account against the local API. Enable only permitted
+test configuration; supply the observed test creative's close label. The flow
+starts at the locked player, opts into the disclosed reward, dismisses the
+completed test creative and requires the authorized native player. It deliberately
+fails if genuine server verification never arrives; no synthetic grant hook is
+provided. Shared demo-unit display cannot prove SSV delivery. Publisher-owned
+tests still require #98's operator/privacy/UMP setup first. #98 and production
+enablement remain untouched; D-028 does not waive P3-T08's unchecked Maestro test.
+
+Rollback: revert the P3-T08 mobile changes. No migration, persisted entitlement
+mutation, new dependency or provider configuration is part of this slice.
 
 ## Runtime and contract
 

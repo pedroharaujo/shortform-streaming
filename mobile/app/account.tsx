@@ -1,12 +1,15 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 
 import { createAppAccountClient } from '../src/api/createAppClients';
 import { createEmailPasswordAuth } from '../src/auth/createEmailPasswordAuth';
 import { AccountScreen } from '../src/features/account/AccountScreen';
+import { readRouteId } from '../src/features/catalog/readRouteId';
 
 export default function AccountRoute(): JSX.Element {
+  const params = useLocalSearchParams<{ returnEpisode?: string | string[] }>();
+  const returnEpisode = readRouteId(params.returnEpisode);
   const auth = useMemo(() => createEmailPasswordAuth(), []);
   const client = useMemo(() => createAppAccountClient(), []);
   const [visit, setVisit] = useState(0);
@@ -21,7 +24,16 @@ export default function AccountRoute(): JSX.Element {
       key={visit}
       auth={auth}
       client={client}
-      onSignIn={() => router.push('/sign-in')}
+      onSignIn={() =>
+        router.push(
+          returnEpisode ? { pathname: '/sign-in', params: { returnEpisode } } : '/sign-in',
+        )
+      }
+      onReturnToEpisode={
+        returnEpisode
+          ? () => router.replace({ pathname: '/reward/[id]', params: { id: returnEpisode } })
+          : undefined
+      }
       onHome={() => router.replace('/')}
     />
   );
