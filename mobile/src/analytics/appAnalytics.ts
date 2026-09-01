@@ -7,15 +7,18 @@ import Constants from 'expo-constants';
 import { randomUUID } from 'expo-crypto';
 import { Platform } from 'react-native';
 
+import { getAuthSessionRevision } from '../auth/session';
 import { getApiConfiguration } from '../config/appConfiguration';
 import type { ApiEnvironment } from '../config/environment';
+import { createAccountAnalytics, type AccountAnalytics } from './accountAnalytics';
 import { createAppOpenTracker, type AppOpenTracker } from './appOpenTracker';
 import { getAppAnalyticsConsentController } from './appAnalyticsConsent';
 import { createAnalyticsClient, type AnalyticsSink } from './client';
-import { createAnalyticsRuntime, type AnalyticsRuntime } from './runtime';
+import { createAnalyticsRuntime, type AccountAnalyticsRuntime } from './runtime';
 
-let appRuntime: AnalyticsRuntime | null = null;
+let appRuntime: AccountAnalyticsRuntime | null = null;
 let appOpenTracker: AppOpenTracker | null = null;
+let appAccountAnalytics: AccountAnalytics | null = null;
 
 function isJestRuntime(): boolean {
   // eslint-disable-next-line no-restricted-syntax -- JEST_WORKER_ID is the Jest/native gate, not a public bundle value
@@ -53,7 +56,7 @@ function buildVersion(): string {
   return Constants.nativeBuildVersion ?? String(manifestBuild ?? 0);
 }
 
-export function getAppAnalyticsRuntime(): AnalyticsRuntime {
+export function getAppAnalyticsRuntime(): AccountAnalyticsRuntime {
   if (appRuntime !== null) return appRuntime;
 
   const configuration = getApiConfiguration();
@@ -81,4 +84,12 @@ export function getAppAnalyticsRuntime(): AnalyticsRuntime {
 export function getAppOpenTracker(): AppOpenTracker {
   appOpenTracker ??= createAppOpenTracker(getAppAnalyticsRuntime());
   return appOpenTracker;
+}
+
+export function getAppAccountAnalytics(): AccountAnalytics {
+  appAccountAnalytics ??= createAccountAnalytics(getAppAnalyticsRuntime(), {
+    consent: getAppAnalyticsConsentController(),
+    getSessionRevision: getAuthSessionRevision,
+  });
+  return appAccountAnalytics;
 }

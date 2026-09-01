@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { createAppMeClient } from '../src/api/createAppClients';
+import { getAppAccountAnalytics } from '../src/analytics/appAnalytics';
 import { getAppAnalyticsConsentController } from '../src/analytics/appAnalyticsConsent';
 import { createEmailPasswordAuth } from '../src/auth/createEmailPasswordAuth';
 import { SignInScreen } from '../src/features/auth/SignInScreen';
@@ -12,12 +13,14 @@ export default function SignInRoute(): JSX.Element {
   const params = useLocalSearchParams<{ returnEpisode?: string | string[] }>();
   const returnEpisode = readRouteId(params.returnEpisode);
   const auth = useMemo(() => createEmailPasswordAuth(), []);
+  const analytics = useMemo(() => getAppAccountAnalytics(), []);
   const analyticsConsent = useMemo(() => getAppAnalyticsConsentController(), []);
   const meClient = useMemo(() => createAppMeClient(), []);
 
   return (
     <SignInScreen
       auth={auth}
+      analytics={analytics}
       analyticsConsent={analyticsConsent}
       meClient={meClient}
       onFinished={() => {

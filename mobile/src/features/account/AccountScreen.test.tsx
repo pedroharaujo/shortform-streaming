@@ -2,6 +2,7 @@ import { act, fireEvent, render, userEvent, waitFor } from '@testing-library/rea
 
 import { createAccountClient } from '../../api/account/accountClient';
 import { jsonResponse } from '../../api/fetchTestUtils';
+import type { AccountAnalytics } from '../../analytics/accountAnalytics';
 import type { AnalyticsConsentController } from '../../analytics/consentController';
 import type { AuthOutcome } from '../../auth/localMockFirebaseAuth';
 import { createLocalMockFirebaseAuth } from '../../auth/localMockFirebaseAuth';
@@ -24,6 +25,19 @@ const PROFILE = {
   ads_consent: false,
   consent_updated_at: null,
 };
+
+function accountAnalyticsDouble(): jest.Mocked<AccountAnalytics> {
+  return {
+    recordAuthentication: jest.fn<
+      ReturnType<AccountAnalytics['recordAuthentication']>,
+      Parameters<AccountAnalytics['recordAuthentication']>
+    >(async () => undefined),
+    recordDeletion: jest.fn<
+      ReturnType<AccountAnalytics['recordDeletion']>,
+      Parameters<AccountAnalytics['recordDeletion']>
+    >(async () => undefined),
+  };
+}
 
 async function setup(writeResponse = jsonResponse(PROFILE, 200)) {
   setAuthSession({ credential: 'mock.synthetic_account' });
@@ -49,6 +63,10 @@ async function setup(writeResponse = jsonResponse(PROFILE, 200)) {
       ReturnType<AnalyticsConsentController['applyProfile']>,
       Parameters<AnalyticsConsentController['applyProfile']>
     >(async () => true),
+    clearForAccountDeletion: jest.fn<
+      ReturnType<AnalyticsConsentController['clearForAccountDeletion']>,
+      Parameters<AnalyticsConsentController['clearForAccountDeletion']>
+    >(async () => true),
     clear: jest.fn(async () => true),
     isCollectionEnabled: jest.fn(() => false),
     subscribe: jest.fn<
@@ -56,6 +74,7 @@ async function setup(writeResponse = jsonResponse(PROFILE, 200)) {
       Parameters<AnalyticsConsentController['subscribe']>
     >(() => () => undefined),
   };
+  const analytics = accountAnalyticsDouble();
   const client = createAccountClient({
     baseUrl: 'https://api.example.test',
     getCredential: getSessionCredential,
@@ -64,6 +83,7 @@ async function setup(writeResponse = jsonResponse(PROFILE, 200)) {
   const view = await render(
     <AccountScreen
       auth={auth}
+      analytics={analytics}
       analyticsConsent={analyticsConsent}
       client={client}
       onSignIn={jest.fn()}
@@ -71,7 +91,15 @@ async function setup(writeResponse = jsonResponse(PROFILE, 200)) {
     />,
   );
   await waitFor(() => expect(view.getByLabelText('Save preferences')).toBeEnabled());
-  return { view, analyticsConsent, auth, fetchImplementation, requests, user: userEvent.setup() };
+  return {
+    view,
+    analytics,
+    analyticsConsent,
+    auth,
+    fetchImplementation,
+    requests,
+    user: userEvent.setup(),
+  };
 }
 
 afterEach(() => setAuthSession(null));
@@ -148,6 +176,7 @@ it.each(['pending', 'completed'])(
     expect(requests[1]?.headers.get('Authorization')).toBe('Bearer mock.reauthenticated_account');
     expect(await requests[1]?.json()).toEqual({ confirmation: true });
     expect(getSessionCredential()).toBeNull();
+    expect(analyticsConsent.clearForAccountDeletion).toHaveBeenCalledTimes(1);
     expect(analyticsConsent.clear).toHaveBeenCalledTimes(1);
     expect(mockDeleteSecureItem).toHaveBeenCalledWith('shortform.pending_reward_attempt.v1');
     expect(view.queryByLabelText('Current password')).toBeNull();
@@ -157,6 +186,28 @@ it.each(['pending', 'completed'])(
     );
   },
 );
+
+it('records accepted deletion only inside the identity-detached consent cleanup window', async () => {
+  const { view, analytics, analyticsConsent, user, auth } = await setup(
+    jsonResponse({ public_id: 'del_synthetic', status: 'pending' }, 202),
+  );
+  const order: string[] = [];
+  analytics.recordDeletion.mockImplementation(async () => void order.push('diagnostic'));
+  analyticsConsent.clearForAccountDeletion.mockImplementation(async (recordDiagnostic) => {
+    order.push('identity-detached');
+    await recordDiagnostic();
+    order.push('collection-disabled');
+    return true;
+  });
+
+  await user.press(view.getByLabelText('Delete account'));
+  await user.press(view.getByLabelText('Verify Google and delete account'));
+  await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
+
+  expect(analytics.recordDeletion).toHaveBeenCalledTimes(1);
+  expect(analytics.recordDeletion).toHaveBeenCalledWith('del_synthetic', 'pending');
+  expect(order).toEqual(['identity-detached', 'diagnostic', 'collection-disabled']);
+});
 
 it.each(['cancelled', 'error'] as const)(
   'sends no deletion request when Google verification is %s',
@@ -190,7 +241,7 @@ it('keeps the account signed in and asks for new verification after the server r
 });
 
 it('warns that deletion may have succeeded when its response is lost', async () => {
-  const { view, user, auth, fetchImplementation } = await setup();
+  const { view, analytics, user, auth, fetchImplementation } = await setup();
   fetchImplementation.mockRejectedValueOnce(new TypeError('Synthetic network failure'));
   await user.press(view.getByLabelText('Delete account'));
   await user.press(view.getByLabelText('Verify Google and delete account'));
@@ -200,6 +251,7 @@ it('warns that deletion may have succeeded when its response is lost', async () 
     ),
   );
   expect(auth.signOut).not.toHaveBeenCalled();
+  expect(analytics.recordDeletion).not.toHaveBeenCalled();
 });
 
 it.each([202, 401])(
@@ -259,6 +311,7 @@ it('clears an invalid session on profile load and never offers account mutations
   const auth = { ...createLocalMockFirebaseAuth(), signOut: jest.fn(async () => {}) };
   const analyticsConsent: AnalyticsConsentController = {
     applyProfile: jest.fn(async () => true),
+    clearForAccountDeletion: async () => true,
     clear: jest.fn(async () => true),
     isCollectionEnabled: jest.fn(() => false),
     subscribe: jest.fn(() => () => undefined),
@@ -272,6 +325,7 @@ it('clears an invalid session on profile load and never offers account mutations
   const view = await render(
     <AccountScreen
       auth={auth}
+      analytics={accountAnalyticsDouble()}
       analyticsConsent={analyticsConsent}
       client={client}
       onSignIn={jest.fn()}
@@ -290,6 +344,7 @@ it('ignores an old profile-load rejection after the session changes', async () =
   const auth = { ...createLocalMockFirebaseAuth(), signOut: jest.fn(async () => {}) };
   const analyticsConsent: AnalyticsConsentController = {
     applyProfile: jest.fn(async () => true),
+    clearForAccountDeletion: async () => true,
     clear: jest.fn(async () => true),
     isCollectionEnabled: jest.fn(() => false),
     subscribe: jest.fn(() => () => undefined),
@@ -305,6 +360,7 @@ it('ignores an old profile-load rejection after the session changes', async () =
   const view = await render(
     <AccountScreen
       auth={auth}
+      analytics={accountAnalyticsDouble()}
       analyticsConsent={analyticsConsent}
       client={client}
       onSignIn={jest.fn()}

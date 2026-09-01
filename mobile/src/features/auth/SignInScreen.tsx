@@ -4,12 +4,18 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { MeClient } from '../../api/me/types';
+import type {
+  AccountAnalytics,
+  AccountAuthenticationEvent,
+  AccountAuthenticationMethod,
+} from '../../analytics/accountAnalytics';
 import type { AnalyticsConsentController } from '../../analytics/consentController';
 import type { AppAuth, AuthOutcome } from '../../auth/localMockFirebaseAuth';
 import { getAuthSessionRevision, setAuthSession } from '../../auth/session';
 
 export interface SignInScreenProps {
   readonly auth: AppAuth;
+  readonly analytics: AccountAnalytics;
   readonly analyticsConsent: AnalyticsConsentController;
   readonly meClient: MeClient;
   readonly onFinished: () => void;
@@ -17,6 +23,7 @@ export interface SignInScreenProps {
 
 export function SignInScreen({
   auth,
+  analytics,
   analyticsConsent,
   meClient,
   onFinished,
@@ -27,7 +34,12 @@ export function SignInScreen({
   const [busy, setBusy] = useState(false);
   const sessionOwner = useRef(getAuthSessionRevision());
 
-  async function applyAuthOutcome(outcome: AuthOutcome, attemptRevision: number): Promise<void> {
+  async function applyAuthOutcome(
+    outcome: AuthOutcome,
+    attemptRevision: number,
+    event: AccountAuthenticationEvent,
+    method: AccountAuthenticationMethod,
+  ): Promise<void> {
     if (outcome.outcome === 'cancelled') {
       setBusy(false);
       return;
@@ -64,6 +76,7 @@ export function SignInScreen({
         setBusy(false);
         return;
       }
+      void analytics.recordAuthentication(outcome.accountEvent ?? event, method, sessionRevision);
       setBusy(false);
       setMessage(`Signed in as ${me.data.public_id}`);
       onFinished();
@@ -73,7 +86,11 @@ export function SignInScreen({
     setMessage(me.outcome === 'unreachable' ? me.reason : me.message);
   }
 
-  async function run(task: () => Promise<AuthOutcome>): Promise<void> {
+  async function run(
+    task: () => Promise<AuthOutcome>,
+    event: AccountAuthenticationEvent,
+    method: AccountAuthenticationMethod,
+  ): Promise<void> {
     const attemptRevision = getAuthSessionRevision();
     if (attemptRevision !== sessionOwner.current) {
       setMessage('Your session changed. Reopen Sign in before continuing.');
@@ -81,7 +98,7 @@ export function SignInScreen({
     }
     setBusy(true);
     setMessage(null);
-    await applyAuthOutcome(await task(), attemptRevision);
+    await applyAuthOutcome(await task(), attemptRevision, event, method);
   }
 
   return (
@@ -123,19 +140,19 @@ export function SignInScreen({
         <ActionButton
           busy={busy}
           label="Sign in"
-          onPress={() => void run(() => auth.signIn(email, password))}
+          onPress={() => void run(() => auth.signIn(email, password), 'login', 'password')}
           testID="sign-in-submit"
         />
         <ActionButton
           busy={busy}
           label="Create account"
-          onPress={() => void run(() => auth.signUp(email, password))}
+          onPress={() => void run(() => auth.signUp(email, password), 'sign_up', 'password')}
           testID="sign-in-create"
         />
         <ActionButton
           busy={busy}
           label="Sign in with Google"
-          onPress={() => void run(() => auth.signInWithGoogle())}
+          onPress={() => void run(() => auth.signInWithGoogle(), 'login', 'google')}
           testID="sign-in-google"
         />
         <ActionButton

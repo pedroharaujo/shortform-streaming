@@ -7,7 +7,7 @@
 
 This file is the single engineering source for later privacy labels (P6-T04), account deletion (P2-T02), and legal/privacy review. Row labels below still describe the `85207d2` research snapshot plus later planned processors; they are not a claim that merged P2-T01/P2-T05 work is still unmerged. This inventory does not authorize production processing.
 
-### P4-T01 F3 implementation update (2026-09-01)
+### P4-T01 event implementation update (2026-09-01)
 
 The mobile runtime now emits only canonical `app_open`, `home_viewed`,
 `series_impression`, and `series_opened` discovery events through Firebase in
@@ -27,6 +27,13 @@ response exposes only a derived `admob_ssv` grant source; provider bindings, SSV
 queries, transactions, and tokens remain outside Analytics. Reward authority stays
 with the verified callback and `EpisodeEntitlement`.
 
+Password/Google `sign_up` and `login` now observe only a successful `/v1/me`
+confirmation. Pre-consent authentication remains process-local and is retried only
+if the same session later enables its server-owned preference. Accepted deletion
+emits only its completion/pending status after the Analytics user ID and local data
+are cleared; profile, session, country, email, credential, and receipt identifiers
+are absent. Production transport remains hard-disabled.
+
 ### P4-T01 F2 implementation update (2026-09-01)
 
 The mobile dependency and a tested consent controller for Firebase Analytics are
@@ -35,9 +42,9 @@ identifiers all default off. A process-wide controller now follows the current
 server-owned profile preference across sign-in, preference changes, sign-out,
 session replacement, unauthenticated cleanup, and deletion. Only the opaque backend
 profile ID may be linked after consent; withdrawal and session cleanup disable
-collection, clear identity, and reset local Analytics data. Product event triggers
-remain P4-T01 F3/F4, and production processing remains blocked on D-020 and P6
-clearance. Production builds select a hard no-op adapter; local/staging synthetic
+collection, clear identity, and reset local Analytics data. Product and account
+event triggers are implemented, and production processing remains blocked on D-020
+and P6 clearance. Production builds select a hard no-op adapter; local/staging synthetic
 validation cannot silently activate production collection.
 
 Owner boxes that remain open for the **ads-only** P0-T03 slice: legal/privacy jurisdiction review, content rating, and AdMob/ads-only finance/tax treatment. Store IAP EUR settlement is required before P7 IAP, not before this ads-only slice. See `STORE_COMPLIANCE_MATRIX.md`.
@@ -96,7 +103,7 @@ Every inventory row uses one of:
 | D-013 | **Accepted.** Firebase Auth, Analytics, Crashlytics, and App Check are planned MVP processors (ADR 0003). Remote Config A/B and FCM are **planned P7**. Consumer Firebase Auth verification (`GET /v1/me`) and native Android Auth (P2-T01 / P2-T01-F1) have **merged to `main` after** `85207d2`. Do not treat Firebase Auth as unshipped. |
 | D-014 / ADR 0005 | Bunny Stream is the accepted **default**; GCP Cloud CDN is the **documented fallback and is not active**. P2-T05 on-device proof is not this task. |
 | D-015 / ADR 0006 | RevenueCat plus Django ledger remain accepted architecture. **MVP implementation deferred to P7**; MVP commerce is AdMob only. Not implemented. |
-| D-016 / ADR 0007 | Firebase Analytics typed events are planned MVP. BigQuery export, Looker Studio, and Remote Config A/B are **planned P7**. The F3/F4 discovery, playback, and reward subsets are implemented but production-disabled. |
+| D-016 / ADR 0007 | Firebase Analytics typed MVP events are implemented but production-disabled. BigQuery export, Looker Studio, and Remote Config A/B are **planned P7**. |
 | D-004 | **Founder approved 2026-08-27.** Launch catalog is 1 series; data model still supports N. |
 | D-005–D-007 | **Founder approved 2026-08-27** (guest boundary, hardcoded free window, rewarded-ad-only MVP monetization). Anonymous catalog on `main` is P2-T03 engineering, not this inventory converting those decisions. |
 | D-008 / D-009 | Remain **Proposed**. Required before P7 IAP only; not required for ads-only MVP. |
@@ -197,7 +204,7 @@ Accepted by D-013, D-014, D-007 and ADRs 0003–0007 unless noted, with P7 timin
 | Status | Field / event (processor + typical data) | Purpose | Lawful basis / consent (planned/assumed) | Processor | Region | Retention | Access roles | Deletion behavior |
 |---|---|---|---|---|---|---|---|---|
 | planned MVP | Firebase Authentication: email/password and Google Sign-In (Android, D-027); email, provider ids, Firebase UID. Apple Sign-In is deferred to an iOS storefront, not waived. Phone/SMS auth is out of MVP without a decision. | Consumer identity. Django verifies ID tokens and owns profiles (ADR 0003). Email stays in Firebase, not in analytics. | Art. 6(1)(b) to create/use an account — planned/assumed. D-005 is **Founder approved 2026-08-27**. | Google Firebase Authentication | **pending D-020** | **pending D-020** | The account holder; Django via UID; Firebase project admins | P2-T02 must delete Firebase user and local profile or anonymize; not started. |
-| planned MVP | Firebase Analytics: app-instance / user ids where consent permits; canonical MVP events below | Product analytics. **Not** the financial ledger (ADR 0003/0007). | Art. 6(1)(a) + ePrivacy consent for non-essential measurement — planned/assumed, consent-gated | Google Firebase Analytics | **pending D-020** | **pending D-020** | Product/growth/engineering with least privilege | P2-T02 / P4-T01: deletion and opt-out propagation where required; not implemented. |
+| implemented, production-disabled | Firebase Analytics: app-instance / user ids where consent permits; canonical MVP events below | Product analytics. **Not** the financial ledger (ADR 0003/0007). | Art. 6(1)(a) + ePrivacy consent for non-essential measurement — planned/assumed, consent-gated | Google Firebase Analytics | **pending D-020** | **pending D-020** | Product/growth/engineering with least privilege | Opt-out/session cleanup disables collection, clears identity, and resets local data. Accepted deletion emits status only after identity detachment, then disables collection. |
 | planned P7 | Firebase Remote Config | Server-safe client defaults: paywall position, free-episode count, coin price, ad offer, messaging. MVP free window is hardcoded/admin (D-006). | Art. 6(1)(f) to configure the client **or** consent if tied to profiling — planned/assumed. Server remains authoritative. | Google Firebase Remote Config | **pending D-020** | **pending D-020** | Engineering/product; fetched by the app | Fetch is not a durable consumer record. Experiment exposure is a separate event. |
 | planned P7 | Firebase A/B Testing / experiment assignment | Reversible client experiments (ADR 0007). Log exposure when behavior is used. | Consent when the experiment is non-essential / profiling — planned/assumed | Google Firebase A/B Testing (with Analytics) | **pending D-020** | **pending D-020** | Product/engineering | Stop experiment; deletion of Analytics identifiers follows P2-T02/P4-T01. Optional server `ExperimentExposure` only for financially material server decisions. |
 | planned MVP | Firebase Crashlytics: stack traces, device model/OS, app version; no free-form PII payload | Crash reporting | Art. 6(1)(f) for stability of a requested app **or** consent if not strictly necessary — planned/assumed. Conservative default: consent-gated unless legal later classifies it as strictly necessary. | Google Firebase Crashlytics | **pending D-020** | **pending D-020** | Engineering | Deletion/opt-out per provider tools and P2-T02; never put tokens, emails, or signed URLs in crash context. |
@@ -217,13 +224,13 @@ Accepted by D-013, D-014, D-007 and ADRs 0003–0007 unless noted, with P7 timin
 
 ### Canonical analytics events
 
-Source: `MICRODRAMA_IMPLEMENTATION_PLAN.md` § Canonical analytics events. P4-T01 publishes the typed SDK and dictionary for MVP events. F3/F4 implement the discovery, playback, and reward subsets behind consent in local/staging while production stays hard-disabled. Coin, subscription, push, and experiment events are **planned P7**.
+Source: `MICRODRAMA_IMPLEMENTATION_PLAN.md` § Canonical analytics events. P4-T01 implements the typed SDK and account, discovery, playback, and reward events behind consent in local/staging while production stays hard-disabled. Coin, subscription, push, and experiment events are **planned P7**.
 
 Shared planned properties (only if consent permits): `event_id`; anonymous/app-instance ID; authenticated user ID; app version/build; platform; locale; country; timestamp; session ID; series/episode IDs and episode number; offer ID; access method; campaign, ad set, creative, source, medium, deep-link target. Coin price, store product ID, and experiment ID/variant are P7 properties.
 
 | Status | Field / event | Purpose | Lawful basis / consent (planned/assumed) | Processor | Region | Retention | Access roles | Deletion behavior |
 |---|---|---|---|---|---|---|---|---|
-| implemented, production-disabled (`app_open`); remaining account events planned MVP | `app_open`, `sign_up`, `login`, `account_deleted` | Session and account funnel | Art. 6(1)(a) + ePrivacy — planned/assumed, consent-gated | Firebase Analytics | **pending D-020** | **pending D-020** | Product/growth | P2-T02 / P4-T01; `account_deleted` must not re-identify |
+| implemented, production-disabled | `app_open`, `sign_up`, `login`, `account_deleted` | Session and account funnel | Art. 6(1)(a) + ePrivacy — planned/assumed, consent-gated | Firebase Analytics | **pending D-020** | **pending D-020** | Product/growth | P2-T02 / P4-T01; deletion clears identity/data before a status-only event and cannot re-identify |
 | implemented, production-disabled | `home_viewed`, `series_impression`, `series_opened` | Discovery | Same | Firebase Analytics | **pending D-020** | **pending D-020** | Product/growth | Same |
 | implemented, production-disabled | `episode_started`, `episode_progress`, `episode_completed`, `playback_error` | Viewing quality. `playback_error` uses a safe code, never a free-form payload or signed URL. | Same | Firebase Analytics | **pending D-020** | **pending D-020** | Product/engineering | Same |
 | implemented, production-disabled | `locked_episode_viewed`, `offer_presented`, `offer_selected` | Lock / ad-offer funnel | Same | Firebase Analytics | **pending D-020** | **pending D-020** | Product/growth | Same |

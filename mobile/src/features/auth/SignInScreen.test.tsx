@@ -1,6 +1,7 @@
 import { act, render, userEvent, waitFor } from '@testing-library/react-native';
 
 import type { MeClient } from '../../api/me/types';
+import type { AccountAnalytics } from '../../analytics/accountAnalytics';
 import type { AnalyticsConsentController } from '../../analytics/consentController';
 import { createLocalMockFirebaseAuth } from '../../auth/localMockFirebaseAuth';
 import { getAuthSessionRevision, getSessionCredential, setAuthSession } from '../../auth/session';
@@ -28,12 +29,29 @@ function analyticsConsentDouble(): jest.Mocked<AnalyticsConsentController> {
       ReturnType<AnalyticsConsentController['applyProfile']>,
       Parameters<AnalyticsConsentController['applyProfile']>
     >(async () => true),
+    clearForAccountDeletion: jest.fn<
+      ReturnType<AnalyticsConsentController['clearForAccountDeletion']>,
+      Parameters<AnalyticsConsentController['clearForAccountDeletion']>
+    >(async () => true),
     clear: jest.fn(async () => true),
     isCollectionEnabled: jest.fn(() => false),
     subscribe: jest.fn<
       ReturnType<AnalyticsConsentController['subscribe']>,
       Parameters<AnalyticsConsentController['subscribe']>
     >(() => () => undefined),
+  };
+}
+
+function accountAnalyticsDouble(): jest.Mocked<AccountAnalytics> {
+  return {
+    recordAuthentication: jest.fn<
+      ReturnType<AccountAnalytics['recordAuthentication']>,
+      Parameters<AccountAnalytics['recordAuthentication']>
+    >(async () => undefined),
+    recordDeletion: jest.fn<
+      ReturnType<AccountAnalytics['recordDeletion']>,
+      Parameters<AccountAnalytics['recordDeletion']>
+    >(async () => undefined),
   };
 }
 
@@ -45,12 +63,14 @@ describe('SignInScreen', () => {
   it('signs in with email/password and loads /v1/me without sending a backend user id', async () => {
     const auth = createLocalMockFirebaseAuth();
     const { getMe, meClient } = okMeClient();
+    const analytics = accountAnalyticsDouble();
     const analyticsConsent = analyticsConsentDouble();
     const onFinished = jest.fn();
     const user = userEvent.setup();
     const view = await render(
       <SignInScreen
         auth={auth}
+        analytics={analytics}
         analyticsConsent={analyticsConsent}
         meClient={meClient}
         onFinished={onFinished}
@@ -70,7 +90,39 @@ describe('SignInScreen', () => {
       analyticsConsent: false,
       sessionRevision: getAuthSessionRevision(),
     });
+    expect(analytics.recordAuthentication).toHaveBeenCalledWith(
+      'login',
+      'password',
+      getAuthSessionRevision(),
+    );
     expect(onFinished).toHaveBeenCalled();
+  });
+
+  it('records password sign-up only after the new account is confirmed by /v1/me', async () => {
+    const auth = createLocalMockFirebaseAuth();
+    const { getMe, meClient } = okMeClient();
+    const analytics = accountAnalyticsDouble();
+    const user = userEvent.setup();
+    const view = await render(
+      <SignInScreen
+        auth={auth}
+        analytics={analytics}
+        analyticsConsent={analyticsConsentDouble()}
+        meClient={meClient}
+        onFinished={jest.fn()}
+      />,
+    );
+
+    await user.type(view.getByTestId('sign-in-email'), 'new@example.com');
+    await user.type(view.getByTestId('sign-in-password'), 'correct-horse');
+    await user.press(view.getByTestId('sign-in-create'));
+
+    await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
+    expect(analytics.recordAuthentication).toHaveBeenCalledWith(
+      'sign_up',
+      'password',
+      getAuthSessionRevision(),
+    );
   });
 
   it('signs out and clears the session credential', async () => {
@@ -82,6 +134,7 @@ describe('SignInScreen', () => {
     const view = await render(
       <SignInScreen
         auth={auth}
+        analytics={accountAnalyticsDouble()}
         analyticsConsent={analyticsConsent}
         meClient={{ getMe: jest.fn() }}
         onFinished={jest.fn()}
@@ -95,15 +148,17 @@ describe('SignInScreen', () => {
     expect(analyticsConsent.clear).toHaveBeenCalledTimes(1);
   });
 
-  it('signs in with Google, never offers Apple, and does not send a backend user id', async () => {
+  it('classifies first-time Google as sign-up without sending a backend user id', async () => {
     const auth = createLocalMockFirebaseAuth();
     const { getMe, meClient } = okMeClient();
+    const analytics = accountAnalyticsDouble();
     const analyticsConsent = analyticsConsentDouble();
     const onFinished = jest.fn();
     const user = userEvent.setup();
     const view = await render(
       <SignInScreen
         auth={auth}
+        analytics={analytics}
         analyticsConsent={analyticsConsent}
         meClient={meClient}
         onFinished={onFinished}
@@ -116,6 +171,11 @@ describe('SignInScreen', () => {
     await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
     expect(getSessionCredential()).toBe('mock.google_user');
     expect(getSessionCredential()).not.toContain('usr_from_server');
+    expect(analytics.recordAuthentication).toHaveBeenCalledWith(
+      'sign_up',
+      'google',
+      getAuthSessionRevision(),
+    );
     expect(onFinished).toHaveBeenCalled();
   });
 
@@ -130,6 +190,7 @@ describe('SignInScreen', () => {
     const view = await render(
       <SignInScreen
         auth={auth}
+        analytics={accountAnalyticsDouble()}
         analyticsConsent={analyticsConsent}
         meClient={{ getMe }}
         onFinished={jest.fn()}
@@ -159,6 +220,7 @@ describe('SignInScreen', () => {
     const view = await render(
       <SignInScreen
         auth={auth}
+        analytics={accountAnalyticsDouble()}
         analyticsConsent={analyticsConsent}
         meClient={{ getMe }}
         onFinished={jest.fn()}
@@ -178,6 +240,7 @@ describe('SignInScreen', () => {
 
   it('does not link a late profile response after the session is replaced', async () => {
     const auth = createLocalMockFirebaseAuth();
+    const analytics = accountAnalyticsDouble();
     const analyticsConsent = analyticsConsentDouble();
     let resolveMe!: (value: Awaited<ReturnType<MeClient['getMe']>>) => void;
     const getMe = jest.fn(
@@ -191,6 +254,7 @@ describe('SignInScreen', () => {
     const view = await render(
       <SignInScreen
         auth={auth}
+        analytics={analytics}
         analyticsConsent={analyticsConsent}
         meClient={{ getMe }}
         onFinished={onFinished}
@@ -204,6 +268,7 @@ describe('SignInScreen', () => {
 
     await waitFor(() => expect(view.getByTestId('sign-in-google')).toBeEnabled());
     expect(analyticsConsent.applyProfile).not.toHaveBeenCalled();
+    expect(analytics.recordAuthentication).not.toHaveBeenCalled();
     expect(onFinished).not.toHaveBeenCalled();
     expect(getSessionCredential()).toBe('mock.replacement_account');
   });
@@ -223,6 +288,7 @@ describe('SignInScreen', () => {
     const view = await render(
       <SignInScreen
         auth={auth}
+        analytics={accountAnalyticsDouble()}
         analyticsConsent={analyticsConsent}
         meClient={{ getMe }}
         onFinished={jest.fn()}
@@ -255,6 +321,7 @@ describe('SignInScreen', () => {
     const view = await render(
       <SignInScreen
         auth={auth}
+        analytics={accountAnalyticsDouble()}
         analyticsConsent={analyticsConsent}
         meClient={{ getMe: jest.fn() }}
         onFinished={jest.fn()}
@@ -279,6 +346,7 @@ describe('SignInScreen', () => {
     const view = await render(
       <SignInScreen
         auth={auth}
+        analytics={accountAnalyticsDouble()}
         analyticsConsent={analyticsConsent}
         meClient={{ getMe: jest.fn() }}
         onFinished={jest.fn()}

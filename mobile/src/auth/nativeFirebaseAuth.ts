@@ -12,6 +12,7 @@ import {
   connectAuthEmulator,
   createUserWithEmailAndPassword,
   EmailAuthProvider,
+  getAdditionalUserInfo,
   getAuth,
   GoogleAuthProvider,
   reauthenticateWithCredential,
@@ -28,7 +29,7 @@ import { requireOptionalNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
 import { getApiConfiguration } from '../config/appConfiguration';
-import type { AppAuth, AuthOutcome } from './localMockFirebaseAuth';
+import type { AppAuth, AuthAccountEvent, AuthOutcome } from './localMockFirebaseAuth';
 
 const ANDROID_EMULATOR_AUTH_ORIGIN = 'http://10.0.2.2:9099';
 const HOST_LOOPBACK_AUTH_ORIGIN = 'http://127.0.0.1:9099';
@@ -134,13 +135,17 @@ function describeAuthError(error: unknown, fallback: string): string {
   return fallback;
 }
 
-async function sessionFromCurrentUser(): Promise<AuthOutcome> {
+async function sessionFromCurrentUser(accountEvent?: AuthAccountEvent): Promise<AuthOutcome> {
   const user = getAuth().currentUser;
   if (user === null) {
     return { outcome: 'error', message: 'Sign-in did not produce a session.' };
   }
   const credential = await user.getIdToken();
-  return { outcome: 'ok', session: { credential } };
+  return {
+    outcome: 'ok',
+    session: { credential },
+    ...(accountEvent === undefined ? {} : { accountEvent }),
+  };
 }
 
 export function createNativeFirebaseAuth(): AppAuth {
@@ -150,6 +155,7 @@ export function createNativeFirebaseAuth(): AppAuth {
   async function withEmailPassword(
     email: string,
     password: string,
+    accountEvent: AuthAccountEvent,
     run: () => Promise<unknown>,
   ): Promise<AuthOutcome> {
     const invalid = requireCredentials(email, password);
@@ -158,7 +164,7 @@ export function createNativeFirebaseAuth(): AppAuth {
     }
     try {
       await run();
-      const outcome = await sessionFromCurrentUser();
+      const outcome = await sessionFromCurrentUser(accountEvent);
       currentCredential = outcome.outcome === 'ok' ? outcome.session.credential : null;
       return outcome;
     } catch (error: unknown) {
@@ -168,12 +174,12 @@ export function createNativeFirebaseAuth(): AppAuth {
 
   return {
     async signUp(email: string, password: string): Promise<AuthOutcome> {
-      return withEmailPassword(email, password, () =>
+      return withEmailPassword(email, password, 'sign_up', () =>
         createUserWithEmailAndPassword(getAuth(), email.trim(), password),
       );
     },
     async signIn(email: string, password: string): Promise<AuthOutcome> {
-      return withEmailPassword(email, password, () =>
+      return withEmailPassword(email, password, 'login', () =>
         signInWithEmailAndPassword(getAuth(), email.trim(), password),
       );
     },
@@ -195,8 +201,13 @@ export function createNativeFirebaseAuth(): AppAuth {
         if (typeof result.data?.idToken !== 'string' || result.data.idToken === '') {
           return { outcome: 'error', message: MISSING_GOOGLE_SIGN_IN_MESSAGE };
         }
-        await signInWithCredential(getAuth(), GoogleAuthProvider.credential(result.data.idToken));
-        const outcome = await sessionFromCurrentUser();
+        const credential = await signInWithCredential(
+          getAuth(),
+          GoogleAuthProvider.credential(result.data.idToken),
+        );
+        const outcome = await sessionFromCurrentUser(
+          getAdditionalUserInfo(credential)?.isNewUser === true ? 'sign_up' : 'login',
+        );
         currentCredential = outcome.outcome === 'ok' ? outcome.session.credential : null;
         return outcome;
       } catch (error: unknown) {

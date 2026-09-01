@@ -24,7 +24,10 @@ jest.mock('../../config/appConfiguration', () => ({
   getRewardedAdUnitId: jest.fn(),
 }));
 jest.mock('./testAdPresenter', () => ({ createTestAdPresenter: jest.fn() }));
-jest.mock('../../analytics/appAnalytics', () => ({ getAppAnalyticsRuntime: jest.fn(() => ({})) }));
+jest.mock('../../analytics/appAnalytics', () => ({
+  getAppAccountAnalytics: jest.fn(() => ({})),
+  getAppAnalyticsRuntime: jest.fn(() => ({})),
+}));
 jest.mock('./rewardAnalytics', () => ({ createRewardAnalytics: jest.fn(() => ({})) }));
 jest.mock('./RewardScreen', () => ({
   RewardScreen: ({ onAccount, onClose }: { onAccount: () => void; onClose: () => void }) => {
