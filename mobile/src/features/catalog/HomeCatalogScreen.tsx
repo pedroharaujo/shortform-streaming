@@ -1,13 +1,15 @@
-import type { JSX } from 'react';
+import { useEffect, type JSX } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CatalogClient, CatalogSeriesCard } from '../../api/catalog/types';
+import type { AnalyticsRuntime } from '../../analytics/runtime';
 import { CatalogArtwork } from './CatalogArtwork';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
 import { useCatalogHome } from './useCatalog';
 
 export interface HomeCatalogScreenProps {
+  readonly analytics: AnalyticsRuntime;
   readonly client: CatalogClient;
   readonly onSelectSeries: (seriesId: string) => void;
   readonly onOpenHealth?: () => void;
@@ -40,6 +42,7 @@ function SeriesCard({
 }
 
 export function HomeCatalogScreen({
+  analytics,
   client,
   onSelectSeries,
   onOpenHealth,
@@ -47,6 +50,23 @@ export function HomeCatalogScreen({
   onOpenAccount,
 }: HomeCatalogScreenProps): JSX.Element {
   const { state, refresh } = useCatalogHome(client);
+
+  useEffect(() => {
+    if (state.phase !== 'loaded') return;
+    void (async () => {
+      await analytics.logOnce('home_viewed', 'home', {});
+      let position = 0;
+      for (const rail of state.home.rails) {
+        for (const series of rail.series) {
+          await analytics.logOnce('series_impression', `i:${series.id}:${position}`, {
+            series_id: series.id,
+            position,
+          });
+          position += 1;
+        }
+      }
+    })();
+  }, [analytics, state]);
 
   return (
     <SafeAreaView style={styles.container} testID="home-screen">

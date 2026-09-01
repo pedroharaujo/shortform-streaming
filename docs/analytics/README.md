@@ -75,8 +75,11 @@ P4-T01-F2 adds the native Analytics module and a process-wide consent controller
 while all native automatic collection, screen reporting, advertising identifiers,
 and advertising consent default off. F2b connects sign-in, the confirmed `/v1/me`
 profile, preference saves, sign-out, session replacement, unauthenticated cleanup,
-and account deletion to the controller. Product event logging still waits for
-F3/F4.
+and account deletion to the controller. F3a connects the process-wide event runtime
+to cold/foreground app lifecycle, successful home catalog rendering, ordered series
+card impressions, and eligible series detail rendering. The runtime retries a cold
+trigger when consent activates and deduplicates accepted logical events across
+remounts and retries. Playback and reward triggers still wait for F3b/F4.
 
 After `/v1/me` confirms
 analytics consent, the adapter may enable collection and link only the opaque
@@ -96,7 +99,11 @@ validation. Production uses a no-op adapter until D-020 and P6 clearance.
   consent/identity controller.
 - Completed P4-T01-F2b: process-wide lifecycle connection for sign-in, preference
   changes, sign-out, deletion, and session replacement.
-- P4-T01-F3: free discovery/playback triggers and ordered trail tests.
+- Completed P4-T01-F3a: consent-aware runtime/Firebase event transport plus
+  `app_open`, `home_viewed`, `series_impression`, and `series_opened` triggers with
+  ordered consented and zero-event non-consented tests.
+- P4-T01-F3b: playback start/progress/complete, lock display, safe-coded playback
+  errors, and the completed free-journey trail.
 - P4-T01-F4: reward diagnostics and the smallest typed backend boundary.
 - P4-T06: persistence and routing for campaign/deferred-deep-link fields.
 - P7: BigQuery/Looker models, experiments, push, commerce events, and MMP.

@@ -49,10 +49,13 @@ it('keeps collection denied and clears identity when consent is off', async () =
   ).resolves.toBe(false);
 
   expect(calls).toEqual(CLEANUP);
+  expect(controller.isCollectionEnabled()).toBe(false);
 });
 
 it('cleans old state before enabling analytics-only consent for the server profile', async () => {
   const { calls, controller } = setup();
+  const consentChanges: boolean[] = [];
+  const unsubscribe = controller.subscribe((enabled) => consentChanges.push(enabled));
 
   await expect(
     controller.applyProfile({
@@ -68,6 +71,9 @@ it('cleans old state before enabling analytics-only consent for the server profi
     'user:usr_synthetic',
     'collection:true',
   ]);
+  expect(controller.isCollectionEnabled()).toBe(true);
+  expect(consentChanges).toEqual([true]);
+  unsubscribe();
 });
 
 it('does not reset or relink the same active profile in the same session', async () => {
@@ -83,6 +89,22 @@ it('does not reset or relink the same active profile in the same session', async
   await expect(controller.applyProfile(options)).resolves.toBe(true);
 
   expect(calls).toEqual([]);
+});
+
+it('contains observer failures so they cannot interrupt consent activation', async () => {
+  const { controller } = setup();
+  controller.subscribe(() => {
+    throw new Error('observer failure');
+  });
+
+  await expect(
+    controller.applyProfile({
+      profileId: 'usr_synthetic',
+      analyticsConsent: true,
+      sessionRevision: 1,
+    }),
+  ).resolves.toBe(true);
+  expect(controller.isCollectionEnabled()).toBe(true);
 });
 
 it('never enables a stale or signed-out session', async () => {
@@ -181,8 +203,19 @@ it('contains provider failures and completes every cleanup step', async () => {
 
 it('explicitly clears collection, consent, identity, and local analytics data', async () => {
   const { calls, controller } = setup();
+  const consentChanges: boolean[] = [];
+  controller.subscribe((enabled) => consentChanges.push(enabled));
+
+  await controller.applyProfile({
+    profileId: 'usr_synthetic',
+    analyticsConsent: true,
+    sessionRevision: 1,
+  });
+  calls.length = 0;
 
   await expect(controller.clear()).resolves.toBe(true);
 
   expect(calls).toEqual(CLEANUP);
+  expect(controller.isCollectionEnabled()).toBe(false);
+  expect(consentChanges).toEqual([true, false]);
 });

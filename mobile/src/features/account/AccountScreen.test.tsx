@@ -50,6 +50,11 @@ async function setup(writeResponse = jsonResponse(PROFILE, 200)) {
       Parameters<AnalyticsConsentController['applyProfile']>
     >(async () => true),
     clear: jest.fn(async () => true),
+    isCollectionEnabled: jest.fn(() => false),
+    subscribe: jest.fn<
+      ReturnType<AnalyticsConsentController['subscribe']>,
+      Parameters<AnalyticsConsentController['subscribe']>
+    >(() => () => undefined),
   };
   const client = createAccountClient({
     baseUrl: 'https://api.example.test',
@@ -255,6 +260,8 @@ it('clears an invalid session on profile load and never offers account mutations
   const analyticsConsent: AnalyticsConsentController = {
     applyProfile: jest.fn(async () => true),
     clear: jest.fn(async () => true),
+    isCollectionEnabled: jest.fn(() => false),
+    subscribe: jest.fn(() => () => undefined),
   };
   const client = createAccountClient({
     baseUrl: 'https://api.example.test',
@@ -284,6 +291,8 @@ it('ignores an old profile-load rejection after the session changes', async () =
   const analyticsConsent: AnalyticsConsentController = {
     applyProfile: jest.fn(async () => true),
     clear: jest.fn(async () => true),
+    isCollectionEnabled: jest.fn(() => false),
+    subscribe: jest.fn(() => () => undefined),
   };
   const client = createAccountClient({
     baseUrl: 'https://api.example.test',
