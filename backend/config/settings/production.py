@@ -13,10 +13,17 @@ if missing:
 
 from .base import *  # noqa: E402,F403
 
-if os.environ.get("REWARDED_ADS_MODE", "disabled").strip().lower() != "disabled":
-    raise ImproperlyConfigured("Production rewarded ads are disabled pending release approval.")
 if "REWARDED_ADS_TEST_UNIT_ID" in os.environ:
-    raise ImproperlyConfigured("REWARDED_ADS_TEST_UNIT_ID is not allowed in production.")
+    raise ImproperlyConfigured("REWARDED_ADS_TEST_UNIT_ID is obsolete; use REWARDED_ADS_UNIT_ID.")
+if REWARDED_ADS_MODE == "test":  # noqa: F405
+    raise ImproperlyConfigured("REWARDED_ADS_MODE=test is not allowed in production settings.")
+if REWARDED_ADS_MODE == "production" and (  # noqa: F405
+    not REWARDED_ADS_UNIT_ID  # noqa: F405
+    or REWARDED_ADS_UNIT_ID == REWARDED_ADS_DEMO_UNIT_ID  # noqa: F405
+):
+    raise ImproperlyConfigured(
+        "Production rewarded ads require a publisher-owned REWARDED_ADS_UNIT_ID."
+    )
 
 ALLOWED_HOSTS = [
     host.strip() for host in os.environ["DJANGO_ALLOWED_HOSTS"].split(",") if host.strip()
@@ -100,4 +107,4 @@ if _staff_upload_store == "gcs":
             "STAFF_UPLOAD_GCS_BUCKET is required when STAFF_UPLOAD_STORE=gcs"
         )
 elif _staff_upload_store:
-    raise ImproperlyConfigured("STAFF_UPLOAD_STORE must be empty (disabled) or gcs in production")
+    raise ImproperlyConfigured("STAFF_UPLOAD_STORE must be empty or gcs in production")

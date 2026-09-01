@@ -1,5 +1,4 @@
 import { jsonResponse, requestHeaders, requestUrl } from '../fetchTestUtils';
-import { MVP_CLIENT_PLATFORM } from '../context';
 import { createProgressClient, type ProgressClientOptions } from './progressClient';
 
 const BASE_URL = 'http://10.0.2.2:8000';
@@ -15,8 +14,6 @@ const PROGRESS_BODY = {
 function client(performRequest: typeof fetch, extra?: Partial<ProgressClientOptions>) {
   return createProgressClient({
     baseUrl: BASE_URL,
-    territory: 'FR',
-    platform: MVP_CLIENT_PLATFORM,
     getDeviceId: async () => DEVICE_ID,
     fetchImplementation: performRequest,
     ...extra,
@@ -24,7 +21,7 @@ function client(performRequest: typeof fetch, extra?: Partial<ProgressClientOpti
 }
 
 describe('createProgressClient', () => {
-  it('sends catalog headers and X-Device-Id when anonymous', async () => {
+  it('sends only X-Device-Id when anonymous', async () => {
     const performRequest = jest.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       jsonResponse(PROGRESS_BODY, 200),
     );
@@ -39,9 +36,9 @@ describe('createProgressClient', () => {
     const [input, init] = performRequest.mock.calls[0] ?? [];
     expect(requestUrl(input as RequestInfo | URL)).toContain('/v1/progress/ep_harbor_1');
     const headers = requestHeaders(input as RequestInfo | URL, init);
-    expect(headers.get('X-Territory')).toBe('FR');
-    expect(headers.get('X-Platform')).toBe(MVP_CLIENT_PLATFORM);
-    expect(headers.get('X-Language')).toBe('en');
+    expect(headers.get('X-Territory')).toBeNull();
+    expect(headers.get('X-Platform')).toBeNull();
+    expect(headers.get('X-Language')).toBeNull();
     expect(headers.get('X-Device-Id')).toBe(DEVICE_ID);
     expect(headers.get('Authorization')).toBeNull();
   });

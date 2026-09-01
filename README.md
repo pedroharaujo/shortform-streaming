@@ -2,7 +2,7 @@
 
 Public monorepo for a mobile-first vertical microdrama streaming platform.
 
-The MVP consists of a Django REST backend/Django Admin and one React Native/Expo application for iOS and Android. A consumer web client is explicitly post-MVP.
+The MVP consists of a Django REST backend/Django Admin and one Android React Native/Expo application. iOS release work and a consumer web client are explicitly post-MVP.
 
 ## Local backend bootstrap
 
@@ -56,27 +56,18 @@ Stop local services without deleting their named data volume with `make stop-sql
 Staff catalog management uses Django Admin at `http://127.0.0.1:8000/admin/` (local
 `DEBUG` + `runserver`; the production image collects Admin static files — see
 [docs/runbooks/django-container.md](./docs/runbooks/django-container.md)). Create a staff user and
-optional synthetic FR/DE titles (generated metadata only):
+the single synthetic self-owned series (generated metadata only):
 
 ```shell
 uv run python backend/manage.py createsuperuser
 uv run python backend/manage.py seed_catalog
-uv run python backend/manage.py spike_bunny_playback
 ```
 
-`spike_bunny_playback` generates 9:16 test media and uploads it through
-`VideoProvider`. It no-ops with a clear error when `VIDEO_PROVIDER` is `fake` or
-Bunny credentials are missing (that is not a Bunny failure). See
-[docs/runbooks/playback-spike.md](./docs/runbooks/playback-spike.md). Never
-commit keys or paste signed URLs.
-
-Anonymous catalog reads require explicit `X-Territory` (ISO 3166-1 alpha-2),
-`X-Platform` (`ios` or `android`), and `X-Language` (ISO 639-1, MVP `en`) headers.
-Those values are never inferred from `Accept-Language`.
+The catalog is fixed to France, Android, and English. Clients cannot override
+market or language eligibility.
 
 ```shell
-curl -sS -H "X-Territory: FR" -H "X-Platform: ios" -H "X-Language: en" \
-  http://127.0.0.1:8000/v1/catalog/home
+curl -sS http://127.0.0.1:8000/v1/catalog/home
 ```
 
 Local Django accepts `10.0.2.2` as a host so an Android emulator can reach this server
@@ -154,21 +145,16 @@ Run the current repository-wide aggregate gate with `pnpm check` (includes `cont
 
 ## Local mobile bootstrap
 
-P1-T03 provides a strict TypeScript Expo app with Expo Router, an Android
-development-build configuration (not Expo Go), and a backend-availability screen.
-P2-T04 makes Home the launch route (`app/index.tsx`) and keeps health at `/health`.
+P1-T03 provides a strict TypeScript Expo app with Expo Router and an Android
+development-build configuration (not Expo Go). Home is the launch route.
 Ads-only MVP is Google Play only (D-027). Details, including the emulator sequence,
 are in [mobile/README.md](./mobile/README.md).
 
 `EXPO_PUBLIC_*` values are compiled into the public JavaScript bundle. Never place a
-secret, key, token, or credential in `EXPO_PUBLIC_API_ENVIRONMENT`,
-`EXPO_PUBLIC_API_BASE_URL`, or `EXPO_PUBLIC_CATALOG_TERRITORY`. Copy those three
-names from `.env.example` into `mobile/.env` (gitignored). All three are required;
-the app does not default an environment or infer territory from device locale.
+secret, key, token, or credential in `EXPO_PUBLIC_*`. Copy the API environment
+and base URL from `.env.example` into `mobile/.env` (gitignored). Both are required.
 
 Use `http://10.0.2.2:8000` as `EXPO_PUBLIC_API_BASE_URL` on the Android emulator.
-Set `EXPO_PUBLIC_CATALOG_TERRITORY=FR`
-for the synthetic FR-only Harbor Lights seed.
 
 From the repository root (`export PATH="$HOME/.local/bin:$PATH"` if `pnpm` is the
 corepack shim):
@@ -247,18 +233,18 @@ protections. Do not reuse the local example values or commit a populated `.env`.
 
 ## Project status
 
-Implementation has started with Phase 0 product, rights, compliance, architecture, and cost gates. The founder-approved MVP launch scope is the 21 EU countries using EUR listed canonically in decision D-001. The MVP interface and initial microdrama catalog are in English. The ads-only MVP has no IAP; store-localized price strings apply when P7 IAP ships. EUR is the company's base reporting currency and desired store-settlement currency for that later IAP path.
+Implementation targets a France-only Android launch through Google Play (D-001/D-027), with an English interface and exactly one self-owned English-language series (D-004/D-023). The ads-only MVP has no IAP; one verified AdMob rewarded ad unlocks one episode. EUR remains the company reporting and desired future store-settlement currency for the later P7 IAP path.
 
-Phase 1 engineering may proceed without company-registration or store-account data. Development and automated tests use only short self-owned, generated, or purpose-made test media and local/emulated/provider-fake integrations; real licensed media and production credentials are not required.
+Development and automated tests use only short self-owned or generated media and local/emulated/provider-fake integrations. Licensed third-party content, licensor contracts, royalties, contract-driven territory enforcement, and DRM decisions are post-MVP.
 
-The approved geographic scope is not final launch clearance. Territorial content rights, GDPR/privacy, per-market legal and language review, age/content controls, store compliance, incorporation and registration details of the intended French entity, and AdMob production configuration remain mandatory **ads-only** release gates. Store IAP EUR-compatible Apple/Google payment-profile and bank configuration is required before P7 IAP, not before ads-only launch. No public distribution or real advertising may be enabled before ads-only clearance. Real purchase or subscription flows wait for P7.
+The narrow scope is not final launch clearance. Ownership/provenance for the self-owned series, France-specific GDPR/privacy and legal review, age/content controls, Google Play compliance, incorporation and registration details of the intended French entity, and AdMob production configuration remain mandatory **ads-only** release gates. Store IAP settlement configuration is required before P7 IAP, not before ads-only launch. No public distribution or real advertising may be enabled before ads-only clearance. Real purchase or subscription flows wait for P7.
 
 ## Source of truth
 
 - [Complete product and implementation plan](./MICRODRAMA_IMPLEMENTATION_PLAN.md)
 - [MVP product brief](./docs/product/MVP_PRODUCT_BRIEF.md)
 - [Decision register](./docs/product/DECISION_REGISTER.md)
-- [Content-rights checklist](./docs/product/CONTENT_RIGHTS_CHECKLIST.md)
+- [Self-owned content provenance and media checklist](./docs/product/CONTENT_RIGHTS_CHECKLIST.md)
 - [Store and privacy compliance matrix](./docs/product/STORE_COMPLIANCE_MATRIX.md)
 - [Unit-cost model](./docs/product/COST_MODEL.md)
 - [Architecture decision records](./docs/adr/)

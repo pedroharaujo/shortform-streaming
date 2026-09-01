@@ -52,8 +52,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Home catalog rails
-         * @description Small rails document of series eligible for the explicit request territory, platform, language, and current time. Not a CursorPage. Catalog is tiny; home is not paginated in P2-T03. Missing or malformed context headers are 400. A well-formed context with no eligible titles is 200 with an empty featured rail.
+         * Home catalog
+         * @description Published self-owned English series for the France/Android MVP.
          */
         get: operations["v1_catalog_home_retrieve"];
         put?: never;
@@ -71,10 +71,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Episode detail
-         * @description Localized episode detail. The episode is eligible only when its series is eligible, the episode is published within its optional window, and a ready MediaAsset exists. Ineligible ids return 404, never 403. Monetization lock state is omitted.
-         */
+        /** Episode detail */
         get: operations["v1_episodes_retrieve"];
         put?: never;
         post?: never;
@@ -128,26 +125,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/me/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Account export placeholder
-         * @description Explicitly unavailable; does not enqueue or claim to fulfill an export.
-         */
-        post: operations["v1_me_export_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/offers/{episode_id}": {
         parameters: {
             query?: never;
@@ -157,7 +134,7 @@ export interface paths {
         };
         /**
          * List episode access offers
-         * @description Return currently available access methods for a catalog-eligible episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished, takedown, wrong-territory, or unknown ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and methods. Grant returns HTTP 200 decision=granted with methods. This response never includes a playback URL and never calls the video provider. MVP method types are entitlement, free, and rewarded_ad. Client-supplied free-window or user identifiers are ignored.
+         * @description Return currently available access methods for a catalog-eligible episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished, taken-down, or unknown ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and methods. Grant returns HTTP 200 decision=granted with methods. This response never includes a playback URL and never calls the video provider. MVP method types are entitlement, free, and rewarded_ad. Client-supplied free-window or user identifiers are ignored.
          */
         get: operations["v1_offers_retrieve"];
         put?: never;
@@ -179,7 +156,7 @@ export interface paths {
         put?: never;
         /**
          * Authorize episode playback
-         * @description Authorize playback for a catalog-eligible episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished, takedown, wrong-territory, or missing-ready-asset ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and no playback_url. Grant looks up the episode's ready MediaAsset and returns an opaque HTTPS HLS URL that is not served by Django. An unset or disabled VideoProvider returns 503 ErrorEnvelope on the grant path only and never mints unsigned access. Client-supplied user identifiers are ignored.
+         * @description Authorize playback for a catalog-eligible episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished, taken-down, or missing-ready-asset ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and no playback_url. Grant looks up the episode's ready MediaAsset and returns an opaque HTTPS HLS URL that is not served by Django. An unset or disabled VideoProvider returns 503 ErrorEnvelope on the grant path only and never mints unsigned access. Client-supplied user identifiers are ignored.
          */
         post: operations["v1_playback_authorize_create"];
         delete?: never;
@@ -239,7 +216,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Provider-only AdMob ECDSA verification. Original URL query required; never a client grant. Test mode only. The verifier percent-decodes the prefix once to UTF-8, preserving order and literal plus signs, before signature and key_id (last, in that order). Duplicate verified delivery is acknowledged without granting again. Invalid/mismatched/expired callbacks return 400. */
+        /** @description Provider-only AdMob ECDSA verification. Original URL query required; never a client grant. The verifier percent-decodes the prefix once to UTF-8, preserving order and literal plus signs, before signature and key_id (last, in that order). Duplicate verified delivery is acknowledged without granting again. Invalid/mismatched/expired callbacks return 400. */
         get: operations["v1_rewards_admob_ssv_retrieve"];
         put?: never;
         post?: never;
@@ -260,7 +237,7 @@ export interface paths {
         put?: never;
         /**
          * Accept an episode reward offer
-         * @description Authenticated Android test-only intent. Requires ads preference and current catalog eligibility. The request_id is an account-scoped idempotency UUID. Reuse it after a lost response; changing the episode or context returns 409. No client field can grant access. expires_at is 15 minutes after creation.
+         * @description Authenticated Android intent. Requires ads preference and current catalog eligibility. The request_id is an account-scoped idempotency UUID. Reuse it after a lost response; changing the episode returns 409. No client field can grant access. expires_at is 15 minutes after creation.
          */
         post: operations["v1_rewards_intents_create"];
         delete?: never;
@@ -276,10 +253,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Series detail
-         * @description Localized series detail with ordered published episodes. Ineligible or unpublished public ids return 404 ErrorEnvelope, never 403.
-         */
+        /** Series detail */
         get: operations["v1_series_retrieve"];
         put?: never;
         post?: never;
@@ -348,14 +322,12 @@ export interface components {
             title: string;
             synopsis: string;
             artwork_url: string | null;
-            original_language: string;
         };
         CatalogSeriesDetail: {
             id: string;
             title: string;
             synopsis: string;
             artwork_url: string | null;
-            original_language: string;
             genres: string[];
             seasons: components["schemas"]["CatalogSeason"][];
         };
@@ -655,14 +627,7 @@ export interface operations {
     v1_catalog_home_retrieve: {
         parameters: {
             query?: never;
-            header: {
-                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
-                "X-Language": string;
-                /** @description Client platform. Required. Values: ios, android. */
-                "X-Platform": "android" | "ios";
-                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
-                "X-Territory": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -676,30 +641,14 @@ export interface operations {
                     "application/json": components["schemas"]["CatalogHome"];
                 };
             };
-            /** @description Missing or malformed catalog context headers. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
         };
     };
     v1_episodes_retrieve: {
         parameters: {
             query?: never;
-            header: {
-                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
-                "X-Language": string;
-                /** @description Client platform. Required. Values: ios, android. */
-                "X-Platform": "android" | "ios";
-                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
-                "X-Territory": string;
-            };
+            header?: never;
             path: {
-                /** @description Opaque public identifier. Sequential database integers are never used as public IDs. */
+                /** @description Opaque public identifier. Sequential database integers are never exposed. */
                 public_id: components["schemas"]["PublicId"];
             };
             cookie?: never;
@@ -714,16 +663,7 @@ export interface operations {
                     "application/json": components["schemas"]["CatalogEpisodeDetail"];
                 };
             };
-            /** @description Missing or malformed catalog context headers. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -850,45 +790,10 @@ export interface operations {
             };
         };
     };
-    v1_me_export_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
     v1_offers_retrieve: {
         parameters: {
             query?: never;
-            header: {
-                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
-                "X-Language": string;
-                /** @description Client platform. Required. Values: ios, android. */
-                "X-Platform": "android" | "ios";
-                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
-                "X-Territory": string;
-            };
+            header?: never;
             path: {
                 /** @description Opaque episode public identifier. Sequential database integers are never used as public IDs. */
                 episode_id: components["schemas"]["PublicId"];
@@ -905,15 +810,6 @@ export interface operations {
                     "application/json": components["schemas"]["EpisodeOffersResponse"];
                 };
             };
-            /** @description Missing or malformed catalog context headers. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
             /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
             401: {
                 headers: {
@@ -923,7 +819,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -937,14 +833,7 @@ export interface operations {
     v1_playback_authorize_create: {
         parameters: {
             query?: never;
-            header: {
-                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
-                "X-Language": string;
-                /** @description Client platform. Required. Values: ios, android. */
-                "X-Platform": "android" | "ios";
-                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
-                "X-Territory": string;
-            };
+            header?: never;
             path: {
                 /** @description Opaque episode public identifier. Sequential database integers are never used as public IDs. */
                 episode_id: components["schemas"]["PublicId"];
@@ -961,15 +850,6 @@ export interface operations {
                     "application/json": components["schemas"]["PlaybackAuthorizeResponse"];
                 };
             };
-            /** @description Missing or malformed catalog context headers. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
             /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
             401: {
                 headers: {
@@ -979,7 +859,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1002,15 +882,9 @@ export interface operations {
     v1_progress_retrieve: {
         parameters: {
             query?: never;
-            header: {
+            header?: {
                 /** @description Anonymous device UUID (36-character hyphenated form). Required when no Authorization header is present. Ignored when a verified profile is present. Never a user id, profile public id, or Firebase UID. */
                 "X-Device-Id"?: string;
-                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
-                "X-Language": string;
-                /** @description Client platform. Required. Values: ios, android. */
-                "X-Platform": "android" | "ios";
-                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
-                "X-Territory": string;
             };
             path: {
                 /** @description Opaque episode public identifier. Sequential database integers are never used as public IDs. */
@@ -1026,15 +900,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WatchProgress"];
-                };
-            };
-            /** @description Missing or malformed catalog context headers. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
@@ -1055,7 +920,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1069,15 +934,9 @@ export interface operations {
     v1_progress_update: {
         parameters: {
             query?: never;
-            header: {
+            header?: {
                 /** @description Anonymous device UUID (36-character hyphenated form). Required when no Authorization header is present. Ignored when a verified profile is present. Never a user id, profile public id, or Firebase UID. */
                 "X-Device-Id"?: string;
-                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
-                "X-Language": string;
-                /** @description Client platform. Required. Values: ios, android. */
-                "X-Platform": "android" | "ios";
-                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
-                "X-Territory": string;
             };
             path: {
                 /** @description Opaque episode public identifier. Sequential database integers are never used as public IDs. */
@@ -1099,15 +958,6 @@ export interface operations {
                     "application/json": components["schemas"]["WatchProgress"];
                 };
             };
-            /** @description Missing or malformed catalog context headers. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
             /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
             401: {
                 headers: {
@@ -1126,7 +976,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1165,7 +1015,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1224,14 +1074,7 @@ export interface operations {
     v1_rewards_intents_create: {
         parameters: {
             query?: never;
-            header: {
-                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
-                "X-Language": string;
-                /** @description Client platform. Required. Values: ios, android. */
-                "X-Platform": "android" | "ios";
-                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
-                "X-Territory": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1257,15 +1100,6 @@ export interface operations {
                     "application/json": components["schemas"]["RewardIntent"];
                 };
             };
-            /** @description Missing or malformed catalog context headers. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
             /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
             401: {
                 headers: {
@@ -1275,7 +1109,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1297,16 +1131,9 @@ export interface operations {
     v1_series_retrieve: {
         parameters: {
             query?: never;
-            header: {
-                /** @description ISO 639-1 catalog language (MVP: en). Required and never inferred from Accept-Language. */
-                "X-Language": string;
-                /** @description Client platform. Required. Values: ios, android. */
-                "X-Platform": "android" | "ios";
-                /** @description ISO 3166-1 alpha-2 territory (for example FR). Required and never inferred from Accept-Language or UI language. */
-                "X-Territory": string;
-            };
+            header?: never;
             path: {
-                /** @description Opaque public identifier. Sequential database integers are never used as public IDs. */
+                /** @description Opaque public identifier. Sequential database integers are never exposed. */
                 public_id: components["schemas"]["PublicId"];
             };
             cookie?: never;
@@ -1321,16 +1148,7 @@ export interface operations {
                     "application/json": components["schemas"]["CatalogSeriesDetail"];
                 };
             };
-            /** @description Missing or malformed catalog context headers. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Unknown or ineligible public id. Does not confirm whether the id exists. */
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
                 headers: {
                     [name: string]: unknown;

@@ -45,7 +45,5 @@ export function createAccountClient(options: MeClientOptions): AccountClient {
           api.POST('/v1/me/deletion', { headers, signal, body: { confirmation: true } }),
         options.timeoutMs ?? 30_000,
       ),
-    requestExport: () =>
-      request((headers, signal) => api.POST('/v1/me/export', { headers, signal })),
   };
 }

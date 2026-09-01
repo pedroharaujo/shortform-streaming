@@ -12,15 +12,13 @@ retention remain release gates. This runbook does not approve legal policy.
   changes. These preferences alone are not a consent-management platform and do
   not initialize tracking/ad SDKs. P3/P4 must apply their own approved gates.
 - `PATCH /v1/me` accepts only locale/country/analytics_consent/ads_consent.
-- Account deletion requires explicit confirmation and same-account password or
-  Google reauthentication. Django checks the signed Firebase `auth_time` (five
+- Account deletion requires explicit confirmation and same-account Google
+  reauthentication. Django checks the signed Firebase `auth_time` (five
   minutes maximum); refreshing a token does not qualify as reauthentication.
 - `POST /v1/me/deletion` returns 202 and an opaque receipt with `pending` or
   `completed`. A pending result is accepted work, not completed provider cleanup.
   A lost response leaves status unknown. Signing in is not a status check:
   Google sign-in can create a new account after deletion.
-- `POST /v1/me/export` returns 501 `export_unavailable`. No export is created.
-  Full data-subject export fulfillment must be supplied before public release.
 - Native and app sessions are cleared after accepted deletion or logout.
   Another account signed in during an outstanding request must not be cleared.
 
@@ -112,9 +110,9 @@ and [Google sign-in account creation](https://firebase.google.com/docs/auth/andr
   deterministic first-profile deletion race and old-revision insert.
 - `pnpm --filter @shortform/mobile test --runInBand src/features/account/AccountScreen.test.tsx src/auth/nativeFirebaseAuth.test.ts`:
   PASS (21), including delayed account-A results after account-B session change.
-- Pixel_9 Android development build: synthetic email/password signup; Account
-  shows English, blank country, both preferences off; save FR/analytics-on with
-  ads still off; explicit confirmation and same-account password reauth; UI
+- Historical Pixel_9 Android validation used the since-removed synthetic password
+  surface. Account showed English, blank country, both preferences off; saved
+  FR/analytics-on with ads still off; explicit confirmation and reauth; UI
   reports completed deletion and signed-out state. The isolated validation DB
   had one profile, one generated progress row and one entitlement beforehand;
   all three counts were zero afterward, Firebase emulator user count was zero,

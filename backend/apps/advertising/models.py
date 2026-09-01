@@ -17,9 +17,12 @@ class RewardIntent(models.Model):
     request_id = models.UUIDField()
     custom_data = models.CharField(max_length=64, default=opaque_binding, unique=True)
     ssv_user_id = models.CharField(max_length=64, default=opaque_binding)
-    territory = models.CharField(max_length=2)
-    platform = models.CharField(max_length=7)
-    language = models.CharField(max_length=2)
+    # Kept only until the later destructive schema contraction. These fixed
+    # defaults satisfy the original NOT NULL columns without accepting market
+    # context from the Android client.
+    territory = models.CharField(max_length=2, default="FR", editable=False)
+    platform = models.CharField(max_length=7, default="android", editable=False)
+    language = models.CharField(max_length=2, default="en", editable=False)
     ad_unit_id = models.CharField(max_length=80)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()

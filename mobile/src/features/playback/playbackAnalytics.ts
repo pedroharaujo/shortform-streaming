@@ -82,18 +82,13 @@ export function createPlaybackAnalytics(runtime: AnalyticsRuntime): PlaybackAnal
       });
     },
     recordProgress(episode, positionSeconds, completed): Promise<void> {
+      void positionSeconds;
+      if (!completed) return Promise.resolve();
       return enqueue(async () => {
-        await runtime.logOnce('episode_progress', `p:${episode.episodeId}:${positionSeconds}`, {
+        await runtime.logOnce('episode_completed', `c:${episode.episodeId}`, {
           ...episodeProperties(episode),
-          position_seconds: positionSeconds,
           duration_seconds: episode.durationSeconds,
         });
-        if (completed) {
-          await runtime.logOnce('episode_completed', `c:${episode.episodeId}`, {
-            ...episodeProperties(episode),
-            duration_seconds: episode.durationSeconds,
-          });
-        }
       });
     },
     recordLocked(episode, reason): Promise<void> {

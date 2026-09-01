@@ -1,11 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
-
 import type {
   CatalogClient,
   CatalogRequestOutcome,
   CatalogSeriesDetail,
 } from '../../api/catalog/types';
-import type { AnalyticsRuntime } from '../../analytics/runtime';
 import { expectNoFreeOrLockedBadges, renderWithSafeArea } from '../../testUtils';
 import { SeriesDetailScreen } from './SeriesDetailScreen';
 
@@ -14,7 +11,6 @@ const harborLightsDetail: CatalogSeriesDetail = {
   title: 'Harbor Lights',
   synopsis: 'Synthetic FR-only English microdrama for local catalog tests.',
   artwork_url: null,
-  original_language: 'en',
   genres: [],
   seasons: [
     {
@@ -52,17 +48,10 @@ function stubSeriesClient(series: CatalogRequestOutcome<CatalogSeriesDetail>): C
   };
 }
 
-function analyticsDouble() {
-  const logOnce = jest.fn(async () => ({ outcome: 'accepted' as const, eventId: 'evt_test' }));
-  return { analytics: { logOnce } as AnalyticsRuntime, logOnce };
-}
-
 describe('SeriesDetailScreen', () => {
   it('renders published seasons and listed episodes without lock or free inference', async () => {
-    const { analytics, logOnce } = analyticsDouble();
     const view = await renderWithSafeArea(
       <SeriesDetailScreen
-        analytics={analytics}
         client={stubSeriesClient({ outcome: 'ok', data: harborLightsDetail })}
         onBack={() => {}}
         onSelectEpisode={() => {}}
@@ -76,18 +65,11 @@ describe('SeriesDetailScreen', () => {
     expect(view.getByTestId('episode-row-ep_harbor_1')).toBeTruthy();
     expect(view.getByTestId('episode-row-ep_harbor_6')).toBeTruthy();
     expectNoFreeOrLockedBadges(view);
-    await waitFor(() =>
-      expect(logOnce).toHaveBeenCalledWith('series_opened', 's:ser_harbor', {
-        series_id: 'ser_harbor',
-      }),
-    );
   }, 10000);
 
   it('shows not-found for an ineligible series, not a locked state', async () => {
-    const { analytics, logOnce } = analyticsDouble();
     const view = await renderWithSafeArea(
       <SeriesDetailScreen
-        analytics={analytics}
         client={stubSeriesClient({
           outcome: 'not-found',
           httpStatus: 404,
@@ -103,6 +85,5 @@ describe('SeriesDetailScreen', () => {
     expect(await view.findByTestId('series-detail-not-found')).toBeTruthy();
     expectNoFreeOrLockedBadges(view);
     expect(view.queryByTestId('episode-row-ep_harbor_1')).toBeNull();
-    expect(logOnce).not.toHaveBeenCalled();
   });
 });

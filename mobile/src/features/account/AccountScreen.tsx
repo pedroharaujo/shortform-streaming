@@ -27,9 +27,6 @@ function failureMessage(outcome: Exclude<AccountOutcome<unknown>, { outcome: 'ok
   if (outcome.code === 'reauthentication_required') {
     return 'Verification expired. Verify your account again to request deletion.';
   }
-  if (outcome.code === 'export_unavailable') {
-    return 'Account export is not available yet. No export has been requested.';
-  }
   if (outcome.outcome === 'unauthenticated') {
     return 'Sign in again to manage your account.';
   }
@@ -282,22 +279,6 @@ export function AccountScreen({
                 busy || (preferences.country !== '' && !/^[A-Z]{2}$/.test(preferences.country))
               }
               onPress={() => void run(savePreferences)}
-            />
-            <Action
-              label="Request account export"
-              disabled={busy}
-              onPress={() =>
-                void run(async () => {
-                  const revision = sessionOwner.current;
-                  const result = await client.requestExport();
-                  if (!requireSession(revision)) return;
-                  if (result.outcome !== 'ok') await showFailure(result);
-                  else
-                    setMessage(
-                      'Account export is not available yet. No export has been requested.',
-                    );
-                })
-              }
             />
             <Action
               label="Sign out"

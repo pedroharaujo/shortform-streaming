@@ -25,6 +25,7 @@ const COMMON = {
   country: 'FR',
   occurred_at: '2026-09-01T10:00:00.000Z',
 };
+const LOGIN = { ...COMMON, method: 'google' as const };
 
 function recordingSink() {
   const events: AnalyticsEnvelope[] = [];
@@ -33,9 +34,10 @@ function recordingSink() {
 
 it('knows every canonical MVP event and starts with collection disabled', async () => {
   expect(Object.keys(ANALYTICS_EVENT_SCHEMAS).sort()).toEqual([...ANALYTICS_EVENT_NAMES].sort());
-  await expect(
-    createAnalyticsClient().log('home_viewed', 'session_01:home', COMMON),
-  ).resolves.toEqual({ outcome: 'dropped', reason: 'collection_disabled' });
+  await expect(createAnalyticsClient().log('login', 'session_01:login', LOGIN)).resolves.toEqual({
+    outcome: 'dropped',
+    reason: 'collection_disabled',
+  });
 });
 
 it('still rejects developer contract mistakes while collection is disabled', async () => {
@@ -47,7 +49,7 @@ it('still rejects developer contract mistakes while collection is disabled', asy
   ) => Promise<unknown>;
 
   await expect(
-    unsafeLog('home_viewed', 'session_01:home', { ...COMMON, email: 'person@example.com' }),
+    unsafeLog('login', 'session_01:login', { ...LOGIN, email: 'person@example.com' }),
   ).rejects.toThrow('Unknown property email');
 });
 
@@ -60,16 +62,16 @@ it('reads consent at send time without rebuilding the client', async () => {
     sink: recorder.sink,
   });
 
-  await expect(client.log('home_viewed', 'session_01:disabled', COMMON)).resolves.toEqual({
+  await expect(client.log('login', 'session_01:disabled', LOGIN)).resolves.toEqual({
     outcome: 'dropped',
     reason: 'collection_disabled',
   });
   enabled = true;
-  await expect(client.log('home_viewed', 'session_01:enabled', COMMON)).resolves.toMatchObject({
+  await expect(client.log('login', 'session_01:enabled', LOGIN)).resolves.toMatchObject({
     outcome: 'accepted',
   });
   enabled = false;
-  await expect(client.log('home_viewed', 'session_01:disabled_again', COMMON)).resolves.toEqual({
+  await expect(client.log('login', 'session_01:disabled_again', LOGIN)).resolves.toEqual({
     outcome: 'dropped',
     reason: 'collection_disabled',
   });
@@ -154,7 +156,7 @@ it('strips unknown or unsafe optional production values before they reach the si
       ...COMMON,
       launch_reason: 'cold',
       campaign: 'person@example.com',
-      deep_link_target: 'https://media.example/video.m3u8?token=secret',
+      signed_url: 'https://media.example/video.m3u8?token=secret',
       auth_token: 'secret',
       error_payload: 'arbitrary provider response',
     }),
@@ -212,14 +214,14 @@ it('rejects impossible calendar timestamps', async () => {
   const client = createAnalyticsClient({ enabled: true, mode: 'production', sink: recorder.sink });
 
   await expect(
-    client.log('home_viewed', 'session_01:home', {
-      ...COMMON,
+    client.log('login', 'session_01:login', {
+      ...LOGIN,
       occurred_at: '2026-99-99T10:00:00.000Z',
     }),
   ).resolves.toEqual({ outcome: 'dropped', reason: 'invalid_contract' });
   await expect(
-    client.log('home_viewed', 'session_01:home', {
-      ...COMMON,
+    client.log('login', 'session_01:login', {
+      ...LOGIN,
       occurred_at: '2026-02-30T10:00:00.000Z',
     }),
   ).resolves.toEqual({ outcome: 'dropped', reason: 'invalid_contract' });
@@ -233,7 +235,7 @@ it('contains sink failures so analytics cannot break the product flow', async ()
     sink: { send: async () => Promise.reject(new Error('provider unavailable')) },
   });
 
-  await expect(client.log('home_viewed', 'session_01:home', COMMON)).resolves.toEqual({
+  await expect(client.log('login', 'session_01:login', LOGIN)).resolves.toEqual({
     outcome: 'dropped',
     reason: 'sink_unavailable',
   });
@@ -244,7 +246,7 @@ it('contains event ID failures so analytics cannot break the product flow', asyn
   const recorder = recordingSink();
   const client = createAnalyticsClient({ enabled: true, mode: 'production', sink: recorder.sink });
 
-  await expect(client.log('home_viewed', 'session_01:home', COMMON)).resolves.toEqual({
+  await expect(client.log('login', 'session_01:login', LOGIN)).resolves.toEqual({
     outcome: 'dropped',
     reason: 'sink_unavailable',
   });

@@ -18,8 +18,7 @@ from apps.advertising.models import RewardIntent
 from apps.advertising.serializers import RewardIntentCreateSerializer, RewardIntentSerializer
 from apps.advertising.services import create_reward_intent, current_profile, grant_verified_reward
 from apps.advertising.verification import InvalidCallback, verify_callback
-from apps.catalog.request_context import parse_catalog_context
-from apps.catalog.views import CATALOG_CONTEXT_PARAMETERS, ERROR_400, ERROR_404
+from apps.catalog.views import ERROR_404
 
 ERROR_409 = {"$ref": "#/components/schemas/ErrorEnvelope"}
 
@@ -32,17 +31,15 @@ class RewardIntentCreateView(APIView):
         tags=["rewards"],
         summary="Accept an episode reward offer",
         description=(
-            "Authenticated Android test-only intent. Requires ads preference and current "
+            "Authenticated Android intent. Requires ads preference and current "
             "catalog eligibility. The request_id is an account-scoped idempotency UUID. "
-            "Reuse it after a lost response; changing the episode or context returns 409. "
+            "Reuse it after a lost response; changing the episode returns 409. "
             "No client field can grant access. expires_at is 15 minutes after creation."
         ),
-        parameters=CATALOG_CONTEXT_PARAMETERS,
         request=RewardIntentCreateSerializer,
         responses={
             201: RewardIntentSerializer,
             200: RewardIntentSerializer,
-            400: ERROR_400,
             401: ERROR_401,
             404: ERROR_404,
             409: ERROR_409,
@@ -57,7 +54,6 @@ class RewardIntentCreateView(APIView):
             request.user,
             serializer.validated_data["episode_id"],
             serializer.validated_data["request_id"],
-            parse_catalog_context(request),
         )
         response = Response(RewardIntentSerializer(row).data, status=201 if created else 200)
         response["Cache-Control"] = "no-store"
@@ -103,7 +99,7 @@ class AdMobCallbackView(APIView):
         auth=[],
         description=(
             "Provider-only AdMob ECDSA verification. Original URL query required; "
-            "never a client grant. Test mode only. The verifier percent-decodes the prefix "
+            "never a client grant. The verifier percent-decodes the prefix "
             "once to UTF-8, preserving order and literal plus signs, before signature and "
             "key_id (last, in that order). Duplicate verified delivery is "
             "acknowledged without granting again. Invalid/mismatched/expired callbacks return 400."
@@ -126,7 +122,7 @@ class AdMobCallbackView(APIView):
         responses={200: None, 400: ERROR_409, 503: ERROR_409},
     )
     def get(self, request: Request) -> Response:
-        if not settings.DEBUG or settings.REWARDED_ADS_MODE != "test":
+        if settings.REWARDED_ADS_MODE not in {"test", "production"}:
             raise InvalidCallback()
         callback = verify_callback(request.META.get("QUERY_STRING", ""))
         grant_verified_reward(callback)

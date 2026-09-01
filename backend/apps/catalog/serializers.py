@@ -5,30 +5,7 @@ from collections.abc import Mapping, Sequence
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
-from apps.catalog.eligibility import CatalogRequestContext
-from apps.catalog.models import REQUIRED_CATALOG_LANGUAGE, Episode, Season, Series
-
-
-def localized_translation[T](
-    translations: Sequence[T],
-    *,
-    requested: str,
-    original: str,
-    language_attr: str = "language",
-) -> T | None:
-    """Prefer X-Language, then original language, then English.
-
-    Eligibility already required the request language to be in the rights grant.
-    Missing translations fall back so a published English series still renders.
-    """
-    by_language: dict[str, T] = {}
-    for item in translations:
-        by_language[str(getattr(item, language_attr))] = item
-    for language in (requested, original, REQUIRED_CATALOG_LANGUAGE):
-        match = by_language.get(language)
-        if match is not None:
-            return match
-    return None
+from apps.catalog.models import Episode, Season, Series
 
 
 def series_artwork_url(series: Series) -> str | None:
@@ -41,7 +18,6 @@ class CatalogSeriesCardSerializer(serializers.Serializer[Mapping[str, object]]):
     title = serializers.CharField()
     synopsis = serializers.CharField()
     artwork_url = serializers.CharField(allow_null=True)
-    original_language = serializers.CharField()
 
 
 @extend_schema_serializer(component_name="CatalogRail")
@@ -77,7 +53,6 @@ class CatalogSeriesDetailSerializer(serializers.Serializer[Mapping[str, object]]
     title = serializers.CharField()
     synopsis = serializers.CharField()
     artwork_url = serializers.CharField(allow_null=True)
-    original_language = serializers.CharField()
     genres = serializers.ListField(child=serializers.CharField())
     seasons = CatalogSeasonSerializer(many=True)
 
@@ -93,69 +68,51 @@ class CatalogEpisodeDetailSerializer(serializers.Serializer[Mapping[str, object]
     season_number = serializers.IntegerField()
 
 
-def serialize_series_card(series: Series, context: CatalogRequestContext) -> dict[str, object]:
-    translation = localized_translation(
-        list(series.translations.all()),
-        requested=context.language,
-        original=series.original_language,
-    )
-    title = translation.title if translation else ""
-    synopsis = translation.synopsis if translation else ""
+def serialize_series_card(series: Series) -> dict[str, object]:
     return {
         "id": series.public_id,
-        "title": title,
-        "synopsis": synopsis,
+        "title": series.title,
+        "synopsis": series.synopsis,
         "artwork_url": series_artwork_url(series),
-        "original_language": series.original_language,
     }
 
 
-def serialize_episode_summary(
-    episode: Episode, context: CatalogRequestContext
-) -> dict[str, object]:
-    translation = localized_translation(
-        list(episode.translations.all()),
-        requested=context.language,
-        original=episode.series.original_language,
-    )
+def serialize_episode_summary(episode: Episode) -> dict[str, object]:
     return {
         "id": episode.public_id,
         "order": episode.order,
         "duration_seconds": episode.duration_seconds,
-        "title": translation.title if translation else "",
-        "synopsis": translation.synopsis if translation else "",
+        "title": episode.title,
+        "synopsis": episode.synopsis,
     }
 
 
 def serialize_series_detail(
     series: Series,
-    context: CatalogRequestContext,
     episodes_by_season: Mapping[int, Sequence[Episode]],
     seasons: Sequence[Season],
 ) -> dict[str, object]:
-    card = serialize_series_card(series, context)
-    season_payload: list[dict[str, object]] = []
-    for season in seasons:
-        visible = episodes_by_season.get(season.number, ())
-        if not visible:
-            continue
-        season_payload.append(
-            {
-                "number": season.number,
-                "episodes": [serialize_episode_summary(episode, context) for episode in visible],
-            }
-        )
+    season_payload = [
+        {
+            "number": season.number,
+            "episodes": [
+                serialize_episode_summary(episode)
+                for episode in episodes_by_season.get(season.number, ())
+            ],
+        }
+        for season in seasons
+        if episodes_by_season.get(season.number)
+    ]
     return {
-        **card,
+        **serialize_series_card(series),
         "genres": [genre.name for genre in series.genres.all()],
         "seasons": season_payload,
     }
 
 
-def serialize_episode_detail(episode: Episode, context: CatalogRequestContext) -> dict[str, object]:
-    summary = serialize_episode_summary(episode, context)
+def serialize_episode_detail(episode: Episode) -> dict[str, object]:
     return {
-        **summary,
+        **serialize_episode_summary(episode),
         "series_id": episode.series.public_id,
         "season_number": episode.season.number,
     }

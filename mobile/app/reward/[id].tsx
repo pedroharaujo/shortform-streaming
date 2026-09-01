@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import type { JSX } from 'react';
 import { useMemo } from 'react';
-import { Platform } from 'react-native';
 import {
   createAppCatalogClient,
   createAppMeClient,
@@ -10,16 +9,17 @@ import {
 } from '../../src/api/createAppClients';
 import { getAppAnalyticsRuntime } from '../../src/analytics/appAnalytics';
 import { getSessionCredential } from '../../src/auth/session';
-import { getApiConfiguration, getRewardedAdUnitId } from '../../src/config/appConfiguration';
+import { getAdsConfiguration, getApiConfiguration } from '../../src/config/appConfiguration';
 import { readRouteId } from '../../src/features/catalog/readRouteId';
 import { RewardScreen } from '../../src/features/rewards/RewardScreen';
 import { createRewardAnalytics } from '../../src/features/rewards/rewardAnalytics';
-import { createTestAdPresenter } from '../../src/features/rewards/testAdPresenter';
+import { createRewardedAdPresenter } from '../../src/features/rewards/rewardedAdPresenter';
 
 export default function RewardRoute(): JSX.Element {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const episodeId = readRouteId(params.id);
   const { environment } = getApiConfiguration();
+  const ads = getAdsConfiguration();
   const clients = useMemo(
     () => ({
       catalog: createAppCatalogClient(),
@@ -30,8 +30,13 @@ export default function RewardRoute(): JSX.Element {
     [],
   );
   const presenter = useMemo(
-    () => createTestAdPresenter(environment, Platform.OS, getRewardedAdUnitId()),
-    [environment],
+    () =>
+      createRewardedAdPresenter({
+        environment,
+        mode: ads.mode,
+        rewardedUnitId: ads.rewardedUnitId,
+      }),
+    [ads.mode, ads.rewardedUnitId, environment],
   );
   const analytics = useMemo(() => createRewardAnalytics(getAppAnalyticsRuntime()), []);
   return (
@@ -41,7 +46,7 @@ export default function RewardRoute(): JSX.Element {
       episodeId={episodeId}
       analytics={analytics}
       presenter={presenter}
-      enabled={environment !== 'production' && Platform.OS === 'android'}
+      enabled={ads.mode !== 'disabled'}
       onClose={() => {
         if (router.canGoBack()) router.back();
         else router.replace({ pathname: '/episodes/[id]', params: { id: episodeId } });

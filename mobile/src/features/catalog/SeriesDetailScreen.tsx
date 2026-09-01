@@ -1,15 +1,13 @@
-import { useEffect, type JSX } from 'react';
+import type { JSX } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CatalogClient, CatalogEpisodeSummary } from '../../api/catalog/types';
-import type { AnalyticsRuntime } from '../../analytics/runtime';
 import { CatalogArtwork } from './CatalogArtwork';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
 import { useCatalogSeries } from './useCatalog';
 
 export interface SeriesDetailScreenProps {
-  readonly analytics: AnalyticsRuntime;
   readonly client: CatalogClient;
   readonly seriesId: string;
   readonly onSelectEpisode: (episodeId: string) => void;
@@ -41,20 +39,12 @@ function EpisodeRow({
 }
 
 export function SeriesDetailScreen({
-  analytics,
   client,
   seriesId,
   onSelectEpisode,
   onBack,
 }: SeriesDetailScreenProps): JSX.Element {
   const { state, refresh } = useCatalogSeries(client, seriesId);
-
-  useEffect(() => {
-    if (state.phase !== 'loaded') return;
-    void analytics.logOnce('series_opened', `s:${state.series.id}`, {
-      series_id: state.series.id,
-    });
-  }, [analytics, state]);
 
   return (
     <SafeAreaView style={styles.container} testID="series-detail-screen">

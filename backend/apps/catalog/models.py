@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import re
-from collections.abc import Callable
 from typing import Any
 
 from django.contrib.postgres.fields import ArrayField
@@ -15,53 +13,14 @@ from apps.catalog.public_ids import (
     generate_public_id,
 )
 
-ISO_3166_1_ALPHA_2 = re.compile(r"^[A-Za-z]{2}$")
-ISO_639_1 = re.compile(r"^[A-Za-z]{2}$")
-REQUIRED_CATALOG_LANGUAGE = "en"
-ALLOWED_PLATFORMS = frozenset({"ios", "android"})
+MVP_CATALOG_LANGUAGE = "en"
+MVP_DISTRIBUTION_COUNTRY = "FR"
+MVP_PLATFORM = "android"
 
 
 class PublicationStatus(models.TextChoices):
     DRAFT = "draft", "Draft"
     PUBLISHED = "published", "Published"
-
-
-def _dedupe_codes(values: list[str] | None, transform: Callable[[str], str]) -> list[str]:
-    if not values:
-        return []
-    normalized: list[str] = []
-    seen: set[str] = set()
-    for raw in values:
-        code = transform(raw.strip())
-        if code in seen:
-            continue
-        seen.add(code)
-        normalized.append(code)
-    return normalized
-
-
-def normalize_territory_codes(values: list[str] | None) -> list[str]:
-    return _dedupe_codes(values, str.upper)
-
-
-def normalize_language_codes(values: list[str] | None) -> list[str]:
-    return _dedupe_codes(values, str.lower)
-
-
-def normalize_platforms(values: list[str] | None) -> list[str]:
-    return _dedupe_codes(values, str.lower)
-
-
-def _validate_territory_codes(values: list[str], field_name: str) -> None:
-    invalid = [code for code in values if not ISO_3166_1_ALPHA_2.fullmatch(code)]
-    if invalid:
-        raise ValidationError({field_name: "Territory codes must be ISO 3166-1 alpha-2."})
-
-
-def _validate_language_codes(values: list[str], field_name: str) -> None:
-    invalid = [code for code in values if not ISO_639_1.fullmatch(code)]
-    if invalid:
-        raise ValidationError({field_name: "Language codes must be ISO 639-1 (two letters)."})
 
 
 class Genre(models.Model):
@@ -76,17 +35,11 @@ class Genre(models.Model):
 
 
 class Series(models.Model):
-    """Editorial series. Eligibility for anonymous catalog is evaluated at request time.
-
-    Publish rule (P2-T03): a series may be stored as published only when it has an
-    English translation (title + synopsis) and at least one structurally valid,
-    non-takedown ContentRight (licensor, opaque contract_reference, window,
-    territory allowlist, platforms, languages). Expired windows do not block the
-    published flag; the public API hides ineligible titles at read time.
-    Age rating is stored as metadata only; anonymous GET is not age-gated (D-003).
-    """
+    """Self-owned English series for the France/Android MVP."""
 
     public_id = models.CharField(max_length=40, unique=True, editable=False)
+    title = models.CharField(max_length=200, blank=True, default="")
+    synopsis = models.TextField(blank=True, default="")
     publication_status = models.CharField(
         max_length=16,
         choices=PublicationStatus.choices,
@@ -97,9 +50,10 @@ class Series(models.Model):
         default=0,
         help_text="Lower values appear first on home, then public_id.",
     )
+    # Dormant compatibility column retained until the destructive contraction.
     original_language = models.CharField(
         max_length=2,
-        default=REQUIRED_CATALOG_LANGUAGE,
+        default=MVP_CATALOG_LANGUAGE,
         help_text="ISO 639-1 original language. MVP catalog language is English.",
     )
     artwork_url = models.CharField(
@@ -117,6 +71,29 @@ class Series(models.Model):
     content_warnings = models.TextField(blank=True, default="")
     attribution = models.TextField(blank=True, default="")
     genres = models.ManyToManyField(Genre, blank=True, related_name="series")
+    self_owned = models.BooleanField(
+        default=False,
+        help_text="Must be confirmed before publication. Licensed content is outside MVP.",
+    )
+    provenance_reference = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        help_text="Opaque reference to the private ownership/component-provenance record.",
+    )
+    promotional_use_approved = models.BooleanField(
+        default=False,
+        help_text="Confirms promotional use for the self-owned launch material.",
+    )
+    takedown = models.BooleanField(default=False, db_index=True)
+    free_episode_count = models.PositiveIntegerField(
+        default=5,
+        help_text="Episodes 1 through this order are free in each season.",
+    )
+    rewarded_ads_enabled = models.BooleanField(
+        default=True,
+        help_text="Server-side kill switch for rewarded-ad offers on this series.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -125,99 +102,44 @@ class Series(models.Model):
         ordering = ("editorial_rank", "public_id")
 
     def __str__(self) -> str:
-        return self.english_title or self.public_id
+        return self.title or self.public_id
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         if not self.public_id:
             self.public_id = generate_public_id(SERIES_PUBLIC_ID_PREFIX)
-        self.original_language = self.original_language.strip().lower()
         super().save(*args, **kwargs)
 
     def clean(self) -> None:
         super().clean()
-        language = self.original_language.strip().lower()
-        if not ISO_639_1.fullmatch(language):
-            raise ValidationError({"original_language": "Original language must be ISO 639-1."})
-        self.original_language = language
         if self.publication_status != PublicationStatus.PUBLISHED:
             return
-        if not self.pk:
-            raise ValidationError(
-                {
-                    "publication_status": (
-                        "Save the series as a draft, add an English translation and a valid "
-                        "non-takedown ContentRight, then publish."
-                    )
-                }
-            )
-        self.validate_publish_requirements()
-
-    def validate_publish_requirements(self) -> None:
-        english = self.translations.filter(language=REQUIRED_CATALOG_LANGUAGE).first()
-        if english is None or not english.title.strip() or not english.synopsis.strip():
-            raise ValidationError(
-                {
-                    "publication_status": (
-                        "Publishing requires an English title and synopsis "
-                        f"(language={REQUIRED_CATALOG_LANGUAGE})."
-                    )
-                }
-            )
-        if not self.has_publishable_right():
-            raise ValidationError(
-                {
-                    "publication_status": (
-                        "Publishing requires at least one non-takedown ContentRight with "
-                        "licensor, contract_reference, starts_at, territory allowlist, "
-                        "platforms, and languages."
-                    )
-                }
-            )
-
-    def has_publishable_right(self) -> bool:
-        return any(right.is_structurally_publishable() for right in self.rights.all())
-
-    @property
-    def english_title(self) -> str:
-        if not self.pk:
-            return ""
-        translation = self.translations.filter(language=REQUIRED_CATALOG_LANGUAGE).first()
-        return translation.title if translation else ""
-
-
-class SeriesTranslation(models.Model):
-    series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name="translations")
-    language = models.CharField(
-        max_length=2, help_text="ISO 639-1. English is required to publish."
-    )
-    title = models.CharField(max_length=200)
-    synopsis = models.TextField()
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=("series", "language"), name="catalog_seriestranslation_unique_language"
-            ),
-        ]
-        ordering = ("language",)
-
-    def __str__(self) -> str:
-        return f"{self.language}: {self.title}"
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        self.language = self.language.strip().lower()
-        super().save(*args, **kwargs)
-
-    def clean(self) -> None:
-        super().clean()
-        language = self.language.strip().lower()
-        if not ISO_639_1.fullmatch(language):
-            raise ValidationError({"language": "Language must be ISO 639-1."})
-        self.language = language
+        errors: dict[str, str] = {}
         if not self.title.strip():
-            raise ValidationError({"title": "Title is required."})
+            errors["title"] = "Publishing requires an English title."
         if not self.synopsis.strip():
-            raise ValidationError({"synopsis": "Synopsis is required."})
+            errors["synopsis"] = "Publishing requires an English synopsis."
+        if not self.self_owned:
+            errors["self_owned"] = "MVP publication is limited to confirmed self-owned content."
+        if not self.provenance_reference.strip():
+            errors["provenance_reference"] = "Publishing requires a private provenance reference."
+        if not self.promotional_use_approved:
+            errors["promotional_use_approved"] = (
+                "Promotional use must be approved before publication."
+            )
+        if self.takedown:
+            errors["takedown"] = "A taken-down series cannot be published."
+        if errors:
+            raise ValidationError(errors)
+
+    def is_publishable(self) -> bool:
+        return (
+            bool(self.title.strip())
+            and bool(self.synopsis.strip())
+            and self.self_owned
+            and bool(self.provenance_reference.strip())
+            and self.promotional_use_approved
+            and not self.takedown
+        )
 
 
 class Season(models.Model):
@@ -236,18 +158,35 @@ class Season(models.Model):
         return f"{self.series} · season {self.number}"
 
 
-class Episode(models.Model):
-    """Episode metadata. Monetization lock state is omitted (P3 / P2-T04).
+class SeriesTranslation(models.Model):  # noqa: DJ008
+    """Dormant pre-MVP-simplification rows retained for safe cascaded deletion."""
 
-    Publish rule: English title + synopsis, positive duration, valid optional
-    window, the parent series must have a structurally valid non-takedown
-    ContentRight, and a ready MediaAsset must exist (P2-T06).
-    """
+    series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name="translations")
+    language = models.CharField(
+        max_length=2, help_text="ISO 639-1. English is required to publish."
+    )
+    title = models.CharField(max_length=200)
+    synopsis = models.TextField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("series", "language"),
+                name="catalog_seriestranslation_unique_language",
+            ),
+        ]
+        ordering = ("language",)
+
+
+class Episode(models.Model):
+    """English episode metadata; playback still requires a ready provider asset."""
 
     public_id = models.CharField(max_length=40, unique=True, editable=False)
     series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name="episodes")
     season = models.ForeignKey(Season, on_delete=models.CASCADE, related_name="episodes")
     order = models.PositiveIntegerField(help_text="1-based order unique within the season.")
+    title = models.CharField(max_length=200, blank=True, default="")
+    synopsis = models.TextField(blank=True, default="")
     duration_seconds = models.PositiveIntegerField(default=0)
     publication_status = models.CharField(
         max_length=16,
@@ -255,6 +194,7 @@ class Episode(models.Model):
         default=PublicationStatus.DRAFT,
         db_index=True,
     )
+    # Dormant nullable columns retained until the destructive contraction.
     window_starts_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -286,7 +226,7 @@ class Episode(models.Model):
         ordering = ("season__number", "order")
 
     def __str__(self) -> str:
-        return self.english_title or self.public_id
+        return self.title or self.public_id
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         if not self.public_id:
@@ -301,54 +241,23 @@ class Episode(models.Model):
             raise ValidationError({"season": "Season must belong to the same series."})
         if self.season_id and not self.series_id:
             self.series_id = self.season.series_id
-        if (
-            self.window_starts_at is not None
-            and self.window_ends_at is not None
-            and self.window_starts_at >= self.window_ends_at
-        ):
-            raise ValidationError({"window_ends_at": "Episode window end must be after start."})
         if self.publication_status != PublicationStatus.PUBLISHED:
             return
-        if not self.pk:
-            raise ValidationError(
-                {
-                    "publication_status": (
-                        "Save the episode as a draft, add an English translation, then publish."
-                    )
-                }
-            )
-        self.validate_publish_requirements()
-
-    def validate_publish_requirements(self) -> None:
+        errors: dict[str, str] = {}
         if self.duration_seconds < 1:
-            raise ValidationError({"duration_seconds": "Publishing requires a positive duration."})
-        english = self.translations.filter(language=REQUIRED_CATALOG_LANGUAGE).first()
-        if english is None or not english.title.strip() or not english.synopsis.strip():
-            raise ValidationError(
-                {
-                    "publication_status": (
-                        "Publishing requires an English episode title and synopsis."
-                    )
-                }
-            )
-        series = self.series
-        if not series.has_publishable_right():
-            raise ValidationError(
-                {
-                    "publication_status": (
-                        "Publishing an episode requires the series to have a valid "
-                        "non-takedown ContentRight."
-                    )
-                }
+            errors["duration_seconds"] = "Publishing requires a positive duration."
+        if not self.title.strip():
+            errors["title"] = "Publishing requires an English episode title."
+        if not self.synopsis.strip():
+            errors["synopsis"] = "Publishing requires an English episode synopsis."
+        if not self.series.is_publishable():
+            errors["publication_status"] = (
+                "The parent series must pass self-owned publication gates."
             )
         if not self.has_ready_media_asset():
-            raise ValidationError(
-                {
-                    "publication_status": (
-                        "Publishing requires a ready MediaAsset with valid captions and thumbnail."
-                    )
-                }
-            )
+            errors["publication_status"] = "Publishing requires a ready media asset."
+        if errors:
+            raise ValidationError(errors)
 
     def has_ready_media_asset(self) -> bool:
         if not self.pk:
@@ -357,15 +266,10 @@ class Episode(models.Model):
 
         return self.media_assets.filter(state=MediaAssetState.READY).exists()
 
-    @property
-    def english_title(self) -> str:
-        if not self.pk:
-            return ""
-        translation = self.translations.filter(language=REQUIRED_CATALOG_LANGUAGE).first()
-        return translation.title if translation else ""
 
+class EpisodeTranslation(models.Model):  # noqa: DJ008
+    """Dormant pre-MVP-simplification rows retained for safe cascaded deletion."""
 
-class EpisodeTranslation(models.Model):
     episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name="translations")
     language = models.CharField(max_length=2)
     title = models.CharField(max_length=200)
@@ -380,32 +284,9 @@ class EpisodeTranslation(models.Model):
         ]
         ordering = ("language",)
 
-    def __str__(self) -> str:
-        return f"{self.language}: {self.title}"
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        self.language = self.language.strip().lower()
-        super().save(*args, **kwargs)
-
-    def clean(self) -> None:
-        super().clean()
-        language = self.language.strip().lower()
-        if not ISO_639_1.fullmatch(language):
-            raise ValidationError({"language": "Language must be ISO 639-1."})
-        self.language = language
-        if not self.title.strip():
-            raise ValidationError({"title": "Title is required."})
-        if not self.synopsis.strip():
-            raise ValidationError({"synopsis": "Synopsis is required."})
-
-
-class ContentRight(models.Model):
-    """Series-level rights grant. Opaque contract references only; never rates or PII.
-
-    Language grant: `languages` is the licensed original/subtitle/dub grant. A request
-    is eligible only when X-Language is in this list. Series.original_language is
-    metadata and is not an implicit grant.
-    """
+class ContentRight(models.Model):  # noqa: DJ008
+    """Dormant legacy rows; not used for MVP eligibility or exposed in Admin/API."""
 
     series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name="rights")
     licensor = models.CharField(
@@ -476,74 +357,3 @@ class ContentRight(models.Model):
             ),
         ]
         ordering = ("starts_at", "id")
-
-    def __str__(self) -> str:
-        status = "takedown" if self.takedown else "active"
-        return f"{self.licensor} ({status})"
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        self.territory_allowlist = normalize_territory_codes(self.territory_allowlist)
-        self.territory_denylist = normalize_territory_codes(self.territory_denylist)
-        self.platforms = normalize_platforms(self.platforms)
-        self.languages = normalize_language_codes(self.languages)
-        super().save(*args, **kwargs)
-
-    def clean(self) -> None:
-        super().clean()
-        self.territory_allowlist = normalize_territory_codes(self.territory_allowlist)
-        self.territory_denylist = normalize_territory_codes(self.territory_denylist)
-        self.platforms = normalize_platforms(self.platforms)
-        self.languages = normalize_language_codes(self.languages)
-        errors: dict[str, str] = {}
-        if not self.licensor.strip():
-            errors["licensor"] = "Licensor is required."
-        if not self.contract_reference.strip():
-            errors["contract_reference"] = "Opaque contract_reference is required."
-        if not self.territory_allowlist:
-            errors["territory_allowlist"] = "Territory allowlist must contain at least one code."
-        else:
-            try:
-                _validate_territory_codes(self.territory_allowlist, "territory_allowlist")
-            except ValidationError as exc:
-                errors.update(
-                    {str(key): str(messages[0]) for key, messages in exc.message_dict.items()}
-                )
-        if self.territory_denylist:
-            try:
-                _validate_territory_codes(self.territory_denylist, "territory_denylist")
-            except ValidationError as exc:
-                errors.update(
-                    {str(key): str(messages[0]) for key, messages in exc.message_dict.items()}
-                )
-        if not self.platforms:
-            errors["platforms"] = "At least one platform is required."
-        elif set(self.platforms) - ALLOWED_PLATFORMS:
-            errors["platforms"] = "Platforms must be ios and/or android."
-        if not self.languages:
-            errors["languages"] = "At least one language grant is required."
-        else:
-            try:
-                _validate_language_codes(self.languages, "languages")
-            except ValidationError as exc:
-                errors.update(
-                    {str(key): str(messages[0]) for key, messages in exc.message_dict.items()}
-                )
-        if (
-            self.ends_at is not None
-            and self.starts_at is not None
-            and self.starts_at >= self.ends_at
-        ):
-            errors["ends_at"] = "Rights window end must be after start (end is exclusive)."
-        if errors:
-            raise ValidationError(errors)
-
-    def is_structurally_publishable(self) -> bool:
-        if self.takedown:
-            return False
-        if not self.licensor.strip() or not self.contract_reference.strip():
-            return False
-        if not self.territory_allowlist or not self.platforms or not self.languages:
-            return False
-        if self.ends_at is not None and self.starts_at >= self.ends_at:
-            return False
-        return True

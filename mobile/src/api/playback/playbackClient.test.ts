@@ -1,5 +1,4 @@
 import { jsonResponse, requestHeaders, requestUrl } from '../fetchTestUtils';
-import { MVP_CLIENT_PLATFORM } from '../context';
 import { createPlaybackClient, type PlaybackClientOptions } from './playbackClient';
 
 const BASE_URL = 'http://10.0.2.2:8000';
@@ -14,15 +13,13 @@ const GRANTED = {
 function client(performRequest: typeof fetch, extra?: Partial<PlaybackClientOptions>) {
   return createPlaybackClient({
     baseUrl: BASE_URL,
-    territory: 'FR',
-    platform: MVP_CLIENT_PLATFORM,
     fetchImplementation: performRequest,
     ...extra,
   });
 }
 
 describe('createPlaybackClient', () => {
-  it('posts authorize with catalog context headers and no Authorization', async () => {
+  it('posts authorize without client-controlled market headers or Authorization', async () => {
     const performRequest = jest.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       jsonResponse(GRANTED, 200),
     );
@@ -33,9 +30,9 @@ describe('createPlaybackClient', () => {
     const [input, init] = performRequest.mock.calls[0] ?? [];
     expect(requestUrl(input as RequestInfo | URL)).toContain('/v1/playback/ep_harbor_1/authorize');
     const headers = requestHeaders(input as RequestInfo | URL, init);
-    expect(headers.get('X-Territory')).toBe('FR');
-    expect(headers.get('X-Platform')).toBe(MVP_CLIENT_PLATFORM);
-    expect(headers.get('X-Language')).toBe('en');
+    expect(headers.get('X-Territory')).toBeNull();
+    expect(headers.get('X-Platform')).toBeNull();
+    expect(headers.get('X-Language')).toBeNull();
     expect(headers.get('Authorization')).toBeNull();
     expect(headers.get('Accept-Language')).toBeNull();
   });

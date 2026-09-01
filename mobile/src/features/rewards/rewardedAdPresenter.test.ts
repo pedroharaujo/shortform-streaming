@@ -1,4 +1,4 @@
-import { createTestAdPresenter } from './testAdPresenter';
+import { createRewardedAdPresenter } from './rewardedAdPresenter';
 import type { RewardIntent } from '../../api/rewards/types';
 
 const mockDevice: { isDevice: boolean | undefined } = { isDevice: false };
@@ -8,6 +8,14 @@ jest.mock('expo-device', () => ({
   },
 }));
 const PUBLISHER_UNIT = 'ca-app-pub-1111111111111111/2222222222';
+
+function createPresenter(
+  environment = 'local',
+  rewardedUnitId = INTENT.ad_unit_id,
+  mode: 'disabled' | 'test' | 'production' = 'test',
+) {
+  return createRewardedAdPresenter({ environment, rewardedUnitId, mode });
+}
 
 const mockListeners = new Map<string, () => void>();
 const mockInitialize = jest.fn(async () => []);
@@ -64,7 +72,7 @@ beforeEach(() => {
 
 it('requires fresh consent before initializing or requesting an ad', async () => {
   mockGather.mockResolvedValue({ canRequestAds: false });
-  const presenter = createTestAdPresenter('local', 'android');
+  const presenter = createPresenter();
   await expect(presenter.prepare(() => true)).rejects.toThrow();
   expect(mockInitialize).not.toHaveBeenCalled();
   expect(mockCreate).not.toHaveBeenCalled();
@@ -73,7 +81,7 @@ it('requires fresh consent before initializing or requesting an ad', async () =>
 it.each([INTENT.ad_unit_id, PUBLISHER_UNIT])(
   'loads configured %s with server bindings and never resolves on client reward alone',
   async (unit) => {
-    const presenter = createTestAdPresenter('local', 'android', unit);
+    const presenter = createPresenter('local', unit);
     const intent = { ...INTENT, ad_unit_id: unit };
     await presenter.prepare(() => true);
     expect(mockRequestConfiguration).toHaveBeenCalledWith({ testDeviceIdentifiers: ['EMULATOR'] });
@@ -113,17 +121,14 @@ it.each([INTENT.ad_unit_id, PUBLISHER_UNIT])(
   },
 );
 
-it.each([
-  ['production', 'android'],
-  ['local', 'ios'],
-])('cannot initialize for %s/%s', async (environment, platform) => {
-  await expect(createTestAdPresenter(environment, platform).prepare(() => true)).rejects.toThrow();
+it('cannot initialize test ads in production', async () => {
+  await expect(createPresenter('production').prepare(() => true)).rejects.toThrow();
   expect(mockGather).not.toHaveBeenCalled();
   expect(mockCreate).not.toHaveBeenCalled();
 });
 
 it('rejects a live unit even when returned by a server', async () => {
-  const presenter = createTestAdPresenter('local', 'android');
+  const presenter = createPresenter();
   await presenter.prepare(() => true);
   await expect(
     presenter.present(
@@ -136,7 +141,7 @@ it('rejects a live unit even when returned by a server', async () => {
 });
 
 it('cannot show a loaded ad after the session changes', async () => {
-  const presenter = createTestAdPresenter('local', 'android');
+  const presenter = createPresenter();
   let current = true;
   await presenter.prepare(() => current);
   const onEvent = jest.fn();
@@ -150,18 +155,17 @@ it('cannot show a loaded ad after the session changes', async () => {
 });
 
 it.each([
-  ['local', 'android', true, true],
-  ['local', 'android', undefined, true],
-  ['local', 'android', false, false],
-  ['staging', 'android', false, true],
-  ['production', 'android', false, true],
-  ['local', 'ios', false, true],
+  ['local', true, true],
+  ['local', undefined, true],
+  ['local', false, false],
+  ['staging', false, true],
+  ['production', false, true],
 ] as const)(
-  'blocks publisher ads before consent/SDK for %s/%s device=%s dev=%s',
-  async (environment, platform, isDevice, dev) => {
+  'blocks publisher ads before consent/SDK for %s device=%s dev=%s',
+  async (environment, isDevice, dev) => {
     mockDevice.isDevice = isDevice;
     Object.defineProperty(globalThis, '__DEV__', { value: dev, writable: true });
-    const presenter = createTestAdPresenter(environment, platform, PUBLISHER_UNIT);
+    const presenter = createPresenter(environment, PUBLISHER_UNIT);
     await expect(presenter.prepare(() => true)).rejects.toThrow();
     expect(mockGather).not.toHaveBeenCalled();
     expect(mockRequestConfiguration).not.toHaveBeenCalled();
@@ -171,7 +175,7 @@ it.each([
 );
 
 it('rejects a server unit that differs from the configured publisher unit before loading', async () => {
-  const presenter = createTestAdPresenter('local', 'android', PUBLISHER_UNIT);
+  const presenter = createPresenter('local', PUBLISHER_UNIT);
   await presenter.prepare(() => true);
   await expect(
     presenter.present(
@@ -182,4 +186,14 @@ it('rejects a server unit that differs from the configured publisher unit before
   ).rejects.toThrow();
   expect(mockCreate).not.toHaveBeenCalled();
   expect(mockLoad).not.toHaveBeenCalled();
+});
+
+it('initializes a publisher unit in an explicitly enabled production build', async () => {
+  Object.defineProperty(globalThis, '__DEV__', { value: false, writable: true });
+  const presenter = createPresenter('production', PUBLISHER_UNIT, 'production');
+
+  await presenter.prepare(() => true);
+
+  expect(mockRequestConfiguration).not.toHaveBeenCalled();
+  expect(mockInitialize).toHaveBeenCalledTimes(1);
 });

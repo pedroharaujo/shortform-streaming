@@ -1,21 +1,20 @@
 # Mobile source
 
-Strict TypeScript sources for the Expo app.
+| Path                                  | Role                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------ |
+| `api/createAppClients.ts`             | Android API clients using the single configured backend URL              |
+| `api/context.ts`                      | OpenAPI fetch wrapper and optional Bearer header                         |
+| `api/catalog/`                        | Anonymous fixed-market catalog reads                                     |
+| `api/playback/`                       | Playback authorization                                                   |
+| `api/progress/`                       | Watch progress                                                           |
+| `api/rewards/`                        | Reward offers, intents, and status                                       |
+| `api/me/`, `api/account/`             | Verified profile, preferences, and deletion                              |
+| `auth/`                               | Email/password + Google Jest/native Firebase boundary and session holder |
+| `analytics/`                          | Consent-gated launch/auth/playback/reward outcome events                 |
+| `features/catalog/`                   | Home, series, and episode screens                                        |
+| `features/playback/`                  | Product player                                                           |
+| `features/rewards/`                   | AdMob reward flow                                                        |
+| `features/auth/`, `features/account/` | Email/password + Google sign-in and account controls                     |
 
-| Path                      | Role                                                                                       |
-| ------------------------- | ------------------------------------------------------------------------------------------ |
-| `api/createAppClients.ts` | Android app clients: catalog, playback, progress, me, health. Routes should use this file. |
-| `api/context.ts`          | `X-Territory` / `X-Platform` / `X-Language` and the OpenAPI fetch wrapper                  |
-| `api/catalog/`            | Anonymous catalog reads                                                                    |
-| `api/playback/`           | Playback authorize                                                                         |
-| `api/progress/`           | Watch progress                                                                             |
-| `api/me/`                 | Authenticated `GET /v1/me`; Bearer ID token only                                           |
-| `api/health/`             | `GET /health/live` and `GET /health/ready`                                                 |
-| `auth/`                   | Jest mock vs native Firebase Auth + Google on Android                                      |
-| `config/`                 | Environment selection and Expo manifest reads                                              |
-| `features/catalog/`       | Home, series detail, episode-selected screens                                              |
-| `features/auth/`          | Sign-in screen (email/password and Google)                                                 |
-| `features/playback/`      | Product player and isolated HLS spike                                                      |
-| `features/health/`        | Backend availability screen                                                                |
-
-Tests sit next to the modules they cover (`*.test.ts` / `*.test.tsx`). Shared screen helpers live in `testUtils.tsx`.
+Tests sit beside the modules they cover. API shapes come from the generated
+OpenAPI client; do not recreate request or response types by hand.

@@ -1,104 +1,31 @@
-# Playback spike (P2-T05)
+# Historical Bunny playback proof
 
-Prove the default video path: a generated 9:16 master goes through `VideoProvider`
-to Bunny Stream (or the in-memory Fake in CI), encodes ABR HLS, and plays in
-`expo-video` from a short-lived URL that **Django** mints. Django never serves
-video bytes. The app never uses Bunny’s web player.
+This file preserves the result of the August 2026 playback spike. Its temporary
+Django management command and mobile proof route were removed from the MVP on
+2026-09-02. Do not recreate them as production surfaces.
 
-**Never commit Bunny keys, paste signed URLs, or check in mp4/m3u8/vtt/srt.**
+## Result
 
-## Local Fake (default)
+- A generated, self-owned 9:16 clip was uploaded directly to a non-production
+  Bunny Stream library and encoded successfully.
+- An Android Pixel emulator played adaptive HLS through `expo-video` using a
+  short-lived URL returned by Django authorization.
+- Unsigned and expired requests were denied by the provider.
+- Bunny met the proof criteria, so the GCP Cloud CDN fallback was not activated.
+- No licensed media, production master, provider secret, signed URL, or provider
+  payload belongs in this repository or its test evidence.
 
-`.env.example` sets `VIDEO_PROVIDER=fake`. Pytest and Application CI need no
-Bunny credentials. Authorize looks up the episode's **ready MediaAsset** (P2-T06).
-`PLAYBACK_SPIKE_ASSETS` is obsolete and is not consulted.
+## Current MVP workflow
 
-Authorize:
+Staff initiate the self-owned master upload in Django Admin. The existing
+workflow verifies its checksum, submits it to Bunny Stream, records processing
+and ready metadata, and provides Admin retry and takedown actions. Production
+uploads use a private signed landing bucket; consumer APIs never accept or serve
+video bytes. The Android app calls the normal playback authorization endpoint;
+France, Android, and English are fixed server-side and no market headers are
+accepted.
 
-```shell
-curl -sS -X POST \
-  -H "X-Territory: FR" -H "X-Platform: android" -H "X-Language: en" \
-  http://127.0.0.1:8000/v1/playback/<episode_public_id>/authorize
-```
-
-Play the returned `playback_url` on the isolated mobile route `/playback-spike?episodeId=<id>`.
-Do not convert the catalog episode-selected screen into a player (P2-T08).
-Required live play is an Android development build (D-026). iOS device play is deferred to the iOS ship pass, not dropped from the product.
-
-## Non-production Bunny Stream
-
-Missing credentials are **not** a Bunny failure and must not reopen D-014.
-
-1. Create a non-production Stream library. Copy library id, Stream API key, CDN
-   hostname (for example `vz-….b-cdn.net`), and pull-zone token authentication
-   key into a **local, untracked** environment. Leave production unset.
-2. Enable CDN token authentication on the library pull zone. Use directory /
-   path-style tokens so HLS segments inherit access. Leave Stream **Block Direct
-   URL File Access** **off** (required for native `expo-video`; a signed GET
-   with no Referer must succeed). Token auth still denies unsigned and expired
-   requests. Do not rely on hotlink / empty-referrer blocking for this spike.
-3. Set:
-
-   ```text
-   VIDEO_PROVIDER=bunny
-   BUNNY_STREAM_LIBRARY_ID=…
-   BUNNY_STREAM_API_KEY=…
-   BUNNY_STREAM_CDN_HOSTNAME=…
-   BUNNY_STREAM_TOKEN_KEY=…
-   ```
-
-4. Generate a short 9:16 clip (ffmpeg) and upload:
-
-   ```shell
-   uv run python backend/manage.py spike_bunny_playback
-   ```
-
-   The command prints **redacted** status (rendition names, duration, captions,
-   portrait flag). It does **not** attach a catalog MediaAsset. For authorize and
-   publish, upload the generated (or any) vertical master through Django Admin
-   (`Playback → Media assets → Add`) and use **Retry reconcile** until the row is
-   `ready`. Do not paste a provider asset id into Admin. `PLAYBACK_SPIKE_ASSETS`
-   is obsolete. The command must never print a usable signed URL (signing
-   query/path values are replaced with `redacted`).
-5. Restart Django if needed. Call authorize as above. Play in `expo-video`.
-6. Confirm unsigned and expired playlist GETs return **403**. Django remains
-   the authorizer. A signed GET with no Referer should return **200** when
-   Block Direct URL File Access is off.
-
-If Bunny is attempted and fails encode, tokens, hotlink, residency, or cost,
-record a GCP Cloud CDN fallback spike and update D-014. Do not treat absent
-credentials as that failure.
-
-## Isolated mobile route
-
-`/playback-spike?episodeId=<episode_public_id>` calls authorize with catalog
-headers and plays the opaque HLS URL in `expo-video`. Bunny keys must never
-appear in `EXPO_PUBLIC_*`. Android is the required live play; iOS is deferred
-per D-026.
-
-## Live observation (non-production)
-
-Never paste signed URLs, token query values, or API keys.
-
-**Encode / authorize (2026-08-25).** Generated 9:16 clip, `spike_bunny_playback`:
-status ready; 1080×1920 portrait; 3.0s; audio yes; captions yes; thumbnails 3.
-Renditions 240p, 360p, 480p, 720p, 1080p (no 540p in this library’s default
-ladder; 360p and 720p present). Django `POST /v1/playback/.../authorize` with
-territory **FR** → **200** opaque HTTPS m3u8; **DE** → **404**. Unsigned
-playlist GET → **403**. Expired token GET → **403**. Signed GET with no Referer
-→ **200** after Stream **Block Direct URL File Access** was turned **off**
-(required for native `expo-video`). Hotlink / empty-referrer blocking was
-intentionally off; token auth still denies unsigned and expired requests.
-
-**Android (2026-08-26).** Pixel emulator, isolated `/playback-spike`, played the
-3s blue HLS in `expo-video` (not Bunny’s web player). The catalog
-episode-selected screen is **not** the player (P2-T08). Network: normal local.
-Startup to play succeeded. Constrained-network and rebuffer instrumentation
-were **not** run on a 3s clip. Seek and background/foreground were **not**
-separately timed.
-
-**D-026.** iOS device play is deferred to the iOS ship / TestFlight-quality
-pass. It is not a P2-T05 close-out gate and is not cancelled.
-
-Bunny did **not** fail; GCP Cloud CDN fallback was not activated; D-014 was
-not reopened.
+Before production activation, validate a generated/self-owned asset end to end
+on a real Android device, confirm short-lived URL expiry and takedown, and record
+only redacted evidence. Provider residency and retention remain governed by
+D-020.

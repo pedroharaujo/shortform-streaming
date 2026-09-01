@@ -20,7 +20,6 @@ const EXPO_CLI = createRequire(import.meta.url).resolve('expo/bin/cli');
 const REQUIRED_ENVIRONMENT = {
   EXPO_PUBLIC_API_ENVIRONMENT: 'local',
   EXPO_PUBLIC_API_BASE_URL: 'http://10.0.2.2:8000',
-  EXPO_PUBLIC_CATALOG_TERRITORY: 'FR',
 };
 
 const BUNDLE_EXTENSIONS = new Set(['.js', '.hbc']);
@@ -81,7 +80,9 @@ try {
     {
       cwd: MOBILE_ROOT,
       encoding: 'utf8',
-      env: { ...baseEnvironment(), ...REQUIRED_ENVIRONMENT },
+      // Keep developer .env files from reintroducing retired public settings
+      // into this deterministic Android-only bundle gate.
+      env: { ...baseEnvironment(), EXPO_NO_DOTENV: '1', ...REQUIRED_ENVIRONMENT },
     },
   );
 

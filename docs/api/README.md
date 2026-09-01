@@ -22,7 +22,12 @@ otherwise the backend generates a UUID. Error envelopes carry the same value so
 a client-visible failure can be matched to the privacy-safe server completion
 record without logging bodies, credentials, query strings, or raw object paths.
 
-Health probes stay unauthenticated. Anonymous catalog reads (`GET /v1/catalog/home`, `GET /v1/series/{public_id}`, `GET /v1/episodes/{public_id}`) and anonymous playback authorize (`POST /v1/playback/{episode_id}/authorize`) are also unauthenticated and require explicit `X-Territory`, `X-Platform`, and `X-Language` headers. Those headers are never inferred from `Accept-Language`. Missing or malformed headers are HTTP 400 `ErrorEnvelope`. Ineligible or unmapped public ids are HTTP 404 `ErrorEnvelope`. An unset or disabled video provider is HTTP 503 `ErrorEnvelope` and never returns an unsigned playlist. Django never serves video bytes. A Bearer credential on health, catalog, or playback authorize must not change those outcomes.
+Health probes stay unauthenticated. Catalog reads and playback authorization are
+also anonymous where the free-window policy allows. France, Android, and English
+are server-owned MVP constants; client market headers are not accepted or used.
+Ineligible or unmapped public ids are HTTP 404 `ErrorEnvelope`. An unset or
+disabled video provider is HTTP 503 and never returns an unsigned playlist.
+Django never serves video bytes.
 
 Consumer API commands use `application/json`; form and multipart command bodies
 are unsupported. `/v1/` bodies are capped at 64 KiB and return HTTP 413
@@ -31,9 +36,14 @@ valid. Firebase Bearer credentials are capped at 4 KiB of printable, non-whitesp
 ASCII before verification. These parser/verifier bounds are not a substitute for
 edge or distributed abuse controls.
 
-`GET /v1/offers/{episode_id}` uses the same catalog context headers and optional Firebase ID token as playback authorize. A missing token is anonymous; a present invalid token is 401 `ErrorEnvelope`. Ineligible or unknown ids are HTTP 404. Catalog-eligible lock is HTTP 200 with `lock_reasons` and `methods` (anonymous locks omit rewarded-ad and return an empty `methods` list). Granted responses include methods and never a playback URL. Django never serves video bytes.
+`GET /v1/offers/{episode_id}` uses an optional Firebase ID token. A missing token
+is anonymous; a present invalid token is 401. Ineligible or unknown ids are 404.
+Locked responses never include playback URLs.
 
-`GET`/`PUT /v1/progress/{episode_id}` uses the same catalog context headers and optional Firebase ID token. Anonymous progress requires `X-Device-Id` (a client-generated UUID, never a user id). Authenticated progress uses the verified profile and ignores `X-Device-Id`. Catalog-eligible lock is HTTP 403 `ErrorEnvelope` with code `playback_locked` and does not write. The progress JSON never includes a playback URL. Django never serves video bytes.
+`GET`/`PUT /v1/progress/{episode_id}` uses an optional Firebase ID token.
+Anonymous progress requires `X-Device-Id`; authenticated progress uses the
+verified profile and ignores that header. Locked progress is HTTP 403 and does
+not write.
 
 `GET /v1/me` requires `FirebaseIdToken`. Django verifies the ID token and maps the UID to one local profile. Missing, malformed, expired, or revoked tokens are HTTP 401 `ErrorEnvelope` with code `authentication_required`. Client-supplied user or profile identifiers are ignored. Local/CI verification defaults to a mock (`mock.<uid>` tokens); production uses firebase-admin and fails closed if a token cannot be verified.
 

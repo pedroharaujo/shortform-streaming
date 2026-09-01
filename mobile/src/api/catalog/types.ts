@@ -9,9 +9,6 @@ import type { components } from '@shortform/api-client';
 
 import type { EnvelopeOutcome, UnreachableOutcome } from '../outcomes';
 
-/** OpenAPI `X-Platform` values. The ads-only client always sends `android` (D-027). */
-export type CatalogPlatform = 'ios' | 'android';
-
 export type CatalogHome = components['schemas']['CatalogHome'];
 export type CatalogRail = components['schemas']['CatalogRail'];
 export type CatalogSeriesCard = components['schemas']['CatalogSeriesCard'];

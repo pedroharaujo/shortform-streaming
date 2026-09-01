@@ -139,7 +139,7 @@ def ingest_master(
             failed_sibling,
             video_bytes=video_bytes,
             captions_bytes=captions_bytes,
-            title=title or episode.english_title or episode.public_id,
+            title=title or episode.title or episode.public_id,
         )
 
     asset = MediaAsset(
@@ -162,7 +162,7 @@ def ingest_master(
         asset,
         video_bytes=video_bytes,
         captions_bytes=captions_bytes,
-        title=title or episode.english_title or episode.public_id,
+        title=title or episode.title or episode.public_id,
     )
 
 
@@ -273,7 +273,7 @@ def complete_staff_upload(
         locked,
         video_bytes=video_bytes,
         captions_bytes=captions_bytes,
-        title=title or locked.episode.english_title or locked.episode.public_id,
+        title=title or locked.episode.title or locked.episode.public_id,
     )
 
 

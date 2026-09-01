@@ -13,7 +13,7 @@ DEVICE_A = "11111111-2222-4333-8444-555555555555"
 
 @pytest.mark.django_db
 def test_reset_local_progress_refuses_when_debug_is_false() -> None:
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    _series, episode = make_published_title(title="Harbor Lights")
     WatchProgress.objects.create(device_id=DEVICE_A, episode=episode, position_seconds=12)
     with override_settings(DEBUG=False):
         with pytest.raises(CommandError, match="DEBUG"):
@@ -23,7 +23,7 @@ def test_reset_local_progress_refuses_when_debug_is_false() -> None:
 
 @pytest.mark.django_db
 def test_reset_local_progress_deletes_rows_when_debug() -> None:
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    _series, episode = make_published_title(title="Harbor Lights")
     WatchProgress.objects.create(device_id=DEVICE_A, episode=episode, position_seconds=12)
     with override_settings(DEBUG=True):
         call_command("reset_local_progress")

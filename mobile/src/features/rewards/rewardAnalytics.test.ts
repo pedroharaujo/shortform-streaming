@@ -40,57 +40,39 @@ function setup(enabledInitially: boolean) {
   };
 }
 
-it('emits the ordered rewarded trail only after analytics consent is active', async () => {
+it('records only the ad start and verified grant after consent', async () => {
   const { analytics, events, setEnabled } = setup(false);
   const attempt = '11111111-1111-4111-8111-111111111111';
-
-  await analytics.recordOfferPresented(EPISODE);
-  await analytics.recordOfferSelected(EPISODE, attempt);
-  await analytics.recordAdEvent(EPISODE, attempt, 'loaded');
+  await analytics.recordAdEvent(EPISODE, attempt, 'started');
   await analytics.recordGranted(EPISODE, attempt, 'admob_ssv');
   expect(events).toEqual([]);
 
   setEnabled(true);
-  await analytics.recordOfferPresented(EPISODE);
-  await analytics.recordOfferSelected(EPISODE, attempt);
   await analytics.recordAdEvent(EPISODE, attempt, 'loaded');
   await analytics.recordAdEvent(EPISODE, attempt, 'started');
   await analytics.recordAdEvent(EPISODE, attempt, 'completed');
   await analytics.recordGranted(EPISODE, attempt, 'admob_ssv');
 
-  expect(events.map((event) => event.name)).toEqual([
-    'offer_presented',
-    'offer_selected',
-    'rewarded_ad_loaded',
-    'rewarded_ad_started',
-    'rewarded_ad_completed',
-    'reward_granted',
-  ]);
-  expect(events.every((event) => !JSON.stringify(event).includes('custom_data'))).toBe(true);
+  expect(events.map((event) => event.name)).toEqual(['rewarded_ad_started', 'reward_granted']);
+  expect(JSON.stringify(events)).not.toContain('custom_data');
 });
 
-it('deduplicates retries, recovery, callback replay, and repeated terminal failures', async () => {
+it('deduplicates callback replay and repeated terminal failures', async () => {
   const { analytics, events } = setup(true);
   const attempt = '22222222-2222-4222-8222-222222222222';
-
   for (let retry = 0; retry < 2; retry += 1) {
-    await analytics.recordOfferSelected(EPISODE, attempt);
-    await analytics.recordAdEvent(EPISODE, attempt, 'loaded');
-    await analytics.recordAdEvent(EPISODE, attempt, 'completed');
+    await analytics.recordAdEvent(EPISODE, attempt, 'started');
     await analytics.recordGranted(EPISODE, attempt, 'admob_ssv');
     await analytics.recordFailed(EPISODE, attempt, 'verify', 'grant_source_unavailable');
   }
-
   expect(events.map((event) => event.name)).toEqual([
-    'offer_selected',
-    'rewarded_ad_loaded',
-    'rewarded_ad_completed',
+    'rewarded_ad_started',
     'reward_granted',
     'reward_failed',
   ]);
 });
 
-it('uses only fixed safe failure properties when an attempt key is unsafe', async () => {
+it('uses fixed safe failure properties when an attempt key is unsafe', async () => {
   const { analytics, events } = setup(true);
   await analytics.recordFailed(
     EPISODE,
@@ -98,8 +80,6 @@ it('uses only fixed safe failure properties when an attempt key is unsafe', asyn
     'present',
     'ad_present_failed',
   );
-
-  expect(events).toHaveLength(1);
   expect(events[0]).toMatchObject({
     name: 'reward_failed',
     properties: { failure_stage: 'present', error_code: 'ad_present_failed' },

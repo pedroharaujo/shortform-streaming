@@ -6,7 +6,6 @@
   "scripts": {
     "start": "expo start --dev-client",
     "android": "uv run python ../scripts/run_mobile_android.py",
-    "ios": "expo run:ios",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",

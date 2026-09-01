@@ -12,9 +12,9 @@ AI agents start at the root `AGENTS.md`. Operating notes are in
 
 ## Product and delivery
 
-- `product/MVP_PRODUCT_BRIEF.md` — thinner MVP: 1 series, ads-only monetization; Public Release Readiness remains open.
+- `product/MVP_PRODUCT_BRIEF.md` — France-only Android MVP: 1 self-owned English series and rewarded-AdMob-only monetization; Public Release Readiness remains open.
 - `product/DECISION_REGISTER.md` — authoritative approval status.
-- `product/CONTENT_RIGHTS_CHECKLIST.md` — contractual and media gate.
+- `product/CONTENT_RIGHTS_CHECKLIST.md` — MVP self-owned provenance/media gate; third-party licensing checklist is post-MVP.
 - `product/STORE_COMPLIANCE_MATRIX.md` — commerce, advertising, store, and privacy baseline.
 - `product/SDK_DATA_INVENTORY.md` — engineering SDK/data inventory for privacy labels and deletion (P0-T03 remaining slice; P0-T03 is not complete).
 - `product/COST_MODEL.md` — unit-cost and contribution formulas.

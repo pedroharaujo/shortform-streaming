@@ -5,7 +5,7 @@
  */
 
 import Constants from 'expo-constants';
-import { resolveAdsConfiguration } from '../../app.config';
+import { resolveAdsConfiguration, type AdsConfiguration } from '../../app.config';
 
 import {
   API_ENVIRONMENTS,
@@ -16,6 +16,8 @@ import {
 
 interface ExtraShape {
   readonly api?: unknown;
+  readonly ads?: unknown;
+  readonly analytics?: unknown;
 }
 
 function isApiEnvironment(value: unknown): value is ApiEnvironment {
@@ -31,10 +33,9 @@ export function readApiConfiguration(extra: ExtraShape | null | undefined): ApiC
     );
   }
 
-  const { environment, baseUrl, catalogTerritory } = candidate as {
+  const { environment, baseUrl } = candidate as {
     environment?: unknown;
     baseUrl?: unknown;
-    catalogTerritory?: unknown;
   };
   if (!isApiEnvironment(environment)) {
     throw new EnvironmentConfigurationError(
@@ -46,22 +47,19 @@ export function readApiConfiguration(extra: ExtraShape | null | undefined): ApiC
       'Expo manifest extra.api.baseUrl must be a non-empty absolute URL.',
     );
   }
-  if (typeof catalogTerritory !== 'string' || !/^[A-Z]{2}$/.test(catalogTerritory)) {
-    throw new EnvironmentConfigurationError(
-      'Expo manifest extra.api.catalogTerritory must be ISO 3166-1 alpha-2, for example FR.',
-    );
-  }
-
-  return { environment, baseUrl, catalogTerritory };
+  return { environment, baseUrl };
 }
 
 export function getApiConfiguration(): ApiConfiguration {
   return readApiConfiguration(Constants.expoConfig?.extra as ExtraShape | null | undefined);
 }
 
-export function getRewardedAdUnitId(): string {
-  const ads = Constants.expoConfig?.extra?.ads as
-    { androidAppId?: unknown; rewardedUnitId?: unknown } | undefined;
+export function readAdsConfiguration(
+  extra: ExtraShape | null | undefined,
+  environment: ApiEnvironment,
+): AdsConfiguration {
+  const ads = extra?.ads as
+    { mode?: unknown; androidAppId?: unknown; rewardedUnitId?: unknown } | undefined;
   if (typeof ads?.androidAppId !== 'string' || typeof ads?.rewardedUnitId !== 'string') {
     throw new EnvironmentConfigurationError(
       'Expo manifest is missing extra.ads. Rebuild the development client.',
@@ -69,12 +67,31 @@ export function getRewardedAdUnitId(): string {
   }
   // Manifest values are frozen with the native app ID, never read from process.env at runtime.
   // The default demo pair is valid in staging as well as local builds.
-  const validated = resolveAdsConfiguration(
+  return resolveAdsConfiguration(
     {
+      EXPO_PUBLIC_REWARDED_ADS_MODE: typeof ads.mode === 'string' ? ads.mode : undefined,
       EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: ads.androidAppId,
       EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID: ads.rewardedUnitId,
     },
-    'local',
+    environment,
   );
-  return validated.rewardedUnitId;
+}
+
+export function getAdsConfiguration(): AdsConfiguration {
+  const extra = Constants.expoConfig?.extra as ExtraShape | undefined;
+  return readAdsConfiguration(extra, getApiConfiguration().environment);
+}
+
+export function readAnalyticsEnabled(extra: ExtraShape | null | undefined): boolean {
+  const enabled = (extra?.analytics as { enabled?: unknown } | undefined)?.enabled;
+  if (typeof enabled !== 'boolean') {
+    throw new EnvironmentConfigurationError(
+      'Expo manifest is missing extra.analytics.enabled. Rebuild the development client.',
+    );
+  }
+  return enabled;
+}
+
+export function isAnalyticsEnabled(): boolean {
+  return readAnalyticsEnabled(Constants.expoConfig?.extra as ExtraShape | undefined);
 }

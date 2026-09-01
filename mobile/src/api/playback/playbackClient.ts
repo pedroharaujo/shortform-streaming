@@ -8,8 +8,7 @@
 
 import type { paths } from '@shortform/api-client';
 
-import type { CatalogPlatform } from '../catalog/types';
-import { bearerHeaders, catalogContextHeaders, createOpenApiClient } from '../context';
+import { bearerHeaders, createOpenApiClient } from '../context';
 import { DEFAULT_TIMEOUT_MS, mapJsonDomain, mapJsonRequest } from '../http';
 import type {
   PlaybackAuthorizeGranted,
@@ -22,8 +21,6 @@ const UNKNOWN_MESSAGE = 'Playback request failed.';
 
 export interface PlaybackClientOptions {
   readonly baseUrl: string;
-  readonly territory: string;
-  readonly platform: CatalogPlatform;
   readonly getCredential?: () => string | null;
   readonly timeoutMs?: number;
   readonly fetchImplementation?: typeof fetch;
@@ -34,11 +31,9 @@ function isGranted(body: PlaybackAuthorizeResponse): body is PlaybackAuthorizeGr
 }
 
 export function createPlaybackClient(options: PlaybackClientOptions): PlaybackClient {
-  const { baseUrl, territory, platform, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  const contextHeaders = catalogContextHeaders(territory, platform);
+  const { baseUrl, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   const api = createOpenApiClient({
     baseUrl,
-    headers: { ...contextHeaders },
     fetchImplementation: options.fetchImplementation,
   });
 
@@ -49,7 +44,7 @@ export function createPlaybackClient(options: PlaybackClientOptions): PlaybackCl
         UNKNOWN_MESSAGE,
         (signal) =>
           api.POST('/v1/playback/{episode_id}/authorize' satisfies keyof paths, {
-            params: { path: { episode_id: episodeId }, header: contextHeaders },
+            params: { path: { episode_id: episodeId } },
             headers: bearerHeaders(options.getCredential),
             signal,
           }),
