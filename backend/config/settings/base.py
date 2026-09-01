@@ -36,6 +36,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "config.observability.RequestCorrelationMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "config.request_boundaries.APIRequestBoundaryMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -134,7 +135,23 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "filters": {"redact_query": {"()": "config.logging.RedactQueryString"}},
-    "loggers": {"django.server": {"filters": ["redact_query"]}},
+    "formatters": {
+        "privacy_safe_json": {"()": "config.logging.PrivacySafeJsonFormatter"},
+    },
+    "handlers": {
+        "privacy_safe_console": {
+            "class": "logging.StreamHandler",
+            "formatter": "privacy_safe_json",
+        },
+    },
+    "loggers": {
+        "django.server": {"filters": ["redact_query"]},
+        "shortform.request": {
+            "handlers": ["privacy_safe_console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
 }
 
 # Identity: local/CI default is mock verification. Production settings force

@@ -1187,6 +1187,17 @@ or the live staging authorization matrix; those remain required before release.
 
 #### P5-T06 — Add backend and mobile observability
 
+**Correlation foundation implemented (P5-T06-F1 / #119):** One validated or
+generated request ID now spans success/error response headers, API error
+envelopes, and structured request-completion logs. The log schema is an allowlist
+of request ID, method, route template/coarse family, status, and duration; it
+does not format raw paths, query strings, bodies, IPs, users, credentials, or
+signed URLs. Early request-boundary failures are correlated before authentication.
+
+Cloud Logging retention, dashboards, alerts, mobile Crashlytics, uptime checks,
+and controlled staging failure evidence remain later P5-T06 slices. No provider
+or live-environment result is inferred from the local correlation tests.
+
 **Description:** Configure structured correlated logs, metrics, traces, errors/crashes, performance spans, uptime checks, dashboards, and alerts with privacy-safe context.
 
 **Objective:** Detect and diagnose failures before they erase revenue or trust.
