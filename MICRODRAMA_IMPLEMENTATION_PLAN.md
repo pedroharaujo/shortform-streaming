@@ -955,6 +955,14 @@ default. Firebase transport, consent/identity lifecycle, screen instrumentation,
 backend boundary and DebugView evidence remain the ordered F2–F4 slices in #104;
 this foundation alone does not mark P4-T01 complete or authorize collection.
 
+**Consent foundation in progress (P4-T01-F2a / #104):** The matching native
+Firebase Analytics module is added with collection, automatic screen reporting,
+advertising identifiers and advertising consent disabled by default. A tested
+controller cleans old identity/data before an analytics-consented profile may be
+enabled and fails closed on stale sessions or provider errors. F2b still must
+connect it to sign-in, preference updates, sign-out and account deletion; F2a
+alone sends no events and does not authorize collection.
+
 **Description:** Publish event dictionary, property schemas, ownership, retention, consent rules, and a typed mobile/backend analytics wrapper with deterministic event IDs for MVP events: `app_open`/campaign, episode start/complete, `lock_shown`, `ad_offer`, `ad_rewarded`, and `playback_error`. Coin, subscription, push, and experiment events wait for P7.
 
 **Objective:** Produce decision-grade events for the ads-only loop instead of inconsistent ad hoc tracking.

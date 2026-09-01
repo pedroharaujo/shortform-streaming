@@ -198,6 +198,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-secure-store',
       '@react-native-firebase/app',
       [
+        '@react-native-firebase/analytics',
+        {
+          ios: {
+            withoutAdIdSupport: true,
+          },
+        },
+      ],
+      [
         'react-native-google-mobile-ads',
         {
           androidAppId: ads.androidAppId,

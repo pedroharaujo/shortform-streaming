@@ -13,12 +13,14 @@
  */
 
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const MOBILE_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const EXPO_CLI = createRequire(import.meta.url).resolve('expo/bin/cli');
+const FIREBASE_CONFIG = path.join(MOBILE_ROOT, '..', 'firebase.json');
 
 const REQUIRED_ENVIRONMENT = {
   EXPO_PUBLIC_API_ENVIRONMENT: 'local',
@@ -101,6 +103,9 @@ function checkResolvedConfiguration() {
   const adsPlugin = resolved.plugins?.find(
     (plugin) => Array.isArray(plugin) && plugin[0] === 'react-native-google-mobile-ads',
   );
+  const analyticsPlugin = resolved.plugins?.find(
+    (plugin) => Array.isArray(plugin) && plugin[0] === '@react-native-firebase/analytics',
+  );
   if (
     resolved.extra?.ads?.androidAppId !== 'ca-app-pub-3940256099942544~3347511713' ||
     resolved.extra?.ads?.rewardedUnitId !== 'ca-app-pub-3940256099942544/5224354917' ||
@@ -108,6 +113,10 @@ function checkResolvedConfiguration() {
     adsPlugin?.[1]?.delayAppMeasurementInit !== true
   ) {
     fail('rewarded ads must use the Google demo app and delay native measurement initialization.');
+    return;
+  }
+  if (analyticsPlugin?.[1]?.ios?.withoutAdIdSupport !== true) {
+    fail('Firebase Analytics must omit iOS advertising-ID support.');
     return;
   }
   walk(resolved, '', (key, value, keyPath) => {
@@ -129,6 +138,35 @@ function checkResolvedConfiguration() {
       `(catalog territory ${api.catalogTerritory}); ` +
       'no sensitive keys or credential-shaped values present.\n',
   );
+}
+
+function checkAnalyticsDefaultsOff() {
+  let firebaseConfig;
+  try {
+    firebaseConfig = JSON.parse(readFileSync(FIREBASE_CONFIG, 'utf8'));
+  } catch (error) {
+    fail(`firebase.json could not be read (${error.message}).`);
+    return;
+  }
+  const native = firebaseConfig['react-native'];
+  const requiredFalse = [
+    'analytics_auto_collection_enabled',
+    'analytics_default_allow_analytics_storage',
+    'analytics_default_allow_ad_storage',
+    'analytics_default_allow_ad_user_data',
+    'analytics_default_allow_ad_personalization_signals',
+    'analytics_idfv_collection_enabled',
+    'google_analytics_adid_collection_enabled',
+    'google_analytics_ssaid_collection_enabled',
+    'google_analytics_automatic_screen_reporting_enabled',
+    'google_analytics_registration_with_ad_network_enabled',
+  ];
+  const enabled = requiredFalse.filter((name) => native?.[name] !== false);
+  if (enabled.length > 0) {
+    fail(`analytics must default off in firebase.json: ${enabled.join(', ')}`);
+    return;
+  }
+  process.stdout.write('Firebase Analytics collection and advertising identifiers default off.\n');
 }
 
 function checkMissingEnvironmentFails() {
@@ -194,6 +232,7 @@ function checkInvalidTerritoryFails() {
 }
 
 checkResolvedConfiguration();
+checkAnalyticsDefaultsOff();
 checkMissingEnvironmentFails();
 checkInvalidEnvironmentFails();
 checkMissingTerritoryFails();
