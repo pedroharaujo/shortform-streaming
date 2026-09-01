@@ -772,8 +772,6 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["PatchedAccountPreferencesRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedAccountPreferencesRequest"];
-                "multipart/form-data": components["schemas"]["PatchedAccountPreferencesRequest"];
             };
         };
         responses: {
@@ -814,8 +812,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AccountDeletionRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["AccountDeletionRequestRequest"];
-                "multipart/form-data": components["schemas"]["AccountDeletionRequestRequest"];
             };
         };
         responses: {
@@ -1092,8 +1088,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["WatchProgressWriteRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["WatchProgressWriteRequest"];
-                "multipart/form-data": components["schemas"]["WatchProgressWriteRequest"];
             };
         };
         responses: {
@@ -1244,8 +1238,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RewardIntentCreateRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RewardIntentCreateRequest"];
-                "multipart/form-data": components["schemas"]["RewardIntentCreateRequest"];
             };
         };
         responses: {

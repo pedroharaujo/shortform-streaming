@@ -14,6 +14,7 @@ from apps.accounts.exceptions import TokenFailure, TokenVerificationError
 
 MOCK_TOKEN_PREFIX = "mock."
 _UID_MAX_LENGTH = 128
+_CREDENTIAL_MAX_LENGTH = 4096
 
 _admin_verifier: AdminFirebaseTokenVerifier | None = None
 _admin_lock = Lock()
@@ -34,6 +35,17 @@ class FirebaseTokenVerifier(Protocol):
         """Return claims for a verified ID token, or raise TokenVerificationError."""
 
 
+def validate_credential_shape(credential: str) -> None:
+    if (
+        not credential
+        or len(credential) > _CREDENTIAL_MAX_LENGTH
+        or not credential.isascii()
+        or not credential.isprintable()
+        or any(ch.isspace() for ch in credential)
+    ):
+        raise TokenVerificationError(TokenFailure.MALFORMED)
+
+
 class MockFirebaseTokenVerifier:
     """Local/CI verifier. Accepts `mock.<uid>` and optional test overrides.
 
@@ -46,8 +58,7 @@ class MockFirebaseTokenVerifier:
     _lock = Lock()
 
     def verify_id_token(self, credential: str) -> VerifiedToken:
-        if not credential or not credential.isprintable() or any(ch.isspace() for ch in credential):
-            raise TokenVerificationError(TokenFailure.MALFORMED)
+        validate_credential_shape(credential)
 
         with self._lock:
             override = self._overrides.get(credential)
@@ -94,8 +105,7 @@ class AdminFirebaseTokenVerifier:
         self._lock = Lock()
 
     def verify_id_token(self, credential: str) -> VerifiedToken:
-        if not credential or not credential.isprintable() or any(ch.isspace() for ch in credential):
-            raise TokenVerificationError(TokenFailure.MALFORMED)
+        validate_credential_shape(credential)
         if not self._ensure_app():
             raise TokenVerificationError(TokenFailure.UNVERIFIABLE)
         return self._verify_with_admin(credential)

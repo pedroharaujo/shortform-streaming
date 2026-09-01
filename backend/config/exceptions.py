@@ -23,6 +23,8 @@ _SAFE_DEFAULT_MESSAGES: dict[int, str] = {
     status.HTTP_403_FORBIDDEN: "You do not have access to this resource.",
     status.HTTP_404_NOT_FOUND: "Resource not found.",
     status.HTTP_405_METHOD_NOT_ALLOWED: "Method not allowed.",
+    status.HTTP_413_REQUEST_ENTITY_TOO_LARGE: "The request body is too large.",
+    status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: "Unsupported media type.",
     status.HTTP_429_TOO_MANY_REQUESTS: "Too many requests.",
     status.HTTP_500_INTERNAL_SERVER_ERROR: "An internal error occurred.",
     status.HTTP_503_SERVICE_UNAVAILABLE: "The service is temporarily unavailable.",

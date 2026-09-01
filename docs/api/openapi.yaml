@@ -204,12 +204,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PatchedAccountPreferencesRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedAccountPreferencesRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedAccountPreferencesRequest'
       security:
       - FirebaseIdToken: []
       responses:
@@ -245,12 +239,6 @@ paths:
       requestBody:
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/AccountDeletionRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/AccountDeletionRequestRequest'
-          multipart/form-data:
             schema:
               $ref: '#/components/schemas/AccountDeletionRequestRequest'
         required: true
@@ -613,12 +601,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WatchProgressWriteRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/WatchProgressWriteRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/WatchProgressWriteRequest'
         required: true
       security:
       - {}
@@ -809,12 +791,6 @@ paths:
       requestBody:
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/RewardIntentCreateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/RewardIntentCreateRequest'
-          multipart/form-data:
             schema:
               $ref: '#/components/schemas/RewardIntentCreateRequest'
         required: true

@@ -19,6 +19,13 @@ These shared shapes are published even while only health operations exist:
 
 Health probes stay unauthenticated. Anonymous catalog reads (`GET /v1/catalog/home`, `GET /v1/series/{public_id}`, `GET /v1/episodes/{public_id}`) and anonymous playback authorize (`POST /v1/playback/{episode_id}/authorize`) are also unauthenticated and require explicit `X-Territory`, `X-Platform`, and `X-Language` headers. Those headers are never inferred from `Accept-Language`. Missing or malformed headers are HTTP 400 `ErrorEnvelope`. Ineligible or unmapped public ids are HTTP 404 `ErrorEnvelope`. An unset or disabled video provider is HTTP 503 `ErrorEnvelope` and never returns an unsigned playlist. Django never serves video bytes. A Bearer credential on health, catalog, or playback authorize must not change those outcomes.
 
+Consumer API commands use `application/json`; form and multipart command bodies
+are unsupported. `/v1/` bodies are capped at 64 KiB and return HTTP 413
+`request_too_large` without reflecting request content. Bodyless POST actions stay
+valid. Firebase Bearer credentials are capped at 4 KiB of printable, non-whitespace
+ASCII before verification. These parser/verifier bounds are not a substitute for
+edge or distributed abuse controls.
+
 `GET /v1/offers/{episode_id}` uses the same catalog context headers and optional Firebase ID token as playback authorize. A missing token is anonymous; a present invalid token is 401 `ErrorEnvelope`. Ineligible or unknown ids are HTTP 404. Catalog-eligible lock is HTTP 200 with `lock_reasons` and `methods` (anonymous locks omit rewarded-ad and return an empty `methods` list). Granted responses include methods and never a playback URL. Django never serves video bytes.
 
 `GET`/`PUT /v1/progress/{episode_id}` uses the same catalog context headers and optional Firebase ID token. Anonymous progress requires `X-Device-Id` (a client-generated UUID, never a user id). Authenticated progress uses the verified profile and ignores `X-Device-Id`. Catalog-eligible lock is HTTP 403 `ErrorEnvelope` with code `playback_locked` and does not write. The progress JSON never includes a playback URL. Django never serves video bytes.

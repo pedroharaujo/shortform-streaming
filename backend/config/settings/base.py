@@ -37,6 +37,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.request_boundaries.APIRequestBoundaryMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -119,10 +120,15 @@ TIME_ZONE = "UTC"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_PARSER_CLASSES": ["config.request_boundaries.BoundedJSONParser"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "config.exceptions.exception_handler",
 }
+
+# Consumer API bodies are tiny JSON commands. Master media bytes upload directly
+# to object storage and must never transit Django (P2-T06).
+API_MAX_REQUEST_BODY_BYTES = 64 * 1024
 
 LOGGING = {
     "version": 1,

@@ -10,7 +10,11 @@ from rest_framework.request import Request
 from apps.accounts.exceptions import TokenVerificationError
 from apps.accounts.models import UserProfile
 from apps.accounts.profiles import get_or_create_profile
-from apps.accounts.verification import VerifiedToken, get_token_verifier
+from apps.accounts.verification import (
+    VerifiedToken,
+    get_token_verifier,
+    validate_credential_shape,
+)
 from config.spectacular import BEARER_SCHEME
 
 _AUTHENTICATION_REQUIRED = "Authentication is required."
@@ -50,6 +54,7 @@ def verify_firebase_token(request: Request) -> VerifiedToken:
         raise FirebaseAuthenticationFailed()
 
     try:
+        validate_credential_shape(credential)
         verified = get_token_verifier().verify_id_token(credential)
     except TokenVerificationError as exc:
         raise FirebaseAuthenticationFailed() from exc

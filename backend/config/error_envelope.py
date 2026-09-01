@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import TypedDict
 
+from django.http import HttpRequest
 from rest_framework.request import Request
 
 
@@ -19,7 +20,7 @@ class ErrorEnvelope(TypedDict, total=False):
     field_errors: list[FieldError]
 
 
-def get_request_id(request: Request | None) -> str:
+def get_request_id(request: HttpRequest | Request | None) -> str:
     """Return `X-Request-ID` when it is a short printable token, else a UUID."""
     if request is None:
         return str(uuid.uuid4())
