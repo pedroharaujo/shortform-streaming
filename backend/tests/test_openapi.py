@@ -124,6 +124,7 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     assert "expires_at" not in locked_properties
     assert "lock_reasons" in locked_properties
     granted = schema["components"]["schemas"]["PlaybackAuthorizeGranted"]
+    assert "access_method" in granted["properties"]
     assert "playback_url" in granted["properties"]
     assert "expires_at" in granted["properties"]
     assert "lock_reasons" not in granted["properties"]

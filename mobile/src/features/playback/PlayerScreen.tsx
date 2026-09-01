@@ -3,11 +3,20 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { CatalogClient, CatalogSeriesDetail } from '../../api/catalog/types';
-import type { PlaybackClient } from '../../api/playback/types';
+import type {
+  CatalogClient,
+  CatalogEpisodeDetail,
+  CatalogSeriesDetail,
+} from '../../api/catalog/types';
+import type { PlaybackClient, PlaybackRequestOutcome } from '../../api/playback/types';
 import type { ProgressClient } from '../../api/progress/types';
 import { useCatalogQuery } from '../catalog/useCatalog';
 import { HlsVideoView } from './HlsVideoView';
+import type {
+  PlaybackAnalytics,
+  PlaybackAnalyticsEpisode,
+  PlaybackAnalyticsErrorCode,
+} from './playbackAnalytics';
 import {
   clampResumePosition,
   isCompleteByPosition,
@@ -21,6 +30,7 @@ const EPISODE_NOT_AVAILABLE = 'This episode is not available.';
 const PLAYBACK_FAILED = 'Playback could not be started.';
 
 export interface PlayerScreenProps {
+  readonly analytics: PlaybackAnalytics;
   readonly episodeId: string;
   readonly catalog: CatalogClient;
   readonly playback: PlaybackClient;
@@ -29,11 +39,21 @@ export interface PlayerScreenProps {
   readonly onReward?: (episodeId: string) => void;
 }
 
+interface PlaybackFailure {
+  readonly episodeId: string;
+  readonly code: PlaybackAnalyticsErrorCode;
+  readonly phase: 'authorize' | 'load' | 'play';
+}
+
 type PlayerPhase =
   | { readonly phase: 'loading' }
-  | { readonly phase: 'error'; readonly message: string }
-  | { readonly phase: 'unavailable' }
-  | { readonly phase: 'locked'; readonly reasons: readonly string[] }
+  | { readonly phase: 'error'; readonly message: string; readonly failure: PlaybackFailure }
+  | { readonly phase: 'unavailable'; readonly episodeId: string }
+  | {
+      readonly phase: 'locked';
+      readonly reasons: readonly string[];
+      readonly episode: PlaybackAnalyticsEpisode;
+    }
   | {
       readonly phase: 'playing';
       readonly episodeId: string;
@@ -44,7 +64,62 @@ type PlayerPhase =
       readonly series: CatalogSeriesDetail | null;
     };
 
+function analyticsEpisode(
+  episode: CatalogEpisodeDetail,
+  options?: {
+    readonly accessMethod?: 'free' | 'rewarded_ad';
+    readonly startPositionSeconds?: number;
+  },
+): PlaybackAnalyticsEpisode {
+  return {
+    seriesId: episode.series_id,
+    episodeId: episode.id,
+    seasonNumber: episode.season_number,
+    episodeNumber: episode.order,
+    durationSeconds: episode.duration_seconds,
+    ...(options?.accessMethod === undefined ? {} : { accessMethod: options.accessMethod }),
+    ...(options?.startPositionSeconds === undefined
+      ? {}
+      : { startPositionSeconds: options.startPositionSeconds }),
+  };
+}
+
+function seriesEpisode(
+  series: CatalogSeriesDetail,
+  episodeId: string,
+): PlaybackAnalyticsEpisode | null {
+  for (const season of series.seasons) {
+    const episode = season.episodes.find((candidate) => candidate.id === episodeId);
+    if (episode !== undefined) {
+      return {
+        seriesId: series.id,
+        episodeId: episode.id,
+        seasonNumber: season.number,
+        episodeNumber: episode.order,
+        durationSeconds: episode.duration_seconds,
+      };
+    }
+  }
+  return null;
+}
+
+function authorizeErrorCode(
+  outcome: PlaybackRequestOutcome['outcome'],
+): PlaybackAnalyticsErrorCode {
+  switch (outcome) {
+    case 'unauthenticated':
+      return 'authorize_unauthenticated';
+    case 'unavailable':
+      return 'authorize_unavailable';
+    case 'unreachable':
+      return 'authorize_unreachable';
+    default:
+      return 'authorize_failed';
+  }
+}
+
 export function PlayerScreen({
+  analytics,
   episodeId,
   catalog,
   playback,
@@ -55,9 +130,14 @@ export function PlayerScreen({
   const [activeEpisodeId, setActiveEpisodeId] = useState(episodeId);
   const [paused, setPaused] = useState(false);
   const [nextGate, setNextGate] = useState<
-    | { readonly phase: 'locked'; readonly reasons: readonly string[]; readonly episodeId: string }
-    | { readonly phase: 'unavailable' }
-    | { readonly phase: 'error'; readonly message: string }
+    | {
+        readonly phase: 'locked';
+        readonly reasons: readonly string[];
+        readonly episodeId: string;
+        readonly episode: PlaybackAnalyticsEpisode;
+      }
+    | { readonly phase: 'unavailable'; readonly episodeId: string }
+    | { readonly phase: 'error'; readonly message: string; readonly failure: PlaybackFailure }
     | null
   >(null);
   const lastProgressRef = useRef<{ positionSeconds: number; completed: boolean } | null>(null);
@@ -68,6 +148,7 @@ export function PlayerScreen({
   const completingRef = useRef(false);
   const throttleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeEpisodeRef = useRef(activeEpisodeId);
+  const analyticsEpisodeRef = useRef<PlaybackAnalyticsEpisode | null>(null);
 
   const clearThrottle = useCallback(() => {
     if (throttleTimerRef.current !== null) {
@@ -93,9 +174,13 @@ export function PlayerScreen({
       });
       if (result.outcome === 'ok') {
         lastProgressRef.current = payload;
+        const eventEpisode = analyticsEpisodeRef.current;
+        if (eventEpisode?.episodeId === currentId) {
+          void analytics.recordProgress(eventEpisode, payload.positionSeconds, payload.completed);
+        }
       }
     },
-    [progress],
+    [analytics, progress],
   );
 
   const startThrottle = useCallback(() => {
@@ -112,19 +197,41 @@ export function PlayerScreen({
     completingRef.current = false;
     lastProgressRef.current = null;
     positionRef.current = 0;
+    durationRef.current = 0;
+    seriesRef.current = null;
     activeEpisodeRef.current = activeEpisodeId;
+    analyticsEpisodeRef.current = null;
     const [episodeResult, authorizeResult] = await Promise.all([
       catalog.getEpisode(activeEpisodeId),
       playback.authorize(activeEpisodeId),
     ]);
+    const eventEpisode =
+      episodeResult.outcome === 'ok' ? analyticsEpisode(episodeResult.data) : null;
     if (authorizeResult.outcome === 'not-found' || episodeResult.outcome === 'not-found') {
-      return { phase: 'unavailable' };
+      return { phase: 'unavailable', episodeId: activeEpisodeId };
     }
     if (authorizeResult.outcome === 'locked') {
-      return { phase: 'locked', reasons: authorizeResult.lockReasons };
+      return eventEpisode === null
+        ? { phase: 'unavailable', episodeId: activeEpisodeId }
+        : { phase: 'locked', reasons: authorizeResult.lockReasons, episode: eventEpisode };
     }
-    if (authorizeResult.outcome !== 'ok' || episodeResult.outcome !== 'ok') {
-      return { phase: 'error', message: PLAYBACK_FAILED };
+    if (authorizeResult.outcome !== 'ok') {
+      return {
+        phase: 'error',
+        message: PLAYBACK_FAILED,
+        failure: {
+          episodeId: activeEpisodeId,
+          code: authorizeErrorCode(authorizeResult.outcome),
+          phase: 'authorize',
+        },
+      };
+    }
+    if (episodeResult.outcome !== 'ok') {
+      return {
+        phase: 'error',
+        message: PLAYBACK_FAILED,
+        failure: { episodeId: activeEpisodeId, code: 'episode_load_failed', phase: 'load' },
+      };
     }
     const seriesResult = await catalog.getSeries(episodeResult.data.series_id);
     const series = seriesResult.outcome === 'ok' ? seriesResult.data : null;
@@ -141,6 +248,15 @@ export function PlayerScreen({
       };
     }
     positionRef.current = resumeSeconds;
+    const accessMethod =
+      authorizeResult.data.access_method === 'free' ||
+      authorizeResult.data.access_method === 'rewarded_ad'
+        ? authorizeResult.data.access_method
+        : undefined;
+    analyticsEpisodeRef.current = analyticsEpisode(episodeResult.data, {
+      ...(accessMethod === undefined ? {} : { accessMethod }),
+      startPositionSeconds: resumeSeconds,
+    });
     return {
       phase: 'playing',
       episodeId: activeEpisodeId,
@@ -201,15 +317,34 @@ export function PlayerScreen({
     }
     const nextAuthorize = await playback.authorize(nextId);
     if (nextAuthorize.outcome === 'locked') {
-      setNextGate({ phase: 'locked', reasons: nextAuthorize.lockReasons, episodeId: nextId });
+      const nextEpisode =
+        seriesRef.current === null ? null : seriesEpisode(seriesRef.current, nextId);
+      if (nextEpisode === null) {
+        setNextGate({ phase: 'unavailable', episodeId: nextId });
+        return;
+      }
+      setNextGate({
+        phase: 'locked',
+        reasons: nextAuthorize.lockReasons,
+        episodeId: nextId,
+        episode: nextEpisode,
+      });
       return;
     }
     if (nextAuthorize.outcome === 'not-found') {
-      setNextGate({ phase: 'unavailable' });
+      setNextGate({ phase: 'unavailable', episodeId: nextId });
       return;
     }
     if (nextAuthorize.outcome !== 'ok') {
-      setNextGate({ phase: 'error', message: PLAYBACK_FAILED });
+      setNextGate({
+        phase: 'error',
+        message: PLAYBACK_FAILED,
+        failure: {
+          episodeId: nextId,
+          code: authorizeErrorCode(nextAuthorize.outcome),
+          phase: 'authorize',
+        },
+      });
       return;
     }
     setNextGate(null);
@@ -227,6 +362,21 @@ export function PlayerScreen({
   );
 
   const displayed = nextGate ?? phase;
+
+  useEffect(() => {
+    if (displayed.phase === 'locked') {
+      // Both server lock reasons lead to the ads-only reward unlock path.
+      void analytics.recordLocked(displayed.episode, 'reward_required');
+    } else if (displayed.phase === 'unavailable') {
+      void analytics.recordError({
+        episodeId: displayed.episodeId,
+        code: 'episode_unavailable',
+        phase: 'authorize',
+      });
+    } else if (displayed.phase === 'error') {
+      void analytics.recordError(displayed.failure);
+    }
+  }, [analytics, displayed]);
   const errorText =
     displayed.phase === 'error'
       ? displayed.message
@@ -296,9 +446,23 @@ export function PlayerScreen({
             onEnded={() => {
               void handleEnded();
             }}
+            onError={() => {
+              setNextGate({
+                phase: 'error',
+                message: PLAYBACK_FAILED,
+                failure: {
+                  episodeId: activeEpisodeRef.current,
+                  code: 'video_playback_failed',
+                  phase: 'play',
+                },
+              });
+            }}
             onPlayingChange={(playing) => {
               playingRef.current = playing;
-              if (!playing) {
+              if (playing) {
+                const eventEpisode = analyticsEpisodeRef.current;
+                if (eventEpisode !== null) void analytics.recordStarted(eventEpisode);
+              } else {
                 void flushProgress(false);
               }
             }}

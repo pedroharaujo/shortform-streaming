@@ -7,7 +7,7 @@
 
 This file is the single engineering source for later privacy labels (P6-T04), account deletion (P2-T02), and legal/privacy review. Row labels below still describe the `85207d2` research snapshot plus later planned processors; they are not a claim that merged P2-T01/P2-T05 work is still unmerged. This inventory does not authorize production processing.
 
-### P4-T01 F3a implementation update (2026-09-01)
+### P4-T01 F3 implementation update (2026-09-01)
 
 The mobile runtime now emits only canonical `app_open`, `home_viewed`,
 `series_impression`, and `series_opened` discovery events through Firebase in
@@ -16,7 +16,11 @@ active. It supplies an ephemeral per-process session ID and allowlisted
 app/build/platform/locale/time context, and deduplicates accepted logical events.
 Tests prove zero transport events before consent. Production transport remains a
 hard no-op pending D-020, privacy/store disclosure review, and P6 validation.
-Playback and reward events remain unimplemented F3b/F4 work.
+The player also emits canonical start, progress, completion, displayed-lock, and
+terminal safe-error events from authoritative UI/API triggers. Playback authorize
+supplies the server-owned `free`, `rewarded_ad`, or `staff` access source; staff
+playback does not fabricate a product start method. Signed playback URLs, provider
+messages, and raw errors never enter event properties. Reward events remain F4 work.
 
 ### P4-T01 F2 implementation update (2026-09-01)
 
@@ -87,7 +91,7 @@ Every inventory row uses one of:
 | D-013 | **Accepted.** Firebase Auth, Analytics, Crashlytics, and App Check are planned MVP processors (ADR 0003). Remote Config A/B and FCM are **planned P7**. Consumer Firebase Auth verification (`GET /v1/me`) and native Android Auth (P2-T01 / P2-T01-F1) have **merged to `main` after** `85207d2`. Do not treat Firebase Auth as unshipped. |
 | D-014 / ADR 0005 | Bunny Stream is the accepted **default**; GCP Cloud CDN is the **documented fallback and is not active**. P2-T05 on-device proof is not this task. |
 | D-015 / ADR 0006 | RevenueCat plus Django ledger remain accepted architecture. **MVP implementation deferred to P7**; MVP commerce is AdMob only. Not implemented. |
-| D-016 / ADR 0007 | Firebase Analytics typed events are planned MVP. BigQuery export, Looker Studio, and Remote Config A/B are **planned P7**. The F3a discovery subset is implemented but production-disabled; playback/reward events remain planned. |
+| D-016 / ADR 0007 | Firebase Analytics typed events are planned MVP. BigQuery export, Looker Studio, and Remote Config A/B are **planned P7**. The F3 discovery/playback subset is implemented but production-disabled; reward events remain planned. |
 | D-004 | **Founder approved 2026-08-27.** Launch catalog is 1 series; data model still supports N. |
 | D-005–D-007 | **Founder approved 2026-08-27** (guest boundary, hardcoded free window, rewarded-ad-only MVP monetization). Anonymous catalog on `main` is P2-T03 engineering, not this inventory converting those decisions. |
 | D-008 / D-009 | Remain **Proposed**. Required before P7 IAP only; not required for ads-only MVP. |
@@ -208,7 +212,7 @@ Accepted by D-013, D-014, D-007 and ADRs 0003–0007 unless noted, with P7 timin
 
 ### Canonical analytics events
 
-Source: `MICRODRAMA_IMPLEMENTATION_PLAN.md` § Canonical analytics events. P4-T01 publishes the typed SDK and dictionary for MVP events. F3a implements the discovery subset behind consent in local/staging while production stays hard-disabled. Playback/reward events remain planned. Coin, subscription, push, and experiment events are **planned P7**.
+Source: `MICRODRAMA_IMPLEMENTATION_PLAN.md` § Canonical analytics events. P4-T01 publishes the typed SDK and dictionary for MVP events. F3 implements the discovery and playback subsets behind consent in local/staging while production stays hard-disabled. Reward events remain planned. Coin, subscription, push, and experiment events are **planned P7**.
 
 Shared planned properties (only if consent permits): `event_id`; anonymous/app-instance ID; authenticated user ID; app version/build; platform; locale; country; timestamp; session ID; series/episode IDs and episode number; offer ID; access method; campaign, ad set, creative, source, medium, deep-link target. Coin price, store product ID, and experiment ID/variant are P7 properties.
 
@@ -216,8 +220,8 @@ Shared planned properties (only if consent permits): `event_id`; anonymous/app-i
 |---|---|---|---|---|---|---|---|---|
 | implemented, production-disabled (`app_open`); remaining account events planned MVP | `app_open`, `sign_up`, `login`, `account_deleted` | Session and account funnel | Art. 6(1)(a) + ePrivacy — planned/assumed, consent-gated | Firebase Analytics | **pending D-020** | **pending D-020** | Product/growth | P2-T02 / P4-T01; `account_deleted` must not re-identify |
 | implemented, production-disabled | `home_viewed`, `series_impression`, `series_opened` | Discovery | Same | Firebase Analytics | **pending D-020** | **pending D-020** | Product/growth | Same |
-| planned MVP | `episode_started`, `episode_progress`, `episode_completed`, `playback_error` | Viewing quality. `playback_error` uses a safe code, never a free-form payload or signed URL. | Same | Firebase Analytics | **pending D-020** | **pending D-020** | Product/engineering | Same |
-| planned MVP | `locked_episode_viewed`, `offer_presented`, `offer_selected` | Lock / ad-offer funnel | Same | Firebase Analytics | **pending D-020** | **pending D-020** | Product/growth | Same |
+| implemented, production-disabled | `episode_started`, `episode_progress`, `episode_completed`, `playback_error` | Viewing quality. `playback_error` uses a safe code, never a free-form payload or signed URL. | Same | Firebase Analytics | **pending D-020** | **pending D-020** | Product/engineering | Same |
+| playback lock implemented, production-disabled; offer events planned MVP | `locked_episode_viewed`, `offer_presented`, `offer_selected` | Lock / ad-offer funnel | Same | Firebase Analytics | **pending D-020** | **pending D-020** | Product/growth | Same |
 | planned MVP | `rewarded_ad_loaded`, `rewarded_ad_started`, `rewarded_ad_completed`, `reward_granted`, `reward_failed` | Ad offer diagnostics. Grants are server-authoritative. | Consent for ads/measurement — planned/assumed | Firebase Analytics (diagnostic); AdMob (ad delivery) | **pending D-020** | **pending D-020** | Product/ads | Same; finance uses verified callbacks, not these events |
 | planned P7 | `coin_pack_viewed`, `purchase_started`, `purchase_succeeded`, `purchase_failed`, `purchase_restored`, `coins_spent`, `episode_unlocked` | Commerce diagnostics. No receipts. | Consent for analytics; purchase fulfilment remains Art. 6(1)(b) on the ledger — planned/assumed | Firebase Analytics (diagnostic); Django ledger / RevenueCat (authority) | **pending D-020** | Analytics **pending D-020**; ledger per legal/accounting **pending D-020** | Product vs finance separated | Analytics deletion ≠ ledger retention |
 | planned P7 | `subscription_started`, `subscription_renewed`, `subscription_cancelled`, `subscription_expired` | Subscription funnel diagnostics | Same split as commerce | Firebase Analytics (diagnostic); RevenueCat/Django (authority) | **pending D-020** | Same split | Product vs finance | Same split |

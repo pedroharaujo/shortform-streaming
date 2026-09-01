@@ -971,8 +971,16 @@ controller at send time, and deduplicates accepted logical events across remount
 and retries. It owns cold/foreground `app_open`, successfully rendered
 `home_viewed`, ordered `series_impression`, and eligible `series_opened` triggers.
 Tests prove an ordered consented discovery trail and zero transport events before
-consent. F3b still owns playback start/progress/complete, lock display, and
-safe-coded playback errors; F4 owns reward/backend diagnostics. Production
+consent.
+
+**Playback instrumentation implemented (P4-T01-F3b / #104):** The authorize
+response now supplies the server-owned `free`, `rewarded_ad`, or `staff` access
+source. The player records starts only after native playback begins, progress and
+completion only after the progress API accepts them, locks only when displayed,
+and terminal failures with fixed safe codes that cannot contain URLs or provider
+messages. Tests prove ordered, deduplicated consented playback trails and zero
+non-consented transport events. Staff-authorized playback never fabricates a
+product access method. F4 still owns reward/backend diagnostics. Production
 transport remains hard-disabled pending the existing approvals.
 
 **Description:** Publish event dictionary, property schemas, ownership, retention, consent rules, and a typed mobile/backend analytics wrapper with deterministic event IDs for MVP events: `app_open`/campaign, episode start/complete, `lock_shown`, `ad_offer`, `ad_rewarded`, and `playback_error`. Coin, subscription, push, and experiment events wait for P7.

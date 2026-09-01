@@ -293,6 +293,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description * `free` - free
+         *     * `rewarded_ad` - rewarded_ad
+         *     * `staff` - staff
+         * @enum {string}
+         */
+        AccessMethodEnum: "free" | "rewarded_ad" | "staff";
         AccountDeletion: {
             public_id: string;
             status: components["schemas"]["AccountDeletionStatusEnum"];
@@ -480,6 +487,14 @@ export interface components {
              * @enum {string}
              */
             decision: "granted";
+            /**
+             * @description Server-authoritative reason this grant is playable: free policy, verified rewarded-ad entitlement, or staff support entitlement.
+             *
+             *     * `free` - free
+             *     * `rewarded_ad` - rewarded_ad
+             *     * `staff` - staff
+             */
+            access_method: components["schemas"]["AccessMethodEnum"];
             /**
              * Format: uri
              * @description Opaque HTTPS HLS playlist URL. Short-lived. Does not include Bunny library ids, video ids as separate fields, or an embed player URL. Django never serves these bytes.

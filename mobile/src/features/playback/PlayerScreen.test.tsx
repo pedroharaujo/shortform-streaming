@@ -13,6 +13,7 @@ import type {
 } from '../../api/progress/types';
 import { renderWithSafeArea } from '../../testUtils';
 import { PlayerScreen } from './PlayerScreen';
+import type { PlaybackAnalytics } from './playbackAnalytics';
 
 const GRANTED_URI = 'https://video.example.test/hls/a/playlist.m3u8?token=secret';
 
@@ -92,9 +93,31 @@ function grantedAuthorize(_id: string): PlaybackRequestOutcome {
     outcome: 'ok',
     data: {
       decision: 'granted',
+      access_method: 'free',
       playback_url: GRANTED_URI,
       expires_at: '2026-08-28T12:10:00Z',
     },
+  };
+}
+
+function analyticsDouble(): jest.Mocked<PlaybackAnalytics> {
+  return {
+    recordStarted: jest.fn<
+      ReturnType<PlaybackAnalytics['recordStarted']>,
+      Parameters<PlaybackAnalytics['recordStarted']>
+    >(async () => undefined),
+    recordProgress: jest.fn<
+      ReturnType<PlaybackAnalytics['recordProgress']>,
+      Parameters<PlaybackAnalytics['recordProgress']>
+    >(async () => undefined),
+    recordLocked: jest.fn<
+      ReturnType<PlaybackAnalytics['recordLocked']>,
+      Parameters<PlaybackAnalytics['recordLocked']>
+    >(async () => undefined),
+    recordError: jest.fn<
+      ReturnType<PlaybackAnalytics['recordError']>,
+      Parameters<PlaybackAnalytics['recordError']>
+    >(async () => undefined),
   };
 }
 
@@ -135,8 +158,10 @@ function visibleHasSecrets(view: Awaited<ReturnType<typeof renderWithSafeArea>>)
 
 describe('PlayerScreen', () => {
   it('plays a granted episode without displaying the playback URI', async () => {
+    const analytics = analyticsDouble();
     const view = await renderWithSafeArea(
       <PlayerScreen
+        analytics={analytics}
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
@@ -152,11 +177,24 @@ describe('PlayerScreen', () => {
     visibleHasSecrets(view);
     expect(view.queryAllByText('Free')).toHaveLength(0);
     expect(view.queryAllByText('Locked')).toHaveLength(0);
+    expect(analytics.recordStarted).not.toHaveBeenCalled();
+
+    await userEvent.setup().press(view.getByTestId('player-simulate-start'));
+    await waitFor(() =>
+      expect(analytics.recordStarted).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accessMethod: 'free',
+          episodeId: 'ep_harbor_1',
+          startPositionSeconds: 0,
+        }),
+      ),
+    );
   });
 
   it('resumes GET progress at 12s and treats GET 404 as start, not unavailable', async () => {
     const resumed = await renderWithSafeArea(
       <PlayerScreen
+        analytics={analyticsDouble()}
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
@@ -180,6 +218,7 @@ describe('PlayerScreen', () => {
 
     const missing = await renderWithSafeArea(
       <PlayerScreen
+        analytics={analyticsDouble()}
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
@@ -195,6 +234,7 @@ describe('PlayerScreen', () => {
   it('resumes a mid-rewatch even when completed is still sticky', async () => {
     const view = await renderWithSafeArea(
       <PlayerScreen
+        analytics={analyticsDouble()}
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
@@ -221,6 +261,7 @@ describe('PlayerScreen', () => {
     const authorize = jest.fn(async (id: string) => grantedAuthorize(id));
     const view = await renderWithSafeArea(
       <PlayerScreen
+        analytics={analyticsDouble()}
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
@@ -252,6 +293,7 @@ describe('PlayerScreen', () => {
     );
     const view = await renderWithSafeArea(
       <PlayerScreen
+        analytics={analyticsDouble()}
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
@@ -277,11 +319,13 @@ describe('PlayerScreen', () => {
 
   it('autoplays a granted next opaque id from true end and PUTs completed', async () => {
     const authorize = jest.fn(async (id: string) => grantedAuthorize(id));
+    const analytics = analyticsDouble();
     const put = jest.fn(async (episodeId: string, body: WatchProgressWrite) =>
       okPut(episodeId, body),
     );
     const view = await renderWithSafeArea(
       <PlayerScreen
+        analytics={analytics}
         catalog={stubCatalog(grantedNextSeries)}
         episodeId="ep_harbor_1"
         onClose={() => {}}
@@ -292,6 +336,7 @@ describe('PlayerScreen', () => {
 
     expect(await view.findByTestId('player-loaded')).toBeTruthy();
     const user = userEvent.setup();
+    await user.press(view.getByTestId('player-simulate-start'));
     await user.press(view.getByTestId('player-simulate-end'));
     await waitFor(() => {
       expect(put).toHaveBeenCalledWith('ep_harbor_1', expect.objectContaining({ completed: true }));
@@ -304,6 +349,18 @@ describe('PlayerScreen', () => {
     expect(await view.findByTestId('player-loaded')).toBeTruthy();
     expect(view.queryByTestId('player-locked')).toBeNull();
     expect(view.getByTestId('player-now-playing')).toHaveTextContent('Harbor Lights · Episode 2');
+    await user.press(view.getByTestId('player-simulate-start'));
+    await waitFor(() =>
+      expect(analytics.recordStarted.mock.calls.map(([episode]) => episode.episodeId)).toEqual([
+        'ep_harbor_1',
+        'ep_harbor_2',
+      ]),
+    );
+    expect(analytics.recordProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ episodeId: 'ep_harbor_1' }),
+      90,
+      true,
+    );
     visibleHasSecrets(view);
   });
 
@@ -322,6 +379,7 @@ describe('PlayerScreen', () => {
     });
     const view = await renderWithSafeArea(
       <PlayerScreen
+        analytics={analyticsDouble()}
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
@@ -343,6 +401,7 @@ describe('PlayerScreen', () => {
 
   it('shows lock reasons for a locked next episode and does not keep a next URI', async () => {
     const onReward = jest.fn();
+    const analytics = analyticsDouble();
     const authorize = jest.fn(async (id: string): Promise<PlaybackRequestOutcome> => {
       if (id === 'ep_harbor_6') {
         return { outcome: 'locked', lockReasons: ['login_required'] };
@@ -351,6 +410,7 @@ describe('PlayerScreen', () => {
     });
     const view = await renderWithSafeArea(
       <PlayerScreen
+        analytics={analytics}
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
@@ -372,11 +432,19 @@ describe('PlayerScreen', () => {
     visibleHasSecrets(view);
     expect(view.queryAllByText(/^Free$/i)).toHaveLength(0);
     expect(view.queryAllByText(/^Locked$/i)).toHaveLength(0);
+    await waitFor(() =>
+      expect(analytics.recordLocked).toHaveBeenCalledWith(
+        expect.objectContaining({ episodeId: 'ep_harbor_6' }),
+        'reward_required',
+      ),
+    );
   });
 
   it('uses static error copy without host or query tokens', async () => {
+    const analytics = analyticsDouble();
     const view = await renderWithSafeArea(
       <PlayerScreen
+        analytics={analytics}
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
@@ -394,5 +462,39 @@ describe('PlayerScreen', () => {
     expect(view.getByText('Playback could not be started.')).toBeTruthy();
     visibleHasSecrets(view);
     expect(view.queryByText(/video\.example\.test/)).toBeNull();
+    await waitFor(() =>
+      expect(analytics.recordError).toHaveBeenCalledWith({
+        episodeId: 'ep_harbor_1',
+        code: 'authorize_failed',
+        phase: 'authorize',
+      }),
+    );
+  });
+
+  it('turns a native video failure into static UI and a safe play-phase code', async () => {
+    const analytics = analyticsDouble();
+    const view = await renderWithSafeArea(
+      <PlayerScreen
+        analytics={analytics}
+        catalog={stubCatalog()}
+        episodeId="ep_harbor_1"
+        onClose={() => {}}
+        playback={stubPlayback()}
+        progress={stubProgress()}
+      />,
+    );
+
+    expect(await view.findByTestId('player-loaded')).toBeTruthy();
+    await userEvent.setup().press(view.getByTestId('player-simulate-error'));
+    expect(await view.findByTestId('player-error')).toBeTruthy();
+    expect(view.getByText('Playback could not be started.')).toBeTruthy();
+    await waitFor(() =>
+      expect(analytics.recordError).toHaveBeenCalledWith({
+        episodeId: 'ep_harbor_1',
+        code: 'video_playback_failed',
+        phase: 'play',
+      }),
+    );
+    visibleHasSecrets(view);
   });
 });

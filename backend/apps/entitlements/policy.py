@@ -9,7 +9,7 @@ from django.db.models import Q
 from apps.accounts.models import UserProfile
 from apps.catalog.eligibility import CatalogRequestContext, episode_is_eligible
 from apps.catalog.models import Episode
-from apps.entitlements.models import AccessPolicy, EpisodeEntitlement
+from apps.entitlements.models import AccessPolicy, EntitlementSource, EpisodeEntitlement
 
 # D-006: first five episodes per season by Episode.order. Not Remote Config.
 DEFAULT_FREE_EPISODE_ORDER_MAX = 5
@@ -23,8 +23,9 @@ class LockReason(StrEnum):
 
 
 class GrantSource(StrEnum):
-    ENTITLEMENT = "entitlement"
     FREE = "free"
+    REWARDED_AD = "rewarded_ad"
+    STAFF = "staff"
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,11 +113,16 @@ def evaluate_authorize_access(
     """
     if not episode_is_eligible(episode, context, now=now):
         return Ineligible()
-    if (
-        profile is not None
-        and EpisodeEntitlement.objects.filter(user_profile=profile, episode=episode).exists()
-    ):
-        return Grant(GrantSource.ENTITLEMENT)
+    if profile is not None:
+        entitlement_source = (
+            EpisodeEntitlement.objects.filter(user_profile=profile, episode=episode)
+            .values_list("source", flat=True)
+            .first()
+        )
+        if entitlement_source == EntitlementSource.REWARDED_AD:
+            return Grant(GrantSource.REWARDED_AD)
+        if entitlement_source is not None:
+            return Grant(GrantSource.STAFF)
     policy = resolve_access_policy(episode)
     if episode_is_free(episode, policy):
         return Grant(GrantSource.FREE)
@@ -180,9 +186,9 @@ def evaluate_episode_offers(
         return Ineligible()
     if isinstance(decision, Grant):
         kind = (
-            OfferMethodType.ENTITLEMENT
-            if decision.source == GrantSource.ENTITLEMENT
-            else OfferMethodType.FREE
+            OfferMethodType.FREE
+            if decision.source == GrantSource.FREE
+            else OfferMethodType.ENTITLEMENT
         )
         return OffersGranted(methods=(_offer_method(kind),))
     methods: tuple[OfferMethod, ...] = ()

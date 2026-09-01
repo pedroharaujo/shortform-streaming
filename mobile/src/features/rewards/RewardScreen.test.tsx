@@ -112,6 +112,7 @@ async function setup(
       outcome: 'ok' as const,
       data: {
         decision: 'granted' as const,
+        access_method: 'rewarded_ad' as const,
         playback_url: 'https://video.example.test/synthetic.m3u8',
         expires_at: '2099-01-01T00:00:00Z',
       },
@@ -462,6 +463,7 @@ it.each(['close', 'session-change'] as const)(
         outcome: 'ok',
         data: {
           decision: 'granted',
+          access_method: 'rewarded_ad',
           playback_url: 'https://video.example.test/synthetic.m3u8',
           expires_at: '2099-01-01T00:00:00Z',
         },
