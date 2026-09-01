@@ -129,6 +129,9 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     assert "expires_at" in granted["properties"]
     assert "lock_reasons" not in granted["properties"]
 
+    reward_intent = schema["components"]["schemas"]["RewardIntent"]
+    assert "grant_source" in reward_intent["properties"]
+
     progress_get = paths["/v1/progress/{episode_id}"]["get"]
     progress_put = paths["/v1/progress/{episode_id}"]["put"]
     for operation in (progress_get, progress_put):

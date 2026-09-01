@@ -8,10 +8,12 @@ import {
   createAppPlaybackClient,
   createAppRewardsClient,
 } from '../../src/api/createAppClients';
+import { getAppAnalyticsRuntime } from '../../src/analytics/appAnalytics';
 import { getSessionCredential } from '../../src/auth/session';
 import { getApiConfiguration, getRewardedAdUnitId } from '../../src/config/appConfiguration';
 import { readRouteId } from '../../src/features/catalog/readRouteId';
 import { RewardScreen } from '../../src/features/rewards/RewardScreen';
+import { createRewardAnalytics } from '../../src/features/rewards/rewardAnalytics';
 import { createTestAdPresenter } from '../../src/features/rewards/testAdPresenter';
 
 export default function RewardRoute(): JSX.Element {
@@ -31,11 +33,13 @@ export default function RewardRoute(): JSX.Element {
     () => createTestAdPresenter(environment, Platform.OS, getRewardedAdUnitId()),
     [environment],
   );
+  const analytics = useMemo(() => createRewardAnalytics(getAppAnalyticsRuntime()), []);
   return (
     <RewardScreen
       key={episodeId}
       {...clients}
       episodeId={episodeId}
+      analytics={analytics}
       presenter={presenter}
       enabled={environment !== 'production' && Platform.OS === 'android'}
       onClose={() => {

@@ -1252,6 +1252,11 @@ components:
         message:
           type: string
           description: Safe, user-displayable field message.
+    GrantSourceEnum:
+      enum:
+      - admob_ssv
+      type: string
+      description: '* `admob_ssv` - admob_ssv'
     HealthStatus:
       type: object
       properties:
@@ -1286,6 +1291,9 @@ components:
       description: |-
         * `login_required` - login_required
         * `entitlement_required` - entitlement_required
+    NullEnum:
+      enum:
+      - null
     OfferMethod:
       type: object
       properties:
@@ -1415,6 +1423,16 @@ components:
           allOf:
           - $ref: '#/components/schemas/RewardIntentStatusEnum'
           readOnly: true
+        grant_source:
+          readOnly: true
+          nullable: true
+          description: |-
+            Server-derived verified grant source. Null until the provider callback has created or confirmed the entitlement.
+
+            * `admob_ssv` - admob_ssv
+          oneOf:
+          - $ref: '#/components/schemas/GrantSourceEnum'
+          - $ref: '#/components/schemas/NullEnum'
         expires_at:
           type: string
           format: date-time
@@ -1432,6 +1450,7 @@ components:
       - custom_data
       - episode_id
       - expires_at
+      - grant_source
       - id
       - reward_description
       - ssv_user_id

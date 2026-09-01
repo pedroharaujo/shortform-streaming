@@ -81,7 +81,9 @@ card impressions, and eligible series detail rendering. F3b connects the player 
 actual native playback start, accepted progress/completion writes, displayed locks,
 and terminal safe-coded failures. The runtime retries a cold trigger when consent
 activates and deduplicates accepted logical events across remounts, retries, and
-autoplay. Reward triggers still wait for F4.
+autoplay. F4 connects visible offer/selection, native loaded/opened/earned callbacks,
+and owner-only verified reward status without sending provider bindings or making
+Analytics authoritative.
 
 After `/v1/me` confirms
 analytics consent, the adapter may enable collection and link only the opaque
@@ -109,7 +111,11 @@ validation. Production uses a no-op adapter until D-020 and P6 clearance.
   Tests cover ordered/deduplicated free and autoplay trails and zero non-consented
   transport. Staff access omits `episode_started` instead of inventing a product
   access method; progress and completion remain non-authoritative diagnostics.
-- P4-T01-F4: reward diagnostics and the smallest typed backend boundary.
+- Completed P4-T01-F4: visible offer/selection, native ad lifecycle, terminal safe
+  failures, and owner-status `reward_granted` backed by a server-derived
+  `admob_ssv` source. Stable request/intent keys deduplicate retry, recovery, and
+  callback replay but are never event properties. The verified callback,
+  entitlement, refreshed offer, and playback authorization remain authoritative.
 - P4-T06: persistence and routing for campaign/deferred-deep-link fields.
 - P7: BigQuery/Looker models, experiments, push, commerce events, and MMP.
 - P6-T03: DebugView/device evidence if deferred under D-029 while collection is

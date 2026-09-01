@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { randomUUID } from 'expo-crypto';
-import type { CatalogClient } from '../../api/catalog/types';
+import type { CatalogClient, CatalogEpisodeDetail } from '../../api/catalog/types';
 import type { MeClient } from '../../api/me/types';
 import type { PlaybackClient } from '../../api/playback/types';
 import type { RewardIntent, RewardsClient } from '../../api/rewards/types';
@@ -17,6 +17,17 @@ import {
 } from './pendingRewardAttempt';
 import type { RewardedAdPresenter } from './types';
 import { useCatalogQuery } from '../catalog/useCatalog';
+import type {
+  RewardAnalytics,
+  RewardAnalyticsEpisode,
+  RewardFailureCode,
+  RewardFailureStage,
+} from './rewardAnalytics';
+
+interface RewardAnalyticsFailure {
+  readonly stage: RewardFailureStage;
+  readonly code: RewardFailureCode;
+}
 
 type OfferState =
   | { phase: 'loading' }
@@ -26,9 +37,12 @@ type OfferState =
       message: string;
       unlocked?: boolean;
       recoveredAttempt?: PendingRewardAttempt;
+      analyticsEpisode?: RewardAnalyticsEpisode;
+      analyticsFailure?: RewardAnalyticsFailure;
     };
 
 export interface RewardScreenProps {
+  readonly analytics: RewardAnalytics;
   readonly episodeId: string;
   readonly catalog: CatalogClient;
   readonly me: MeClient;
@@ -41,7 +55,17 @@ export interface RewardScreenProps {
   readonly onPlay: (episodeId: string) => void;
 }
 
+function analyticsEpisode(episode: CatalogEpisodeDetail): RewardAnalyticsEpisode {
+  return {
+    seriesId: episode.series_id,
+    episodeId: episode.id,
+    seasonNumber: episode.season_number,
+    episodeNumber: episode.order,
+  };
+}
+
 export function RewardScreen({
+  analytics,
   episodeId,
   catalog,
   me,
@@ -93,10 +117,18 @@ export function RewardScreen({
   }, []);
 
   const load = useCallback(async (): Promise<OfferState> => {
-    const unavailable = (message: string): Extract<OfferState, { phase: 'loaded' }> => ({
+    const unavailable = (
+      message: string,
+      options?: {
+        readonly episode?: RewardAnalyticsEpisode;
+        readonly failure?: RewardAnalyticsFailure;
+      },
+    ): Extract<OfferState, { phase: 'loaded' }> => ({
       phase: 'loaded',
       offer: null,
       message,
+      ...(options?.episode === undefined ? {} : { analyticsEpisode: options.episode }),
+      ...(options?.failure === undefined ? {} : { analyticsFailure: options.failure }),
     });
     const owner = revision.current;
     if (owner !== getAuthSessionRevision() || getSessionCredential() === null) {
@@ -108,10 +140,16 @@ export function RewardScreen({
         rewards.offers(episodeId),
         me.getMe(),
       ]);
+      const eventEpisode = episode.outcome === 'ok' ? analyticsEpisode(episode.data) : undefined;
       if (owner !== getAuthSessionRevision())
         return unavailable('Your session changed. Return to Account and sign in again.');
       if ([episode, available, profile].some((result) => result.outcome === 'unreachable')) {
-        return unavailable('You may be offline. Check your connection and refresh the offer.');
+        return unavailable('You may be offline. Check your connection and refresh the offer.', {
+          ...(eventEpisode === undefined ? {} : { episode: eventEpisode }),
+          ...(available.outcome === 'unreachable'
+            ? { failure: { stage: 'offer', code: 'offer_unavailable' } as const }
+            : {}),
+        });
       }
       if (profile.outcome === 'unauthenticated' || available.outcome === 'unauthenticated') {
         return unavailable('Sign in through Account before unlocking an episode.');
@@ -120,17 +158,67 @@ export function RewardScreen({
       } else if (profile.outcome !== 'ok') {
         return unavailable('The account could not be checked. Refresh the offer to try again.');
       } else if (episode.outcome !== 'ok' || available.outcome !== 'ok') {
-        return unavailable('The reward offer is unavailable. Try again later.');
+        return unavailable('The reward offer is unavailable. Try again later.', {
+          ...(eventEpisode === undefined ? {} : { episode: eventEpisode }),
+          ...(eventEpisode === undefined
+            ? {}
+            : { failure: { stage: 'offer', code: 'offer_unavailable' } as const }),
+        });
       } else if (available.data.episode_id !== episodeId) {
-        return unavailable('The reward offer did not match this episode. Refresh to try again.');
+        return unavailable('The reward offer did not match this episode. Refresh to try again.', {
+          episode: analyticsEpisode(episode.data),
+          failure: { stage: 'offer', code: 'offer_mismatch' },
+        });
       }
       const recoveredAttempt = await readPendingRewardAttempt(profile.data.public_id, episodeId);
       if (owner !== getAuthSessionRevision())
         return unavailable('Your session changed. Return to Account and sign in again.');
       if (available.data.decision === 'granted') {
-        if (recoveredAttempt !== null) await clearPendingRewardAttempt();
+        if (recoveredAttempt?.intentId !== undefined) {
+          const recovered = await rewards.get(recoveredAttempt.intentId);
+          if (owner !== getAuthSessionRevision())
+            return unavailable('Your session changed. Return to Account and sign in again.');
+          if (
+            recovered.outcome === 'ok' &&
+            recovered.data.id === recoveredAttempt.intentId &&
+            recovered.data.episode_id === episodeId
+          ) {
+            if (recovered.data.status === 'granted') {
+              if (recovered.data.grant_source === 'admob_ssv') {
+                void analytics.recordGranted(
+                  analyticsEpisode(episode.data),
+                  recovered.data.id,
+                  recovered.data.grant_source,
+                );
+              } else {
+                void analytics.recordFailed(
+                  analyticsEpisode(episode.data),
+                  recovered.data.id,
+                  'verify',
+                  'grant_source_unavailable',
+                );
+              }
+              await clearPendingRewardAttempt();
+            } else if (
+              recovered.data.status === 'expired' ||
+              recovered.data.status === 'unavailable'
+            ) {
+              void analytics.recordFailed(
+                analyticsEpisode(episode.data),
+                recovered.data.id,
+                'verify',
+                recovered.data.status === 'expired' ? 'reward_expired' : 'reward_unavailable',
+              );
+              await clearPendingRewardAttempt();
+            }
+          }
+        } else if (recoveredAttempt !== null) {
+          await clearPendingRewardAttempt();
+        }
         return {
-          ...unavailable('This episode is already unlocked. Continue to playback.'),
+          ...unavailable('This episode is already unlocked. Continue to playback.', {
+            episode: analyticsEpisode(episode.data),
+          }),
           unlocked: true,
         };
       } else if (!enabled) {
@@ -144,6 +232,7 @@ export function RewardScreen({
         }
         return {
           phase: 'loaded',
+          analyticsEpisode: analyticsEpisode(episode.data),
           offer: {
             title: episode.data.title,
             description: method.description,
@@ -156,14 +245,30 @@ export function RewardScreen({
     } catch {
       return unavailable('The reward offer is unavailable. Try again later.');
     }
-  }, [catalog, enabled, episodeId, me, rewards]);
+  }, [analytics, catalog, enabled, episodeId, me, rewards]);
   const { state, refresh } = useCatalogQuery(load);
   const recoveryResolved = state.phase === 'loaded';
   const recoveredAttempt = state.phase === 'loaded' ? (state.recoveredAttempt ?? null) : null;
   const attempt = attemptOverride === undefined ? recoveredAttempt : attemptOverride;
   const offer = state.phase === 'loaded' && !invalidated ? state.offer : null;
+  const eventEpisode =
+    state.phase === 'loaded' && !invalidated ? (state.analyticsEpisode ?? null) : null;
   const displayMessage =
     message ?? (state.phase === 'loaded' ? state.message : 'Loading reward offer…');
+
+  useEffect(() => {
+    if (eventEpisode === null || state.phase !== 'loaded') return;
+    if (offer !== null) {
+      void analytics.recordOfferPresented(eventEpisode);
+    } else if (state.analyticsFailure !== undefined) {
+      void analytics.recordFailed(
+        eventEpisode,
+        eventEpisode.episodeId,
+        state.analyticsFailure.stage,
+        state.analyticsFailure.code,
+      );
+    }
+  }, [analytics, eventEpisode, offer, state]);
 
   function leave(action: () => void): void {
     leaving.current = true;
@@ -221,17 +326,38 @@ export function RewardScreen({
       }
       const verified = result.data;
       if (verified.id !== row.id || verified.episode_id !== episodeId) {
+        if (eventEpisode !== null)
+          void analytics.recordFailed(eventEpisode, row.id, 'verify', 'verify_mismatch');
         setMessage('The reward response did not match this episode.');
         return;
       }
       setIntent(verified);
       if (verified.status === 'granted') {
+        if (eventEpisode !== null) {
+          if (verified.grant_source === 'admob_ssv') {
+            void analytics.recordGranted(eventEpisode, verified.id, verified.grant_source);
+          } else {
+            void analytics.recordFailed(
+              eventEpisode,
+              verified.id,
+              'verify',
+              'grant_source_unavailable',
+            );
+          }
+        }
         await clearPendingRewardAttempt();
         setAttempt(null);
         await confirmPlayback();
         return;
       }
       if (verified.status === 'expired' || verified.status === 'unavailable') {
+        if (eventEpisode !== null)
+          void analytics.recordFailed(
+            eventEpisode,
+            verified.id,
+            'verify',
+            verified.status === 'expired' ? 'reward_expired' : 'reward_unavailable',
+          );
         await clearPendingRewardAttempt();
         setAttempt(null);
         setMessage(
@@ -268,6 +394,11 @@ export function RewardScreen({
     inFlight.current = true;
     setBusy(true);
     let created = intent;
+    let analyticsFailure: {
+      readonly attemptKey: string;
+      readonly stage: RewardFailureStage;
+      readonly code: RewardFailureCode;
+    } | null = null;
     try {
       if (created === null && attempt?.intentId !== undefined) {
         await poll({ id: attempt.intentId, episode_id: attempt.episodeId });
@@ -291,9 +422,6 @@ export function RewardScreen({
           setMessage('Your session changed. Return to Account and sign in again.');
           return;
         }
-        setMessage('Checking ad consent…');
-        await presenter.prepare(isCurrent);
-        if (!guard()) return;
         let activeAttempt = attempt;
         if (activeAttempt === null) {
           activeAttempt = newPendingRewardAttempt(profile.data.public_id, episodeId, randomUUID());
@@ -306,6 +434,17 @@ export function RewardScreen({
           if (!guard()) return;
           setAttempt(activeAttempt);
         }
+        if (eventEpisode !== null)
+          void analytics.recordOfferSelected(eventEpisode, activeAttempt.requestId);
+        analyticsFailure = {
+          attemptKey: activeAttempt.requestId,
+          stage: 'load',
+          code: 'ad_prepare_failed',
+        };
+        setMessage('Checking ad consent…');
+        await presenter.prepare(isCurrent);
+        analyticsFailure = null;
+        if (!guard()) return;
         const result = await rewards.create(episodeId, activeAttempt.requestId);
         if (!guard()) return;
         if (result.outcome !== 'ok') {
@@ -313,7 +452,17 @@ export function RewardScreen({
           return;
         }
         created = result.data;
-        if (created.episode_id !== episodeId) throw new Error('Mismatched reward');
+        if (created.episode_id !== episodeId) {
+          if (eventEpisode !== null)
+            void analytics.recordFailed(
+              eventEpisode,
+              activeAttempt.requestId,
+              'offer',
+              'intent_mismatch',
+            );
+          setMessage('The reward response did not match this episode.');
+          return;
+        }
         setIntent(created);
         const identifiedAttempt = { ...activeAttempt, intentId: created.id };
         try {
@@ -327,14 +476,42 @@ export function RewardScreen({
         }
         if (!guard()) return;
         if (created.status === 'pending') {
+          const pendingIntent = created;
           setMessage('Loading test ad…');
-          await presenter.present(created, isCurrent);
+          analyticsFailure = {
+            attemptKey: pendingIntent.id,
+            stage: 'load',
+            code: 'ad_load_failed',
+          };
+          const outcome = await presenter.present(pendingIntent, isCurrent, (event) => {
+            if (!isCurrent()) return;
+            if (eventEpisode !== null)
+              void analytics.recordAdEvent(eventEpisode, pendingIntent.id, event);
+            analyticsFailure =
+              event === 'completed'
+                ? null
+                : {
+                    attemptKey: pendingIntent.id,
+                    stage: 'present',
+                    code: 'ad_present_failed',
+                  };
+          });
+          analyticsFailure = null;
+          if (outcome === 'dismissed' && eventEpisode !== null)
+            void analytics.recordFailed(eventEpisode, pendingIntent.id, 'present', 'ad_dismissed');
           if (!guard()) return;
         }
       }
       await poll(created);
     } catch {
       if (guard()) {
+        if (eventEpisode !== null && analyticsFailure !== null)
+          void analytics.recordFailed(
+            eventEpisode,
+            analyticsFailure.attemptKey,
+            analyticsFailure.stage,
+            analyticsFailure.code,
+          );
         setMessage(
           created
             ? 'The ad was unavailable or closed. Check reward status; no client reward was granted.'

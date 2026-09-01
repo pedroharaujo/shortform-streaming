@@ -5,6 +5,7 @@ import type { PlaybackClient } from '../../api/playback/types';
 import type { RewardIntent, RewardsClient } from '../../api/rewards/types';
 import { setAuthSession } from '../../auth/session';
 import { RewardScreen } from './RewardScreen';
+import type { RewardAnalytics } from './rewardAnalytics';
 import type { RewardedAdPresenter } from './types';
 
 const mockSecureStore = new Map<string, string>();
@@ -36,7 +37,33 @@ const INTENT: RewardIntent = {
   ad_unit_id: 'ca-app-pub-3940256099942544/5224354917',
   custom_data: 'synthetic-custom',
   ssv_user_id: 'synthetic-ssv',
+  grant_source: null,
 };
+
+function analyticsDouble(): jest.Mocked<RewardAnalytics> {
+  return {
+    recordOfferPresented: jest.fn<
+      ReturnType<RewardAnalytics['recordOfferPresented']>,
+      Parameters<RewardAnalytics['recordOfferPresented']>
+    >(async () => undefined),
+    recordOfferSelected: jest.fn<
+      ReturnType<RewardAnalytics['recordOfferSelected']>,
+      Parameters<RewardAnalytics['recordOfferSelected']>
+    >(async () => undefined),
+    recordAdEvent: jest.fn<
+      ReturnType<RewardAnalytics['recordAdEvent']>,
+      Parameters<RewardAnalytics['recordAdEvent']>
+    >(async () => undefined),
+    recordGranted: jest.fn<
+      ReturnType<RewardAnalytics['recordGranted']>,
+      Parameters<RewardAnalytics['recordGranted']>
+    >(async () => undefined),
+    recordFailed: jest.fn<
+      ReturnType<RewardAnalytics['recordFailed']>,
+      Parameters<RewardAnalytics['recordFailed']>
+    >(async () => undefined),
+  };
+}
 
 async function setup(
   adsConsent = true,
@@ -49,9 +76,18 @@ async function setup(
   const catalog = {
     getEpisode: jest.fn(async () => ({
       outcome: 'ok',
-      data: { public_id: 'ep_synthetic', title: 'Synthetic episode 6' },
+      data: {
+        id: 'ep_synthetic',
+        title: 'Synthetic episode 6',
+        synopsis: 'Synthetic synopsis',
+        duration_seconds: 90,
+        order: 6,
+        series_id: 'ser_synthetic',
+        season_number: 1,
+      },
     })),
   } as unknown as CatalogClient;
+  const analytics = analyticsDouble();
   const me: MeClient = {
     getMe: jest.fn<ReturnType<MeClient['getMe']>, Parameters<MeClient['getMe']>>(async () => ({
       outcome: 'ok',
@@ -97,7 +133,12 @@ async function setup(
     present: jest.fn<
       ReturnType<RewardedAdPresenter['present']>,
       Parameters<RewardedAdPresenter['present']>
-    >(async () => 'completed'),
+    >(async (_intent, _isCurrent, onEvent) => {
+      onEvent('loaded');
+      onEvent('started');
+      onEvent('completed');
+      return 'completed';
+    }),
     privacy: jest.fn<
       ReturnType<RewardedAdPresenter['privacy']>,
       Parameters<RewardedAdPresenter['privacy']>
@@ -121,6 +162,7 @@ async function setup(
   configure?.(rewards);
   const view = await render(
     <RewardScreen
+      analytics={analytics}
       episodeId="ep_synthetic"
       catalog={catalog}
       me={me}
@@ -133,7 +175,7 @@ async function setup(
       onPlay={onPlay}
     />,
   );
-  return { view, rewards, presenter, onPlay, me, playback };
+  return { view, rewards, presenter, onPlay, me, playback, analytics };
 }
 
 afterEach(() => {
@@ -156,7 +198,7 @@ it.each([true, false])(
 );
 
 it('discloses the episode and exact reward before opt-in, and client completion cannot unlock', async () => {
-  const { view, rewards, presenter, onPlay } = await setup();
+  const { view, rewards, presenter, onPlay, analytics } = await setup();
   await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
   expect(view.getByText('Synthetic episode 6')).toBeTruthy();
   expect(view.getByText(INTENT.reward_description)).toBeTruthy();
@@ -164,12 +206,26 @@ it('discloses the episode and exact reward before opt-in, and client completion 
   expect(rewards.create).not.toHaveBeenCalled();
   await fireEvent.press(view.getByLabelText('Watch test ad'));
   await waitFor(() => expect(rewards.get).toHaveBeenCalled());
-  expect(presenter.present).toHaveBeenCalledWith(INTENT, expect.any(Function));
+  expect(presenter.present).toHaveBeenCalledWith(
+    INTENT,
+    expect.any(Function),
+    expect.any(Function),
+  );
+  expect(analytics.recordOfferPresented).toHaveBeenCalledWith(
+    expect.objectContaining({ episodeId: 'ep_synthetic', episodeNumber: 6 }),
+  );
+  expect(analytics.recordOfferSelected).toHaveBeenCalledTimes(1);
+  expect(analytics.recordAdEvent.mock.calls.map(([, , event]) => event)).toEqual([
+    'loaded',
+    'started',
+    'completed',
+  ]);
+  expect(analytics.recordGranted).not.toHaveBeenCalled();
   expect(onPlay).not.toHaveBeenCalled();
 });
 
 it('refreshes authoritative access and authorizes before entering playback', async () => {
-  const { view, rewards, onPlay, playback } = await setup();
+  const { view, rewards, onPlay, playback, analytics } = await setup();
   await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
   let confirmAccess!: (value: Awaited<ReturnType<RewardsClient['offers']>>) => void;
   rewards.offers.mockImplementation(
@@ -178,7 +234,10 @@ it('refreshes authoritative access and authorizes before entering playback', asy
         confirmAccess = resolve;
       }),
   );
-  rewards.get.mockResolvedValue({ outcome: 'ok', data: { ...INTENT, status: 'granted' } });
+  rewards.get.mockResolvedValue({
+    outcome: 'ok',
+    data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
+  });
   await fireEvent.press(view.getByLabelText('Watch test ad'));
   await waitFor(() => expect(rewards.offers).toHaveBeenCalledTimes(2));
   expect(playback.authorize).not.toHaveBeenCalled();
@@ -186,6 +245,11 @@ it('refreshes authoritative access and authorizes before entering playback', asy
   await act(async () => confirmAccess(GRANTED_ACCESS));
   await waitFor(() => expect(onPlay).toHaveBeenCalledWith('ep_synthetic'));
   expect(playback.authorize).toHaveBeenCalledWith('ep_synthetic');
+  expect(analytics.recordGranted).toHaveBeenCalledWith(
+    expect.objectContaining({ episodeId: 'ep_synthetic' }),
+    INTENT.id,
+    'admob_ssv',
+  );
 });
 
 it('cannot initialize ads without the account preference', async () => {
@@ -197,7 +261,7 @@ it('cannot initialize ads without the account preference', async () => {
 });
 
 it('fails closed if UMP consent is unavailable', async () => {
-  const { view, presenter, rewards, onPlay } = await setup();
+  const { view, presenter, rewards, onPlay, analytics } = await setup();
   presenter.prepare.mockRejectedValue(new Error('synthetic-private-provider-detail'));
   await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
   await fireEvent.press(view.getByLabelText('Watch test ad'));
@@ -205,11 +269,17 @@ it('fails closed if UMP consent is unavailable', async () => {
   expect(rewards.create).not.toHaveBeenCalled();
   expect(presenter.present).not.toHaveBeenCalled();
   expect(view.queryByText('synthetic-private-provider-detail')).toBeNull();
+  expect(analytics.recordFailed).toHaveBeenCalledWith(
+    expect.objectContaining({ episodeId: 'ep_synthetic' }),
+    expect.any(String),
+    'load',
+    'ad_prepare_failed',
+  );
   expect(onPlay).not.toHaveBeenCalled();
 });
 
 it('guards duplicate taps and ignores a late grant after account replacement', async () => {
-  const { view, presenter, rewards, onPlay } = await setup();
+  const { view, presenter, rewards, onPlay, analytics } = await setup();
   let complete!: (value: 'completed') => void;
   presenter.present.mockImplementation(
     () =>
@@ -217,7 +287,10 @@ it('guards duplicate taps and ignores a late grant after account replacement', a
         complete = resolve;
       }),
   );
-  rewards.get.mockResolvedValue({ outcome: 'ok', data: { ...INTENT, status: 'granted' } });
+  rewards.get.mockResolvedValue({
+    outcome: 'ok',
+    data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
+  });
   await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
   const button = view.getByLabelText('Watch test ad');
   await fireEvent.press(button);
@@ -228,6 +301,8 @@ it('guards duplicate taps and ignores a late grant after account replacement', a
   await act(async () => complete('completed'));
   expect(onPlay).not.toHaveBeenCalled();
   expect(rewards.get).not.toHaveBeenCalled();
+  expect(analytics.recordAdEvent).not.toHaveBeenCalled();
+  expect(analytics.recordGranted).not.toHaveBeenCalled();
 });
 
 it('does not contact the ad SDK for production configuration', async () => {
@@ -238,18 +313,28 @@ it('does not contact the ad SDK for production configuration', async () => {
 });
 
 it('can confirm a delayed reward after ad failure without creating or presenting another ad', async () => {
-  const { view, presenter, rewards, onPlay } = await setup();
+  const { view, presenter, rewards, onPlay, analytics } = await setup();
   presenter.present.mockRejectedValue(new Error('synthetic no fill'));
   await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
   await fireEvent.press(view.getByLabelText('Watch test ad'));
   await waitFor(() => expect(view.getByLabelText('Check reward status')).toBeEnabled());
   expect(onPlay).not.toHaveBeenCalled();
-  rewards.get.mockResolvedValue({ outcome: 'ok', data: { ...INTENT, status: 'granted' } });
+  rewards.get.mockResolvedValue({
+    outcome: 'ok',
+    data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
+  });
   rewards.offers.mockResolvedValue(GRANTED_ACCESS);
   await fireEvent.press(view.getByLabelText('Check reward status'));
   await waitFor(() => expect(onPlay).toHaveBeenCalledWith('ep_synthetic'));
   expect(rewards.create).toHaveBeenCalledTimes(1);
   expect(presenter.present).toHaveBeenCalledTimes(1);
+  expect(analytics.recordFailed).toHaveBeenCalledWith(
+    expect.objectContaining({ episodeId: 'ep_synthetic' }),
+    INTENT.id,
+    'load',
+    'ad_load_failed',
+  );
+  expect(analytics.recordGranted).toHaveBeenCalledTimes(1);
 });
 
 const GRANTED_ACCESS = {
@@ -296,7 +381,10 @@ it.each(['unreachable', 'no-method', 'mismatched'] as const)(
 it('keeps a granted reward on the sheet when fresh playback authorization denies access', async () => {
   const { view, rewards, onPlay, playback } = await setup();
   await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
-  rewards.get.mockResolvedValue({ outcome: 'ok', data: { ...INTENT, status: 'granted' } });
+  rewards.get.mockResolvedValue({
+    outcome: 'ok',
+    data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
+  });
   rewards.offers.mockResolvedValue(GRANTED_ACCESS);
   playback.authorize.mockResolvedValue({
     outcome: 'locked',
@@ -378,6 +466,8 @@ it('recovers a known pending intent with a status check and no second ad impress
   expect(recovered.rewards.create).not.toHaveBeenCalled();
   expect(recovered.presenter.prepare).not.toHaveBeenCalled();
   expect(recovered.presenter.present).not.toHaveBeenCalled();
+  expect(recovered.analytics.recordOfferSelected).not.toHaveBeenCalled();
+  expect(recovered.analytics.recordAdEvent).not.toHaveBeenCalled();
 });
 
 it('allows an explicit fresh attempt after a recovered intent becomes terminal', async () => {
@@ -417,7 +507,10 @@ it.each(['locked', 'unreachable', 'mismatched'] as const)(
   async (failure) => {
     const { view, rewards, playback, onPlay } = await setup();
     await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
-    rewards.get.mockResolvedValue({ outcome: 'ok', data: { ...INTENT, status: 'granted' } });
+    rewards.get.mockResolvedValue({
+      outcome: 'ok',
+      data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
+    });
     rewards.offers.mockResolvedValue(
       failure === 'unreachable'
         ? { outcome: 'unreachable', reason: 'Connection lost' }
@@ -445,7 +538,10 @@ it.each(['close', 'session-change'] as const)(
   async (ending) => {
     const { view, rewards, playback, onPlay } = await setup();
     await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
-    rewards.get.mockResolvedValue({ outcome: 'ok', data: { ...INTENT, status: 'granted' } });
+    rewards.get.mockResolvedValue({
+      outcome: 'ok',
+      data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
+    });
     rewards.offers.mockResolvedValue(GRANTED_ACCESS);
     let authorize!: (value: Awaited<ReturnType<PlaybackClient['authorize']>>) => void;
     playback.authorize.mockImplementation(
@@ -484,6 +580,28 @@ it('continues an already unlocked episode without ad consent or an enabled ad bu
   expect(playback.authorize).toHaveBeenCalledTimes(1);
   expect(rewards.create).not.toHaveBeenCalled();
   expect(presenter.prepare).not.toHaveBeenCalled();
+});
+
+it('recovers one server-sourced grant diagnostic when access is already unlocked', async () => {
+  persistAttempt('usr_synthetic', true);
+  const { view, rewards, presenter, analytics } = await setup(false, false, true, (client) => {
+    client.offers.mockResolvedValue(GRANTED_ACCESS);
+    client.get.mockResolvedValue({
+      outcome: 'ok',
+      data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
+    });
+  });
+
+  await waitFor(() => expect(view.getByLabelText('Continue to playback')).toBeEnabled());
+  expect(rewards.get).toHaveBeenCalledWith(INTENT.id);
+  expect(analytics.recordGranted).toHaveBeenCalledWith(
+    expect.objectContaining({ episodeId: 'ep_synthetic' }),
+    INTENT.id,
+    'admob_ssv',
+  );
+  expect(mockSecureStore.has(PENDING_REWARD_KEY)).toBe(false);
+  expect(presenter.prepare).not.toHaveBeenCalled();
+  expect(presenter.present).not.toHaveBeenCalled();
 });
 
 it('does not erase another episode recovery when this episode is already unlocked', async () => {

@@ -48,6 +48,7 @@ def test_intent_requires_opt_in_and_never_grants(client: Client, reward_setup: A
     assert response.status_code == 201
     data = response.json()
     assert data["status"] == "pending"
+    assert data["grant_source"] is None
     assert data["episode_id"] == episode.public_id
     assert data["ad_unit_id"] == "ca-app-pub-3940256099942544/5224354917"
     assert data["ssv_user_id"] != profile.firebase_uid

@@ -41,7 +41,7 @@ export function createTestAdPresenter(
       check(isCurrent);
       prepared = true;
     },
-    async present(intent, isCurrent) {
+    async present(intent, isCurrent, onEvent) {
       check(isCurrent);
       if (
         !prepared ||
@@ -89,6 +89,7 @@ export function createTestAdPresenter(
               void (async () => {
                 if (finished || showing) return;
                 check(isCurrent);
+                onEvent('loaded');
                 if (
                   !(Date.parse(intent.expires_at) > Date.now()) ||
                   !(await sdk.AdsConsent.getConsentInfo()).canRequestAds
@@ -102,8 +103,16 @@ export function createTestAdPresenter(
             }),
           );
           unsubscribe.push(
+            ad.addAdEventListener(sdk.AdEventType.OPENED, () => {
+              if (!finished && isCurrent()) onEvent('started');
+            }),
+          );
+          unsubscribe.push(
             ad.addAdEventListener(sdk.RewardedAdEventType.EARNED_REWARD, () => {
-              earned = true;
+              if (!finished && isCurrent()) {
+                earned = true;
+                onEvent('completed');
+              }
             }),
           );
           unsubscribe.push(
