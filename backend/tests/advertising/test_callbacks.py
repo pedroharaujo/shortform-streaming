@@ -98,7 +98,9 @@ def test_verified_callback_unlocks_once_and_playback_still_checks_rights(
     query = signed_query(ephemeral_signer, data, reward_item=reward_item)
     assert client.get(f"{CALLBACK}?{query}").status_code == 200
     assert client.get(f"{CALLBACK}?{query}").status_code == 200
-    assert client.get(f"/v1/rewards/{data['id']}", **headers()).json()["status"] == "granted"
+    granted = client.get(f"/v1/rewards/{data['id']}", **headers()).json()
+    assert granted["status"] == "granted"
+    assert granted["grant_source"] == "admob_ssv"
     grant = EpisodeEntitlement.objects.get(user_profile=profile, episode=episode)
     assert grant.source == "rewarded_ad"
     assert EpisodeEntitlement.objects.count() == 1

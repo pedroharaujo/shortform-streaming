@@ -433,6 +433,11 @@ export interface components {
             /** @description Safe, user-displayable field message. */
             message: string;
         };
+        /**
+         * @description * `admob_ssv` - admob_ssv
+         * @enum {string}
+         */
+        GrantSourceEnum: "admob_ssv";
         HealthStatus: {
             /**
              * @description ok when the probe succeeds; unavailable when readiness fails.
@@ -459,6 +464,8 @@ export interface components {
          * @enum {string}
          */
         LockReasonsEnum: "login_required" | "entitlement_required";
+        /** @enum {unknown} */
+        NullEnum: null;
         OfferMethod: {
             /**
              * @description MVP offer method: entitlement, free, or rewarded_ad. Coin and subscription are omitted.
@@ -538,6 +545,12 @@ export interface components {
             id: string;
             episode_id: string;
             readonly status: components["schemas"]["RewardIntentStatusEnum"];
+            /**
+             * @description Server-derived verified grant source. Null until the provider callback has created or confirmed the entitlement.
+             *
+             *     * `admob_ssv` - admob_ssv
+             */
+            readonly grant_source: (components["schemas"]["GrantSourceEnum"] | components["schemas"]["NullEnum"]) | null;
             /** Format: date-time */
             expires_at: string;
             readonly reward_description: string;

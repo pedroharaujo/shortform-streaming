@@ -48,14 +48,13 @@ For each deferral, record:
 
 ## Deferred validation register
 
-### P4-T01 F2/F3 — Firebase Analytics consent, identity, and product trail
+### P4-T01 F2–F4 — Firebase Analytics consent, identity, and product trail
 
-- **Source:** P4-T01 F2a/F2b/F3a/F3b; D-029; implementation revisions to be recorded after merge.
+- **Source:** P4-T01 F2a/F2b/F3a/F3b/F4; D-029; implementation revisions to be recorded after merge.
 - **Disabled/fail-closed state:** every native Analytics collection and advertising
   identifier default is off. Only a current authenticated session whose `/v1/me`
   response has `analytics_consent=true` may enable collection or link the opaque
-  backend profile ID. F3 discovery/playback events are instrumented; F4 reward
-  events remain unimplemented.
+  backend profile ID. F3 discovery/playback and F4 reward events are instrumented.
 - **Production gate:** production builds select a hard no-op adapter even when the
   stored preference is true. Removing that gate requires the applicable D-020,
   privacy/store, and P6 approvals for the exact release candidate.
@@ -66,9 +65,10 @@ For each deferral, record:
 - **Actions:** install the clean build and clear app data; confirm the anonymous and
   consent-off account states emit nothing; save analytics consent on one generated
   account; open home, select the generated series, play its free episodes through
-  autoplay, and display a locked episode; then withdraw consent, sign out, replace
-  the session with the second account, and complete generated-account deletion while
-  inspecting DebugView and bounded device logs.
+  autoplay, display a locked episode, accept the disclosed test-ad offer, complete
+  the permitted test ad, and wait for owner-only verified status; then withdraw
+  consent, sign out, replace the session with the second account, and complete
+  generated-account deletion while inspecting DebugView and bounded device logs.
 - **Expected:** nothing is collected before server-confirmed consent; consent-on
   links only that account's opaque backend profile ID; withdrawal, sign-out,
   replacement, and deletion disable collection, clear identity, and reset local
@@ -80,6 +80,14 @@ For each deferral, record:
   Retries, remounts, progress throttling, completion, and autoplay do not duplicate
   logical events. Terminal playback failures contain only the documented safe code
   and phase, never a signed URL or provider message.
+  The rewarded continuation is ordered as `locked_episode_viewed`,
+  `offer_presented`, `offer_selected`, `rewarded_ad_loaded`,
+  `rewarded_ad_started`, `rewarded_ad_completed`, and `reward_granted`. The final
+  event appears only after owner-only status returns the server-derived `admob_ssv`
+  source. Retry, pending recovery, callback replay, and session replacement do not
+  duplicate the trail or create access. Failure events contain only fixed stage/code
+  values; request IDs, intent IDs, ad-unit/provider bindings, SSV data, transactions,
+  tokens, signed URLs, and provider messages are absent from DebugView properties.
 - **Evidence:** redacted build result, device/OS/build revision, DebugView absence
   and transition observations, date, and independent reviewer.
 - **Blocks:** P6-T03 completion and production Analytics activation. An unavailable

@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from apps.accounts.serializers import StrictSerializer
 from apps.advertising.models import RewardIntent
-from apps.advertising.services import REWARD_DESCRIPTION, reward_status
+from apps.advertising.services import REWARD_DESCRIPTION, RewardGrantSource, reward_status
 
 
 class RewardIntentCreateSerializer(StrictSerializer):
@@ -24,6 +24,15 @@ class RewardIntentSerializer(serializers.Serializer[RewardIntent]):
     status = serializers.ChoiceField(
         choices=["pending", "granted", "expired", "unavailable"], read_only=True
     )
+    grant_source = serializers.ChoiceField(
+        choices=[(source.value, source.value) for source in RewardGrantSource],
+        allow_null=True,
+        read_only=True,
+        help_text=(
+            "Server-derived verified grant source. Null until the provider callback has "
+            "created or confirmed the entitlement."
+        ),
+    )
     expires_at = serializers.DateTimeField()
     reward_description = serializers.CharField(read_only=True)
     ad_unit_id = serializers.CharField()
@@ -32,6 +41,8 @@ class RewardIntentSerializer(serializers.Serializer[RewardIntent]):
 
     def to_representation(self, instance: RewardIntent) -> dict[str, object]:
         result = super().to_representation(instance)
-        result["status"] = reward_status(instance)
+        status = reward_status(instance)
+        result["status"] = status
+        result["grant_source"] = RewardGrantSource.ADMOB_SSV.value if status == "granted" else None
         result["reward_description"] = REWARD_DESCRIPTION
         return result

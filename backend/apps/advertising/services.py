@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import timedelta
+from enum import StrEnum
 from uuid import UUID
 
 from django.conf import settings
@@ -21,6 +22,10 @@ from apps.entitlements.models import EntitlementSource, EpisodeEntitlement
 from apps.entitlements.policy import OffersLocked, evaluate_episode_offers
 
 REWARD_DESCRIPTION = "Watch one rewarded ad to unlock this episode permanently."
+
+
+class RewardGrantSource(StrEnum):
+    ADMOB_SSV = "admob_ssv"
 
 
 class RewardUnavailable(APIException):
