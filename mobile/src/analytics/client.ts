@@ -112,7 +112,7 @@ function sanitize(
 }
 
 export function createAnalyticsClient(options?: {
-  readonly enabled?: boolean;
+  readonly enabled?: boolean | (() => boolean);
   readonly mode?: 'development' | 'production';
   readonly sink?: AnalyticsSink;
 }): AnalyticsClient {
@@ -132,7 +132,9 @@ export function createAnalyticsClient(options?: {
       }
       const clean = sanitize(name, properties, mode);
       if (!clean.valid) return clean.result;
-      if (!enabled) return { outcome: 'dropped', reason: 'collection_disabled' };
+      if (!(typeof enabled === 'function' ? enabled() : enabled)) {
+        return { outcome: 'dropped', reason: 'collection_disabled' };
+      }
       try {
         const identifier = await eventId(name, logicalEventKey);
         await sink.send(

@@ -51,6 +51,32 @@ it('still rejects developer contract mistakes while collection is disabled', asy
   ).rejects.toThrow('Unknown property email');
 });
 
+it('reads consent at send time without rebuilding the client', async () => {
+  const recorder = recordingSink();
+  let enabled = false;
+  const client = createAnalyticsClient({
+    enabled: () => enabled,
+    mode: 'development',
+    sink: recorder.sink,
+  });
+
+  await expect(client.log('home_viewed', 'session_01:disabled', COMMON)).resolves.toEqual({
+    outcome: 'dropped',
+    reason: 'collection_disabled',
+  });
+  enabled = true;
+  await expect(client.log('home_viewed', 'session_01:enabled', COMMON)).resolves.toMatchObject({
+    outcome: 'accepted',
+  });
+  enabled = false;
+  await expect(client.log('home_viewed', 'session_01:disabled_again', COMMON)).resolves.toEqual({
+    outcome: 'dropped',
+    reason: 'collection_disabled',
+  });
+
+  expect(recorder.events).toHaveLength(1);
+});
+
 it('creates one stable event ID for retries and a different ID for another logical event', async () => {
   const recorder = recordingSink();
   const client = createAnalyticsClient({ enabled: true, mode: 'development', sink: recorder.sink });

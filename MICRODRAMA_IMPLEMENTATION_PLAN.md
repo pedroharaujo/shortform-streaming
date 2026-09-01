@@ -965,6 +965,16 @@ account deletion now drive that controller. F3/F4 still own product event trigge
 production processing remains blocked on D-020/privacy/store approval and P6
 clearance.
 
+**Discovery instrumentation implemented (P4-T01-F3a / #104):** A process-wide
+runtime now injects allowlisted app/session context, checks the current consent
+controller at send time, and deduplicates accepted logical events across remounts
+and retries. It owns cold/foreground `app_open`, successfully rendered
+`home_viewed`, ordered `series_impression`, and eligible `series_opened` triggers.
+Tests prove an ordered consented discovery trail and zero transport events before
+consent. F3b still owns playback start/progress/complete, lock display, and
+safe-coded playback errors; F4 owns reward/backend diagnostics. Production
+transport remains hard-disabled pending the existing approvals.
+
 **Description:** Publish event dictionary, property schemas, ownership, retention, consent rules, and a typed mobile/backend analytics wrapper with deterministic event IDs for MVP events: `app_open`/campaign, episode start/complete, `lock_shown`, `ad_offer`, `ad_rewarded`, and `playback_error`. Coin, subscription, push, and experiment events wait for P7.
 
 **Objective:** Produce decision-grade events for the ads-only loop instead of inconsistent ad hoc tracking.

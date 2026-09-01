@@ -29,6 +29,11 @@ function analyticsConsentDouble(): jest.Mocked<AnalyticsConsentController> {
       Parameters<AnalyticsConsentController['applyProfile']>
     >(async () => true),
     clear: jest.fn(async () => true),
+    isCollectionEnabled: jest.fn(() => false),
+    subscribe: jest.fn<
+      ReturnType<AnalyticsConsentController['subscribe']>,
+      Parameters<AnalyticsConsentController['subscribe']>
+    >(() => () => undefined),
   };
 }
 

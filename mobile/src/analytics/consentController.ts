@@ -22,6 +22,8 @@ export interface AnalyticsConsentController {
     readonly sessionRevision: number;
   }): Promise<boolean>;
   clear(): Promise<boolean>;
+  isCollectionEnabled(): boolean;
+  subscribe(listener: (enabled: boolean) => void): () => void;
 }
 
 type ActiveIdentity = { readonly profileId: string; readonly sessionRevision: number };
@@ -51,6 +53,22 @@ export function createAnalyticsConsentController(options: {
   const { adapter, getSession } = options;
   let active: ActiveIdentity | null = null;
   let queue: Promise<void> = Promise.resolve();
+  const listeners = new Set<(enabled: boolean) => void>();
+
+  function setActive(next: ActiveIdentity | null): void {
+    const wasEnabled = active !== null;
+    active = next;
+    const enabled = active !== null;
+    if (enabled !== wasEnabled) {
+      listeners.forEach((listener) => {
+        try {
+          listener(enabled);
+        } catch {
+          // Observers cannot interrupt native consent cleanup or activation.
+        }
+      });
+    }
+  }
 
   function enqueue<T>(task: () => Promise<T>): Promise<T> {
     const result = queue.then(task, task);
@@ -76,11 +94,11 @@ export function createAnalyticsConsentController(options: {
   }
 
   async function disableAndReset(): Promise<boolean> {
+    setActive(null);
     let succeeded = await attempt(() => adapter.setCollectionEnabled(false));
     if (!(await attempt(() => adapter.setConsent(DENIED_CONSENT)))) succeeded = false;
     if (!(await attempt(() => adapter.setUserId(null)))) succeeded = false;
     if (!(await attempt(() => adapter.resetData()))) succeeded = false;
-    active = null;
     return succeeded;
   }
 
@@ -126,12 +144,19 @@ export function createAnalyticsConsentController(options: {
         }
         if (await stopIfSessionChanged(sessionRevision)) return false;
 
-        active = { profileId, sessionRevision };
+        setActive({ profileId, sessionRevision });
         return true;
       });
     },
     clear(): Promise<boolean> {
       return enqueue(disableAndReset);
+    },
+    isCollectionEnabled(): boolean {
+      return active !== null;
+    },
+    subscribe(listener: (enabled: boolean) => void): () => void {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
     },
   };
 }
