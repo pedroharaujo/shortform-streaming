@@ -13,6 +13,7 @@ export interface HlsVideoViewProps {
   readonly onEnded?: () => void;
   readonly onPosition?: (seconds: number) => void;
   readonly onPlayingChange?: (playing: boolean) => void;
+  readonly onError?: () => void;
 }
 
 export function HlsVideoView({
@@ -24,6 +25,7 @@ export function HlsVideoView({
   onEnded,
   onPosition,
   onPlayingChange,
+  onError,
 }: HlsVideoViewProps): JSX.Element {
   const player = useVideoPlayer(uri, (instance) => {
     instance.loop = false;
@@ -44,6 +46,9 @@ export function HlsVideoView({
   });
   useEventListener(player, 'playingChange', ({ isPlaying }) => {
     onPlayingChange?.(isPlaying);
+  });
+  useEventListener(player, 'statusChange', ({ status }) => {
+    if (status === 'error') onError?.();
   });
 
   useEffect(() => {

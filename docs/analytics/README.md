@@ -77,9 +77,11 @@ and advertising consent default off. F2b connects sign-in, the confirmed `/v1/me
 profile, preference saves, sign-out, session replacement, unauthenticated cleanup,
 and account deletion to the controller. F3a connects the process-wide event runtime
 to cold/foreground app lifecycle, successful home catalog rendering, ordered series
-card impressions, and eligible series detail rendering. The runtime retries a cold
-trigger when consent activates and deduplicates accepted logical events across
-remounts and retries. Playback and reward triggers still wait for F3b/F4.
+card impressions, and eligible series detail rendering. F3b connects the player to
+actual native playback start, accepted progress/completion writes, displayed locks,
+and terminal safe-coded failures. The runtime retries a cold trigger when consent
+activates and deduplicates accepted logical events across remounts, retries, and
+autoplay. Reward triggers still wait for F4.
 
 After `/v1/me` confirms
 analytics consent, the adapter may enable collection and link only the opaque
@@ -102,8 +104,11 @@ validation. Production uses a no-op adapter until D-020 and P6 clearance.
 - Completed P4-T01-F3a: consent-aware runtime/Firebase event transport plus
   `app_open`, `home_viewed`, `series_impression`, and `series_opened` triggers with
   ordered consented and zero-event non-consented tests.
-- P4-T01-F3b: playback start/progress/complete, lock display, safe-coded playback
-  errors, and the completed free-journey trail.
+- Completed P4-T01-F3b: server-owned playback access source plus actual-start,
+  accepted-progress/completion, displayed-lock, and terminal safe-error triggers.
+  Tests cover ordered/deduplicated free and autoplay trails and zero non-consented
+  transport. Staff access omits `episode_started` instead of inventing a product
+  access method; progress and completion remain non-authoritative diagnostics.
 - P4-T01-F4: reward diagnostics and the smallest typed backend boundary.
 - P4-T06: persistence and routing for campaign/deferred-deep-link fields.
 - P7: BigQuery/Looker models, experiments, push, commerce events, and MMP.

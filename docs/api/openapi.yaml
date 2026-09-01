@@ -921,6 +921,16 @@ paths:
       security: []
 components:
   schemas:
+    AccessMethodEnum:
+      enum:
+      - free
+      - rewarded_ad
+      - staff
+      type: string
+      description: |-
+        * `free` - free
+        * `rewarded_ad` - rewarded_ad
+        * `staff` - staff
     AccountDeletion:
       type: object
       properties:
@@ -1323,6 +1333,15 @@ components:
             granted when playback is authorized and a short-lived URL is returned.
 
             * `granted` - granted
+        access_method:
+          allOf:
+          - $ref: '#/components/schemas/AccessMethodEnum'
+          description: |-
+            Server-authoritative reason this grant is playable: free policy, verified rewarded-ad entitlement, or staff support entitlement.
+
+            * `free` - free
+            * `rewarded_ad` - rewarded_ad
+            * `staff` - staff
         playback_url:
           type: string
           format: uri
@@ -1335,6 +1354,7 @@ components:
           description: UTC expiry of this playback URL. Clients must re-authorize
             after expiry.
       required:
+      - access_method
       - decision
       - expires_at
       - playback_url

@@ -48,13 +48,14 @@ For each deferral, record:
 
 ## Deferred validation register
 
-### P4-T01 F2 — Firebase Analytics consent and identity lifecycle
+### P4-T01 F2/F3 — Firebase Analytics consent, identity, and product trail
 
-- **Source:** P4-T01 F2a/F2b; D-029; implementation revisions to be recorded after merge.
+- **Source:** P4-T01 F2a/F2b/F3a/F3b; D-029; implementation revisions to be recorded after merge.
 - **Disabled/fail-closed state:** every native Analytics collection and advertising
   identifier default is off. Only a current authenticated session whose `/v1/me`
   response has `analytics_consent=true` may enable collection or link the opaque
-  backend profile ID. F3/F4 product events are not instrumented.
+  backend profile ID. F3 discovery/playback events are instrumented; F4 reward
+  events remain unimplemented.
 - **Production gate:** production builds select a hard no-op adapter even when the
   stored preference is true. Removing that gate requires the applicable D-020,
   privacy/store, and P6 approvals for the exact release candidate.
@@ -64,13 +65,21 @@ For each deferral, record:
   configuration contents, device identifiers, or provider payloads.
 - **Actions:** install the clean build and clear app data; confirm the anonymous and
   consent-off account states emit nothing; save analytics consent on one generated
-  account; then withdraw it, sign out, replace the session with the second account,
-  and complete generated-account deletion while inspecting DebugView and bounded
-  device logs.
+  account; open home, select the generated series, play its free episodes through
+  autoplay, and display a locked episode; then withdraw consent, sign out, replace
+  the session with the second account, and complete generated-account deletion while
+  inspecting DebugView and bounded device logs.
 - **Expected:** nothing is collected before server-confirmed consent; consent-on
   links only that account's opaque backend profile ID; withdrawal, sign-out,
   replacement, and deletion disable collection, clear identity, and reset local
   Analytics state. The second account never inherits the first identity or consent.
+  The consented free journey is ordered as `app_open`, `home_viewed`,
+  `series_impression`, `series_opened`, `episode_started`, owned
+  `episode_progress` checkpoints, one accepted `episode_completed`, the next actual
+  `episode_started`, and one `locked_episode_viewed` when the lock is displayed.
+  Retries, remounts, progress throttling, completion, and autoplay do not duplicate
+  logical events. Terminal playback failures contain only the documented safe code
+  and phase, never a signed URL or provider message.
 - **Evidence:** redacted build result, device/OS/build revision, DebugView absence
   and transition observations, date, and independent reviewer.
 - **Blocks:** P6-T03 completion and production Analytics activation. An unavailable

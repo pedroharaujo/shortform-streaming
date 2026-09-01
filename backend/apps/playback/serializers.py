@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from drf_spectacular.utils import PolymorphicProxySerializer, extend_schema_serializer
 from rest_framework import serializers
 
-from apps.entitlements.policy import LockReason
+from apps.entitlements.policy import GrantSource, LockReason
 
 
 @extend_schema_serializer(component_name="PlaybackAuthorizeGranted")
@@ -13,6 +13,13 @@ class PlaybackAuthorizeGrantedSerializer(serializers.Serializer[Mapping[str, obj
     decision = serializers.ChoiceField(
         choices=[("granted", "granted")],
         help_text="granted when playback is authorized and a short-lived URL is returned.",
+    )
+    access_method = serializers.ChoiceField(
+        choices=[(source.value, source.value) for source in GrantSource],
+        help_text=(
+            "Server-authoritative reason this grant is playable: free policy, "
+            "verified rewarded-ad entitlement, or staff support entitlement."
+        ),
     )
     playback_url = serializers.URLField(
         help_text=(

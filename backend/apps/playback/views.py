@@ -19,7 +19,13 @@ from apps.catalog.views import (
     ERROR_404,
     CatalogAnonymousView,
 )
-from apps.entitlements.policy import Grant, Ineligible, Lock, evaluate_authorize_access
+from apps.entitlements.policy import (
+    Grant,
+    GrantSource,
+    Ineligible,
+    Lock,
+    evaluate_authorize_access,
+)
 from apps.playback.exceptions import (
     PlaybackUnavailable,
     VideoAssetNotFoundError,
@@ -105,10 +111,12 @@ class PlaybackAuthorizeView(CatalogAnonymousView):
             return Response(PlaybackAuthorizeLockedSerializer(payload).data)
         if not isinstance(decision, Grant):
             raise NotFound(detail=_NOT_FOUND_MESSAGE)
-        return _mint_granted_response(request, episode)
+        return _mint_granted_response(request, episode, decision.source)
 
 
-def _mint_granted_response(request: Request, episode: Episode) -> Response:
+def _mint_granted_response(
+    request: Request, episode: Episode, access_method: GrantSource
+) -> Response:
     asset = ready_asset_for_episode(episode)
     if asset is None:
         raise NotFound(detail=_NOT_FOUND_MESSAGE)
@@ -135,6 +143,7 @@ def _mint_granted_response(request: Request, episode: Episode) -> Response:
 
     payload = {
         "decision": "granted",
+        "access_method": access_method.value,
         "playback_url": playback_url,
         "expires_at": access.expires_at,
     }

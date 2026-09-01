@@ -6,6 +6,7 @@ const BASE_URL = 'http://10.0.2.2:8000';
 
 const GRANTED = {
   decision: 'granted' as const,
+  access_method: 'free' as const,
   playback_url: 'https://video.example.test/hls/a/playlist.m3u8',
   expires_at: '2026-08-25T12:10:00Z',
 };

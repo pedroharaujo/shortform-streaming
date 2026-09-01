@@ -15,7 +15,7 @@ from apps.accounts.models import UserProfile
 from apps.accounts.profiles import get_or_create_profile
 from apps.accounts.verification import MOCK_TOKEN_PREFIX
 from apps.catalog.models import PublicationStatus
-from apps.entitlements.models import AccessPolicy, EpisodeEntitlement
+from apps.entitlements.models import AccessPolicy, EntitlementSource, EpisodeEntitlement
 from apps.playback.models import MediaAssetState
 from apps.playback.providers.factory import reset_provider_cache
 from apps.playback.providers.fake import FakeVideoProvider
@@ -108,9 +108,15 @@ def fake_provider() -> Iterator[FakeVideoProvider]:
     reset_provider_cache()
 
 
-def _assert_granted(payload: dict[str, Any], fake_provider: FakeVideoProvider) -> None:
-    assert set(payload.keys()) == {"decision", "playback_url", "expires_at"}
+def _assert_granted(
+    payload: dict[str, Any],
+    fake_provider: FakeVideoProvider,
+    *,
+    access_method: str = "free",
+) -> None:
+    assert set(payload.keys()) == {"decision", "access_method", "playback_url", "expires_at"}
     assert payload["decision"] == "granted"
+    assert payload["access_method"] == access_method
     playback_url = payload["playback_url"]
     parsed = urlparse(playback_url)
     assert parsed.scheme == "https"
@@ -191,6 +197,29 @@ def test_season_two_order_one_is_free_for_anonymous(
 
 
 @pytest.mark.django_db
+def test_rewarded_ad_entitlement_reports_server_owned_access_method(
+    client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
+) -> None:
+    del freeze_catalog_clock
+    _series, episode = _published_episode(order=6, title="Rewarded")
+    _seed_ready(fake_provider, episode)
+    profile = get_or_create_profile(VALID_UID)
+    EpisodeEntitlement.objects.create(
+        user_profile=profile,
+        episode=episode,
+        source=EntitlementSource.REWARDED_AD,
+    )
+
+    response = client.post(
+        AUTHORIZE.format(episode_id=episode.public_id),
+        **_headers(authorization=_bearer(VALID_CREDENTIAL)),
+    )
+
+    assert response.status_code == 200
+    _assert_granted(response.json(), fake_provider, access_method="rewarded_ad")
+
+
+@pytest.mark.django_db
 def test_staff_entitlement_grants_order_six(
     client: Client, freeze_catalog_clock: None, fake_provider: FakeVideoProvider
 ) -> None:
@@ -204,7 +233,7 @@ def test_staff_entitlement_grants_order_six(
         **_headers(authorization=_bearer(VALID_CREDENTIAL)),
     )
     assert response.status_code == 200
-    _assert_granted(response.json(), fake_provider)
+    _assert_granted(response.json(), fake_provider, access_method="staff")
 
 
 @pytest.mark.django_db
@@ -500,7 +529,7 @@ def test_concurrent_entitled_grants(
         responses = [future.result() for future in [pool.submit(authorize), pool.submit(authorize)]]
     for response in responses:
         assert response.status_code == 200
-        _assert_granted(response.json(), fake_provider)
+        _assert_granted(response.json(), fake_provider, access_method="staff")
 
 
 @pytest.mark.django_db
@@ -584,7 +613,7 @@ def test_episode_force_lock_locks_order_one_unless_entitled(
         **_headers(authorization=_bearer(VALID_CREDENTIAL)),
     )
     assert granted.status_code == 200
-    _assert_granted(granted.json(), fake_provider)
+    _assert_granted(granted.json(), fake_provider, access_method="staff")
 
 
 @pytest.mark.django_db
@@ -638,4 +667,4 @@ def test_episode_force_lock_keeps_series_ads_off_and_locks_unless_entitled(
         **_headers(authorization=_bearer(VALID_CREDENTIAL)),
     )
     assert granted.status_code == 200
-    _assert_granted(granted.json(), fake_provider)
+    _assert_granted(granted.json(), fake_provider, access_method="staff")

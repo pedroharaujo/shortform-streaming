@@ -322,8 +322,9 @@ def test_authorize_grant_has_no_upload_write_url_fields(
         )
     assert response.status_code == 200
     payload = response.json()
-    assert set(payload.keys()) == {"decision", "playback_url", "expires_at"}
+    assert set(payload.keys()) == {"decision", "access_method", "playback_url", "expires_at"}
     assert payload["decision"] == "granted"
+    assert payload["access_method"] == "free"
     dumped = json.dumps(payload)
     assert "upload_url" not in payload
     assert "put_url" not in payload
