@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { AccountClient, AccountOutcome, AccountPreferences } from '../../api/account/types';
+import type { AccountAnalytics } from '../../analytics/accountAnalytics';
 import type { AnalyticsConsentController } from '../../analytics/consentController';
 import type { AppAuth, ReauthenticationRequest } from '../../auth/localMockFirebaseAuth';
 import { getAuthSessionRevision, setAuthSession } from '../../auth/session';
@@ -11,6 +12,7 @@ import { clearPendingRewardAttempt } from '../rewards/pendingRewardAttempt';
 
 export interface AccountScreenProps {
   readonly auth: AppAuth;
+  readonly analytics: AccountAnalytics;
   readonly analyticsConsent: AnalyticsConsentController;
   readonly client: AccountClient;
   readonly onSignIn: () => void;
@@ -36,6 +38,7 @@ function failureMessage(outcome: Exclude<AccountOutcome<unknown>, { outcome: 'ok
 
 export function AccountScreen({
   auth,
+  analytics,
   analyticsConsent,
   client,
   onSignIn,
@@ -192,6 +195,10 @@ export function AccountScreen({
       await showFailure(result);
       return;
     }
+    await analyticsConsent.clearForAccountDeletion(() =>
+      analytics.recordDeletion(result.data.public_id, result.data.status),
+    );
+    if (!requireSession(deletingRevision)) return;
     await clearSession();
     if (!requireSession(sessionOwner.current)) return;
     setMessage(

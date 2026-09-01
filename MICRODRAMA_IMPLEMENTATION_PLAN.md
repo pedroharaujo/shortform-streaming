@@ -991,9 +991,17 @@ grant event. Stable request/intent keys deduplicate retries, pending recovery,
 callback replay, and remounts without exposing those keys as event properties.
 Provider bindings, SSV data, tokens, transaction identifiers, and signed URLs never
 enter Analytics, and no event creates an intent, entitlement, or playable access.
-The F1–F4 ads-only viewing-loop slices are complete; account-funnel triggers remain
-planned. Deferred device/DebugView evidence and production activation remain blocked
-by D-020/privacy/store and P6 clearance.
+The F1–F4 ads-only viewing-loop slices are complete.
+
+**Account-funnel instrumentation implemented (P4-T01 / #104):** Confirmed `/v1/me`
+results now own password/Google `sign_up` and `login` diagnostics. A result that
+arrives before consent stays process-local and may be retried only when that same
+session enables the server-owned preference; session replacement discards it.
+Accepted account deletion records the receipt status only after the Analytics user
+ID is cleared and local Analytics data is reset, then disables collection. It never
+sends the profile ID, deletion receipt ID, email, credential, country, or session.
+Automated P4-T01 engineering is complete. Deferred device/DebugView evidence and
+production activation remain blocked by D-020/privacy/store and P6 clearance.
 
 **Description:** Publish event dictionary, property schemas, ownership, retention, consent rules, and a typed mobile/backend analytics wrapper with deterministic event IDs for MVP events: `app_open`/campaign, episode start/complete, `lock_shown`, `ad_offer`, `ad_rewarded`, and `playback_error`. Coin, subscription, push, and experiment events wait for P7.
 

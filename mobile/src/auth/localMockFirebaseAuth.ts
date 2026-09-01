@@ -14,8 +14,14 @@ export interface AuthUserSession {
   readonly credential: string;
 }
 
+export type AuthAccountEvent = 'sign_up' | 'login';
+
 export type AuthOutcome =
-  | { readonly outcome: 'ok'; readonly session: AuthUserSession }
+  | {
+      readonly outcome: 'ok';
+      readonly session: AuthUserSession;
+      readonly accountEvent?: AuthAccountEvent;
+    }
   | { readonly outcome: 'cancelled' }
   | { readonly outcome: 'error'; readonly message: string };
 
@@ -49,6 +55,7 @@ export function createLocalMockFirebaseAuth(): AppAuth {
   const passwords = new Map<string, string>();
   let currentCredential: string | null = null;
   let currentEmail: string | null = null;
+  let googleAccountExists = false;
 
   function requireCredentials(email: string, password: string): string | null {
     if (normalizeEmail(email) === '' || password.trim() === '') {
@@ -70,7 +77,11 @@ export function createLocalMockFirebaseAuth(): AppAuth {
       passwords.set(key, password);
       currentCredential = issueCredential(email);
       currentEmail = key;
-      return { outcome: 'ok', session: { credential: currentCredential } };
+      return {
+        outcome: 'ok',
+        session: { credential: currentCredential },
+        accountEvent: 'sign_up',
+      };
     },
     async signIn(email: string, password: string): Promise<AuthOutcome> {
       const invalid = requireCredentials(email, password);
@@ -86,12 +97,14 @@ export function createLocalMockFirebaseAuth(): AppAuth {
       }
       currentCredential = issueCredential(email);
       currentEmail = key;
-      return { outcome: 'ok', session: { credential: currentCredential } };
+      return { outcome: 'ok', session: { credential: currentCredential }, accountEvent: 'login' };
     },
     async signInWithGoogle(): Promise<AuthOutcome> {
       currentCredential = 'mock.google_user';
       currentEmail = null;
-      return { outcome: 'ok', session: { credential: currentCredential } };
+      const accountEvent = googleAccountExists ? 'login' : 'sign_up';
+      googleAccountExists = true;
+      return { outcome: 'ok', session: { credential: currentCredential }, accountEvent };
     },
     async reauthenticate(request): Promise<AuthOutcome> {
       if (currentCredential === null) {

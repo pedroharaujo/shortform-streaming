@@ -17,6 +17,7 @@ const mockReauthenticate = jest.fn(async (_user: unknown, _credential: unknown) 
 }));
 const mockSignInWithCredential = jest.fn();
 const mockGoogleSignIn = jest.fn();
+let mockIsNewUser = false;
 
 jest.mock('@react-native-firebase/app', () => ({}));
 jest.mock('@react-native-firebase/auth', () => ({
@@ -25,6 +26,7 @@ jest.mock('@react-native-firebase/auth', () => ({
     credential: (email: string, password: string) => ({ providerId: 'password', email, password }),
   },
   GoogleAuthProvider: { credential: (idToken: string) => ({ providerId: 'google.com', idToken }) },
+  getAdditionalUserInfo: () => ({ isNewUser: mockIsNewUser }),
   reauthenticateWithCredential: (user: unknown, credential: unknown) =>
     mockReauthenticate(user, credential),
   signInWithCredential: (...args: unknown[]) => mockSignInWithCredential(...args),
@@ -50,9 +52,24 @@ beforeEach(() => {
   Platform.OS = 'android';
   mockAuth.currentUser = mockUser;
   mockReauthenticate.mockResolvedValue({ user: mockUser });
+  mockSignInWithCredential.mockResolvedValue({ user: mockUser });
+  mockIsNewUser = false;
   mockGoogleSignIn.mockResolvedValue({
     type: 'success',
     data: { idToken: 'replace-with-provider-value', user: { id: 'synthetic-google-id' } },
+  });
+});
+
+it.each([
+  [true, 'sign_up'],
+  [false, 'login'],
+] as const)('classifies Google isNewUser=%s as %s', async (isNewUser, accountEvent) => {
+  mockIsNewUser = isNewUser;
+  const auth = createNativeFirebaseAuth();
+
+  await expect(auth.signInWithGoogle()).resolves.toMatchObject({
+    outcome: 'ok',
+    accountEvent,
   });
 });
 

@@ -48,31 +48,41 @@ For each deferral, record:
 
 ## Deferred validation register
 
-### P4-T01 F2–F4 — Firebase Analytics consent, identity, and product trail
+### P4-T01 — Firebase Analytics consent, identity, account, and product trail
 
-- **Source:** P4-T01 F2a/F2b/F3a/F3b/F4; D-029; implementation revisions to be recorded after merge.
+- **Source:** P4-T01 F2a/F2b/F3a/F3b/F4 and account-funnel triggers; D-029;
+  implementation revisions to be recorded after merge.
 - **Disabled/fail-closed state:** every native Analytics collection and advertising
   identifier default is off. Only a current authenticated session whose `/v1/me`
   response has `analytics_consent=true` may enable collection or link the opaque
-  backend profile ID. F3 discovery/playback and F4 reward events are instrumented.
+  backend profile ID. Account, discovery, playback, and reward events are instrumented.
 - **Production gate:** production builds select a hard no-op adapter even when the
   stored preference is true. Removing that gate requires the applicable D-020,
   privacy/store, and P6 approvals for the exact release candidate.
 - **Prerequisites:** clean Android development build, generated Firebase test
   project configuration, supported Android device/emulator, Firebase DebugView,
-  and two generated accounts with server preferences off. Do not record
-  configuration contents, device identifiers, or provider payloads.
-- **Actions:** install the clean build and clear app data; confirm the anonymous and
-  consent-off account states emit nothing; save analytics consent on one generated
-  account; open home, select the generated series, play its free episodes through
+  one not-yet-created generated credential plus one existing generated account,
+  both with server preferences off. Do not record configuration contents, device
+  identifiers, or provider payloads.
+- **Actions:** install the clean build and clear app data; confirm the anonymous state
+  emits nothing; create the first generated account and confirm consent-off emits
+  nothing; save analytics consent without replacing that session; open home, select
+  the generated series, play its free episodes through
   autoplay, display a locked episode, accept the disclosed test-ad offer, complete
   the permitted test ad, and wait for owner-only verified status; then withdraw
-  consent, sign out, replace the session with the second account, and complete
-  generated-account deletion while inspecting DebugView and bounded device logs.
+  consent, sign out, log in to the second generated account, confirm it inherits
+  nothing, enable its consent, and complete its deletion while inspecting DebugView
+  and bounded device logs.
 - **Expected:** nothing is collected before server-confirmed consent; consent-on
   links only that account's opaque backend profile ID; withdrawal, sign-out,
   replacement, and deletion disable collection, clear identity, and reset local
   Analytics state. The second account never inherits the first identity or consent.
+  A server-confirmed password/Google login records one method-only `login`. If a
+  generated sign-up occurred before consent, enabling consent in that same session
+  records one method-only `sign_up`; replacement never backfills it. Accepted
+  deletion first detaches and resets the identity, then records one status-only
+  `account_deleted`, and finally disables collection. It has no profile, session,
+  country, email, credential, Firebase UID, or deletion-receipt property.
   The consented free journey is ordered as `app_open`, `home_viewed`,
   `series_impression`, `series_opened`, `episode_started`, owned
   `episode_progress` checkpoints, one accepted `episode_completed`, the next actual

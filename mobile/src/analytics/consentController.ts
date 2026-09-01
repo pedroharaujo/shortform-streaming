@@ -21,6 +21,7 @@ export interface AnalyticsConsentController {
     readonly analyticsConsent: boolean;
     readonly sessionRevision: number;
   }): Promise<boolean>;
+  clearForAccountDeletion(recordDiagnostic: () => Promise<void>): Promise<boolean>;
   clear(): Promise<boolean>;
   isCollectionEnabled(): boolean;
   subscribe(listener: (enabled: boolean) => void): () => void;
@@ -146,6 +147,25 @@ export function createAnalyticsConsentController(options: {
 
         setActive({ profileId, sessionRevision });
         return true;
+      });
+    },
+    clearForAccountDeletion(recordDiagnostic): Promise<boolean> {
+      return enqueue(async () => {
+        const identity = active;
+        if (identity === null || !isCurrent(identity.sessionRevision)) {
+          return disableAndReset();
+        }
+
+        let diagnosticSucceeded = await attempt(() => adapter.setUserId(null));
+        if (!(await attempt(() => adapter.resetData()))) diagnosticSucceeded = false;
+        if (!diagnosticSucceeded || !isCurrent(identity.sessionRevision)) {
+          await disableAndReset();
+          return false;
+        }
+        if (!(await attempt(recordDiagnostic))) diagnosticSucceeded = false;
+        if (!isCurrent(identity.sessionRevision)) diagnosticSucceeded = false;
+        const cleanupSucceeded = await disableAndReset();
+        return diagnosticSucceeded && cleanupSucceeded;
       });
     },
     clear(): Promise<boolean> {

@@ -219,3 +219,52 @@ it('explicitly clears collection, consent, identity, and local analytics data', 
   expect(controller.isCollectionEnabled()).toBe(false);
   expect(consentChanges).toEqual([true, false]);
 });
+
+it('detaches and resets the deleted identity before recording the consented deletion diagnostic', async () => {
+  const { calls, controller } = setup();
+  await controller.applyProfile({
+    profileId: 'usr_synthetic',
+    analyticsConsent: true,
+    sessionRevision: 1,
+  });
+  calls.length = 0;
+
+  await expect(
+    controller.clearForAccountDeletion(async () => {
+      expect(controller.isCollectionEnabled()).toBe(true);
+      calls.push('diagnostic');
+    }),
+  ).resolves.toBe(true);
+
+  expect(calls).toEqual(['user:null', 'reset', 'diagnostic', ...CLEANUP]);
+  expect(controller.isCollectionEnabled()).toBe(false);
+});
+
+it('does not record a deletion diagnostic without active consent', async () => {
+  const { calls, controller } = setup();
+  const diagnostic = jest.fn(async () => undefined);
+
+  await expect(controller.clearForAccountDeletion(diagnostic)).resolves.toBe(true);
+
+  expect(diagnostic).not.toHaveBeenCalled();
+  expect(calls).toEqual(CLEANUP);
+});
+
+it('does not record a deletion diagnostic after session replacement begins', async () => {
+  const { calls, controller, setHook, setSession } = setup();
+  await controller.applyProfile({
+    profileId: 'usr_synthetic',
+    analyticsConsent: true,
+    sessionRevision: 1,
+  });
+  calls.length = 0;
+  setHook((call) => {
+    if (call === 'user:null') setSession({ revision: 2, authenticated: true });
+  });
+  const diagnostic = jest.fn(async () => undefined);
+
+  await expect(controller.clearForAccountDeletion(diagnostic)).resolves.toBe(false);
+
+  expect(diagnostic).not.toHaveBeenCalled();
+  expect(calls).toEqual(['user:null', 'reset', ...CLEANUP]);
+});

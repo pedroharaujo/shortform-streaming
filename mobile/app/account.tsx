@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 
 import { createAppAccountClient } from '../src/api/createAppClients';
+import { getAppAccountAnalytics } from '../src/analytics/appAnalytics';
 import { getAppAnalyticsConsentController } from '../src/analytics/appAnalyticsConsent';
 import { createEmailPasswordAuth } from '../src/auth/createEmailPasswordAuth';
 import { AccountScreen } from '../src/features/account/AccountScreen';
@@ -12,6 +13,7 @@ export default function AccountRoute(): JSX.Element {
   const params = useLocalSearchParams<{ returnEpisode?: string | string[] }>();
   const returnEpisode = readRouteId(params.returnEpisode);
   const auth = useMemo(() => createEmailPasswordAuth(), []);
+  const analytics = useMemo(() => getAppAccountAnalytics(), []);
   const analyticsConsent = useMemo(() => getAppAnalyticsConsentController(), []);
   const client = useMemo(() => createAppAccountClient(), []);
   const [visit, setVisit] = useState(0);
@@ -25,6 +27,7 @@ export default function AccountRoute(): JSX.Element {
     <AccountScreen
       key={visit}
       auth={auth}
+      analytics={analytics}
       analyticsConsent={analyticsConsent}
       client={client}
       onSignIn={() =>

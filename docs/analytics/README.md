@@ -83,7 +83,13 @@ and terminal safe-coded failures. The runtime retries a cold trigger when consen
 activates and deduplicates accepted logical events across remounts, retries, and
 autoplay. F4 connects visible offer/selection, native loaded/opened/earned callbacks,
 and owner-only verified reward status without sending provider bindings or making
-Analytics authoritative.
+Analytics authoritative. The account-funnel connection observes confirmed `/v1/me`
+authentication results and accepted deletion receipts; Firebase's `isNewUser`
+result distinguishes first-time Google sign-up from returning login. A pre-consent
+authentication
+result can be retried only for the same still-current session when consent activates.
+Deletion detaches the Analytics user ID and resets local data before its status-only
+diagnostic, then disables collection.
 
 After `/v1/me` confirms
 analytics consent, the adapter may enable collection and link only the opaque
@@ -116,6 +122,11 @@ validation. Production uses a no-op adapter until D-020 and P6 clearance.
   `admob_ssv` source. Stable request/intent keys deduplicate retry, recovery, and
   callback replay but are never event properties. The verified callback,
   entitlement, refreshed offer, and playback authorization remain authoritative.
+- Completed P4-T01 account funnel: server-confirmed password/Google `sign_up` and
+  `login`, plus status-only accepted deletion after identity detachment/reset.
+  Consent activation retries only the current session's pending authentication
+  result; replacement cannot adopt it. Deletion receipts and profile/session data
+  are not event properties, and diagnostics never control account lifecycle.
 - P4-T06: persistence and routing for campaign/deferred-deep-link fields.
 - P7: BigQuery/Looker models, experiments, push, commerce events, and MMP.
 - P6-T03: DebugView/device evidence if deferred under D-029 while collection is
