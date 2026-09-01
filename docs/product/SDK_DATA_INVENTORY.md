@@ -7,14 +7,18 @@
 
 This file is the single engineering source for later privacy labels (P6-T04), account deletion (P2-T02), and legal/privacy review. Row labels below still describe the `85207d2` research snapshot plus later planned processors; they are not a claim that merged P2-T01/P2-T05 work is still unmerged. This file does not implement SDKs, auth, playback, deletion, commerce, or analytics.
 
-### P4-T01 F2a implementation update (2026-09-01)
+### P4-T01 F2 implementation update (2026-09-01)
 
 The mobile dependency and a tested consent controller for Firebase Analytics are
 now present. Native collection, storage consent, screen reporting, and advertising
-identifiers all default off. No application flow calls the controller and no event
-transport is reachable in this slice, so it collects no analytics. P4-T01 F2b must
-connect the controller to the server-owned profile preference and authentication
-lifecycle before collection can be enabled.
+identifiers all default off. A process-wide controller now follows the current
+server-owned profile preference across sign-in, preference changes, sign-out,
+session replacement, unauthenticated cleanup, and deletion. Only the opaque backend
+profile ID may be linked after consent; withdrawal and session cleanup disable
+collection, clear identity, and reset local Analytics data. Product event triggers
+remain P4-T01 F3/F4, and production processing remains blocked on D-020 and P6
+clearance. Production builds select a hard no-op adapter; local/staging synthetic
+validation cannot silently activate production collection.
 
 Owner boxes that remain open for the **ads-only** P0-T03 slice: legal/privacy jurisdiction review, content rating, and AdMob/ads-only finance/tax treatment. Store IAP EUR settlement is required before P7 IAP, not before this ads-only slice. See `STORE_COMPLIANCE_MATRIX.md`.
 

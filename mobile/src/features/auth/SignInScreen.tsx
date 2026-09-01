@@ -1,25 +1,33 @@
 import type { JSX } from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { MeClient } from '../../api/me/types';
+import type { AnalyticsConsentController } from '../../analytics/consentController';
 import type { AppAuth, AuthOutcome } from '../../auth/localMockFirebaseAuth';
-import { setAuthSession } from '../../auth/session';
+import { getAuthSessionRevision, setAuthSession } from '../../auth/session';
 
 export interface SignInScreenProps {
   readonly auth: AppAuth;
+  readonly analyticsConsent: AnalyticsConsentController;
   readonly meClient: MeClient;
   readonly onFinished: () => void;
 }
 
-export function SignInScreen({ auth, meClient, onFinished }: SignInScreenProps): JSX.Element {
+export function SignInScreen({
+  auth,
+  analyticsConsent,
+  meClient,
+  onFinished,
+}: SignInScreenProps): JSX.Element {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const sessionOwner = useRef(getAuthSessionRevision());
 
-  async function applyAuthOutcome(outcome: AuthOutcome): Promise<void> {
+  async function applyAuthOutcome(outcome: AuthOutcome, attemptRevision: number): Promise<void> {
     if (outcome.outcome === 'cancelled') {
       setBusy(false);
       return;
@@ -29,21 +37,51 @@ export function SignInScreen({ auth, meClient, onFinished }: SignInScreenProps):
       setMessage(outcome.message);
       return;
     }
+    if (getAuthSessionRevision() !== attemptRevision) {
+      setBusy(false);
+      return;
+    }
+    await analyticsConsent.clear();
+    if (getAuthSessionRevision() !== attemptRevision) {
+      setBusy(false);
+      return;
+    }
     setAuthSession(outcome.session);
+    const sessionRevision = getAuthSessionRevision();
+    sessionOwner.current = sessionRevision;
     const me = await meClient.getMe();
-    setBusy(false);
+    if (getAuthSessionRevision() !== sessionRevision) {
+      setBusy(false);
+      return;
+    }
     if (me.outcome === 'ok') {
+      await analyticsConsent.applyProfile({
+        profileId: me.data.public_id,
+        analyticsConsent: me.data.analytics_consent,
+        sessionRevision,
+      });
+      if (getAuthSessionRevision() !== sessionRevision) {
+        setBusy(false);
+        return;
+      }
+      setBusy(false);
       setMessage(`Signed in as ${me.data.public_id}`);
       onFinished();
       return;
     }
+    setBusy(false);
     setMessage(me.outcome === 'unreachable' ? me.reason : me.message);
   }
 
   async function run(task: () => Promise<AuthOutcome>): Promise<void> {
+    const attemptRevision = getAuthSessionRevision();
+    if (attemptRevision !== sessionOwner.current) {
+      setMessage('Your session changed. Reopen Sign in before continuing.');
+      return;
+    }
     setBusy(true);
     setMessage(null);
-    await applyAuthOutcome(await task());
+    await applyAuthOutcome(await task(), attemptRevision);
   }
 
   return (
@@ -105,12 +143,23 @@ export function SignInScreen({ auth, meClient, onFinished }: SignInScreenProps):
           label="Sign out"
           onPress={() => {
             void (async () => {
+              if (getAuthSessionRevision() !== sessionOwner.current) {
+                setMessage('Your session changed. Reopen Sign in before continuing.');
+                return;
+              }
               setBusy(true);
               setMessage(null);
+              setAuthSession(null);
+              const signingOutRevision = getAuthSessionRevision();
+              sessionOwner.current = signingOutRevision;
+              await analyticsConsent.clear();
+              if (getAuthSessionRevision() !== signingOutRevision) {
+                setBusy(false);
+                return;
+              }
               try {
                 await auth.signOut();
               } finally {
-                setAuthSession(null);
                 setBusy(false);
                 setMessage('Signed out');
               }

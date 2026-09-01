@@ -4,12 +4,14 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { AccountClient, AccountOutcome, AccountPreferences } from '../../api/account/types';
+import type { AnalyticsConsentController } from '../../analytics/consentController';
 import type { AppAuth, ReauthenticationRequest } from '../../auth/localMockFirebaseAuth';
 import { getAuthSessionRevision, setAuthSession } from '../../auth/session';
 import { clearPendingRewardAttempt } from '../rewards/pendingRewardAttempt';
 
 export interface AccountScreenProps {
   readonly auth: AppAuth;
+  readonly analyticsConsent: AnalyticsConsentController;
   readonly client: AccountClient;
   readonly onSignIn: () => void;
   readonly onHome: () => void;
@@ -34,6 +36,7 @@ function failureMessage(outcome: Exclude<AccountOutcome<unknown>, { outcome: 'ok
 
 export function AccountScreen({
   auth,
+  analyticsConsent,
   client,
   onSignIn,
   onHome,
@@ -87,7 +90,10 @@ export function AccountScreen({
     setPassword('');
     setConfirming(false);
     setEnded(true);
+    await analyticsConsent.clear();
+    if (!requireSession(clearingRevision)) return false;
     await clearPendingRewardAttempt();
+    if (!requireSession(clearingRevision)) return false;
     try {
       await auth.signOut();
       if (!requireSession(clearingRevision)) return false;
@@ -98,7 +104,7 @@ export function AccountScreen({
       setCleanupFailed(true);
       return false;
     }
-  }, [auth, requireSession]);
+  }, [analyticsConsent, auth, requireSession]);
 
   useEffect(() => {
     let active = true;
@@ -110,6 +116,15 @@ export function AccountScreen({
         return;
       }
       if (result.outcome === 'ok') {
+        await analyticsConsent.applyProfile({
+          profileId: result.data.public_id,
+          analyticsConsent: result.data.analytics_consent,
+          sessionRevision: loadingRevision,
+        });
+        if (!active || !requireSession(loadingRevision)) {
+          setLoading(false);
+          return;
+        }
         const { country, analytics_consent, ads_consent } = result.data;
         setPreferences({ locale: 'en', country, analytics_consent, ads_consent });
       } else {
@@ -121,7 +136,7 @@ export function AccountScreen({
     return () => {
       active = false;
     };
-  }, [clearSession, client, reload, requireSession]);
+  }, [analyticsConsent, clearSession, client, reload, requireSession]);
 
   async function showFailure(result: Exclude<AccountOutcome<unknown>, { outcome: 'ok' }>) {
     if (result.outcome === 'unauthenticated') await clearSession();
@@ -137,6 +152,12 @@ export function AccountScreen({
       await showFailure(result);
       return;
     }
+    await analyticsConsent.applyProfile({
+      profileId: result.data.public_id,
+      analyticsConsent: result.data.analytics_consent,
+      sessionRevision: revision,
+    });
+    if (!requireSession(revision)) return;
     const { country, analytics_consent, ads_consent } = result.data;
     setPreferences({ locale: 'en', country, analytics_consent, ads_consent });
     setMessage('Preferences saved.');
@@ -244,8 +265,9 @@ export function AccountScreen({
               onChange={(ads_consent) => setPreferences({ ...preferences, ads_consent })}
             />
             <Text style={styles.muted}>
-              Optional preferences are off by default. Saving a preference does not activate
-              analytics or advertising SDKs in this build.
+              Optional preferences are off by default. Analytics activates only after the server
+              saves consent. Turning it off, signing out, or deleting your account clears the
+              analytics identity and local analytics data.
             </Text>
             <Action
               label="Save preferences"

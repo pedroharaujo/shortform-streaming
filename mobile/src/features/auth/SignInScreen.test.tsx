@@ -1,8 +1,9 @@
-import { render, userEvent, waitFor } from '@testing-library/react-native';
+import { act, render, userEvent, waitFor } from '@testing-library/react-native';
 
 import type { MeClient } from '../../api/me/types';
+import type { AnalyticsConsentController } from '../../analytics/consentController';
 import { createLocalMockFirebaseAuth } from '../../auth/localMockFirebaseAuth';
-import { getSessionCredential, setAuthSession } from '../../auth/session';
+import { getAuthSessionRevision, getSessionCredential, setAuthSession } from '../../auth/session';
 import { SignInScreen } from './SignInScreen';
 
 const PROFILE = {
@@ -21,6 +22,16 @@ function okMeClient(): { getMe: jest.Mock; meClient: MeClient } {
   return { getMe, meClient: { getMe } };
 }
 
+function analyticsConsentDouble(): jest.Mocked<AnalyticsConsentController> {
+  return {
+    applyProfile: jest.fn<
+      ReturnType<AnalyticsConsentController['applyProfile']>,
+      Parameters<AnalyticsConsentController['applyProfile']>
+    >(async () => true),
+    clear: jest.fn(async () => true),
+  };
+}
+
 describe('SignInScreen', () => {
   afterEach(() => {
     setAuthSession(null);
@@ -29,10 +40,16 @@ describe('SignInScreen', () => {
   it('signs in with email/password and loads /v1/me without sending a backend user id', async () => {
     const auth = createLocalMockFirebaseAuth();
     const { getMe, meClient } = okMeClient();
+    const analyticsConsent = analyticsConsentDouble();
     const onFinished = jest.fn();
     const user = userEvent.setup();
     const view = await render(
-      <SignInScreen auth={auth} meClient={meClient} onFinished={onFinished} />,
+      <SignInScreen
+        auth={auth}
+        analyticsConsent={analyticsConsent}
+        meClient={meClient}
+        onFinished={onFinished}
+      />,
     );
 
     await user.type(view.getByTestId('sign-in-email'), 'user@example.com');
@@ -42,31 +59,50 @@ describe('SignInScreen', () => {
     await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
     expect(getSessionCredential()).toBe('mock.user_example_com');
     expect(getSessionCredential()).not.toContain('usr_from_server');
+    expect(analyticsConsent.clear).toHaveBeenCalledTimes(1);
+    expect(analyticsConsent.applyProfile).toHaveBeenCalledWith({
+      profileId: 'usr_from_server',
+      analyticsConsent: false,
+      sessionRevision: getAuthSessionRevision(),
+    });
     expect(onFinished).toHaveBeenCalled();
   });
 
   it('signs out and clears the session credential', async () => {
     const auth = createLocalMockFirebaseAuth();
+    const analyticsConsent = analyticsConsentDouble();
     await auth.signIn('user@example.com', 'correct-horse');
     setAuthSession({ credential: 'mock.user_example_com' });
     const user = userEvent.setup();
     const view = await render(
-      <SignInScreen auth={auth} meClient={{ getMe: jest.fn() }} onFinished={jest.fn()} />,
+      <SignInScreen
+        auth={auth}
+        analyticsConsent={analyticsConsent}
+        meClient={{ getMe: jest.fn() }}
+        onFinished={jest.fn()}
+      />,
     );
     await user.press(view.getByTestId('sign-in-sign-out'));
 
     await waitFor(() => expect(view.getByTestId('sign-in-message')).toBeTruthy());
     expect(getSessionCredential()).toBeNull();
     expect(auth.getCredential()).toBeNull();
+    expect(analyticsConsent.clear).toHaveBeenCalledTimes(1);
   });
 
   it('signs in with Google, never offers Apple, and does not send a backend user id', async () => {
     const auth = createLocalMockFirebaseAuth();
     const { getMe, meClient } = okMeClient();
+    const analyticsConsent = analyticsConsentDouble();
     const onFinished = jest.fn();
     const user = userEvent.setup();
     const view = await render(
-      <SignInScreen auth={auth} meClient={meClient} onFinished={onFinished} />,
+      <SignInScreen
+        auth={auth}
+        analyticsConsent={analyticsConsent}
+        meClient={meClient}
+        onFinished={onFinished}
+      />,
     );
 
     expect(view.queryByLabelText('Sign in with Apple')).toBeNull();
@@ -84,9 +120,15 @@ describe('SignInScreen', () => {
       signInWithGoogle: jest.fn(async () => ({ outcome: 'cancelled' as const })),
     };
     const getMe = jest.fn();
+    const analyticsConsent = analyticsConsentDouble();
     const user = userEvent.setup();
     const view = await render(
-      <SignInScreen auth={auth} meClient={{ getMe }} onFinished={jest.fn()} />,
+      <SignInScreen
+        auth={auth}
+        analyticsConsent={analyticsConsent}
+        meClient={{ getMe }}
+        onFinished={jest.fn()}
+      />,
     );
 
     await user.press(view.getByTestId('sign-in-google'));
@@ -94,6 +136,7 @@ describe('SignInScreen', () => {
     await waitFor(() => expect(view.getByTestId('sign-in-google')).toBeEnabled());
     expect(getMe).not.toHaveBeenCalled();
     expect(getSessionCredential()).toBeNull();
+    expect(analyticsConsent.clear).not.toHaveBeenCalled();
     expect(view.queryByTestId('sign-in-message')).toBeNull();
   });
 
@@ -106,9 +149,15 @@ describe('SignInScreen', () => {
       })),
     };
     const getMe = jest.fn();
+    const analyticsConsent = analyticsConsentDouble();
     const user = userEvent.setup();
     const view = await render(
-      <SignInScreen auth={auth} meClient={{ getMe }} onFinished={jest.fn()} />,
+      <SignInScreen
+        auth={auth}
+        analyticsConsent={analyticsConsent}
+        meClient={{ getMe }}
+        onFinished={jest.fn()}
+      />,
     );
 
     await user.press(view.getByTestId('sign-in-google'));
@@ -119,5 +168,124 @@ describe('SignInScreen', () => {
     );
     expect(getMe).not.toHaveBeenCalled();
     expect(getSessionCredential()).toBeNull();
+    expect(analyticsConsent.clear).not.toHaveBeenCalled();
+  });
+
+  it('does not link a late profile response after the session is replaced', async () => {
+    const auth = createLocalMockFirebaseAuth();
+    const analyticsConsent = analyticsConsentDouble();
+    let resolveMe!: (value: Awaited<ReturnType<MeClient['getMe']>>) => void;
+    const getMe = jest.fn(
+      () =>
+        new Promise<Awaited<ReturnType<MeClient['getMe']>>>((resolve) => {
+          resolveMe = resolve;
+        }),
+    );
+    const onFinished = jest.fn();
+    const user = userEvent.setup();
+    const view = await render(
+      <SignInScreen
+        auth={auth}
+        analyticsConsent={analyticsConsent}
+        meClient={{ getMe }}
+        onFinished={onFinished}
+      />,
+    );
+
+    await user.press(view.getByTestId('sign-in-google'));
+    await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
+    setAuthSession({ credential: 'mock.replacement_account' });
+    resolveMe({ outcome: 'ok', data: PROFILE });
+
+    await waitFor(() => expect(view.getByTestId('sign-in-google')).toBeEnabled());
+    expect(analyticsConsent.applyProfile).not.toHaveBeenCalled();
+    expect(onFinished).not.toHaveBeenCalled();
+    expect(getSessionCredential()).toBe('mock.replacement_account');
+  });
+
+  it('does not overwrite a replacement session while pre-sign-in cleanup is pending', async () => {
+    const auth = createLocalMockFirebaseAuth();
+    const analyticsConsent = analyticsConsentDouble();
+    let resolveClear!: (value: boolean) => void;
+    analyticsConsent.clear.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveClear = resolve;
+        }),
+    );
+    const getMe = jest.fn();
+    const user = userEvent.setup();
+    const view = await render(
+      <SignInScreen
+        auth={auth}
+        analyticsConsent={analyticsConsent}
+        meClient={{ getMe }}
+        onFinished={jest.fn()}
+      />,
+    );
+
+    await user.press(view.getByTestId('sign-in-google'));
+    await waitFor(() => expect(analyticsConsent.clear).toHaveBeenCalledTimes(1));
+    setAuthSession({ credential: 'mock.replacement_account' });
+    await act(async () => resolveClear(true));
+
+    await waitFor(() => expect(view.getByTestId('sign-in-google')).toBeEnabled());
+    expect(getMe).not.toHaveBeenCalled();
+    expect(analyticsConsent.applyProfile).not.toHaveBeenCalled();
+    expect(getSessionCredential()).toBe('mock.replacement_account');
+  });
+
+  it('does not sign out a replacement session while analytics cleanup is pending', async () => {
+    setAuthSession({ credential: 'mock.original_account' });
+    const auth = { ...createLocalMockFirebaseAuth(), signOut: jest.fn(async () => undefined) };
+    const analyticsConsent = analyticsConsentDouble();
+    let resolveClear!: (value: boolean) => void;
+    analyticsConsent.clear.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveClear = resolve;
+        }),
+    );
+    const user = userEvent.setup();
+    const view = await render(
+      <SignInScreen
+        auth={auth}
+        analyticsConsent={analyticsConsent}
+        meClient={{ getMe: jest.fn() }}
+        onFinished={jest.fn()}
+      />,
+    );
+
+    await user.press(view.getByTestId('sign-in-sign-out'));
+    await waitFor(() => expect(analyticsConsent.clear).toHaveBeenCalledTimes(1));
+    setAuthSession({ credential: 'mock.replacement_account' });
+    await act(async () => resolveClear(true));
+
+    await waitFor(() => expect(view.getByTestId('sign-in-sign-out')).toBeEnabled());
+    expect(auth.signOut).not.toHaveBeenCalled();
+    expect(getSessionCredential()).toBe('mock.replacement_account');
+  });
+
+  it('does not let a stale sign-in screen clear a replacement session', async () => {
+    setAuthSession({ credential: 'mock.original_account' });
+    const auth = { ...createLocalMockFirebaseAuth(), signOut: jest.fn(async () => undefined) };
+    const analyticsConsent = analyticsConsentDouble();
+    const user = userEvent.setup();
+    const view = await render(
+      <SignInScreen
+        auth={auth}
+        analyticsConsent={analyticsConsent}
+        meClient={{ getMe: jest.fn() }}
+        onFinished={jest.fn()}
+      />,
+    );
+    setAuthSession({ credential: 'mock.replacement_account' });
+
+    await user.press(view.getByTestId('sign-in-sign-out'));
+
+    expect(view.getByTestId('sign-in-message')).toHaveTextContent(/session changed/);
+    expect(analyticsConsent.clear).not.toHaveBeenCalled();
+    expect(auth.signOut).not.toHaveBeenCalled();
+    expect(getSessionCredential()).toBe('mock.replacement_account');
   });
 });
