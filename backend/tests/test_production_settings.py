@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -100,6 +101,55 @@ def test_production_settings_accept_import_complete_postgresql_configuration() -
     result = run_settings_import(IMPORT_VALID_ENVIRONMENT)
 
     assert result.returncode == 0, result.stderr
+
+
+ADMIN_SECURITY_CODE = """
+import json
+from config.settings import production
+print(json.dumps({
+    "session_cookie_secure": production.SESSION_COOKIE_SECURE,
+    "session_cookie_httponly": production.SESSION_COOKIE_HTTPONLY,
+    "session_cookie_samesite": production.SESSION_COOKIE_SAMESITE,
+    "session_cookie_name": production.SESSION_COOKIE_NAME,
+    "session_cookie_path": production.SESSION_COOKIE_PATH,
+    "session_cookie_age": production.SESSION_COOKIE_AGE,
+    "session_expire_at_browser_close": production.SESSION_EXPIRE_AT_BROWSER_CLOSE,
+    "session_save_every_request": production.SESSION_SAVE_EVERY_REQUEST,
+    "csrf_cookie_secure": production.CSRF_COOKIE_SECURE,
+    "csrf_cookie_samesite": production.CSRF_COOKIE_SAMESITE,
+    "csrf_use_sessions": production.CSRF_USE_SESSIONS,
+    "staff_policy": production.AUTH_PASSWORD_VALIDATORS,
+}))
+"""
+
+
+def test_production_settings_harden_admin_sessions_csrf_and_passwords() -> None:
+    result = run_settings_import(IMPORT_VALID_ENVIRONMENT, code=ADMIN_SECURITY_CODE)
+
+    assert result.returncode == 0, result.stderr
+    values = json.loads(result.stdout)
+    assert values == {
+        "session_cookie_secure": True,
+        "session_cookie_httponly": True,
+        "session_cookie_samesite": "Lax",
+        "session_cookie_name": "__Secure-shortform_admin_session",
+        "session_cookie_path": "/admin/",
+        "session_cookie_age": 3600,
+        "session_expire_at_browser_close": True,
+        "session_save_every_request": True,
+        "csrf_cookie_secure": True,
+        "csrf_cookie_samesite": "Lax",
+        "csrf_use_sessions": True,
+        "staff_policy": [
+            {"NAME": ("django.contrib.auth.password_validation.UserAttributeSimilarityValidator")},
+            {
+                "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+                "OPTIONS": {"min_length": 12},
+            },
+            {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+            {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+        ],
+    }
 
 
 @pytest.mark.parametrize("unit_id", ["", "ca-app-pub-1111111111111111/2222222222"])

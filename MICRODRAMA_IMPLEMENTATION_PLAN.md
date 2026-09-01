@@ -1157,6 +1157,17 @@ App Check enforcement, Admin MFA/SSO, or completion of the staging authorization
 matrix. Those remain later P5-T05 slices; DRF's cache throttles are non-atomic and
 must not be represented as a security boundary.
 
+**Admin foundation implemented (P5-T05-F2 / #117):** Production Admin sessions
+use secure, HttpOnly, Lax SameSite cookies scoped to `/admin/`, with a rolling
+one-hour idle lifetime and browser-close expiry. CSRF state is server-side,
+unsafe Admin actions are integration-tested to fail without a token, staff
+passwords use strong built-in validators, and Django User/Group administration
+is superuser-only. A view-only catalog role is tested not to mutate titles or
+read rights metadata without its own permission. Cloud Run remains internal-only.
+
+This slice does not complete provider-backed MFA/SSO, edge login abuse controls,
+or the live staging authorization matrix; those remain required before release.
+
 **Description:** Apply OWASP ASVS/MASVS-informed controls: secure storage, TLS, validation, authorization, rate limiting, CORS/CSRF, admin hardening, App Check signals, dependency scanning, and abuse controls.
 
 **Objective:** Protect accounts, licensed content, commerce, and operational interfaces.

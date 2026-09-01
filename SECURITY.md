@@ -37,6 +37,19 @@ or distributed rate limiting. Firebase App Check, edge abuse controls, Admin
 MFA/SSO exposure restrictions, and the complete staging authorization matrix are
 still required by P5-T05 before release.
 
+## Implemented Admin boundary
+
+Production Django Admin sessions use secure, HttpOnly, Lax SameSite cookies
+scoped to `/admin/`, expire after one hour of inactivity or browser close, and
+keep CSRF state in the server-side session. Built-in staff-password validation
+requires at least 12 characters and rejects common, numeric-only, or
+user-similar values. Django User and Group administration is superuser-only;
+ordinary staff roles still use model-level view/add/change/delete permissions.
+
+Cloud Run remains internal-only. These controls do not claim provider-backed
+MFA/SSO, edge login abuse protection, or completion of the live staging
+authorization matrix; all remain release requirements under P5-T05.
+
 ## Public-repository response
 
 If a secret or confidential asset is committed:

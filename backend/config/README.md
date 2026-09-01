@@ -16,6 +16,11 @@ Health and anonymous catalog operations are forced to `security: []`.
 `settings/local.py` supplies safe loopback-only development defaults.
 `settings/production.py` requires explicit secret, host, and database configuration and
 enables Django's deployment security controls.
+Production Admin sessions are secure/HttpOnly/Lax SameSite, scoped to
+`/admin/`, rolling one-hour idle sessions that also expire on browser close.
+CSRF state stays in the server-side session and local Django staff passwords use
+the built-in similarity, 12-character minimum, common-password, and numeric-only
+validators. User and Group administration is restricted to superusers.
 
 OpenAPI is generated with `pnpm contract:generate` (no Swagger UI and no staticfiles).
 Schema generation parses `DATABASE_URL` but does not need a live database.
