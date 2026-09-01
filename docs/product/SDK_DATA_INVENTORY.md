@@ -34,6 +34,20 @@ emits only its completion/pending status after the Analytics user ID and local d
 are cleared; profile, session, country, email, credential, and receipt identifiers
 are absent. Production transport remains hard-disabled.
 
+### P4-T06-F1 installed-link update (2026-09-01)
+
+The app can rewrite an installed custom-scheme series link through an eligibility-
+checked internal landing. It accepts only bounded canonical campaign, ad-set,
+creative, source, medium, and series tokens. It does not retain the incoming URL,
+query string, or attribution history; only the safe tokens and internal target may
+reach the existing consent-gated `app_open` diagnostic. No SDK or processor was
+added. Production Analytics remains a hard no-op.
+
+Google Play Install Referrer, fresh-install attribution, and persistent first/last
+touch remain absent. Issue #113 requires an approved D-020 attribution/retention
+window before adding them. This update neither authorizes paid acquisition nor
+claims deferred-install attribution is complete.
+
 ### P4-T01 F2 implementation update (2026-09-01)
 
 The mobile dependency and a tested consent controller for Firebase Analytics are

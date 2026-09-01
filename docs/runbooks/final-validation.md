@@ -104,6 +104,39 @@ For each deferral, record:
   DebugView/device check is not a pass; under D-029 it may remain deferred only
   while production collection stays disabled/fail-closed.
 
+### P4-T06-F1 — Installed campaign-link routing
+
+- **Source:** P4-T06-F1; D-029; implementation revision to be recorded after merge;
+  issue #113 owns the unapproved persistent/fresh-install remainder.
+- **Disabled/fail-closed state:** production Analytics remains a hard no-op. The app
+  has no attribution-history storage and no Install Referrer SDK, so it cannot claim
+  fresh-install or deferred attribution. A link reaches series detail only after the
+  catalog API confirms current eligibility; malformed or unavailable targets return
+  to home.
+- **Prerequisites:** clean Android development build for the candidate revision,
+  generated eligible and unavailable series IDs, local/staging API, and an account
+  whose analytics preference can be tested both off and on. Use synthetic campaign
+  tokens only.
+- **Actions:** from a logged-out cold state and again while the app is foregrounded,
+  open direct, organic, and fully tagged `shortform://series/<generated-id>` intents.
+  Repeat after login, with analytics consent off and on. Open malformed and
+  unavailable series links. Clear app data and repeat the installed-link cases; do
+  not label this a fresh-install/referrer test. Inspect bounded device logs and
+  Firebase DebugView only in the approved synthetic test project.
+- **Expected:** the eligible target opens once; unavailable and malformed targets
+  return home without exposing an error payload. Consent-off sends no Analytics.
+  Consent-on emits one `app_open` with `deep_link`, safe campaign fields, and the
+  internal series route only—never the raw URL, authentication data, provider data,
+  or arbitrary query fields. Cold and foreground transitions do not duplicate the
+  same deep-link open.
+- **Evidence:** redacted build result, device/OS/build revision, commands using only
+  generated identifiers, routing observations, DebugView absence/allowed-property
+  observations, date, and independent reviewer.
+- **Blocks:** full P4-T06/Checkpoint 4 and paid-acquisition readiness. Under D-029
+  this installed-link observation may wait for P6 only while production Analytics
+  stays disabled; issue #113 still requires an explicit product/privacy decision
+  and cannot be converted into a pass by device evidence.
+
 ### P3-T08 — Android locked-episode rewarded-ad path
 
 - **Source:** PR #100; D-029; implementation revision `dc0c6d7` plus its merge revision.
