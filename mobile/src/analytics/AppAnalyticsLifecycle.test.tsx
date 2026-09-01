@@ -22,6 +22,7 @@ it('retries the cold trigger when consent activates and forwards app-state trans
   } as unknown as AnalyticsConsentController;
   const tracker: AppOpenTracker = {
     recordColdOpen: jest.fn(),
+    recordDeepLink: jest.fn(),
     recordAppStateChange: jest.fn(),
   };
 

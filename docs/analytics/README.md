@@ -127,7 +127,15 @@ validation. Production uses a no-op adapter until D-020 and P6 clearance.
   Consent activation retries only the current session's pending authentication
   result; replacement cannot adopt it. Deletion receipts and profile/session data
   are not event properties, and diagnostics never control account lifecycle.
-- P4-T06: persistence and routing for campaign/deferred-deep-link fields.
+- Completed P4-T06-F1 installed-link baseline: a validated custom-scheme series
+  link contributes only bounded campaign/ad-set/creative/source/medium tokens and
+  an internal series target to the consent-gated `app_open`. The raw URL is never
+  an event property or stored value. A guarded landing asks the catalog API to
+  confirm current eligibility and otherwise returns home.
+- P4-T06-F2 / #113: approve the first/last-touch attribution and retention windows,
+  then add Google Play Install Referrer persistence, fresh-install/deferred-link
+  handling, and device evidence. Until then there is no attribution history on
+  device, no referrer SDK, and no paid-acquisition-ready campaign chain.
 - P7: BigQuery/Looker models, experiments, push, commerce events, and MMP.
 - P6-T03: DebugView/device evidence if deferred under D-029 while collection is
   disabled and the exact validation steps remain recorded.

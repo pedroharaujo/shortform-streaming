@@ -1022,6 +1022,22 @@ production activation remain blocked by D-020/privacy/store and P6 clearance.
 
 #### P4-T06 — Implement campaign attribution and deferred deep linking baseline
 
+**Installed-link baseline implemented (P4-T06-F1):** Expo Router rewrites only
+validated `shortform://series/<id>` campaign links to an internal landing route.
+Campaign, ad-set, creative, source, and medium values use the existing bounded
+Analytics tokens; the raw URL is never stored or logged. The catalog API must
+confirm that the launch series is currently eligible before navigation, otherwise
+the app returns to home. Direct, organic, campaign, malformed, and unavailable
+link behavior is covered by automated tests. Production Analytics remains a hard
+no-op.
+
+This slice deliberately does **not** persist first/last touch or read the Google
+Play Install Referrer. D-020 has not approved an attribution/retention window, so
+inventing one in code would create an unapproved privacy policy. Issue #113 owns
+that decision-dependent persistence, fresh-install/deferred-link work, and the
+Android device evidence. The iOS attribution/privacy pass remains required before
+an iOS storefront; the current ads-only MVP platform is Android (D-027).
+
 **Description:** Capture install/referrer/deep-link campaign parameters, preserve first and last touch, and route users to the one launch series while respecting privacy choices and platform attribution frameworks. This is not an MMP integration (P4-T07 / D-018 remain P7).
 
 **Objective:** Connect creative spend to content consumption and verified ad revenue.
