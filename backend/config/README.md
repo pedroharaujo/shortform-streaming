@@ -1,8 +1,9 @@
 # Backend configuration
 
 `settings/base.py` contains shared Django/DRF, PostgreSQL, OpenAPI, and Django Admin
-configuration (sessions, messages, staticfiles, templates). WhiteNoise is inserted
-immediately after `SecurityMiddleware` and `STORAGES["staticfiles"]` uses
+configuration (sessions, messages, staticfiles, templates). Correlation is the
+outermost layer; request boundaries and WhiteNoise follow `SecurityMiddleware`.
+`STORAGES["staticfiles"]` uses
 `CompressedStaticFilesStorage`. `CONN_MAX_AGE` is an env integer defaulting to 0
 (0–3600) with `conn_health_checks=True`. Local Admin is served by `runserver` when
 `DEBUG` is true. The production image runs `collectstatic` with
@@ -13,6 +14,11 @@ serves Admin static files through WhiteNoise. See
 Health and anonymous catalog operations are forced to `security: []`.
 `exceptions.py` maps API errors onto the shared `ErrorEnvelope` (`code`, `message`,
 `request_id` from `X-Request-ID` or a generated UUID, optional `field_errors`).
+`observability.py` freezes that request ID before other application middleware,
+returns it as `X-Request-ID`, and emits a structured completion record. The
+formatter allowlists only request ID, method, route template/coarse family,
+status, and duration; it never formats raw paths, queries, bodies, IPs, users,
+credentials, or signed URLs.
 `settings/local.py` supplies safe loopback-only development defaults.
 `settings/production.py` requires explicit secret, host, and database configuration and
 enables Django's deployment security controls.

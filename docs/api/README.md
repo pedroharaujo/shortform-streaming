@@ -17,6 +17,11 @@ These shared shapes are published even while only health operations exist:
 | `WatchProgress` | `{ episode_id, position_seconds, completed, updated_at }` from `GET`/`PUT /v1/progress/{episode_id}`; never includes `playback_url` |
 | `EpisodeOffersGranted` / `EpisodeOffersLocked` | Polymorphic `GET /v1/offers/{episode_id}` on `decision`. Granted: `{ decision, episode_id, methods }`. Locked: `{ decision, episode_id, lock_reasons, methods }`. MVP `methods[].type` values are `entitlement`, `free`, and `rewarded_ad`. Never includes `playback_url` |
 
+Every response includes `X-Request-ID`. A valid caller-supplied value is reused;
+otherwise the backend generates a UUID. Error envelopes carry the same value so
+a client-visible failure can be matched to the privacy-safe server completion
+record without logging bodies, credentials, query strings, or raw object paths.
+
 Health probes stay unauthenticated. Anonymous catalog reads (`GET /v1/catalog/home`, `GET /v1/series/{public_id}`, `GET /v1/episodes/{public_id}`) and anonymous playback authorize (`POST /v1/playback/{episode_id}/authorize`) are also unauthenticated and require explicit `X-Territory`, `X-Platform`, and `X-Language` headers. Those headers are never inferred from `Accept-Language`. Missing or malformed headers are HTTP 400 `ErrorEnvelope`. Ineligible or unmapped public ids are HTTP 404 `ErrorEnvelope`. An unset or disabled video provider is HTTP 503 `ErrorEnvelope` and never returns an unsigned playlist. Django never serves video bytes. A Bearer credential on health, catalog, or playback authorize must not change those outcomes.
 
 Consumer API commands use `application/json`; form and multipart command bodies
