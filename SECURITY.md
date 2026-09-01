@@ -23,6 +23,20 @@ Highest-priority reports include:
 
 The project is pre-release. Only the latest `main` and active release candidate are supported. A version policy will be published before public launch.
 
+## Implemented request boundary
+
+Consumer API commands under `/v1/` accept JSON bodies capped at 64 KiB. Oversized
+or unsupported command bodies fail before view mutation with a static error
+envelope; a bounded parser also covers streams without a trustworthy declared
+length. Firebase Bearer credentials are rejected before verification when they
+exceed 4 KiB or contain non-ASCII, non-printable, or whitespace characters.
+Bodies and credentials are never reflected in errors.
+
+These controls reduce parser and verifier exposure; they are not DDoS protection
+or distributed rate limiting. Firebase App Check, edge abuse controls, Admin
+MFA/SSO exposure restrictions, and the complete staging authorization matrix are
+still required by P5-T05 before release.
+
 ## Public-repository response
 
 If a secret or confidential asset is committed:

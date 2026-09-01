@@ -1143,6 +1143,20 @@ an iOS storefront; the current ads-only MVP platform is Android (D-027).
 
 #### P5-T05 — Implement application security baseline
 
+**Request-boundary foundation implemented (P5-T05-F1 / #115):** Consumer API
+commands accept bounded JSON rather than form or multipart payloads. `/v1/`
+request bodies are capped at 64 KiB before view mutation, with a second bounded
+JSON parser check for streams that bypass a declared content length. Firebase
+Bearer credentials are capped at 4 KiB and must be printable ASCII without
+whitespace before any verifier call. Rejections use static error envelopes and
+never reflect bodies or credentials. Admin forms remain separate, and signed
+media upload still sends master bytes directly to object storage.
+
+This foundation is not distributed rate limiting, brute-force/DDoS protection,
+App Check enforcement, Admin MFA/SSO, or completion of the staging authorization
+matrix. Those remain later P5-T05 slices; DRF's cache throttles are non-atomic and
+must not be represented as a security boundary.
+
 **Description:** Apply OWASP ASVS/MASVS-informed controls: secure storage, TLS, validation, authorization, rate limiting, CORS/CSRF, admin hardening, App Check signals, dependency scanning, and abuse controls.
 
 **Objective:** Protect accounts, licensed content, commerce, and operational interfaces.
