@@ -1,10 +1,13 @@
 # MVP analytics contract
 
 P4-T01 measures the ads-only viewing loop with a small, fixed event list. The
-mobile contract exists in `mobile/src/analytics/`; P4-T01-F1 has no Firebase
-sink and collection is disabled by default. This document does not approve
+mobile contract and consent lifecycle exist in `mobile/src/analytics/`;
+collection is disabled by default and can be enabled only from the current
+server-returned account preference. This document does not approve
 production collection, retention, residency, exports, advertising use, or
 legal/store declarations. Those remain gated by D-020 and P6 clearance.
+Production builds therefore select a hard no-op adapter even when the stored
+preference is true; a later approved release task must explicitly remove that gate.
 
 ## Rules shared by every event
 
@@ -36,9 +39,9 @@ data. There are no direct identifiers or financial records in this contract.
 Product owns discovery, playback, offer, and diagnostic definitions.
 Engineering owns schema enforcement and safe error codes. The backend remains
 the owner of verified rewards and access grants. Retention, region, processor
-access, and deletion propagation are **pending D-020**. Until approved, the
-provider transport must remain disabled. Account opt-out/deletion cleanup is
-implemented with the provider adapter in P4-T01-F2.
+access, and deletion propagation are **pending D-020**. Production provider
+transport must remain disabled until approved. Account opt-out/deletion cleanup
+is implemented with the provider adapter in P4-T01-F2.
 
 ## Canonical event dictionary
 
@@ -68,11 +71,12 @@ Every event except `account_deleted` also includes the shared context above.
 
 ## Identity and consent sequence
 
-P4-T01-F2a adds the native Analytics module and consent controller while all
-native automatic collection, screen reporting, advertising identifiers, and
-advertising consent default off. Nothing calls the controller in F2a, so this
-slice still sends no analytics. P4-T01-F2b connects the controller to the
-account lifecycle described below.
+P4-T01-F2 adds the native Analytics module and a process-wide consent controller
+while all native automatic collection, screen reporting, advertising identifiers,
+and advertising consent default off. F2b connects sign-in, the confirmed `/v1/me`
+profile, preference saves, sign-out, session replacement, unauthenticated cleanup,
+and account deletion to the controller. Product event logging still waits for
+F3/F4.
 
 After `/v1/me` confirms
 analytics consent, the adapter may enable collection and link only the opaque
@@ -81,13 +85,17 @@ same consented installation. Withdrawal, sign-out, account deletion, or session
 replacement disables collection, clears the user ID, and resets local Analytics
 data before another account can be linked. Anonymous users have no analytics
 preference in the current MVP, so collection stays off for them.
+The real adapter is reachable only in local/staging builds for synthetic
+validation. Production uses a no-op adapter until D-020 and P6 clearance.
 
-## Deferred work
+## Completed foundations and deferred work
 
-- P4-T01-F2a: Firebase adapter, default-off native settings, and the tested
+- Completed P4-T01-F1: fixed schemas, filtering, deterministic IDs, and no-op
+  default sink.
+- Completed P4-T01-F2a: Firebase adapter, default-off native settings, and the tested
   consent/identity controller.
-- P4-T01-F2b: connect that controller to sign-in, preference changes, sign-out,
-  deletion, and session replacement.
+- Completed P4-T01-F2b: process-wide lifecycle connection for sign-in, preference
+  changes, sign-out, deletion, and session replacement.
 - P4-T01-F3: free discovery/playback triggers and ordered trail tests.
 - P4-T01-F4: reward diagnostics and the smallest typed backend boundary.
 - P4-T06: persistence and routing for campaign/deferred-deep-link fields.

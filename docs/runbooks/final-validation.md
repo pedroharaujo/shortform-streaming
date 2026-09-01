@@ -48,23 +48,34 @@ For each deferral, record:
 
 ## Deferred validation register
 
-### P4-T01 F2a — Firebase Analytics native default-off build
+### P4-T01 F2 — Firebase Analytics consent and identity lifecycle
 
-- **Source:** P4-T01 F2a; D-029; implementation revision to be recorded after merge.
+- **Source:** P4-T01 F2a/F2b; D-029; implementation revisions to be recorded after merge.
 - **Disabled/fail-closed state:** every native Analytics collection and advertising
-  identifier default is off, and no application flow calls the consent controller.
-  This slice cannot emit an analytics event.
+  identifier default is off. Only a current authenticated session whose `/v1/me`
+  response has `analytics_consent=true` may enable collection or link the opaque
+  backend profile ID. F3/F4 product events are not instrumented.
+- **Production gate:** production builds select a hard no-op adapter even when the
+  stored preference is true. Removing that gate requires the applicable D-020,
+  privacy/store, and P6 approvals for the exact release candidate.
 - **Prerequisites:** clean Android development build, generated Firebase test
-  project configuration, supported Android device/emulator, and Firebase DebugView.
-  Do not record configuration contents, device identifiers, or provider payloads.
-- **Actions:** install the clean build, clear app data, cold-start it, sign in and
-  sign out with a synthetic account, and inspect DebugView plus device logs.
-- **Expected:** the app builds and starts; no Analytics events or advertising
-  identifiers are emitted; sign-in and sign-out do not change collection state.
+  project configuration, supported Android device/emulator, Firebase DebugView,
+  and two generated accounts with server preferences off. Do not record
+  configuration contents, device identifiers, or provider payloads.
+- **Actions:** install the clean build and clear app data; confirm the anonymous and
+  consent-off account states emit nothing; save analytics consent on one generated
+  account; then withdraw it, sign out, replace the session with the second account,
+  and complete generated-account deletion while inspecting DebugView and bounded
+  device logs.
+- **Expected:** nothing is collected before server-confirmed consent; consent-on
+  links only that account's opaque backend profile ID; withdrawal, sign-out,
+  replacement, and deletion disable collection, clear identity, and reset local
+  Analytics state. The second account never inherits the first identity or consent.
 - **Evidence:** redacted build result, device/OS/build revision, DebugView absence
-  observation, date, and independent reviewer.
-- **Blocks:** P6-T03 completion. Consent-on provider observation remains blocked
-  until P4-T01 F2b wires the controller to the server-owned preference.
+  and transition observations, date, and independent reviewer.
+- **Blocks:** P6-T03 completion and production Analytics activation. An unavailable
+  DebugView/device check is not a pass; under D-029 it may remain deferred only
+  while production collection stays disabled/fail-closed.
 
 ### P3-T08 — Android locked-episode rewarded-ad path
 

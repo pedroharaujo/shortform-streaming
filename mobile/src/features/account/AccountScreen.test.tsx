@@ -2,6 +2,7 @@ import { act, fireEvent, render, userEvent, waitFor } from '@testing-library/rea
 
 import { createAccountClient } from '../../api/account/accountClient';
 import { jsonResponse } from '../../api/fetchTestUtils';
+import type { AnalyticsConsentController } from '../../analytics/consentController';
 import type { AuthOutcome } from '../../auth/localMockFirebaseAuth';
 import { createLocalMockFirebaseAuth } from '../../auth/localMockFirebaseAuth';
 import { getSessionCredential, setAuthSession } from '../../auth/session';
@@ -43,23 +44,39 @@ async function setup(writeResponse = jsonResponse(PROFILE, 200)) {
     })),
     signOut: jest.fn(async () => {}),
   };
+  const analyticsConsent: jest.Mocked<AnalyticsConsentController> = {
+    applyProfile: jest.fn<
+      ReturnType<AnalyticsConsentController['applyProfile']>,
+      Parameters<AnalyticsConsentController['applyProfile']>
+    >(async () => true),
+    clear: jest.fn(async () => true),
+  };
   const client = createAccountClient({
     baseUrl: 'https://api.example.test',
     getCredential: getSessionCredential,
     fetchImplementation,
   });
   const view = await render(
-    <AccountScreen auth={auth} client={client} onSignIn={jest.fn()} onHome={jest.fn()} />,
+    <AccountScreen
+      auth={auth}
+      analyticsConsent={analyticsConsent}
+      client={client}
+      onSignIn={jest.fn()}
+      onHome={jest.fn()}
+    />,
   );
   await waitFor(() => expect(view.getByLabelText('Save preferences')).toBeEnabled());
-  return { view, auth, fetchImplementation, requests, user: userEvent.setup() };
+  return { view, analyticsConsent, auth, fetchImplementation, requests, user: userEvent.setup() };
 }
 
 afterEach(() => setAuthSession(null));
 
 it('loads consent as off and writes only explicit preferences with the authenticated session', async () => {
   const saved = { ...PROFILE, country: 'FR', analytics_consent: true };
-  const { view, user, requests } = await setup(jsonResponse(saved, 200));
+  const { view, analyticsConsent, user, requests } = await setup(jsonResponse(saved, 200));
+  expect(analyticsConsent.applyProfile).toHaveBeenCalledWith(
+    expect.objectContaining({ profileId: 'usr_synthetic', analyticsConsent: false }),
+  );
   expect(view.getByLabelText('Analytics consent')).toHaveProp('value', false);
   expect(view.getByLabelText('Ads consent')).toHaveProp('value', false);
   await user.type(view.getByLabelText('Country code'), 'fr');
@@ -77,6 +94,9 @@ it('loads consent as off and writes only explicit preferences with the authentic
     analytics_consent: true,
     ads_consent: false,
   });
+  expect(analyticsConsent.applyProfile).toHaveBeenLastCalledWith(
+    expect.objectContaining({ profileId: 'usr_synthetic', analyticsConsent: true }),
+  );
 });
 
 it('keeps unsaved preferences after a failed save and permits retry', async () => {
@@ -106,7 +126,7 @@ it('shows the export placeholder without claiming a request was accepted', async
 it.each(['pending', 'completed'])(
   'reauthenticates before deletion and clears both sessions when %s',
   async (status) => {
-    const { view, user, auth, requests } = await setup(
+    const { view, analyticsConsent, user, auth, requests } = await setup(
       jsonResponse({ public_id: 'del_synthetic', status }, 202),
     );
     expect(view.queryByLabelText('Verify password and delete account')).toBeNull();
@@ -123,6 +143,7 @@ it.each(['pending', 'completed'])(
     expect(requests[1]?.headers.get('Authorization')).toBe('Bearer mock.reauthenticated_account');
     expect(await requests[1]?.json()).toEqual({ confirmation: true });
     expect(getSessionCredential()).toBeNull();
+    expect(analyticsConsent.clear).toHaveBeenCalledTimes(1);
     expect(mockDeleteSecureItem).toHaveBeenCalledWith('shortform.pending_reward_attempt.v1');
     expect(view.queryByLabelText('Current password')).toBeNull();
     expect(view.queryByLabelText('Save preferences')).toBeNull();
@@ -231,6 +252,10 @@ it('does not apply late reauthentication to a replacement session or send deleti
 it('clears an invalid session on profile load and never offers account mutations', async () => {
   setAuthSession({ credential: 'mock.invalid_session' });
   const auth = { ...createLocalMockFirebaseAuth(), signOut: jest.fn(async () => {}) };
+  const analyticsConsent: AnalyticsConsentController = {
+    applyProfile: jest.fn(async () => true),
+    clear: jest.fn(async () => true),
+  };
   const client = createAccountClient({
     baseUrl: 'https://api.example.test',
     getCredential: getSessionCredential,
@@ -238,7 +263,13 @@ it('clears an invalid session on profile load and never offers account mutations
       jsonResponse({ code: 'invalid_token', message: 'Invalid' }, 401),
   });
   const view = await render(
-    <AccountScreen auth={auth} client={client} onSignIn={jest.fn()} onHome={jest.fn()} />,
+    <AccountScreen
+      auth={auth}
+      analyticsConsent={analyticsConsent}
+      client={client}
+      onSignIn={jest.fn()}
+      onHome={jest.fn()}
+    />,
   );
   await waitFor(() => expect(view.getByLabelText('Sign in')).toBeEnabled());
   expect(auth.signOut).toHaveBeenCalledTimes(1);
@@ -250,6 +281,10 @@ it('ignores an old profile-load rejection after the session changes', async () =
   setAuthSession({ credential: 'mock.original_account' });
   let resolveResponse!: (response: Response) => void;
   const auth = { ...createLocalMockFirebaseAuth(), signOut: jest.fn(async () => {}) };
+  const analyticsConsent: AnalyticsConsentController = {
+    applyProfile: jest.fn(async () => true),
+    clear: jest.fn(async () => true),
+  };
   const client = createAccountClient({
     baseUrl: 'https://api.example.test',
     getCredential: getSessionCredential,
@@ -259,7 +294,13 @@ it('ignores an old profile-load rejection after the session changes', async () =
       }),
   });
   const view = await render(
-    <AccountScreen auth={auth} client={client} onSignIn={jest.fn()} onHome={jest.fn()} />,
+    <AccountScreen
+      auth={auth}
+      analyticsConsent={analyticsConsent}
+      client={client}
+      onSignIn={jest.fn()}
+      onHome={jest.fn()}
+    />,
   );
   setAuthSession({ credential: 'mock.replacement_account' });
   await act(async () => {
@@ -305,14 +346,39 @@ it('clears stale credentials when an authenticated action returns 401', async ()
   expect(view.getByTestId('account-message')).toHaveTextContent(/Sign in again/);
 });
 
-it('clears the app session on logout failure and offers native sign-out retry', async () => {
-  const { view, user, auth } = await setup();
+it('clears analytics and the app session on logout failure, then offers native retry', async () => {
+  const { view, analyticsConsent, user, auth } = await setup();
   auth.signOut.mockRejectedValueOnce(new Error('Synthetic native failure'));
   await user.press(view.getByLabelText('Sign out'));
   await waitFor(() => expect(view.getByLabelText('Retry device sign-out')).toBeEnabled());
   expect(getSessionCredential()).toBeNull();
+  expect(analyticsConsent.clear).toHaveBeenCalledTimes(1);
   expect(view.queryByLabelText('Save preferences')).toBeNull();
   await user.press(view.getByLabelText('Retry device sign-out'));
   await waitFor(() => expect(view.queryByLabelText('Retry device sign-out')).toBeNull());
   expect(auth.signOut).toHaveBeenCalledTimes(2);
+});
+
+it('does not sign out a replacement session while analytics cleanup is pending', async () => {
+  const { view, analyticsConsent, user, auth } = await setup();
+  mockDeleteSecureItem.mockClear();
+  let resolveClear!: (value: boolean) => void;
+  analyticsConsent.clear.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        resolveClear = resolve;
+      }),
+  );
+
+  await user.press(view.getByLabelText('Sign out'));
+  await waitFor(() => expect(analyticsConsent.clear).toHaveBeenCalledTimes(1));
+  setAuthSession({ credential: 'mock.replacement_account' });
+  await act(async () => resolveClear(true));
+
+  await waitFor(() =>
+    expect(view.getByTestId('account-message')).toHaveTextContent(/session changed/),
+  );
+  expect(auth.signOut).not.toHaveBeenCalled();
+  expect(mockDeleteSecureItem).not.toHaveBeenCalled();
+  expect(getSessionCredential()).toBe('mock.replacement_account');
 });
