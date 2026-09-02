@@ -175,6 +175,35 @@ For each deferral, record:
   expiry and forgery remain rejected; client completion cannot grant.
 - **Blocks:** #98/P6-T05A and all real-ad/public release activation.
 
+### P5-T05-F3 — Firebase App Check and Play Integrity
+
+- **Source:** issue #122; D-013/D-027/D-029; implementation revision to be
+  recorded after merge.
+- **Disabled/fail-closed state:** the mobile manifest, Cloud Run IaC, and Django
+  default App Check enforcement to disabled. Enabling it requires an exact Android
+  app ID;
+  production settings forbid the mock verifier. Public ingress stays disabled.
+- **Prerequisites:** follow `app-check.md`; same-project Google Play/Firebase app,
+  registered signing SHA-256 and Play Integrity provider, privately registered
+  development debug token, clean development and Play-distributed Android builds,
+  isolated staging candidate, generated accounts/content, and bounded redacted logs.
+- **Actions:** verify valid debug and Play Integrity tokens across anonymous and
+  authenticated journeys; then send missing, empty, malformed, oversized, expired,
+  wrong-project, and wrong-app tokens. Repeat with missing/invalid Firebase user
+  credentials and repeated reward/progress requests. Exercise provider outage,
+  callback exclusion, health/Admin exclusion, redaction, enforcement enablement,
+  and rollback.
+- **Expected:** valid attested app requests reach existing authorization. Every
+  invalid App Check case fails with static HTTP 401 before view work. App Check
+  alone never creates identity, grants access, or changes idempotency; the genuine
+  AdMob callback retains its own signature boundary. No credential or provider
+  payload appears in retained evidence.
+- **Evidence:** tested revision, Android build/distribution channel, OS/device
+  class, Firebase/Play project and app configuration identifiers, server mode,
+  redacted outcomes, rollback result, date, and independent reviewer.
+- **Blocks:** P5-T05/P6-T03 and production App Check enforcement. This deferral is
+  permitted only while enforcement and public production activation remain off.
+
 ## Sign-off record
 
 For each release candidate, append a dated entry with the immutable revision,

@@ -25,6 +25,8 @@ apply time) is **not** a D-020 residency/retention approval.
   container port 8080, `/health/ready` + `/health/live` probes with
   `X-Forwarded-Proto: https`, Django env + Secret Manager refs, CI-owned
   image digest.
+- Firebase App Check API plus service configuration, defaulting to disabled;
+  enforcement requires an explicit Android app ID and the P5-T05-F3 live checks.
 - Cloud Run Jobs `shortform-migrate` (`args = ["migrate"]`) and
   `shortform-smoke` (in-project identity-token HTTP checks). `max_retries = 0`.
 - GitHub OIDC workload identity pool/provider with exact repository, ref, and

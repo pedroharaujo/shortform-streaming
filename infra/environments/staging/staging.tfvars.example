@@ -25,6 +25,8 @@ cloud_run_image = "changeme-docker.pkg.dev/example-only/example-only/shortform-a
 # Probe Host is localhost. Include 127.0.0.1 and localhost so Django does not 400.
 django_allowed_hosts = "127.0.0.1,localhost,.a.run.app,example-only.example"
 firebase_project_id  = "example-only"
+firebase_app_check_mode   = "disabled"
+firebase_app_check_app_id = ""
 video_provider       = ""
 
 github_repository  = "example-org/example-repo"

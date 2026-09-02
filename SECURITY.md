@@ -33,9 +33,11 @@ exceed 4 KiB or contain non-ASCII, non-printable, or whitespace characters.
 Bodies and credentials are never reflected in errors.
 
 These controls reduce parser and verifier exposure; they are not DDoS protection
-or distributed rate limiting. Firebase App Check, edge abuse controls, Admin
-MFA/SSO exposure restrictions, and the complete staging authorization matrix are
-still required by P5-T05 before release.
+or distributed rate limiting. The Firebase App Check client and Django boundary
+are implemented but production enforcement remains disabled pending genuine
+Play Integrity/device evidence. Edge abuse controls, Admin MFA/SSO exposure
+restrictions, and the complete staging authorization matrix are still required by
+P5-T05 before release.
 
 ## Implemented Admin boundary
 

@@ -32,6 +32,7 @@ locals {
     "sts.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "serviceusage.googleapis.com",
+    "firebaseappcheck.googleapis.com",
     "billingbudgets.googleapis.com",
     "cloudbilling.googleapis.com",
   ])
@@ -154,6 +155,8 @@ module "cloud_run" {
   labels                        = local.labels
   django_allowed_hosts          = var.django_allowed_hosts
   firebase_project_id           = var.firebase_project_id
+  firebase_app_check_mode       = var.firebase_app_check_mode
+  firebase_app_check_app_id     = var.firebase_app_check_app_id
   video_provider                = var.video_provider
   secret_versions               = var.secret_versions
   bunny_stream_library_id       = var.bunny_stream_library_id

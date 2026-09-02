@@ -5,6 +5,7 @@ from typing import Any
 from drf_spectacular.generators import SchemaGenerator
 
 from config.spectacular import (
+    APP_CHECK_SCHEME,
     BEARER_SCHEME,
     SHARED_COMPONENT_SCHEMAS,
 )
@@ -56,6 +57,7 @@ def test_schema_includes_shared_conventions() -> None:
 
     assert security_schemes["FirebaseIdToken"]["type"] == BEARER_SCHEME["type"]
     assert security_schemes["FirebaseIdToken"]["scheme"] == "bearer"
+    assert security_schemes["FirebaseAppCheck"] == APP_CHECK_SCHEME
     assert schema.get("security") in (None, [])
 
 
@@ -67,7 +69,9 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     episode = paths["/v1/episodes/{public_id}"]["get"]
 
     for operation in (home, series, episode):
-        assert operation.get("security") in ([], None) or operation["security"] == []
+        assert operation.get("security") == [{"FirebaseAppCheck": []}]
+        assert "401" in operation["responses"]
+        assert _response_schema_ref(operation["responses"]["401"]).endswith("/ErrorEnvelope")
         parameter_names = {item.get("name") for item in operation.get("parameters", [])}
         assert not {"X-Territory", "X-Platform", "X-Language"} & parameter_names
 
@@ -91,7 +95,7 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
 
     me = paths["/v1/me"]["get"]
     security = me.get("security")
-    assert security == [{"FirebaseIdToken": []}]
+    assert security == [{"FirebaseAppCheck": [], "FirebaseIdToken": []}]
     assert "401" in me["responses"]
     assert _response_schema_ref(me["responses"]["401"]).endswith("/ErrorEnvelope")
     success = schema["components"]["schemas"]["CurrentUserProfile"]["properties"]
@@ -107,7 +111,10 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
 
     authorize = paths["/v1/playback/{episode_id}/authorize"]["post"]
     security = authorize.get("security")
-    assert security == [{}, {"FirebaseIdToken": []}]
+    assert security == [
+        {"FirebaseAppCheck": []},
+        {"FirebaseAppCheck": [], "FirebaseIdToken": []},
+    ]
     for status_code in ("401", "404", "503"):
         assert status_code in authorize["responses"]
         assert _response_schema_ref(authorize["responses"][status_code]).endswith("/ErrorEnvelope")
@@ -134,7 +141,10 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     progress_get = paths["/v1/progress/{episode_id}"]["get"]
     progress_put = paths["/v1/progress/{episode_id}"]["put"]
     for operation in (progress_get, progress_put):
-        assert operation.get("security") == [{}, {"FirebaseIdToken": []}]
+        assert operation.get("security") == [
+            {"FirebaseAppCheck": []},
+            {"FirebaseAppCheck": [], "FirebaseIdToken": []},
+        ]
         for status_code in ("401", "403", "404"):
             assert status_code in operation["responses"]
             assert _response_schema_ref(operation["responses"][status_code]).endswith(
@@ -152,7 +162,10 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     assert "updated_at" in progress_properties
 
     offers = paths["/v1/offers/{episode_id}"]["get"]
-    assert offers.get("security") == [{}, {"FirebaseIdToken": []}]
+    assert offers.get("security") == [
+        {"FirebaseAppCheck": []},
+        {"FirebaseAppCheck": [], "FirebaseIdToken": []},
+    ]
     for status_code in ("401", "404"):
         assert status_code in offers["responses"]
         assert _response_schema_ref(offers["responses"][status_code]).endswith("/ErrorEnvelope")
@@ -169,6 +182,9 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     assert set(method_type) == {"entitlement", "free", "rewarded_ad"}
     assert "coin" not in method_type
     assert "subscription" not in method_type
+
+    callback = paths["/v1/rewards/admob/ssv"]["get"]
+    assert callback.get("security") in (None, [])
 
 
 def _response_schema_ref(response: dict[str, Any]) -> str:

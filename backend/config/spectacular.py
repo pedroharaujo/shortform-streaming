@@ -102,6 +102,18 @@ BEARER_SCHEME: dict[str, object] = {
     ),
 }
 
+APP_CHECK_SCHEME: dict[str, object] = {
+    "type": "apiKey",
+    "in": "header",
+    "name": "X-Firebase-AppCheck",
+    "description": (
+        "Firebase App Check token for the Android app, verified by Django before protected "
+        "consumer API work. This attests the app installation and does not replace Firebase "
+        "user authentication or endpoint authorization. Enforcement remains disabled until "
+        "the recorded Play Integrity and development-client validation passes."
+    ),
+}
+
 HEALTH_PATHS = ("/health/live", "/health/ready")
 # Anonymous catalog (P2-T03). Keep these unauthenticated even if a later task
 # sets a global Firebase security requirement. Playback authorize is optional
@@ -113,6 +125,30 @@ UNAUTHENTICATED_PATH_PREFIXES = (
     "/v1/episodes/",
 )
 OPTIONAL_FIREBASE_PATH_PREFIXES = ("/v1/playback/", "/v1/progress/", "/v1/offers/")
+APP_CHECK_EXEMPT_PATHS = ("/v1/rewards/admob/ssv",)
+
+
+def _protect_operation_with_app_check(operation: dict[str, Any]) -> None:
+    security = operation.get("security")
+    requirements = security if isinstance(security, list) and security else [{}]
+    protected: list[dict[str, list[object]]] = []
+    for requirement in requirements:
+        combined: dict[str, list[object]] = {"FirebaseAppCheck": []}
+        if isinstance(requirement, dict):
+            combined.update(requirement)
+        protected.append(combined)
+    operation["security"] = protected
+    responses = operation.get("responses")
+    if isinstance(responses, dict):
+        responses.setdefault(
+            "401",
+            {
+                "description": "Missing or invalid app or user verification.",
+                "content": {
+                    "application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}
+                },
+            },
+        )
 
 
 def inject_shared_components(
@@ -129,6 +165,7 @@ def inject_shared_components(
 
     security_schemes = components.setdefault("securitySchemes", {})
     security_schemes.setdefault("FirebaseIdToken", BEARER_SCHEME)
+    security_schemes.setdefault("FirebaseAppCheck", APP_CHECK_SCHEME)
 
     paths = result.get("paths", {})
     if isinstance(paths, dict):
@@ -149,6 +186,10 @@ def inject_shared_components(
                 for operation in path_item.values():
                     if isinstance(operation, dict) and "responses" in operation:
                         operation["security"] = [{}, {"FirebaseIdToken": []}]
+            if path.startswith("/v1/") and path not in APP_CHECK_EXEMPT_PATHS:
+                for operation in path_item.values():
+                    if isinstance(operation, dict) and "responses" in operation:
+                        _protect_operation_with_app_check(operation)
     return result
 
 
@@ -158,8 +199,10 @@ SPECTACULAR_SETTINGS: dict[str, object] = {
         "HTTP API for the Shortform Streaming MVP. This document is generated from Django; "
         "do not edit docs/api/openapi.yaml by hand. Shared conventions (error envelope, "
         "cursor pagination, opaque public IDs, and Firebase ID-token bearer auth) are "
-        "documented as components. Health probes and anonymous catalog reads are "
-        "unauthenticated. POST /v1/playback/{episode_id}/authorize accepts an optional "
+        "documented as components. Protected consumer /v1/ operations also require a "
+        "Firebase App Check token when server enforcement is enabled; the authentic AdMob "
+        "callback is excluded. Health probes and anonymous catalog reads do not require user "
+        "authentication. POST /v1/playback/{episode_id}/authorize accepts an optional "
         "Firebase ID token: a missing token is anonymous, and a present invalid token "
         "is 401 ErrorEnvelope. Catalog-eligible locked episodes return HTTP 200 with "
         "decision locked and lock_reasons, never a playback URL. GET "
@@ -180,7 +223,10 @@ SPECTACULAR_SETTINGS: dict[str, object] = {
     "SCHEMA_PATH_PREFIX": "/",
     "SECURITY": [],
     "APPEND_COMPONENTS": {
-        "securitySchemes": {"FirebaseIdToken": BEARER_SCHEME},
+        "securitySchemes": {
+            "FirebaseIdToken": BEARER_SCHEME,
+            "FirebaseAppCheck": APP_CHECK_SCHEME,
+        },
         "schemas": SHARED_COMPONENT_SCHEMAS,
     },
     "POSTPROCESSING_HOOKS": [

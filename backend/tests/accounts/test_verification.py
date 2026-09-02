@@ -10,6 +10,7 @@ from apps.accounts.verification import (
     AdminFirebaseTokenVerifier,
     reset_admin_verifier,
 )
+from config.firebase import FirebaseAdminUnavailable
 
 
 def test_admin_verifier_fail_closed_without_project_id() -> None:
@@ -27,8 +28,10 @@ def test_admin_verifier_fail_closed_when_initialize_fails() -> None:
     verifier = AdminFirebaseTokenVerifier()
     with (
         override_settings(FIREBASE_PROJECT_ID="demo-shortform-local"),
-        patch("firebase_admin._apps", {}),
-        patch("firebase_admin.initialize_app", side_effect=ValueError("synthetic")),
+        patch(
+            "apps.accounts.verification.get_firebase_admin_app",
+            side_effect=FirebaseAdminUnavailable,
+        ),
     ):
         with pytest.raises(TokenVerificationError) as raised:
             verifier.verify_id_token("any.token.value")

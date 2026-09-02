@@ -38,6 +38,16 @@ resource "google_cloud_run_v2_service" "this" {
       }
 
       env {
+        name  = "FIREBASE_APP_CHECK_MODE"
+        value = var.firebase_app_check_mode
+      }
+
+      env {
+        name  = "FIREBASE_APP_CHECK_APP_ID"
+        value = var.firebase_app_check_app_id
+      }
+
+      env {
         name = "DJANGO_SECRET_KEY"
         value_source {
           secret_key_ref {

@@ -1,6 +1,7 @@
 import {
   readAdsConfiguration,
   readAnalyticsEnabled,
+  readAppCheckConfiguration,
   readApiConfiguration,
 } from './appConfiguration';
 
@@ -25,4 +26,7 @@ it('reads the fail-closed ad and analytics switches frozen into the manifest', (
   };
   expect(readAdsConfiguration(extra, 'production').mode).toBe('disabled');
   expect(readAnalyticsEnabled(extra)).toBe(false);
+  expect(readAppCheckConfiguration({ appCheck: { mode: 'disabled' } })).toEqual({
+    mode: 'disabled',
+  });
 });

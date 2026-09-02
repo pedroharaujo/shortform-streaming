@@ -89,6 +89,28 @@ variable "firebase_project_id" {
   description = "FIREBASE_PROJECT_ID plain env. Required with no default."
 }
 
+variable "firebase_app_check_mode" {
+  type        = string
+  description = "App Check enforcement switch. Keep disabled until provider/device evidence passes."
+  default     = "disabled"
+
+  validation {
+    condition     = contains(["disabled", "enforce"], var.firebase_app_check_mode)
+    error_message = "firebase_app_check_mode must be disabled or enforce."
+  }
+}
+
+variable "firebase_app_check_app_id" {
+  type        = string
+  description = "Public Firebase Android app ID. Required before App Check enforcement."
+  default     = ""
+
+  validation {
+    condition     = var.firebase_app_check_mode == "disabled" || length(trimspace(var.firebase_app_check_app_id)) > 0
+    error_message = "firebase_app_check_app_id is required when App Check enforcement is enabled."
+  }
+}
+
 variable "video_provider" {
   type        = string
   description = "Optional video provider. Empty default injects no Bunny env. Only bunny is supported."

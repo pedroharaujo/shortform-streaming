@@ -6,18 +6,21 @@ info:
   description: 'HTTP API for the Shortform Streaming MVP. This document is generated
     from Django; do not edit docs/api/openapi.yaml by hand. Shared conventions (error
     envelope, cursor pagination, opaque public IDs, and Firebase ID-token bearer auth)
-    are documented as components. Health probes and anonymous catalog reads are unauthenticated.
-    POST /v1/playback/{episode_id}/authorize accepts an optional Firebase ID token:
-    a missing token is anonymous, and a present invalid token is 401 ErrorEnvelope.
-    Catalog-eligible locked episodes return HTTP 200 with decision locked and lock_reasons,
-    never a playback URL. GET /v1/offers/{episode_id} accepts the same optional Firebase
-    ID token and ineligible ids are 404; locked catalog-eligible episodes return HTTP
-    200 with methods and never a playback URL. GET/PUT /v1/progress/{episode_id} accepts
-    the same optional Firebase ID token plus an anonymous X-Device-Id header; lock
-    is HTTP 403 and the response never includes a playback URL. The MVP catalog is
-    fixed to France, Android, and English; client-supplied market headers cannot alter
-    eligibility. GET /v1/me requires FirebaseIdToken; missing or invalid tokens return
-    401 ErrorEnvelope. firebase_uid is never returned. Django never serves video bytes.'
+    are documented as components. Protected consumer /v1/ operations also require
+    a Firebase App Check token when server enforcement is enabled; the authentic AdMob
+    callback is excluded. Health probes and anonymous catalog reads do not require
+    user authentication. POST /v1/playback/{episode_id}/authorize accepts an optional
+    Firebase ID token: a missing token is anonymous, and a present invalid token is
+    401 ErrorEnvelope. Catalog-eligible locked episodes return HTTP 200 with decision
+    locked and lock_reasons, never a playback URL. GET /v1/offers/{episode_id} accepts
+    the same optional Firebase ID token and ineligible ids are 404; locked catalog-eligible
+    episodes return HTTP 200 with methods and never a playback URL. GET/PUT /v1/progress/{episode_id}
+    accepts the same optional Firebase ID token plus an anonymous X-Device-Id header;
+    lock is HTTP 403 and the response never includes a playback URL. The MVP catalog
+    is fixed to France, Android, and English; client-supplied market headers cannot
+    alter eligibility. GET /v1/me requires FirebaseIdToken; missing or invalid tokens
+    return 401 ErrorEnvelope. firebase_uid is never returned. Django never serves
+    video bytes.'
 paths:
   /health/live:
     get:
@@ -69,7 +72,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/CatalogHome'
           description: ''
-      security: []
+        '401':
+          description: Missing or invalid app or user verification.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - FirebaseAppCheck: []
   /v1/episodes/{public_id}:
     get:
       operationId: v1_episodes_retrieve
@@ -98,7 +108,14 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Unknown or unavailable public id. Does not confirm whether
             the id exists.
-      security: []
+        '401':
+          description: Missing or invalid app or user verification.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - FirebaseAppCheck: []
   /v1/me:
     get:
       operationId: v1_me_retrieve
@@ -110,7 +127,8 @@ paths:
       tags:
       - accounts
       security:
-      - FirebaseIdToken: []
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
       responses:
         '200':
           content:
@@ -137,7 +155,8 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedAccountPreferencesRequest'
       security:
-      - FirebaseIdToken: []
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
       responses:
         '200':
           content:
@@ -175,7 +194,8 @@ paths:
               $ref: '#/components/schemas/AccountDeletionRequestRequest'
         required: true
       security:
-      - FirebaseDeletionIdToken: []
+      - FirebaseAppCheck: []
+        FirebaseDeletionIdToken: []
       responses:
         '202':
           content:
@@ -226,8 +246,9 @@ paths:
       tags:
       - offers
       security:
-      - {}
-      - FirebaseIdToken: []
+      - FirebaseAppCheck: []
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
       responses:
         '200':
           content:
@@ -273,8 +294,9 @@ paths:
       tags:
       - playback
       security:
-      - {}
-      - FirebaseIdToken: []
+      - FirebaseAppCheck: []
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
       responses:
         '200':
           content:
@@ -335,8 +357,9 @@ paths:
       tags:
       - progress
       security:
-      - {}
-      - FirebaseIdToken: []
+      - FirebaseAppCheck: []
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
       responses:
         '200':
           content:
@@ -401,8 +424,9 @@ paths:
               $ref: '#/components/schemas/WatchProgressWriteRequest'
         required: true
       security:
-      - {}
-      - FirebaseIdToken: []
+      - FirebaseAppCheck: []
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
       responses:
         '200':
           content:
@@ -448,7 +472,8 @@ paths:
       tags:
       - rewards
       security:
-      - FirebaseIdToken: []
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
       responses:
         '200':
           content:
@@ -563,7 +588,8 @@ paths:
               $ref: '#/components/schemas/RewardIntentCreateRequest'
         required: true
       security:
-      - FirebaseIdToken: []
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
       responses:
         '201':
           content:
@@ -625,7 +651,14 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Unknown or unavailable public id. Does not confirm whether
             the id exists.
-      security: []
+        '401':
+          description: Missing or invalid app or user verification.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      security:
+      - FirebaseAppCheck: []
 components:
   schemas:
     AccessMethodEnum:
@@ -1227,6 +1260,15 @@ components:
       required:
       - position_seconds
   securitySchemes:
+    FirebaseAppCheck:
+      type: apiKey
+      in: header
+      name: X-Firebase-AppCheck
+      description: Firebase App Check token for the Android app, verified by Django
+        before protected consumer API work. This attests the app installation and
+        does not replace Firebase user authentication or endpoint authorization. Enforcement
+        remains disabled until the recorded Play Integrity and development-client
+        validation passes.
     FirebaseDeletionIdToken:
       type: http
       scheme: bearer

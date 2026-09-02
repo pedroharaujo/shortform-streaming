@@ -40,6 +40,7 @@ MIDDLEWARE = [
     "config.observability.RequestCorrelationMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "config.request_boundaries.APIRequestBoundaryMiddleware",
+    "config.app_check.FirebaseAppCheckMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -159,6 +160,24 @@ LOGGING = {
 # firebase-admin and fail closed when a token cannot be verified.
 FIREBASE_AUTH_MODE = os.environ.get("FIREBASE_AUTH_MODE", "").strip().lower()
 FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "").strip()
+FIREBASE_APP_CHECK_MODE = os.environ.get("FIREBASE_APP_CHECK_MODE", "disabled").strip().lower()
+if FIREBASE_APP_CHECK_MODE not in {"disabled", "enforce"}:
+    raise ImproperlyConfigured("FIREBASE_APP_CHECK_MODE must be disabled or enforce.")
+FIREBASE_APP_CHECK_VERIFIER = os.environ.get("FIREBASE_APP_CHECK_VERIFIER", "mock").strip().lower()
+if FIREBASE_APP_CHECK_VERIFIER not in {"mock", "admin"}:
+    raise ImproperlyConfigured("FIREBASE_APP_CHECK_VERIFIER must be mock or admin.")
+FIREBASE_APP_CHECK_APP_ID = os.environ.get("FIREBASE_APP_CHECK_APP_ID", "").strip()
+if FIREBASE_APP_CHECK_APP_ID and (
+    len(FIREBASE_APP_CHECK_APP_ID) > 256
+    or not FIREBASE_APP_CHECK_APP_ID.isascii()
+    or not FIREBASE_APP_CHECK_APP_ID.isprintable()
+    or any(character.isspace() for character in FIREBASE_APP_CHECK_APP_ID)
+):
+    raise ImproperlyConfigured("FIREBASE_APP_CHECK_APP_ID must be a valid public app identifier.")
+if FIREBASE_APP_CHECK_MODE == "enforce" and not FIREBASE_APP_CHECK_APP_ID:
+    raise ImproperlyConfigured(
+        "FIREBASE_APP_CHECK_APP_ID is required when App Check enforcement is enabled."
+    )
 
 # Playback (P2-T05). Empty VIDEO_PROVIDER disables authorize (fail-closed, no URL).
 # Local settings default to "fake". Production rejects "fake".

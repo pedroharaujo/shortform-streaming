@@ -31,6 +31,9 @@ CONFIGURATION_ENVIRONMENT = (
     "FIREBASE_AUTH_MODE",
     "FIREBASE_PROJECT_ID",
     "FIREBASE_AUTH_EMULATOR_HOST",
+    "FIREBASE_APP_CHECK_MODE",
+    "FIREBASE_APP_CHECK_VERIFIER",
+    "FIREBASE_APP_CHECK_APP_ID",
     *PLAYBACK_ENVIRONMENT,
 )
 IMPORT_VALID_ENVIRONMENT = {
@@ -96,6 +99,31 @@ def test_production_settings_reject_mock_firebase_auth_mode() -> None:
     result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "FIREBASE_AUTH_MODE": "mock"})
     assert result.returncode != 0
     assert "firebase-admin" in result.stderr
+
+
+def test_production_settings_reject_mock_app_check_verifier() -> None:
+    result = run_settings_import(
+        {**IMPORT_VALID_ENVIRONMENT, "FIREBASE_APP_CHECK_VERIFIER": "mock"}
+    )
+    assert result.returncode != 0
+    assert "App Check" in result.stderr
+
+
+def test_production_app_check_enforcement_requires_exact_app_id() -> None:
+    result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "FIREBASE_APP_CHECK_MODE": "enforce"})
+    assert result.returncode != 0
+    assert "FIREBASE_APP_CHECK_APP_ID" in result.stderr
+
+
+def test_production_settings_accept_explicit_app_check_enforcement() -> None:
+    result = run_settings_import(
+        {
+            **IMPORT_VALID_ENVIRONMENT,
+            "FIREBASE_APP_CHECK_MODE": "enforce",
+            "FIREBASE_APP_CHECK_APP_ID": "1:1234567890:android:0123456789abcdef",
+        }
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_production_settings_accept_import_complete_postgresql_configuration() -> None:

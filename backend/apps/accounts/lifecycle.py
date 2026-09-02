@@ -9,6 +9,7 @@ from rest_framework.exceptions import APIException
 from apps.accounts.models import AccountDeletion, UserProfile, deletion_fingerprint
 from apps.accounts.profiles import lock_account_identity
 from apps.accounts.verification import VerifiedToken
+from config.firebase import FirebaseAdminUnavailable, get_firebase_admin_app
 
 
 class ReauthenticationRequired(APIException):
@@ -40,20 +41,14 @@ def delete_firebase_user(uid: str) -> None:
         return
     if mode != "admin":
         raise ImproperlyConfigured("Account deletion requires a supported Firebase mode.")
-    import firebase_admin
     from firebase_admin import auth
 
-    # Token verification initializes the default app for API requests. The retry
-    # command runs in a fresh process and must initialize it independently.
     try:
-        firebase_admin.get_app()
-    except ValueError:
-        project = str(settings.FIREBASE_PROJECT_ID).strip()
-        if not project:
-            raise ImproperlyConfigured("Firebase project configuration is required.") from None
-        firebase_admin.initialize_app(options={"projectId": project, "httpTimeout": 10})
+        firebase_app = get_firebase_admin_app()
+    except FirebaseAdminUnavailable:
+        raise ImproperlyConfigured("Firebase project configuration is required.") from None
     try:
-        auth.delete_user(uid)
+        auth.delete_user(uid, app=firebase_app)
     except auth.UserNotFoundError:
         pass
 

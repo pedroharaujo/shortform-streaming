@@ -132,15 +132,16 @@ def test_retry_command_fails_when_provider_cleanup_remains_pending(client: Clien
 def test_firebase_adapter_already_missing_user_is_success() -> None:
     from firebase_admin.auth import UserNotFoundError
 
+    firebase_app = object()
     with (
         override_settings(FIREBASE_AUTH_MODE="admin"),
-        patch("firebase_admin.get_app"),
+        patch("apps.accounts.lifecycle.get_firebase_admin_app", return_value=firebase_app),
         patch(
             "firebase_admin.auth.delete_user", side_effect=UserNotFoundError("synthetic")
         ) as provider,
     ):
         delete_firebase_user("synthetic-user")
-    provider.assert_called_once_with("synthetic-user")
+    provider.assert_called_once_with("synthetic-user", app=firebase_app)
 
 
 @pytest.mark.django_db(transaction=True)

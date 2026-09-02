@@ -11,6 +11,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils import timezone
 
 from apps.accounts.exceptions import TokenFailure, TokenVerificationError
+from config.firebase import FirebaseAdminUnavailable, get_firebase_admin_app
 
 MOCK_TOKEN_PREFIX = "mock."
 _UID_MAX_LENGTH = 128
@@ -116,23 +117,11 @@ class AdminFirebaseTokenVerifier:
                 return True
             if self._init_failed:
                 return False
-            project_id = str(getattr(settings, "FIREBASE_PROJECT_ID", "")).strip()
-            if not project_id:
-                self._init_failed = True
-                return False
             try:
-                import firebase_admin
-            except ImportError:
-                self._init_failed = True
-                return False
-            try:
-                if firebase_admin._apps:
-                    self._app_ready = True
-                    return True
-                firebase_admin.initialize_app(options={"projectId": project_id, "httpTimeout": 10})
+                get_firebase_admin_app()
                 self._app_ready = True
                 return True
-            except Exception:
+            except FirebaseAdminUnavailable:
                 self._init_failed = True
                 return False
 
