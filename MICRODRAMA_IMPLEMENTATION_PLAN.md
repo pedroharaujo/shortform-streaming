@@ -726,14 +726,16 @@ processor-specific deletion/retention integration is required before they ship.
 
 **Acceptance criteria:**
 
-- [ ] Admin supports ordered episodes, provenance/licensed-right visibility, draft/published/takedown states, and search/filtering.
-- [ ] Publication validation prevents missing self-owned provenance or a structurally valid licensed grant, promotional approval where applicable, English metadata, or ready media.
-- [ ] API returns only published English series with valid fixed France/Android eligibility; clients cannot supply market context.
+- [x] Admin supports ordered episodes, provenance/licensed-right visibility, draft/published/takedown states, and search/filtering.
+- [x] Publication validation prevents missing self-owned provenance or a structurally valid licensed grant, promotional approval where applicable, English metadata, or ready media.
+- [x] API returns only published English series with valid fixed France/Android eligibility; clients cannot supply market context.
 
 **Validation and integration tests:**
 
-- [ ] Model/admin tests cover self-owned and licensed publication metadata, missing/mismatched/expired/DRM-required/taken-down grants, duplicate ordering, and publish restrictions.
-- [ ] Seed synthetic self-owned content only; tests may create synthetic licensed-right metadata and must verify ineligible titles remain hidden.
+- [x] Model/admin tests cover self-owned and licensed publication metadata, missing/mismatched/expired/DRM-required/taken-down grants, duplicate ordering, and publish restrictions.
+- [x] Seed synthetic self-owned content only; tests create synthetic licensed-right metadata and verify ineligible titles remain hidden.
+
+Evidence (2026-09-02): P2-T03-F2 restored the surviving `ContentRight` model validation and Admin surfaces, fixed France/Android/English query enforcement, episode availability windows, and catalog/playback regression coverage. No real contract, rate, provider payload, personal data, or licensed media fixture is included.
 
 #### P2-T04 — Build home catalog and series-detail mobile screens
 

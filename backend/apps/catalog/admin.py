@@ -6,7 +6,7 @@ from django.contrib import admin
 from django.db.models import ForeignKey
 from django.http import HttpRequest
 
-from apps.catalog.models import Episode, Genre, Season, Series
+from apps.catalog.models import ContentRight, Episode, Genre, Season, Series
 
 
 class SeasonInline(admin.TabularInline):  # type: ignore[type-arg]
@@ -48,6 +48,26 @@ class SeasonEpisodeInline(EpisodeInline):
     )
 
 
+class ContentRightInline(admin.TabularInline):  # type: ignore[type-arg]
+    model = ContentRight
+    extra = 0
+    fields = (
+        "licensor",
+        "contract_reference",
+        "territory_allowlist",
+        "territory_denylist",
+        "platforms",
+        "languages",
+        "starts_at",
+        "ends_at",
+        "exclusive",
+        "takedown",
+        "drm_required",
+        "promotional_clip_permission",
+        "revenue_share_rule_reference",
+    )
+
+
 @admin.register(Genre)
 class GenreAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     search_fields = ("name", "slug")
@@ -60,13 +80,20 @@ class SeriesAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "public_id",
         "title",
         "publication_status",
+        "self_owned",
         "takedown",
         "free_episode_count",
         "rewarded_ads_enabled",
     )
     list_filter = ("publication_status", "takedown", "self_owned", "promotional_use_approved")
-    search_fields = ("public_id", "title", "provenance_reference")
-    inlines = (SeasonInline, EpisodeInline)
+    search_fields = (
+        "public_id",
+        "title",
+        "provenance_reference",
+        "rights__licensor",
+        "rights__contract_reference",
+    )
+    inlines = (SeasonInline, EpisodeInline, ContentRightInline)
     filter_horizontal = ("genres",)
     readonly_fields = ("public_id", "created_at", "updated_at")
     fieldsets = (
@@ -85,7 +112,7 @@ class SeriesAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             },
         ),
         (
-            "Ownership and release",
+            "Self-owned release",
             {
                 "fields": (
                     "self_owned",
@@ -115,7 +142,7 @@ class SeriesAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if self.has_change_permission(request, obj):
             return fieldsets
         # Ownership evidence is operational metadata, not editorial viewing data.
-        return tuple(fieldset for fieldset in fieldsets if fieldset[0] != "Ownership and release")
+        return tuple(fieldset for fieldset in fieldsets if fieldset[0] != "Self-owned release")
 
     def save_model(self, request: HttpRequest, obj: Series, form: Any, change: bool) -> None:
         del request, form, change
@@ -147,6 +174,28 @@ class EpisodeAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     ordering = ("series", "season__number", "order")
 
     def save_model(self, request: HttpRequest, obj: Episode, form: Any, change: bool) -> None:
+        del request, form, change
+        obj.full_clean()
+        obj.save()
+
+
+@admin.register(ContentRight)
+class ContentRightAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = (
+        "licensor",
+        "series",
+        "takedown",
+        "starts_at",
+        "ends_at",
+        "exclusive",
+        "drm_required",
+        "promotional_clip_permission",
+    )
+    list_filter = ("takedown", "exclusive", "drm_required", "promotional_clip_permission")
+    search_fields = ("licensor", "contract_reference", "series__public_id", "series__title")
+    readonly_fields = ("created_at", "updated_at")
+
+    def save_model(self, request: HttpRequest, obj: ContentRight, form: Any, change: bool) -> None:
         del request, form, change
         obj.full_clean()
         obj.save()

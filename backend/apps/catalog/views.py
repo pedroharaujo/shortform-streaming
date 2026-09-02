@@ -50,7 +50,10 @@ class CatalogHomeView(CatalogAnonymousView):
         auth=[],
         tags=["catalog"],
         summary="Home catalog",
-        description="Published self-owned English series for the France/Android MVP.",
+        description=(
+            "Published self-owned or licensed English series eligible for the fixed "
+            "France/Android MVP market."
+        ),
         responses={200: CatalogHomeSerializer},
     )
     def get(self, request: Request) -> Response:
