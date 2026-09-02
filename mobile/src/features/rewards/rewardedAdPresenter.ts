@@ -2,24 +2,28 @@ import * as Device from 'expo-device';
 import { DEMO_REWARDED_UNIT_ID } from '../../../app.config';
 import type { RewardedAdPresenter } from './types';
 
-const failure = () => new Error('Test ad unavailable.');
+const failure = () => new Error('Rewarded ad unavailable.');
 
 function loadSdk(): typeof import('react-native-google-mobile-ads') {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- load native SDK only after intentional opt-in
   return require('react-native-google-mobile-ads') as typeof import('react-native-google-mobile-ads');
 }
 
-export function createTestAdPresenter(
-  environment: string,
-  platform: string,
-  rewardedUnitId: string = DEMO_REWARDED_UNIT_ID,
-): RewardedAdPresenter {
+export function createRewardedAdPresenter(options: {
+  readonly environment: string;
+  readonly mode: 'disabled' | 'test' | 'production';
+  readonly rewardedUnitId: string;
+}): RewardedAdPresenter {
+  const { environment, mode, rewardedUnitId } = options;
   let prepared = false;
   let presenting = false;
   function check(isCurrent: () => boolean): void {
-    if (!['local', 'staging'].includes(environment) || platform !== 'android' || !isCurrent())
-      throw failure();
+    if (mode === 'disabled' || !isCurrent()) throw failure();
+    if (mode === 'test' && !['local', 'staging'].includes(environment)) throw failure();
+    if (mode === 'production' && environment !== 'production') throw failure();
+    if (mode === 'production' && rewardedUnitId === DEMO_REWARDED_UNIT_ID) throw failure();
     if (
+      mode === 'test' &&
       rewardedUnitId !== DEMO_REWARDED_UNIT_ID &&
       (!__DEV__ || environment !== 'local' || Device.isDevice !== false)
     )
@@ -35,8 +39,10 @@ export function createTestAdPresenter(
       const consent = await sdk.AdsConsent.gatherConsent();
       check(isCurrent);
       if (!consent.canRequestAds) throw failure();
-      await sdk.default().setRequestConfiguration({ testDeviceIdentifiers: ['EMULATOR'] });
-      check(isCurrent);
+      if (mode === 'test') {
+        await sdk.default().setRequestConfiguration({ testDeviceIdentifiers: ['EMULATOR'] });
+        check(isCurrent);
+      }
       await sdk.default().initialize();
       check(isCurrent);
       prepared = true;

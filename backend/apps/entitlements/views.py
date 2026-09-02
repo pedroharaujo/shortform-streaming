@@ -11,13 +11,7 @@ from apps.accounts.authentication import OptionalFirebaseIdTokenAuthentication
 from apps.accounts.models import UserProfile
 from apps.accounts.views import ERROR_401
 from apps.catalog.models import Episode
-from apps.catalog.request_context import parse_catalog_context
-from apps.catalog.views import (
-    CATALOG_CONTEXT_PARAMETERS,
-    ERROR_400,
-    ERROR_404,
-    CatalogAnonymousView,
-)
+from apps.catalog.views import ERROR_404, CatalogAnonymousView
 from apps.entitlements.policy import (
     Ineligible,
     OfferMethod,
@@ -65,7 +59,7 @@ class EpisodeOffersView(CatalogAnonymousView):
             "Return currently available access methods for a catalog-eligible episode. "
             "Optional Firebase ID token: a missing Authorization header is anonymous; "
             "a present invalid, expired, or revoked token is 401 ErrorEnvelope. "
-            "Catalog-ineligible, unpublished, takedown, wrong-territory, or unknown "
+            "Catalog-ineligible, unpublished, taken-down, or unknown "
             "ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns "
             "HTTP 200 decision=locked with lock_reasons and methods. Grant returns "
             "HTTP 200 decision=granted with methods. This response never includes a "
@@ -73,16 +67,14 @@ class EpisodeOffersView(CatalogAnonymousView):
             "entitlement, free, and rewarded_ad. Client-supplied free-window or "
             "user identifiers are ignored."
         ),
-        parameters=[EPISODE_ID_PARAMETER, *CATALOG_CONTEXT_PARAMETERS],
+        parameters=[EPISODE_ID_PARAMETER],
         responses={
             200: EPISODE_OFFERS_RESPONSE,
-            400: ERROR_400,
             401: ERROR_401,
             404: ERROR_404,
         },
     )
     def get(self, request: Request, episode_id: str) -> Response:
-        context = parse_catalog_context(request)
         episode = (
             Episode.objects.select_related("series", "season").filter(public_id=episode_id).first()
         )
@@ -90,7 +82,7 @@ class EpisodeOffersView(CatalogAnonymousView):
             raise NotFound(detail=_NOT_FOUND_MESSAGE)
 
         profile = request.user if isinstance(request.user, UserProfile) else None
-        decision = evaluate_episode_offers(episode, context, profile)
+        decision = evaluate_episode_offers(episode, profile)
         if isinstance(decision, Ineligible):
             raise NotFound(detail=_NOT_FOUND_MESSAGE)
         if isinstance(decision, OffersGranted):

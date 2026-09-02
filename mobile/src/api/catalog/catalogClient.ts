@@ -4,13 +4,12 @@
 
 import type { paths } from '@shortform/api-client';
 
-import { catalogContextHeaders, createOpenApiClient } from '../context';
+import { createOpenApiClient } from '../context';
 import { DEFAULT_TIMEOUT_MS, mapJsonDomain, mapJsonRequest } from '../http';
 import type {
   CatalogClient,
   CatalogEpisodeDetail,
   CatalogHome,
-  CatalogPlatform,
   CatalogRequestOutcome,
   CatalogSeriesDetail,
 } from './types';
@@ -19,18 +18,14 @@ const UNKNOWN_MESSAGE = 'Catalog request failed.';
 
 export interface CatalogClientOptions {
   readonly baseUrl: string;
-  readonly territory: string;
-  readonly platform: CatalogPlatform;
   readonly timeoutMs?: number;
   readonly fetchImplementation?: typeof fetch;
 }
 
 export function createCatalogClient(options: CatalogClientOptions): CatalogClient {
-  const { baseUrl, territory, platform, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  const contextHeaders = catalogContextHeaders(territory, platform);
+  const { baseUrl, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   const api = createOpenApiClient({
     baseUrl,
-    headers: { ...contextHeaders },
     fetchImplementation: options.fetchImplementation,
   });
 
@@ -50,7 +45,6 @@ export function createCatalogClient(options: CatalogClientOptions): CatalogClien
     getHome() {
       return request<CatalogHome>((signal) =>
         api.GET('/v1/catalog/home' satisfies keyof paths, {
-          params: { header: contextHeaders },
           signal,
         }),
       );
@@ -58,7 +52,7 @@ export function createCatalogClient(options: CatalogClientOptions): CatalogClien
     getSeries(publicId: string) {
       return request<CatalogSeriesDetail>((signal) =>
         api.GET('/v1/series/{public_id}' satisfies keyof paths, {
-          params: { path: { public_id: publicId }, header: contextHeaders },
+          params: { path: { public_id: publicId } },
           signal,
         }),
       );
@@ -66,7 +60,7 @@ export function createCatalogClient(options: CatalogClientOptions): CatalogClien
     getEpisode(publicId: string) {
       return request<CatalogEpisodeDetail>((signal) =>
         api.GET('/v1/episodes/{public_id}' satisfies keyof paths, {
-          params: { path: { public_id: publicId }, header: contextHeaders },
+          params: { path: { public_id: publicId } },
           signal,
         }),
       );

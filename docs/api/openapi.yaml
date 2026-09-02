@@ -11,14 +11,13 @@ info:
     a missing token is anonymous, and a present invalid token is 401 ErrorEnvelope.
     Catalog-eligible locked episodes return HTTP 200 with decision locked and lock_reasons,
     never a playback URL. GET /v1/offers/{episode_id} accepts the same optional Firebase
-    ID token and catalog headers; ineligible ids are 404; locked catalog-eligible
-    episodes return HTTP 200 with methods and never a playback URL. GET/PUT /v1/progress/{episode_id}
-    accepts the same optional Firebase ID token plus an anonymous X-Device-Id header;
-    lock is HTTP 403 and the response never includes a playback URL. Catalog, playback,
-    offers, and progress operations require explicit X-Territory, X-Platform, and
-    X-Language headers; those values are never inferred from Accept-Language. GET
-    /v1/me requires FirebaseIdToken; missing or invalid tokens return 401 ErrorEnvelope.
-    firebase_uid is never returned. Django never serves video bytes.'
+    ID token and ineligible ids are 404; locked catalog-eligible episodes return HTTP
+    200 with methods and never a playback URL. GET/PUT /v1/progress/{episode_id} accepts
+    the same optional Firebase ID token plus an anonymous X-Device-Id header; lock
+    is HTTP 403 and the response never includes a playback URL. The MVP catalog is
+    fixed to France, Android, and English; client-supplied market headers cannot alter
+    eligibility. GET /v1/me requires FirebaseIdToken; missing or invalid tokens return
+    401 ErrorEnvelope. firebase_uid is never returned. Django never serves video bytes.'
 paths:
   /health/live:
     get:
@@ -59,36 +58,8 @@ paths:
   /v1/catalog/home:
     get:
       operationId: v1_catalog_home_retrieve
-      description: Small rails document of series eligible for the explicit request
-        territory, platform, language, and current time. Not a CursorPage. Catalog
-        is tiny; home is not paginated in P2-T03. Missing or malformed context headers
-        are 400. A well-formed context with no eligible titles is 200 with an empty
-        featured rail.
-      summary: Home catalog rails
-      parameters:
-      - in: header
-        name: X-Language
-        schema:
-          type: string
-        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
-          from Accept-Language.'
-        required: true
-      - in: header
-        name: X-Platform
-        schema:
-          type: string
-          enum:
-          - android
-          - ios
-        description: 'Client platform. Required. Values: ios, android.'
-        required: true
-      - in: header
-        name: X-Territory
-        schema:
-          type: string
-        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
-          inferred from Accept-Language or UI language.
-        required: true
+      description: Published self-owned English series for the France/Android MVP.
+      summary: Home catalog
       tags:
       - catalog
       responses:
@@ -98,51 +69,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/CatalogHome'
           description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-          description: Missing or malformed catalog context headers.
       security: []
   /v1/episodes/{public_id}:
     get:
       operationId: v1_episodes_retrieve
-      description: Localized episode detail. The episode is eligible only when its
-        series is eligible, the episode is published within its optional window, and
-        a ready MediaAsset exists. Ineligible ids return 404, never 403. Monetization
-        lock state is omitted.
       summary: Episode detail
       parameters:
-      - in: header
-        name: X-Language
-        schema:
-          type: string
-        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
-          from Accept-Language.'
-        required: true
-      - in: header
-        name: X-Platform
-        schema:
-          type: string
-          enum:
-          - android
-          - ios
-        description: 'Client platform. Required. Values: ios, android.'
-        required: true
-      - in: header
-        name: X-Territory
-        schema:
-          type: string
-        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
-          inferred from Accept-Language or UI language.
-        required: true
       - in: path
         name: public_id
         schema:
           $ref: '#/components/schemas/PublicId'
         description: Opaque public identifier. Sequential database integers are never
-          used as public IDs.
+          exposed.
         required: true
       tags:
       - catalog
@@ -153,19 +91,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/CatalogEpisodeDetail'
           description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-          description: Missing or malformed catalog context headers.
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-          description: Unknown or ineligible public id. Does not confirm whether the
-            id exists.
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
       security: []
   /v1/me:
     get:
@@ -270,67 +202,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: ''
-  /v1/me/export:
-    post:
-      operationId: v1_me_export_create
-      description: Explicitly unavailable; does not enqueue or claim to fulfill an
-        export.
-      summary: Account export placeholder
-      tags:
-      - accounts
-      security:
-      - FirebaseIdToken: []
-      responses:
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-          description: Missing, malformed, expired, revoked, or otherwise unverifiable
-            Firebase ID token. The response never includes the token or firebase_uid.
-        '501':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-          description: ''
   /v1/offers/{episode_id}:
     get:
       operationId: v1_offers_retrieve
       description: 'Return currently available access methods for a catalog-eligible
         episode. Optional Firebase ID token: a missing Authorization header is anonymous;
         a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible,
-        unpublished, takedown, wrong-territory, or unknown ids return 404 ErrorEnvelope,
-        never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons
-        and methods. Grant returns HTTP 200 decision=granted with methods. This response
+        unpublished, taken-down, or unknown ids return 404 ErrorEnvelope, never 403.
+        Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and
+        methods. Grant returns HTTP 200 decision=granted with methods. This response
         never includes a playback URL and never calls the video provider. MVP method
         types are entitlement, free, and rewarded_ad. Client-supplied free-window
         or user identifiers are ignored.'
       summary: List episode access offers
       parameters:
-      - in: header
-        name: X-Language
-        schema:
-          type: string
-        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
-          from Accept-Language.'
-        required: true
-      - in: header
-        name: X-Platform
-        schema:
-          type: string
-          enum:
-          - android
-          - ios
-        description: 'Client platform. Required. Values: ios, android.'
-        required: true
-      - in: header
-        name: X-Territory
-        schema:
-          type: string
-        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
-          inferred from Accept-Language or UI language.
-        required: true
       - in: path
         name: episode_id
         schema:
@@ -350,12 +235,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/EpisodeOffersResponse'
           description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-          description: Missing or malformed catalog context headers.
         '401':
           content:
             application/json:
@@ -368,45 +247,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-          description: Unknown or ineligible public id. Does not confirm whether the
-            id exists.
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
   /v1/playback/{episode_id}/authorize:
     post:
       operationId: v1_playback_authorize_create
       description: 'Authorize playback for a catalog-eligible episode. Optional Firebase
         ID token: a missing Authorization header is anonymous; a present invalid,
         expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished,
-        takedown, wrong-territory, or missing-ready-asset ids return 404 ErrorEnvelope,
-        never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons
-        and no playback_url. Grant looks up the episode''s ready MediaAsset and returns
+        taken-down, or missing-ready-asset ids return 404 ErrorEnvelope, never 403.
+        Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and
+        no playback_url. Grant looks up the episode''s ready MediaAsset and returns
         an opaque HTTPS HLS URL that is not served by Django. An unset or disabled
         VideoProvider returns 503 ErrorEnvelope on the grant path only and never mints
         unsigned access. Client-supplied user identifiers are ignored.'
       summary: Authorize episode playback
       parameters:
-      - in: header
-        name: X-Language
-        schema:
-          type: string
-        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
-          from Accept-Language.'
-        required: true
-      - in: header
-        name: X-Platform
-        schema:
-          type: string
-          enum:
-          - android
-          - ios
-        description: 'Client platform. Required. Values: ios, android.'
-        required: true
-      - in: header
-        name: X-Territory
-        schema:
-          type: string
-        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
-          inferred from Accept-Language or UI language.
-        required: true
       - in: path
         name: episode_id
         schema:
@@ -426,12 +282,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlaybackAuthorizeResponse'
           description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-          description: Missing or malformed catalog context headers.
         '401':
           content:
             application/json:
@@ -444,8 +294,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-          description: Unknown or ineligible public id. Does not confirm whether the
-            id exists.
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
         '503':
           content:
             application/json:
@@ -475,29 +325,6 @@ paths:
         description: Anonymous device UUID (36-character hyphenated form). Required
           when no Authorization header is present. Ignored when a verified profile
           is present. Never a user id, profile public id, or Firebase UID.
-      - in: header
-        name: X-Language
-        schema:
-          type: string
-        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
-          from Accept-Language.'
-        required: true
-      - in: header
-        name: X-Platform
-        schema:
-          type: string
-          enum:
-          - android
-          - ios
-        description: 'Client platform. Required. Values: ios, android.'
-        required: true
-      - in: header
-        name: X-Territory
-        schema:
-          type: string
-        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
-          inferred from Accept-Language or UI language.
-        required: true
       - in: path
         name: episode_id
         schema:
@@ -517,12 +344,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/WatchProgress'
           description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-          description: Missing or malformed catalog context headers.
         '401':
           content:
             application/json:
@@ -542,8 +363,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-          description: Unknown or ineligible public id. Does not confirm whether the
-            id exists.
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
     put:
       operationId: v1_progress_update
       description: 'Read or upsert watch progress for a catalog-eligible granted episode.
@@ -564,29 +385,6 @@ paths:
         description: Anonymous device UUID (36-character hyphenated form). Required
           when no Authorization header is present. Ignored when a verified profile
           is present. Never a user id, profile public id, or Firebase UID.
-      - in: header
-        name: X-Language
-        schema:
-          type: string
-        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
-          from Accept-Language.'
-        required: true
-      - in: header
-        name: X-Platform
-        schema:
-          type: string
-          enum:
-          - android
-          - ios
-        description: 'Client platform. Required. Values: ios, android.'
-        required: true
-      - in: header
-        name: X-Territory
-        schema:
-          type: string
-        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
-          inferred from Accept-Language or UI language.
-        required: true
       - in: path
         name: episode_id
         schema:
@@ -612,12 +410,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/WatchProgress'
           description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-          description: Missing or malformed catalog context headers.
         '401':
           content:
             application/json:
@@ -637,8 +429,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-          description: Unknown or ineligible public id. Does not confirm whether the
-            id exists.
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
   /v1/rewards/{reward_id}:
     get:
       operationId: v1_rewards_retrieve
@@ -676,16 +468,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-          description: Unknown or ineligible public id. Does not confirm whether the
-            id exists.
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
   /v1/rewards/admob/ssv:
     get:
       operationId: v1_rewards_admob_ssv_retrieve
       description: Provider-only AdMob ECDSA verification. Original URL query required;
-        never a client grant. Test mode only. The verifier percent-decodes the prefix
-        once to UTF-8, preserving order and literal plus signs, before signature and
-        key_id (last, in that order). Duplicate verified delivery is acknowledged
-        without granting again. Invalid/mismatched/expired callbacks return 400.
+        never a client grant. The verifier percent-decodes the prefix once to UTF-8,
+        preserving order and literal plus signs, before signature and key_id (last,
+        in that order). Duplicate verified delivery is acknowledged without granting
+        again. Invalid/mismatched/expired callbacks return 400.
       parameters:
       - in: query
         name: ad_network
@@ -757,35 +549,11 @@ paths:
   /v1/rewards/intents:
     post:
       operationId: v1_rewards_intents_create
-      description: Authenticated Android test-only intent. Requires ads preference
-        and current catalog eligibility. The request_id is an account-scoped idempotency
-        UUID. Reuse it after a lost response; changing the episode or context returns
-        409. No client field can grant access. expires_at is 15 minutes after creation.
+      description: Authenticated Android intent. Requires ads preference and current
+        catalog eligibility. The request_id is an account-scoped idempotency UUID.
+        Reuse it after a lost response; changing the episode returns 409. No client
+        field can grant access. expires_at is 15 minutes after creation.
       summary: Accept an episode reward offer
-      parameters:
-      - in: header
-        name: X-Language
-        schema:
-          type: string
-        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
-          from Accept-Language.'
-        required: true
-      - in: header
-        name: X-Platform
-        schema:
-          type: string
-          enum:
-          - android
-          - ios
-        description: 'Client platform. Required. Values: ios, android.'
-        required: true
-      - in: header
-        name: X-Territory
-        schema:
-          type: string
-        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
-          inferred from Accept-Language or UI language.
-        required: true
       tags:
       - rewards
       requestBody:
@@ -809,12 +577,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RewardIntent'
           description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-          description: Missing or malformed catalog context headers.
         '401':
           content:
             application/json:
@@ -827,8 +589,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-          description: Unknown or ineligible public id. Does not confirm whether the
-            id exists.
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
         '409':
           content:
             application/json:
@@ -838,39 +600,14 @@ paths:
   /v1/series/{public_id}:
     get:
       operationId: v1_series_retrieve
-      description: Localized series detail with ordered published episodes. Ineligible
-        or unpublished public ids return 404 ErrorEnvelope, never 403.
       summary: Series detail
       parameters:
-      - in: header
-        name: X-Language
-        schema:
-          type: string
-        description: 'ISO 639-1 catalog language (MVP: en). Required and never inferred
-          from Accept-Language.'
-        required: true
-      - in: header
-        name: X-Platform
-        schema:
-          type: string
-          enum:
-          - android
-          - ios
-        description: 'Client platform. Required. Values: ios, android.'
-        required: true
-      - in: header
-        name: X-Territory
-        schema:
-          type: string
-        description: ISO 3166-1 alpha-2 territory (for example FR). Required and never
-          inferred from Accept-Language or UI language.
-        required: true
       - in: path
         name: public_id
         schema:
           $ref: '#/components/schemas/PublicId'
         description: Opaque public identifier. Sequential database integers are never
-          used as public IDs.
+          exposed.
         required: true
       tags:
       - catalog
@@ -881,19 +618,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/CatalogSeriesDetail'
           description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-          description: Missing or malformed catalog context headers.
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-          description: Unknown or ineligible public id. Does not confirm whether the
-            id exists.
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
       security: []
 components:
   schemas:
@@ -1026,12 +757,9 @@ components:
         artwork_url:
           type: string
           nullable: true
-        original_language:
-          type: string
       required:
       - artwork_url
       - id
-      - original_language
       - synopsis
       - title
     CatalogSeriesDetail:
@@ -1046,8 +774,6 @@ components:
         artwork_url:
           type: string
           nullable: true
-        original_language:
-          type: string
         genres:
           type: array
           items:
@@ -1060,7 +786,6 @@ components:
       - artwork_url
       - genres
       - id
-      - original_language
       - seasons
       - synopsis
       - title

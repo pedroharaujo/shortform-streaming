@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
-
 from django.conf import settings
-from django.core.exceptions import ValidationError
-from django.db import models, transaction
+from django.db import models
 from django.db.models import Q
 
 
@@ -14,11 +11,7 @@ class EntitlementSource(models.TextChoices):
 
 
 class EpisodeEntitlement(models.Model):
-    """One entitlement row per (user profile, episode). No playback URL, no expiry.
-
-    Staff and tests grant with source=staff. The P3-T07 verified provider callback
-    grants rewarded_ad. A client completion callback never writes this model.
-    """
+    """Permanent, server-authoritative account unlock for one episode."""
 
     user_profile = models.ForeignKey(
         "accounts.UserProfile",
@@ -50,17 +43,11 @@ class EpisodeEntitlement(models.Model):
         return f"{self.user_profile_id} · {self.episode_id} · {self.source}"
 
 
-class AccessPolicy(models.Model):
-    """Series-level free/ad config with optional episode override.
-
-    No row → D-006 defaults in policy.resolve_access_policy (order 1–5 free,
-    rewarded ads on). Coin/subscription columns exist for P7 and must stay False.
-    """
+class AccessPolicy(models.Model):  # noqa: DJ008
+    """Dormant legacy rows retained only for safe cascaded deletion."""
 
     series = models.ForeignKey(
-        "catalog.Series",
-        on_delete=models.CASCADE,
-        related_name="access_policies",
+        "catalog.Series", on_delete=models.CASCADE, related_name="access_policies"
     )
     episode = models.ForeignKey(
         "catalog.Episode",
@@ -96,7 +83,6 @@ class AccessPolicy(models.Model):
     subscription_unlock_enabled = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    _revision_actor: Any = None
 
     class Meta:
         constraints = [
@@ -129,68 +115,13 @@ class AccessPolicy(models.Model):
         ]
         ordering = ("series_id", "episode_id", "id")
 
-    def __str__(self) -> str:
-        if self.episode_id:
-            return f"{self.series_id} · episode {self.episode_id}"
-        return f"{self.series_id} · series"
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        episode = self.episode
-        if episode is not None and not self.series_id:
-            self.series_id = episode.series_id
-        actor = getattr(self, "_revision_actor", None)
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-            AccessPolicyRevision.objects.create(
-                policy=self,
-                series=self.series,
-                episode=self.episode,
-                free_episode_order_max=self.free_episode_order_max,
-                rewarded_ad_enabled=self.rewarded_ad_enabled,
-                force_free=self.force_free,
-                force_lock=self.force_lock,
-                coin_unlock_enabled=self.coin_unlock_enabled,
-                subscription_unlock_enabled=self.subscription_unlock_enabled,
-                changed_by=actor if getattr(actor, "pk", None) else None,
-            )
+class AccessPolicyRevision(models.Model):  # noqa: DJ008
+    """Dormant legacy audit rows retained only for safe cascaded deletion."""
 
-    def clean(self) -> None:
-        super().clean()
-        errors: dict[str, str] = {}
-        if self.episode_id:
-            episode = self.episode
-            if episode is not None and episode.series_id != self.series_id:
-                errors["episode"] = "Episode override must belong to the same series."
-        else:
-            if self.force_free or self.force_lock:
-                errors["force_free"] = "force_free and force_lock are episode overrides only."
-        if self.coin_unlock_enabled:
-            errors["coin_unlock_enabled"] = "Coin unlock is not an MVP offer type (D-008 / P7)."
-        if self.subscription_unlock_enabled:
-            errors["subscription_unlock_enabled"] = (
-                "Subscription unlock is not an MVP offer type (D-009 / P7)."
-            )
-        if self.force_free and self.force_lock:
-            errors["force_lock"] = "Cannot set force_free and force_lock together."
-        if errors:
-            raise ValidationError(errors)
-
-
-class AccessPolicyRevision(models.Model):
-    """Append-only snapshot of a published (live) AccessPolicy save. No secrets."""
-
-    policy = models.ForeignKey(
-        AccessPolicy,
-        on_delete=models.CASCADE,
-        related_name="revisions",
-    )
+    policy = models.ForeignKey(AccessPolicy, on_delete=models.CASCADE, related_name="revisions")
     series = models.ForeignKey("catalog.Series", on_delete=models.CASCADE)
-    episode = models.ForeignKey(
-        "catalog.Episode",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-    )
+    episode = models.ForeignKey("catalog.Episode", on_delete=models.CASCADE, null=True, blank=True)
     free_episode_order_max = models.PositiveIntegerField()
     rewarded_ad_enabled = models.BooleanField()
     force_free = models.BooleanField()
@@ -208,6 +139,3 @@ class AccessPolicyRevision(models.Model):
 
     class Meta:
         ordering = ("-changed_at", "-id")
-
-    def __str__(self) -> str:
-        return f"policy {self.policy_id} @ {self.changed_at}"

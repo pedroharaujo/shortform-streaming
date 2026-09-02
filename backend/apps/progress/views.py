@@ -13,13 +13,7 @@ from apps.accounts.authentication import OptionalFirebaseIdTokenAuthentication
 from apps.accounts.models import UserProfile
 from apps.accounts.views import ERROR_401
 from apps.catalog.models import Episode
-from apps.catalog.request_context import parse_catalog_context
-from apps.catalog.views import (
-    CATALOG_CONTEXT_PARAMETERS,
-    ERROR_400,
-    ERROR_404,
-    CatalogAnonymousView,
-)
+from apps.catalog.views import ERROR_404, CatalogAnonymousView
 from apps.entitlements.policy import Grant, Ineligible, Lock, evaluate_authorize_access
 from apps.playback.views import EPISODE_ID_PARAMETER
 from apps.progress.exceptions import PlaybackLocked, ProgressDeviceIdError
@@ -71,10 +65,9 @@ class WatchProgressView(CatalogAnonymousView):
         tags=["progress"],
         summary="Get watch progress",
         description=_SCHEMA_DESCRIPTION,
-        parameters=[EPISODE_ID_PARAMETER, DEVICE_ID_PARAMETER, *CATALOG_CONTEXT_PARAMETERS],
+        parameters=[EPISODE_ID_PARAMETER, DEVICE_ID_PARAMETER],
         responses={
             200: WatchProgressSerializer,
-            400: ERROR_400,
             401: ERROR_401,
             403: ERROR_403,
             404: ERROR_404,
@@ -92,11 +85,10 @@ class WatchProgressView(CatalogAnonymousView):
         tags=["progress"],
         summary="Upsert watch progress",
         description=_SCHEMA_DESCRIPTION,
-        parameters=[EPISODE_ID_PARAMETER, DEVICE_ID_PARAMETER, *CATALOG_CONTEXT_PARAMETERS],
+        parameters=[EPISODE_ID_PARAMETER, DEVICE_ID_PARAMETER],
         request=WatchProgressWriteSerializer,
         responses={
             200: WatchProgressSerializer,
-            400: ERROR_400,
             401: ERROR_401,
             403: ERROR_403,
             404: ERROR_404,
@@ -120,7 +112,6 @@ class WatchProgressView(CatalogAnonymousView):
 def _authorized_subject(
     request: Request, episode_id: str
 ) -> tuple[Episode, UserProfile | None, str | None]:
-    context = parse_catalog_context(request)
     episode = (
         Episode.objects.select_related("series", "season").filter(public_id=episode_id).first()
     )
@@ -128,7 +119,7 @@ def _authorized_subject(
         raise NotFound(detail=_NOT_FOUND_MESSAGE)
 
     profile = request.user if isinstance(request.user, UserProfile) else None
-    decision = evaluate_authorize_access(episode, context, profile)
+    decision = evaluate_authorize_access(episode, profile)
     if isinstance(decision, Ineligible):
         raise NotFound(detail=_NOT_FOUND_MESSAGE)
     if isinstance(decision, Lock):

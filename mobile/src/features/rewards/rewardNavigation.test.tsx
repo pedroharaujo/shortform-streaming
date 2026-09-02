@@ -21,9 +21,12 @@ jest.mock('../../api/createAppClients', () => ({
 jest.mock('../../auth/createEmailPasswordAuth', () => ({ createEmailPasswordAuth: jest.fn() }));
 jest.mock('../../config/appConfiguration', () => ({
   getApiConfiguration: () => ({ environment: 'local' }),
-  getRewardedAdUnitId: jest.fn(),
+  getAdsConfiguration: () => ({
+    mode: 'test',
+    rewardedUnitId: 'ca-app-pub-3940256099942544/5224354917',
+  }),
 }));
-jest.mock('./testAdPresenter', () => ({ createTestAdPresenter: jest.fn() }));
+jest.mock('./rewardedAdPresenter', () => ({ createRewardedAdPresenter: jest.fn() }));
 jest.mock('../../analytics/appAnalytics', () => ({
   getAppAccountAnalytics: jest.fn(() => ({})),
   getAppAnalyticsRuntime: jest.fn(() => ({})),

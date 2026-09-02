@@ -52,7 +52,7 @@ Ads-only MVP ships Android / Google Play only (D-027). iOS AdMob remains relevan
 
 ## Authentication and account rules
 
-- Ads-only MVP (D-027): offer email/password and Google Sign-In on Android. Do not ship Sign in with Apple in this client.
+- Ads-only MVP (D-027): offer Google Sign-In only on Android.
 - If a third-party/social login is offered on a later iOS storefront, include Sign in with Apple where required by current Apple rules.
 - Never use phone/SMS auth in MVP without a cost, abuse, and privacy decision.
 - Allow anonymous browsing/free playback, but require authentication before permanent entitlements (rewarded-ad unlock in MVP; purchases in P7).
@@ -61,7 +61,7 @@ Ads-only MVP ships Android / Google Play only (D-027). iOS AdMob remains relevan
 
 ## Privacy and data protection baseline
 
-The MVP app interface and initial microdrama catalog are in English. The intended legal-entity country is France, and decision D-001 defines the founder-approved scope of 21 EU countries using EUR. Language and common currency do not remove national consumer, tax, age-rating, accessibility, or language obligations. The final law set follows the incorporated legal entity, enabled distribution countries, users, data flows, and providers. Implement a GDPR-ready baseline now, then add and approve each storefront's jurisdiction-specific requirements before enabling distribution there.
+The MVP app interface and self-owned microdrama catalog are in English. Decision D-001 limits the ads-only MVP to France through Google Play. Complete the France-specific consumer, tax, age-rating, accessibility, privacy, advertising, and language review for the exact binary and catalog. Additional countries are post-MVP and require a new explicit decision plus their own review before distribution is enabled.
 
 - Maintain a data inventory: field/event, purpose, lawful basis/consent, processor, region, retention, access roles, deletion behavior. Engineering inventory: [`SDK_DATA_INVENTORY.md`](SDK_DATA_INVENTORY.md) (P0-T03 remaining engineering slice; not a P0-T03 completion record).
 - Minimize identifiers and avoid email, tokens, receipts, signed media URLs, exact IP, or contract references in analytics.
@@ -82,17 +82,17 @@ The MVP app interface and initial microdrama catalog are in English. The intende
 - [ ] Actual public operator identity and monitored privacy-contact email are established, with completed notice/UMP setup and genuine rewarded-ad release evidence in #98. D-028 defers these from P3-T07/PR #97 to release readiness; required setup still precedes publisher-owned ad testing.
 - [ ] Reviewer receives a test account and deterministic instructions for free, locked, rewarded-ad, and deletion flows. Coin, subscription, and restore instructions wait for P7.
 - [ ] Review notes explain why rewarded ads are optional and how rewards are verified.
-- [ ] No licensed production content is used in screenshots or review media without promotional rights.
+- [ ] Screenshots and review media use only the approved self-owned series and assets covered by its private provenance record.
 
 ## Required approvals before P0-T03 completion (ads-only MVP)
 
 Store IAP EUR settlement, IAP merchant, and store-billing refund treatment are **not** P0-T03 closers. They are required before P7 IAP, not before ads-only launch.
 
-- [x] Distribution countries/storefront scope is founder-approved; per-market rights and legal/language launch gates remain open.
-- [ ] Legal/privacy owner reviews the relevant jurisdiction row set.
+- [x] France-only Google Play distribution is founder-approved (D-001, narrowed 2026-09-01).
+- [ ] Legal/privacy owner reviews the France/Google Play jurisdiction requirements for the exact binary and data flows.
 - [ ] Content rating owner approves provisional rating method.
 - [ ] Finance/tax owner approves **AdMob/ads-only** merchant, tax, and revenue-recognition treatment. Store IAP/refund/EUR-settlement treatment waits for P7.
-- [x] Engineering published [`SDK_DATA_INVENTORY.md`](SDK_DATA_INVENTORY.md) (2026-08-25; timing labels updated 2026-08-27). This checks the engineering inventory box only: the inventory exists and is labeled current-on-main / in-flight snapshot / planned MVP / planned P7. **P0-T03 is still incomplete** — legal/privacy jurisdiction review, content rating, and ads-only finance/tax treatment remain open. Store IAP EUR settlement is required before P7 IAP, not before this ads-only slice. Apple privacy labels and Google Data safety declarations are not confirmed until those reviews and a matching binary exist.
+- [x] Engineering published [`SDK_DATA_INVENTORY.md`](SDK_DATA_INVENTORY.md) (2026-08-25; scope labels updated 2026-09-01). This checks the engineering inventory box only: the inventory exists and is labeled current-on-main / in-flight snapshot / planned MVP / planned P7. **P0-T03 is still incomplete** — France legal/privacy review, content rating, and ads-only finance/tax treatment remain open. Store IAP EUR settlement is required before P7 IAP, not before this ads-only slice. Google Data safety declarations are not confirmed until those reviews and a matching Android binary exist; Apple privacy labels are post-MVP with iOS.
 
 ## Required before P7 IAP (not ads-only launch)
 

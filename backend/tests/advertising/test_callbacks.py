@@ -17,8 +17,8 @@ from apps.accounts.lifecycle import request_account_deletion
 from apps.accounts.models import UserProfile
 from apps.accounts.verification import VerifiedToken
 from apps.advertising.models import RewardIntent
-from apps.catalog.models import ContentRight, PublicationStatus
-from apps.entitlements.models import AccessPolicy, EpisodeEntitlement
+from apps.catalog.models import PublicationStatus
+from apps.entitlements.models import EpisodeEntitlement
 from tests.advertising.test_rewards_api import create_intent, headers
 from tests.catalog.builders import make_episode
 
@@ -68,11 +68,11 @@ def signed_query(key: ec.EllipticCurvePrivateKey, intent: dict[str, Any], **chan
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "unit_id,reward_item",
+    "mode,debug,unit_id,reward_item",
     [
-        ("ca-app-pub-3940256099942544/5224354917", "test reward"),
-        ("ca-app-pub-1111111111111111/2222222222", "test reward"),
-        ("ca-app-pub-1111111111111111/2222222222", "bonus+\u00e9%20"),
+        ("test", True, "ca-app-pub-3940256099942544/5224354917", "test reward"),
+        ("test", True, "ca-app-pub-1111111111111111/2222222222", "bonus+\u00e9%20"),
+        ("production", False, "ca-app-pub-1111111111111111/2222222222", "test reward"),
     ],
 )
 def test_verified_callback_unlocks_once_and_playback_still_checks_rights(
@@ -81,13 +81,17 @@ def test_verified_callback_unlocks_once_and_playback_still_checks_rights(
     ephemeral_signer: ec.EllipticCurvePrivateKey,
     monkeypatch: pytest.MonkeyPatch,
     settings: Any,
+    mode: str,
+    debug: bool,
     unit_id: str,
     reward_item: str,
 ) -> None:
     from apps.playback.providers.fake import FakeVideoProvider
 
     profile, episode = reward_setup
-    settings.REWARDED_ADS_TEST_UNIT_ID = unit_id
+    settings.REWARDED_ADS_MODE = mode
+    settings.DEBUG = debug
+    settings.REWARDED_ADS_UNIT_ID = unit_id
     provider = FakeVideoProvider(hmac_key="synthetic-rewards", ttl_seconds=600)
     provider.seed_ready_asset(episode.media_assets.get().provider_asset_id)
     monkeypatch.setattr("apps.playback.views.get_video_provider", lambda: provider)
@@ -108,7 +112,8 @@ def test_verified_callback_unlocks_once_and_playback_still_checks_rights(
         client.post(f"/v1/playback/{episode.public_id}/authorize", **headers()).json()["decision"]
         == "granted"
     )
-    ContentRight.objects.update(takedown=True)
+    episode.series.takedown = True
+    episode.series.save(update_fields=["takedown"])
     assert (
         client.post(f"/v1/playback/{episode.public_id}/authorize", **headers()).status_code == 404
     )
@@ -145,7 +150,7 @@ def test_signed_mismatch_never_grants(
     unit_id: str,
 ) -> None:
     _, episode = reward_setup
-    settings.REWARDED_ADS_TEST_UNIT_ID = unit_id
+    settings.REWARDED_ADS_UNIT_ID = unit_id
     data = create_intent(client, episode).json()
     query = signed_query(ephemeral_signer, data, **{field: value})
     assert client.get(f"{CALLBACK}?{query}").status_code == 400
@@ -187,10 +192,6 @@ def test_forgery_and_ambiguous_query_fail_closed(
         "expiry",
         "consent",
         "takedown",
-        "territory",
-        "platform",
-        "language",
-        "window",
         "unpublish",
         "media",
         "policy",
@@ -198,7 +199,6 @@ def test_forgery_and_ambiguous_query_fail_closed(
         "free",
         "unit-config",
         "disabled",
-        "production",
     ],
 )
 def test_rechecks_eligibility_and_deletion_at_grant(
@@ -215,33 +215,25 @@ def test_rechecks_eligibility_and_deletion_at_grant(
         RewardIntent.objects.update(expires_at=timezone.now() - timedelta(seconds=1))
     elif change == "consent":
         UserProfile.objects.filter(pk=profile.pk).update(ads_consent=False)
-    elif change in {"takedown", "territory", "platform", "language"}:
-        edits: dict[str, dict[str, Any]] = {
-            "takedown": {"takedown": True},
-            "territory": {"territory_allowlist": ["DE"]},
-            "platform": {"platforms": ["ios"]},
-            "language": {"languages": ["fr"]},
-        }
-        ContentRight.objects.update(**edits[change])
-    elif change == "window":
-        episode.window_ends_at = timezone.now()
-        episode.save(update_fields=["window_ends_at"])
+    elif change == "takedown":
+        episode.series.takedown = True
+        episode.series.save(update_fields=["takedown"])
     elif change == "unpublish":
         episode.publication_status = PublicationStatus.DRAFT
         episode.save(update_fields=["publication_status"])
     elif change == "media":
         episode.media_assets.update(state="failed")
     elif change == "policy":
-        AccessPolicy.objects.create(series=episode.series, rewarded_ad_enabled=False)
+        episode.series.rewarded_ads_enabled = False
+        episode.series.save(update_fields=["rewarded_ads_enabled"])
     elif change == "free":
-        AccessPolicy.objects.create(series=episode.series, free_episode_order_max=10)
+        episode.series.free_episode_count = 10
+        episode.series.save(update_fields=["free_episode_count"])
     elif change == "unit-config":
         # A different publisher cannot take over an existing intent, even with the same suffix.
-        settings.REWARDED_ADS_TEST_UNIT_ID = "ca-app-pub-1111111111111111/5224354917"
+        settings.REWARDED_ADS_UNIT_ID = "ca-app-pub-1111111111111111/5224354917"
     elif change == "disabled":
         settings.REWARDED_ADS_MODE = "disabled"
-    elif change == "production":
-        settings.DEBUG = False
     else:
         request_account_deletion(
             VerifiedToken(uid=profile.firebase_uid, auth_time=int(timezone.now().timestamp()))

@@ -146,16 +146,6 @@ it('keeps unsaved preferences after a failed save and permits retry', async () =
   expect(getSessionCredential()).toBe('mock.synthetic_account');
 });
 
-it('shows the export placeholder without claiming a request was accepted', async () => {
-  const { view, user } = await setup(
-    jsonResponse({ code: 'export_unavailable', message: 'Unavailable' }, 501),
-  );
-  await user.press(view.getByLabelText('Request account export'));
-  await waitFor(() =>
-    expect(view.getByTestId('account-message')).toHaveTextContent(/No export has been requested/),
-  );
-});
-
 it.each(['pending', 'completed'])(
   'reauthenticates before deletion and clears both sessions when %s',
   async (status) => {

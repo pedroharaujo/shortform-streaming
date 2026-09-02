@@ -23,8 +23,6 @@ export type RewardFailureCode =
   | 'grant_source_unavailable';
 
 export interface RewardAnalytics {
-  recordOfferPresented(episode: RewardAnalyticsEpisode): Promise<void>;
-  recordOfferSelected(episode: RewardAnalyticsEpisode, attemptKey: string): Promise<void>;
   recordAdEvent(
     episode: RewardAnalyticsEpisode,
     intentKey: string,
@@ -56,12 +54,6 @@ function safeKey(value: string): string {
   return /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(value) ? value : 'unknown';
 }
 
-const AD_EVENT = {
-  loaded: { name: 'rewarded_ad_loaded', key: 'l' },
-  started: { name: 'rewarded_ad_started', key: 's' },
-  completed: { name: 'rewarded_ad_completed', key: 'c' },
-} as const;
-
 const FAILURE_STAGE_KEY: Readonly<Record<RewardFailureStage, string>> = {
   offer: 'o',
   load: 'l',
@@ -79,26 +71,10 @@ export function createRewardAnalytics(runtime: AnalyticsRuntime): RewardAnalytic
   }
 
   return {
-    recordOfferPresented(episode): Promise<void> {
-      return enqueue(async () => {
-        await runtime.logOnce('offer_presented', `o:p:${safeKey(episode.episodeId)}`, {
-          ...episodeProperties(episode),
-          access_method: 'rewarded_ad',
-        });
-      });
-    },
-    recordOfferSelected(episode, attemptKey): Promise<void> {
-      return enqueue(async () => {
-        await runtime.logOnce('offer_selected', `o:s:${safeKey(attemptKey)}`, {
-          ...episodeProperties(episode),
-          access_method: 'rewarded_ad',
-        });
-      });
-    },
     recordAdEvent(episode, intentKey, event): Promise<void> {
-      const definition = AD_EVENT[event];
+      if (event !== 'started') return Promise.resolve();
       return enqueue(async () => {
-        await runtime.logOnce(definition.name, `a:${definition.key}:${safeKey(intentKey)}`, {
+        await runtime.logOnce('rewarded_ad_started', `a:s:${safeKey(intentKey)}`, {
           ...episodeProperties(episode),
           access_method: 'rewarded_ad',
         });

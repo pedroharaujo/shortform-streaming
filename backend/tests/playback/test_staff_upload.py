@@ -32,10 +32,8 @@ from apps.playback.objectstore import (
 from apps.playback.providers.factory import reset_provider_cache
 from apps.playback.providers.fake import FakeVideoProvider
 from tests.catalog.builders import (
-    DEFAULT_NOW,
     make_episode,
     make_published_title,
-    make_right,
     make_series,
 )
 
@@ -58,7 +56,6 @@ def fake_provider() -> Iterator[FakeVideoProvider]:
 
 def _draft_episode() -> Episode:
     series = make_series(title="Staff Upload Title")
-    make_right(series)
     return make_episode(series, publication_status=PublicationStatus.DRAFT)
 
 
@@ -306,19 +303,12 @@ def test_unsigned_put_and_get_are_not_public_reads(
 def test_authorize_grant_has_no_upload_write_url_fields(
     client: Client, fake_provider: FakeVideoProvider
 ) -> None:
-    series, episode = make_published_title(title="Authorize Grant", territory="FR")
+    _series, episode = make_published_title(title="Authorize Grant")
     asset = episode.media_assets.get()
     fake_provider.seed_ready_asset(asset.provider_asset_id)
-    with (
-        patch("apps.catalog.eligibility.timezone.now", return_value=DEFAULT_NOW),
-        patch("apps.playback.views.get_video_provider", return_value=fake_provider),
-        patch("apps.playback.providers.fake.timezone.now", return_value=DEFAULT_NOW),
-    ):
+    with patch("apps.playback.views.get_video_provider", return_value=fake_provider):
         response = client.post(
             AUTHORIZE.format(episode_id=episode.public_id),
-            HTTP_X_TERRITORY="FR",
-            HTTP_X_PLATFORM="ios",
-            HTTP_X_LANGUAGE="en",
         )
     assert response.status_code == 200
     payload = response.json()

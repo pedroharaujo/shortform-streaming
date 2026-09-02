@@ -26,11 +26,11 @@ def headers(uid: str = "synthetic-reward-user") -> dict[str, Any]:
 def reward_setup(settings: Any) -> Any:
     settings.DEBUG = True
     settings.REWARDED_ADS_MODE = "test"
-    settings.REWARDED_ADS_TEST_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
+    settings.REWARDED_ADS_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
     profile = get_or_create_profile("synthetic-reward-user")
     profile.ads_consent = True
     profile.save(update_fields=["ads_consent"])
-    series, _ = make_published_title(title="Synthetic rewards", territory="FR")
+    series, _ = make_published_title(title="Synthetic rewards")
     episode = make_episode(series, order=6, publication_status=PublicationStatus.PUBLISHED)
     return profile, episode
 
@@ -83,28 +83,23 @@ def test_intent_auth_ownership_and_idempotency(client: Client, reward_setup: Any
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(
-    "change", ["consent", "takedown", "free", "policy", "disabled", "production"]
-)
+@pytest.mark.parametrize("change", ["consent", "takedown", "free", "policy", "disabled"])
 def test_intent_fails_closed(client: Client, reward_setup: Any, settings: Any, change: str) -> None:
-    from apps.catalog.models import ContentRight
-    from apps.entitlements.models import AccessPolicy
-
     profile, episode = reward_setup
     if change == "consent":
         profile.ads_consent = False
         profile.save(update_fields=["ads_consent"])
     elif change == "takedown":
-        ContentRight.objects.update(takedown=True)
+        episode.series.takedown = True
+        episode.series.save(update_fields=["takedown"])
     elif change == "free":
-        episode.order = 2
-        episode.save(update_fields=["order"])
+        episode.series.free_episode_count = 10
+        episode.series.save(update_fields=["free_episode_count"])
     elif change == "policy":
-        AccessPolicy.objects.create(series=episode.series, rewarded_ad_enabled=False)
+        episode.series.rewarded_ads_enabled = False
+        episode.series.save(update_fields=["rewarded_ads_enabled"])
     elif change == "disabled":
         settings.REWARDED_ADS_MODE = "disabled"
-    else:
-        settings.DEBUG = False
     assert create_intent(client, episode).status_code == (404 if change == "takedown" else 409)
     assert not EpisodeEntitlement.objects.exists()
 

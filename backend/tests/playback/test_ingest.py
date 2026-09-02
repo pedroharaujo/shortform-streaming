@@ -13,7 +13,7 @@ from apps.playback.ingest import ingest_master, reconcile, sha256_hex, takedown_
 from apps.playback.models import MediaAsset, MediaAssetState
 from apps.playback.providers.factory import reset_provider_cache
 from apps.playback.providers.fake import FakeVideoProvider
-from tests.catalog.builders import make_episode, make_right, make_series
+from tests.catalog.builders import make_episode, make_series
 
 HMAC_KEY = "synthetic-hmac-for-tests"
 SYNTHETIC_MASTER = b"synthetic-vertical-master-bytes"
@@ -31,7 +31,6 @@ def fake_provider() -> Iterator[FakeVideoProvider]:
 
 def _draft_episode() -> Episode:
     series = make_series(title="Ingest Title")
-    make_right(series)
     return make_episode(series, publication_status=PublicationStatus.DRAFT)
 
 

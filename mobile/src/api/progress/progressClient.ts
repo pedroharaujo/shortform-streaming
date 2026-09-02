@@ -8,8 +8,7 @@
 
 import type { paths } from '@shortform/api-client';
 
-import type { CatalogPlatform } from '../catalog/types';
-import { bearerHeaders, catalogContextHeaders, createOpenApiClient } from '../context';
+import { bearerHeaders, createOpenApiClient } from '../context';
 import { DEFAULT_TIMEOUT_MS, mapJsonDomain, mapJsonRequest } from '../http';
 import type {
   ProgressClient,
@@ -22,8 +21,6 @@ const UNKNOWN_MESSAGE = 'Progress request failed.';
 
 export interface ProgressClientOptions {
   readonly baseUrl: string;
-  readonly territory: string;
-  readonly platform: CatalogPlatform;
   readonly getDeviceId: () => Promise<string>;
   readonly getCredential?: () => string | null;
   readonly timeoutMs?: number;
@@ -31,25 +28,23 @@ export interface ProgressClientOptions {
 }
 
 export function createProgressClient(options: ProgressClientOptions): ProgressClient {
-  const { baseUrl, territory, platform, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  const contextHeaders = catalogContextHeaders(territory, platform);
+  const { baseUrl, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   const api = createOpenApiClient({
     baseUrl,
-    headers: { ...contextHeaders },
     fetchImplementation: options.fetchImplementation,
   });
 
   async function requestAuth(): Promise<{
-    readonly header: typeof contextHeaders & { readonly 'X-Device-Id'?: string };
+    readonly header: { readonly 'X-Device-Id'?: string };
     readonly headers: Record<string, string>;
   }> {
     const authorization = bearerHeaders(options.getCredential);
     if (authorization.Authorization !== undefined) {
-      return { header: contextHeaders, headers: authorization };
+      return { header: {}, headers: authorization };
     }
     const deviceId = await options.getDeviceId();
     return {
-      header: { ...contextHeaders, 'X-Device-Id': deviceId },
+      header: { 'X-Device-Id': deviceId },
       headers: { 'X-Device-Id': deviceId },
     };
   }

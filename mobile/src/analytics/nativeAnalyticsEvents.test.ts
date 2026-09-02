@@ -14,7 +14,7 @@ it('sends the allowlisted envelope through the modular Firebase API', async () =
 
   await sink.send({
     event_id: 'evt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-    name: 'series_impression',
+    name: 'app_open',
     properties: {
       session_id: 'session_01',
       app_version: '0.1.0',
@@ -22,13 +22,12 @@ it('sends the allowlisted envelope through the modular Firebase API', async () =
       platform: 'android',
       locale: 'en',
       occurred_at: '2026-09-01T10:00:00.000Z',
-      series_id: 'ser_harbor',
-      position: 0,
+      launch_reason: 'cold',
     },
   });
 
   expect(getAnalytics).toHaveBeenCalledTimes(1);
-  expect(logEvent).toHaveBeenCalledWith(analytics, 'series_impression', {
+  expect(logEvent).toHaveBeenCalledWith(analytics, 'app_open', {
     event_id: 'evt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     session_id: 'session_01',
     app_version: '0.1.0',
@@ -36,7 +35,6 @@ it('sends the allowlisted envelope through the modular Firebase API', async () =
     platform: 'android',
     locale: 'en',
     occurred_at: '2026-09-01T10:00:00.000Z',
-    series_id: 'ser_harbor',
-    position: 0,
+    launch_reason: 'cold',
   });
 });

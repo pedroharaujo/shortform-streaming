@@ -12,13 +12,7 @@ from apps.accounts.authentication import OptionalFirebaseIdTokenAuthentication
 from apps.accounts.models import UserProfile
 from apps.accounts.views import ERROR_401
 from apps.catalog.models import Episode
-from apps.catalog.request_context import parse_catalog_context
-from apps.catalog.views import (
-    CATALOG_CONTEXT_PARAMETERS,
-    ERROR_400,
-    ERROR_404,
-    CatalogAnonymousView,
-)
+from apps.catalog.views import ERROR_404, CatalogAnonymousView
 from apps.entitlements.policy import (
     Grant,
     GrantSource,
@@ -73,7 +67,7 @@ class PlaybackAuthorizeView(CatalogAnonymousView):
             "Authorize playback for a catalog-eligible episode. Optional Firebase ID "
             "token: a missing Authorization header is anonymous; a present invalid, "
             "expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, "
-            "unpublished, takedown, wrong-territory, or missing-ready-asset ids "
+            "unpublished, taken-down, or missing-ready-asset ids "
             "return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns "
             "HTTP 200 decision=locked with lock_reasons and no playback_url. Grant "
             "looks up the episode's ready MediaAsset and returns an opaque HTTPS HLS "
@@ -81,18 +75,16 @@ class PlaybackAuthorizeView(CatalogAnonymousView):
             "returns 503 ErrorEnvelope on the grant path only and never mints unsigned "
             "access. Client-supplied user identifiers are ignored."
         ),
-        parameters=[EPISODE_ID_PARAMETER, *CATALOG_CONTEXT_PARAMETERS],
+        parameters=[EPISODE_ID_PARAMETER],
         request=None,
         responses={
             200: PLAYBACK_AUTHORIZE_RESPONSE,
-            400: ERROR_400,
             401: ERROR_401,
             404: ERROR_404,
             503: ERROR_503,
         },
     )
     def post(self, request: Request, episode_id: str) -> Response:
-        context = parse_catalog_context(request)
         episode = (
             Episode.objects.select_related("series", "season").filter(public_id=episode_id).first()
         )
@@ -100,7 +92,7 @@ class PlaybackAuthorizeView(CatalogAnonymousView):
             raise NotFound(detail=_NOT_FOUND_MESSAGE)
 
         profile = request.user if isinstance(request.user, UserProfile) else None
-        decision = evaluate_authorize_access(episode, context, profile)
+        decision = evaluate_authorize_access(episode, profile)
         if isinstance(decision, Ineligible):
             raise NotFound(detail=_NOT_FOUND_MESSAGE)
         if isinstance(decision, Lock):

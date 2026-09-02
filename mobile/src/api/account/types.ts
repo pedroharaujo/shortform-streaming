@@ -20,5 +20,4 @@ export interface AccountClient {
     preferences: Partial<AccountPreferences>,
   ): Promise<AccountOutcome<AccountProfile>>;
   deleteAccount(): Promise<AccountOutcome<AccountDeletion>>;
-  requestExport(): Promise<AccountOutcome<unknown>>;
 }

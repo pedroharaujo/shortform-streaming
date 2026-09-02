@@ -16,7 +16,7 @@ DEVICE_B = "66666666-2222-4333-8444-555555555555"
 @pytest.mark.django_db
 def test_xor_check_rejects_both_or_neither_subject() -> None:
     profile = UserProfile.objects.create(firebase_uid="uid-xor")
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    _series, episode = make_published_title(title="Harbor Lights")
     with pytest.raises(IntegrityError):
         with transaction.atomic():
             WatchProgress.objects.create(
@@ -52,7 +52,7 @@ def test_xor_check_rejects_both_or_neither_subject() -> None:
 def test_partial_unique_constraints() -> None:
     profile = UserProfile.objects.create(firebase_uid="uid-unique")
     other = UserProfile.objects.create(firebase_uid="uid-other")
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    _series, episode = make_published_title(title="Harbor Lights")
     WatchProgress.objects.create(user_profile=profile, episode=episode, position_seconds=1)
     with pytest.raises(IntegrityError):
         with transaction.atomic():
@@ -68,7 +68,7 @@ def test_partial_unique_constraints() -> None:
 
 @pytest.mark.django_db(transaction=True)
 def test_concurrent_upsert_keeps_one_row() -> None:
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    _series, episode = make_published_title(title="Harbor Lights")
     episode_id = episode.pk
     results: list[str] = []
 

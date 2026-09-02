@@ -24,14 +24,19 @@ export type ApiEnvironment = (typeof API_ENVIRONMENTS)[number];
 export interface ApiConfiguration {
   readonly environment: ApiEnvironment;
   readonly baseUrl: string;
-  readonly catalogTerritory: string;
+}
+
+export const REWARDED_ADS_MODES = ['disabled', 'test', 'production'] as const;
+export type RewardedAdsMode = (typeof REWARDED_ADS_MODES)[number];
+
+export interface AdsConfiguration {
+  readonly mode: RewardedAdsMode;
+  readonly androidAppId: string;
+  readonly rewardedUnitId: string;
 }
 
 export const API_ENVIRONMENT_VARIABLE = 'EXPO_PUBLIC_API_ENVIRONMENT';
 export const API_BASE_URL_VARIABLE = 'EXPO_PUBLIC_API_BASE_URL';
-export const CATALOG_TERRITORY_VARIABLE = 'EXPO_PUBLIC_CATALOG_TERRITORY';
-
-const ISO_3166_1_ALPHA_2 = /^[A-Za-z]{2}$/;
 
 export class EnvironmentConfigurationError extends Error {
   constructor(message: string) {
@@ -97,16 +102,6 @@ function parseBaseUrl(rawValue: string, environment: ApiEnvironment): string {
   return parsed.origin + parsed.pathname.replace(/\/+$/, '');
 }
 
-function parseCatalogTerritory(rawValue: string): string {
-  if (!ISO_3166_1_ALPHA_2.test(rawValue)) {
-    throw new EnvironmentConfigurationError(
-      `${CATALOG_TERRITORY_VARIABLE} must be ISO 3166-1 alpha-2, for example FR. ` +
-        'It is never inferred from device locale or Accept-Language.',
-    );
-  }
-  return rawValue.toUpperCase();
-}
-
 /**
  * Reject any `EXPO_PUBLIC_*` variable whose name suggests a secret, because
  * every such value is inlined into the client bundle.
@@ -140,9 +135,7 @@ export function resolveApiConfiguration(
   }
 
   const baseUrl = parseBaseUrl(requireValue(source, API_BASE_URL_VARIABLE), rawEnvironment);
-  const catalogTerritory = parseCatalogTerritory(requireValue(source, CATALOG_TERRITORY_VARIABLE));
-
-  return { environment: rawEnvironment, baseUrl, catalogTerritory };
+  return { environment: rawEnvironment, baseUrl };
 }
 
 export const DEMO_REWARDED_UNIT_ID = 'ca-app-pub-3940256099942544/5224354917';
@@ -151,30 +144,69 @@ const DEMO_ANDROID_APP_ID = 'ca-app-pub-3940256099942544~3347511713';
 export function resolveAdsConfiguration(
   source: Readonly<Record<string, string | undefined>>,
   environment: ApiEnvironment,
-): { readonly androidAppId: string; readonly rewardedUnitId: string } {
+): AdsConfiguration {
+  const rawMode =
+    source.EXPO_PUBLIC_REWARDED_ADS_MODE ?? (environment === 'production' ? 'disabled' : 'test');
+  if (!(REWARDED_ADS_MODES as readonly string[]).includes(rawMode)) {
+    throw new EnvironmentConfigurationError(
+      `EXPO_PUBLIC_REWARDED_ADS_MODE must be one of ${REWARDED_ADS_MODES.join(', ')}.`,
+    );
+  }
+  const mode = rawMode as RewardedAdsMode;
+  if (mode === 'production' && environment !== 'production') {
+    throw new EnvironmentConfigurationError(
+      'Production rewarded ads require EXPO_PUBLIC_API_ENVIRONMENT=production.',
+    );
+  }
+  if (mode === 'test' && environment === 'production') {
+    throw new EnvironmentConfigurationError('Production builds cannot use rewarded-ad test mode.');
+  }
   const androidAppId = source.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID;
   const rewardedUnitId = source.EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID;
   if (androidAppId === undefined && rewardedUnitId === undefined) {
-    return { androidAppId: DEMO_ANDROID_APP_ID, rewardedUnitId: DEMO_REWARDED_UNIT_ID };
+    if (mode === 'production') {
+      throw new EnvironmentConfigurationError(
+        'Production rewarded ads require publisher-owned AdMob app and rewarded-unit IDs.',
+      );
+    }
+    return { mode, androidAppId: DEMO_ANDROID_APP_ID, rewardedUnitId: DEMO_REWARDED_UNIT_ID };
   }
   const appPublisher = /^ca-app-pub-(\d{16})~\d{10}$/.exec(androidAppId ?? '');
   const unitPublisher = /^ca-app-pub-(\d{16})\/\d{10}$/.exec(rewardedUnitId ?? '');
-  if (
-    environment !== 'local' ||
-    !appPublisher ||
-    !unitPublisher ||
-    appPublisher[1] !== unitPublisher[1]
-  ) {
+  if (!appPublisher || !unitPublisher || appPublisher[1] !== unitPublisher[1]) {
     throw new EnvironmentConfigurationError(
-      'EXPO_PUBLIC_ADMOB_ANDROID_APP_ID and EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID must be a complete, valid same-publisher pair, supplied only for local emulator testing.',
+      'EXPO_PUBLIC_ADMOB_ANDROID_APP_ID and EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID must be a complete, valid same-publisher pair.',
     );
   }
-  return { androidAppId: androidAppId!, rewardedUnitId: rewardedUnitId! };
+  const isDemoPair =
+    androidAppId === DEMO_ANDROID_APP_ID && rewardedUnitId === DEMO_REWARDED_UNIT_ID;
+  if (mode === 'production' && isDemoPair) {
+    throw new EnvironmentConfigurationError('Production rewarded ads cannot use Google demo IDs.');
+  }
+  if (mode === 'test' && environment !== 'local' && !isDemoPair) {
+    throw new EnvironmentConfigurationError(
+      'Publisher-owned rewarded-ad test IDs are allowed only in local emulator builds.',
+    );
+  }
+  return { mode, androidAppId: androidAppId!, rewardedUnitId: rewardedUnitId! };
+}
+
+export function resolveAnalyticsConfiguration(
+  source: Readonly<Record<string, string | undefined>>,
+  environment: ApiEnvironment,
+): { readonly enabled: boolean } {
+  const raw = source.EXPO_PUBLIC_ANALYTICS_ENABLED;
+  if (raw === undefined) return { enabled: environment !== 'production' };
+  if (raw !== 'true' && raw !== 'false') {
+    throw new EnvironmentConfigurationError('EXPO_PUBLIC_ANALYTICS_ENABLED must be true or false.');
+  }
+  return { enabled: raw === 'true' };
 }
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const api = resolveApiConfiguration(process.env);
   const ads = resolveAdsConfiguration(process.env, api.environment);
+  const analytics = resolveAnalyticsConfiguration(process.env, api.environment);
 
   return {
     ...config,
@@ -187,24 +219,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       package: 'com.shortformstreaming.app',
       // Path only; Expo JS export does not read the gitignored file. Prebuild
-      // copies it when present. Ads-only MVP is Android (D-027); do not set
-      // ios.googleServicesFile until an iOS storefront pass.
+      // copies it when present. The MVP ships Android only.
       googleServicesFile: './google-services.json',
     },
-    ios: { bundleIdentifier: 'com.shortformstreaming.app', supportsTablet: false },
     plugins: [
       'expo-router',
       'expo-video',
       'expo-secure-store',
       '@react-native-firebase/app',
-      [
-        '@react-native-firebase/analytics',
-        {
-          ios: {
-            withoutAdIdSupport: true,
-          },
-        },
-      ],
+      '@react-native-firebase/analytics',
       [
         'react-native-google-mobile-ads',
         {
@@ -214,6 +237,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
     ],
     experiments: { typedRoutes: true },
-    extra: { api, ads },
+    extra: { api, ads, analytics },
   };
 };

@@ -4,13 +4,12 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 
-from tests.catalog.builders import make_right, make_series
+from tests.catalog.builders import make_series
 
 
 @pytest.mark.django_db
 def test_anonymous_admin_is_denied_and_does_not_leak_catalog(client: Client) -> None:
     series = make_series(title="Secret Draft Title")
-    make_right(series, licensor="Synthetic Licensor Hidden")
 
     root = client.get("/admin/")
     assert root.status_code in {301, 302}
@@ -22,7 +21,7 @@ def test_anonymous_admin_is_denied_and_does_not_leak_catalog(client: Client) -> 
     assert login.status_code == 200
     assert b"Secret Draft Title" not in login.content
     assert series.public_id.encode() not in login.content
-    assert b"Synthetic Licensor Hidden" not in login.content
+    assert b"synthetic-self-owned-fixture" not in login.content
 
     changelist = client.get("/admin/catalog/series/")
     assert changelist.status_code in {301, 302}
@@ -31,9 +30,8 @@ def test_anonymous_admin_is_denied_and_does_not_leak_catalog(client: Client) -> 
 
 
 @pytest.mark.django_db
-def test_staff_can_see_draft_series_and_rights(admin_client: Client) -> None:
+def test_staff_can_see_draft_series_and_ownership_evidence(admin_client: Client) -> None:
     series = make_series(title="Draft Title")
-    make_right(series, licensor="Synthetic Licensor FR")
 
     changelist = admin_client.get("/admin/catalog/series/")
     assert changelist.status_code == 200
@@ -47,6 +45,5 @@ def test_staff_can_see_draft_series_and_rights(admin_client: Client) -> None:
     assert series.public_id in content
     assert "Draft Title" in content
     assert "draft" in content.lower()
-    assert "Synthetic Licensor FR" in content
-    assert "synthetic-contract" in content
-    assert "territory_allowlist" in content or "FR" in content
+    assert "synthetic-self-owned-fixture" in content
+    assert "self_owned" in content or "Self owned" in content

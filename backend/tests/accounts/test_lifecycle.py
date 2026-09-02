@@ -71,7 +71,7 @@ def test_deletion_removes_owned_data_and_stale_token_cannot_recreate_it(client: 
     client.get("/v1/me", **HEADERS)
     profile = UserProfile.objects.get(firebase_uid="lifecycle-user")
     other = UserProfile.objects.create(firebase_uid="another-user")
-    _, episode = make_published_title(title="Synthetic deletion fixture", territory="FR")
+    _, episode = make_published_title(title="Synthetic deletion fixture")
     for owner in (profile, other):
         WatchProgress.objects.create(user_profile=owner, episode=episode, position_seconds=12)
         EpisodeEntitlement.objects.create(user_profile=owner, episode=episode)
@@ -165,7 +165,7 @@ def test_concurrent_authentication_during_deletion_cannot_restore_profile() -> N
 
 
 @pytest.mark.django_db
-def test_delete_confirmation_and_export_placeholder(client: Client) -> None:
+def test_delete_requires_confirmation_and_authentication(client: Client) -> None:
     assert client.post(DELETE, {}, content_type="application/json", **HEADERS).status_code == 400
     assert (
         client.post(
@@ -177,9 +177,6 @@ def test_delete_confirmation_and_export_placeholder(client: Client) -> None:
         client.post(DELETE, {"confirmation": True}, content_type="application/json").status_code
         == 401
     )
-    response = client.post("/v1/me/export", **HEADERS)
-    assert response.status_code == 501
-    assert response.json()["code"] == "export_unavailable"
 
 
 @pytest.mark.django_db(transaction=True)

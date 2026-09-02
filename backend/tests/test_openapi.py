@@ -68,9 +68,8 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
 
     for operation in (home, series, episode):
         assert operation.get("security") in ([], None) or operation["security"] == []
-        assert "400" in operation["responses"]
-        error_schema = _response_schema_ref(operation["responses"]["400"])
-        assert error_schema.endswith("/ErrorEnvelope")
+        parameter_names = {item.get("name") for item in operation.get("parameters", [])}
+        assert not {"X-Territory", "X-Platform", "X-Language"} & parameter_names
 
     assert "404" in series["responses"]
     assert "404" in episode["responses"]
@@ -109,7 +108,7 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     authorize = paths["/v1/playback/{episode_id}/authorize"]["post"]
     security = authorize.get("security")
     assert security == [{}, {"FirebaseIdToken": []}]
-    for status_code in ("400", "401", "404", "503"):
+    for status_code in ("401", "404", "503"):
         assert status_code in authorize["responses"]
         assert _response_schema_ref(authorize["responses"][status_code]).endswith("/ErrorEnvelope")
     authorize_200 = authorize["responses"]["200"]["content"]["application/json"]["schema"]
@@ -136,12 +135,11 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     progress_put = paths["/v1/progress/{episode_id}"]["put"]
     for operation in (progress_get, progress_put):
         assert operation.get("security") == [{}, {"FirebaseIdToken": []}]
-        for status_code in ("400", "401", "404"):
+        for status_code in ("401", "403", "404"):
             assert status_code in operation["responses"]
             assert _response_schema_ref(operation["responses"][status_code]).endswith(
                 "/ErrorEnvelope"
             )
-    assert "403" in progress_put["responses"]
     assert _response_schema_ref(progress_put["responses"]["403"]).endswith("/ErrorEnvelope")
     progress_schema = schema["components"]["schemas"]["WatchProgress"]
     progress_properties = progress_schema.get("properties", {})
@@ -155,7 +153,7 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
 
     offers = paths["/v1/offers/{episode_id}"]["get"]
     assert offers.get("security") == [{}, {"FirebaseIdToken": []}]
-    for status_code in ("400", "401", "404"):
+    for status_code in ("401", "404"):
         assert status_code in offers["responses"]
         assert _response_schema_ref(offers["responses"][status_code]).endswith("/ErrorEnvelope")
     assert "503" not in offers["responses"]

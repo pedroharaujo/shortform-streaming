@@ -6,7 +6,7 @@ from django.test import Client, override_settings
 from django.urls import reverse
 
 from apps.catalog.models import Genre, PublicationStatus
-from tests.catalog.builders import make_right, make_series
+from tests.catalog.builders import make_series
 
 pytestmark = pytest.mark.django_db
 
@@ -31,12 +31,10 @@ def test_admin_mutation_without_csrf_token_is_rejected() -> None:
     assert not Genre.objects.filter(slug="injected-genre").exists()
 
 
-def test_view_only_catalog_role_cannot_mutate_or_read_rights_metadata() -> None:
-    series = make_series(title="Visible Editorial Title")
-    right = make_right(
-        series,
-        licensor="Synthetic Confidential Licensor",
-        contract_reference="synthetic-confidential-contract",
+def test_view_only_catalog_role_cannot_mutate_or_read_ownership_metadata() -> None:
+    series = make_series(
+        title="Visible Editorial Title",
+        provenance_reference="synthetic-confidential-provenance",
     )
     user = User.objects.create_user(username="catalog-viewer", is_staff=True)
     user.user_permissions.add(Permission.objects.get(codename="view_series"))
@@ -50,20 +48,18 @@ def test_view_only_catalog_role_cannot_mutate_or_read_rights_metadata() -> None:
         {
             "publication_status": PublicationStatus.PUBLISHED,
             "editorial_rank": 999,
-            "original_language": "en",
+            "title": "Tampered title",
         },
     )
-    rights = client.get(reverse("admin:catalog_contentright_changelist"))
 
     assert viewed.status_code == 200
     assert "Visible Editorial Title" in viewed.content.decode()
-    assert right.licensor.encode() not in viewed.content
-    assert right.contract_reference.encode() not in viewed.content
+    assert b"synthetic-confidential-provenance" not in viewed.content
     assert attempted_change.status_code == 403
-    assert rights.status_code == 403
     series.refresh_from_db()
     assert series.publication_status == PublicationStatus.DRAFT
     assert series.editorial_rank != 999
+    assert series.title == "Visible Editorial Title"
 
 
 def test_non_superuser_cannot_administer_staff_even_with_auth_permissions() -> None:

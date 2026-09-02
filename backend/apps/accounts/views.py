@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -113,25 +112,3 @@ class AccountDeletionView(APIView):
         record = request_account_deletion(verified)
         record = process_account_deletion(record.public_id)
         return Response(AccountDeletionSerializer(record).data, status=202)
-
-
-class ExportUnavailable(APIException):
-    status_code = 501
-    default_code = "export_unavailable"
-    default_detail = "Account export is not available yet. No export request was created."
-    envelope_message = default_detail
-
-
-class AccountExportView(APIView):
-    authentication_classes = [FirebaseIdTokenAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        tags=["accounts"],
-        summary="Account export placeholder",
-        description="Explicitly unavailable; does not enqueue or claim to fulfill an export.",
-        request=None,
-        responses={401: ERROR_401, 501: {"$ref": "#/components/schemas/ErrorEnvelope"}},
-    )
-    def post(self, request: Request) -> Response:
-        raise ExportUnavailable()

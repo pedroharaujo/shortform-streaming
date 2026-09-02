@@ -17,18 +17,18 @@ a legal compliance certificate.
 ## What this notice covers
 
 Shortform Streaming (Development) is an unpublished Android development app.
-This test is operated by the developer on an Android emulator, using invented
-email/password accounts and generated video. It checks whether a completed
+This test is operated by the developer on an Android emulator, using a synthetic
+Google identity in the local Auth emulator and generated video. It checks whether a completed
 rewarded test ad can unlock one episode after server verification. There are no
 public participants, payments or live advertising in this test. Do not enter a
-real account, use Google Sign-In or invite other people under this notice.
+real account or invite other people under this notice.
 
 Synthetic accounts do not make every connection anonymous. Consent requests,
 test advertisements and video delivery contact external providers.
 
 ## Information handled during the test
 
-- **Local account and viewing state:** synthetic email/password sign-in is
+- **Local account and viewing state:** synthetic Google sign-in is
   handled by a Firebase Authentication emulator on the development computer.
   The local app database holds an account identifier, profile identifier,
   language/country settings, ads/analytics preferences and timestamps. It can

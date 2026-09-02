@@ -3,82 +3,45 @@ from __future__ import annotations
 import pytest
 from django.core.exceptions import ValidationError
 
-from apps.catalog.models import ContentRight, PublicationStatus, Series
-from tests.catalog.builders import (
-    DEFAULT_NOW,
-    make_episode,
-    make_right,
-    make_series,
+from apps.catalog.models import PublicationStatus
+from tests.catalog.builders import make_episode, make_series
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("title", ""),
+        ("synopsis", ""),
+        ("self_owned", False),
+        ("provenance_reference", ""),
+        ("promotional_use_approved", False),
+        ("takedown", True),
+    ],
 )
-
-# pytest pythonpath includes backend/, so tests import via `tests.catalog`.
-
-
-@pytest.mark.django_db
-def test_invalid_rights_window_rejected() -> None:
+def test_series_publication_fails_closed_without_self_owned_release_gate(
+    field: str, value: object
+) -> None:
     series = make_series()
-    right = ContentRight(
-        series=series,
-        licensor="Synthetic Licensor",
-        contract_reference="synthetic-contract-window",
-        territory_allowlist=["FR"],
-        territory_denylist=[],
-        platforms=["ios"],
-        languages=["en"],
-        starts_at=DEFAULT_NOW,
-        ends_at=DEFAULT_NOW,
-    )
-    with pytest.raises(ValidationError) as exc_info:
-        right.full_clean()
-    assert "ends_at" in exc_info.value.message_dict
-
-
-@pytest.mark.django_db
-def test_empty_allowlist_rejected() -> None:
-    series = make_series()
-    right = ContentRight(
-        series=series,
-        licensor="Synthetic Licensor",
-        contract_reference="synthetic-contract-allowlist",
-        territory_allowlist=[],
-        platforms=["ios"],
-        languages=["en"],
-        starts_at=DEFAULT_NOW,
-    )
-    with pytest.raises(ValidationError) as exc_info:
-        right.full_clean()
-    assert "territory_allowlist" in exc_info.value.message_dict
-
-
-@pytest.mark.django_db
-def test_publish_without_english_metadata_rejected() -> None:
-    series = Series.objects.create(
-        publication_status=PublicationStatus.DRAFT,
-        original_language="en",
-    )
-    make_right(series)
+    setattr(series, field, value)
     series.publication_status = PublicationStatus.PUBLISHED
+
     with pytest.raises(ValidationError) as exc_info:
         series.full_clean()
+
+    assert field in exc_info.value.message_dict
+
+
+@pytest.mark.django_db
+def test_episode_publication_requires_metadata_and_ready_media() -> None:
+    series = make_series()
+    episode = make_episode(series)
+    episode.publication_status = PublicationStatus.PUBLISHED
+
+    with pytest.raises(ValidationError) as exc_info:
+        episode.full_clean()
+
     assert "publication_status" in exc_info.value.message_dict
-
-
-@pytest.mark.django_db
-def test_publish_without_valid_right_rejected() -> None:
-    series = make_series()
-    series.publication_status = PublicationStatus.PUBLISHED
-    with pytest.raises(ValidationError) as exc_info:
-        series.full_clean()
-    assert "publication_status" in exc_info.value.message_dict
-
-
-@pytest.mark.django_db
-def test_takedown_right_does_not_satisfy_publish_rule() -> None:
-    series = make_series()
-    make_right(series, takedown=True)
-    series.publication_status = PublicationStatus.PUBLISHED
-    with pytest.raises(ValidationError):
-        series.full_clean()
 
 
 @pytest.mark.django_db

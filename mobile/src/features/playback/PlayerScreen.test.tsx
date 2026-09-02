@@ -34,7 +34,6 @@ const harborSeries: CatalogSeriesDetail = {
   title: 'Harbor Lights',
   synopsis: 'Synthetic FR-only English microdrama for local catalog tests.',
   artwork_url: null,
-  original_language: 'en',
   genres: [],
   seasons: [
     {

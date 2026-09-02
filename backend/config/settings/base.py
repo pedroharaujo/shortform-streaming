@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -127,8 +128,8 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "config.exceptions.exception_handler",
 }
 
-# Consumer API bodies are tiny JSON commands. Master media bytes upload directly
-# to object storage and must never transit Django (P2-T06).
+# Consumer API bodies are tiny JSON commands and never accept or serve video bytes.
+# Staff-only Admin ingestion is a separate, bounded workflow.
 API_MAX_REQUEST_BODY_BYTES = 64 * 1024
 
 LOGGING = {
@@ -169,19 +170,29 @@ BUNNY_STREAM_TOKEN_KEY = os.environ.get("BUNNY_STREAM_TOKEN_KEY", "").strip()
 PLAYBACK_TOKEN_TTL_SECONDS = 600
 FAKE_PLAYBACK_CDN_HOST = "video.example.test"
 
-# P3-T07 is an explicit local test integration; no live-ad mode is implemented.
-REWARDED_ADS_MODE = os.environ.get("REWARDED_ADS_MODE", "disabled").strip().lower()
-if REWARDED_ADS_MODE not in {"disabled", "test"}:
-    raise ImproperlyConfigured("REWARDED_ADS_MODE must be disabled or test.")
-# P3-T07-F1: only local settings may load a publisher-owned test unit override.
-REWARDED_ADS_TEST_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
-
-# Staff signed PUT landing zone (P2-T06-F1). Empty disables minting.
-# Local settings default to "fake". Production rejects "fake".
+# Private landing zone for Admin-managed master uploads. The signed URL is
+# short-lived and never persisted. Empty disables ingestion.
 STAFF_UPLOAD_STORE = os.environ.get("STAFF_UPLOAD_STORE", "").strip().lower()
 STAFF_UPLOAD_GCS_BUCKET = os.environ.get("STAFF_UPLOAD_GCS_BUCKET", "").strip()
-_raw_staff_upload_ttl = os.environ.get("STAFF_UPLOAD_URL_TTL_SECONDS", "600").strip() or "600"
+_raw_staff_upload_ttl = os.environ.get("STAFF_UPLOAD_URL_TTL_SECONDS", "600").strip()
 try:
-    STAFF_UPLOAD_URL_TTL_SECONDS = int(_raw_staff_upload_ttl)
+    STAFF_UPLOAD_URL_TTL_SECONDS = int(_raw_staff_upload_ttl or "600")
 except ValueError:
     STAFF_UPLOAD_URL_TTL_SECONDS = 600
+
+# Rewarded ads are fail-closed. Test and production use the same server-side
+# verification path; production activation is an explicit release setting.
+REWARDED_ADS_MODE = os.environ.get("REWARDED_ADS_MODE", "disabled").strip().lower()
+if REWARDED_ADS_MODE not in {"disabled", "test", "production"}:
+    raise ImproperlyConfigured("REWARDED_ADS_MODE must be disabled, test, or production.")
+REWARDED_ADS_DEMO_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
+REWARDED_ADS_UNIT_ID = os.environ.get("REWARDED_ADS_UNIT_ID", "").strip()
+if REWARDED_ADS_MODE == "test" and not REWARDED_ADS_UNIT_ID:
+    REWARDED_ADS_UNIT_ID = REWARDED_ADS_DEMO_UNIT_ID
+if (
+    REWARDED_ADS_MODE != "disabled"
+    and re.fullmatch(r"ca-app-pub-[0-9]{16}/[0-9]{10}", REWARDED_ADS_UNIT_ID) is None
+):
+    raise ImproperlyConfigured(
+        "REWARDED_ADS_UNIT_ID must be a valid AdMob ad unit ID when rewarded ads are enabled."
+    )

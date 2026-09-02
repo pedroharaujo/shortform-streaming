@@ -1,7 +1,6 @@
 import {
   API_BASE_URL_VARIABLE,
   API_ENVIRONMENT_VARIABLE,
-  CATALOG_TERRITORY_VARIABLE,
   EnvironmentConfigurationError,
   resolveApiConfiguration,
 } from './environment';
@@ -9,24 +8,19 @@ import {
 const localEnvironment = {
   [API_ENVIRONMENT_VARIABLE]: 'local',
   [API_BASE_URL_VARIABLE]: 'http://10.0.2.2:8000',
-  [CATALOG_TERRITORY_VARIABLE]: 'FR',
 };
 
 describe('resolveApiConfiguration', () => {
-  it('resolves an explicit local configuration', () => {
+  it('resolves the explicit API environment without market configuration', () => {
     expect(resolveApiConfiguration(localEnvironment)).toEqual({
       environment: 'local',
       baseUrl: 'http://10.0.2.2:8000',
-      catalogTerritory: 'FR',
     });
   });
 
   it('fails when the environment name is absent instead of defaulting', () => {
     expect(() =>
-      resolveApiConfiguration({
-        [API_BASE_URL_VARIABLE]: 'https://api.example',
-        [CATALOG_TERRITORY_VARIABLE]: 'FR',
-      }),
+      resolveApiConfiguration({ [API_BASE_URL_VARIABLE]: 'https://api.example' }),
     ).toThrow(EnvironmentConfigurationError);
   });
 
@@ -35,35 +29,14 @@ describe('resolveApiConfiguration', () => {
       resolveApiConfiguration({
         [API_ENVIRONMENT_VARIABLE]: 'production',
         [API_BASE_URL_VARIABLE]: 'http://api.example',
-        [CATALOG_TERRITORY_VARIABLE]: 'FR',
       }),
     ).toThrow(/must use https/);
   });
 
-  it('fails when the catalog territory is absent instead of inferring locale', () => {
-    expect(() =>
-      resolveApiConfiguration({
-        [API_ENVIRONMENT_VARIABLE]: 'local',
-        [API_BASE_URL_VARIABLE]: 'http://10.0.2.2:8000',
-        LANG: 'fr_FR.UTF-8',
-        LC_ALL: 'fr_FR.UTF-8',
-        LOCALE: 'fr_FR',
-      }),
-    ).toThrow(new RegExp(CATALOG_TERRITORY_VARIABLE));
-  });
-
-  it('does not take catalog territory from locale-shaped environment variables', () => {
-    expect(
-      resolveApiConfiguration({
-        ...localEnvironment,
-        LANG: 'de_DE.UTF-8',
-        LC_ALL: 'de_DE.UTF-8',
-        LOCALE: 'DE',
-      }),
-    ).toEqual({
+  it('ignores locale because the MVP market and language are server-owned constants', () => {
+    expect(resolveApiConfiguration({ ...localEnvironment, LANG: 'de_DE.UTF-8' })).toEqual({
       environment: 'local',
       baseUrl: 'http://10.0.2.2:8000',
-      catalogTerritory: 'FR',
     });
   });
 

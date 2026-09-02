@@ -16,7 +16,7 @@ from apps.accounts.models import AccountDeletion, UserProfile, deletion_fingerpr
 from apps.accounts.profiles import lock_account_identity
 from apps.advertising.models import RewardIntent
 from apps.advertising.verification import InvalidCallback, VerifiedReward
-from apps.catalog.eligibility import CatalogRequestContext, episode_is_eligible
+from apps.catalog.eligibility import episode_is_eligible
 from apps.catalog.models import Episode
 from apps.entitlements.models import EntitlementSource, EpisodeEntitlement
 from apps.entitlements.policy import OffersLocked, evaluate_episode_offers
@@ -48,51 +48,37 @@ def current_profile(profile: UserProfile) -> UserProfile:
     return fresh
 
 
-def offer_available(episode: Episode, context: CatalogRequestContext, profile: UserProfile) -> bool:
-    if (
-        not settings.DEBUG
-        or settings.REWARDED_ADS_MODE != "test"
-        or not profile.ads_consent
-        or context.platform != "android"
-    ):
+def offer_available(episode: Episode, profile: UserProfile) -> bool:
+    if settings.REWARDED_ADS_MODE not in {"test", "production"} or not profile.ads_consent:
         return False
-    decision = evaluate_episode_offers(episode, context, profile)
+    decision = evaluate_episode_offers(episode, profile)
     return isinstance(decision, OffersLocked) and any(
         method.type == "rewarded_ad" for method in decision.methods
     )
 
 
-def intent_context(intent: RewardIntent) -> CatalogRequestContext:
-    return CatalogRequestContext(
-        territory=intent.territory, platform=intent.platform, language=intent.language
-    )
-
-
 def create_reward_intent(
-    profile: UserProfile, episode_id: str, request_id: UUID, context: CatalogRequestContext
+    profile: UserProfile, episode_id: str, request_id: UUID
 ) -> tuple[RewardIntent, bool]:
     with transaction.atomic():
         profile = current_profile(profile)
         existing = RewardIntent.objects.filter(user_profile=profile, request_id=request_id).first()
         if existing is not None:
-            if existing.episode.public_id != episode_id or intent_context(existing) != context:
+            if existing.episode.public_id != episode_id:
                 raise RewardUnavailable()
             return existing, False
         episode = (
             Episode.objects.select_related("series", "season").filter(public_id=episode_id).first()
         )
-        if episode is None or not episode_is_eligible(episode, context):
+        if episode is None or not episode_is_eligible(episode):
             raise NotFound("Resource not found.")
-        if not offer_available(episode, context, profile):
+        if not offer_available(episode, profile):
             raise RewardUnavailable()
         return RewardIntent.objects.create(
             user_profile=profile,
             episode=episode,
             request_id=request_id,
-            territory=context.territory,
-            platform=context.platform,
-            language=context.language,
-            ad_unit_id=settings.REWARDED_ADS_TEST_UNIT_ID,
+            ad_unit_id=settings.REWARDED_ADS_UNIT_ID,
             expires_at=timezone.now() + timedelta(minutes=15),
         ), True
 
@@ -102,13 +88,13 @@ def reward_status(intent: RewardIntent) -> str:
         return "granted"
     if intent.expires_at <= timezone.now():
         return "expired"
-    if not offer_available(intent.episode, intent_context(intent), intent.user_profile):
+    if not offer_available(intent.episode, intent.user_profile):
         return "unavailable"
     return "pending"
 
 
 def grant_verified_reward(callback: VerifiedReward) -> None:
-    if not settings.DEBUG or settings.REWARDED_ADS_MODE != "test":
+    if settings.REWARDED_ADS_MODE not in {"test", "production"}:
         raise InvalidCallback()
     with transaction.atomic():
         # Serialize a transaction ID even if two callbacks target different users.
@@ -138,7 +124,7 @@ def grant_verified_reward(callback: VerifiedReward) -> None:
             raise InvalidCallback()
         if (
             callback.ad_unit != intent.ad_unit_id.rsplit("/", 1)[-1]
-            or intent.ad_unit_id != settings.REWARDED_ADS_TEST_UNIT_ID
+            or intent.ad_unit_id != settings.REWARDED_ADS_UNIT_ID
         ):
             raise InvalidCallback()
         if intent.granted_at is not None:
@@ -155,7 +141,7 @@ def grant_verified_reward(callback: VerifiedReward) -> None:
             raise InvalidCallback()
         if RewardIntent.objects.filter(provider_transaction_id=callback.transaction_id).exists():
             raise InvalidCallback()
-        if not offer_available(intent.episode, intent_context(intent), profile):
+        if not offer_available(intent.episode, profile):
             raise InvalidCallback()
         EpisodeEntitlement.objects.get_or_create(
             user_profile=profile,

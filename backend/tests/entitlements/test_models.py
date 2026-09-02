@@ -14,7 +14,7 @@ from tests.entitlements.builders import grant_staff_entitlement
 @pytest.mark.django_db
 def test_unique_profile_episode_rejects_second_source() -> None:
     profile = UserProfile.objects.create(firebase_uid="uid-unique")
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    _series, episode = make_published_title(title="Harbor Lights")
     grant_staff_entitlement(profile, episode)
     with pytest.raises(IntegrityError):
         with transaction.atomic():
@@ -29,7 +29,7 @@ def test_unique_profile_episode_rejects_second_source() -> None:
 @pytest.mark.django_db(transaction=True)
 def test_concurrent_insert_of_same_pair_keeps_one_row() -> None:
     profile = UserProfile.objects.create(firebase_uid="uid-concurrent")
-    _series, episode = make_published_title(title="Harbor Lights", territory="FR")
+    _series, episode = make_published_title(title="Harbor Lights")
     profile_id = profile.pk
     episode_id = episode.pk
     results: list[str] = []

@@ -25,7 +25,6 @@ const FIREBASE_CONFIG = path.join(MOBILE_ROOT, '..', 'firebase.json');
 const REQUIRED_ENVIRONMENT = {
   EXPO_PUBLIC_API_ENVIRONMENT: 'local',
   EXPO_PUBLIC_API_BASE_URL: 'http://10.0.2.2:8000',
-  EXPO_PUBLIC_CATALOG_TERRITORY: 'FR',
 };
 
 const SENSITIVE_NAME = new RegExp(
@@ -92,8 +91,7 @@ function checkResolvedConfiguration() {
   const api = resolved?.extra?.api;
   if (
     api?.environment !== 'local' ||
-    api?.baseUrl !== REQUIRED_ENVIRONMENT.EXPO_PUBLIC_API_BASE_URL ||
-    api?.catalogTerritory !== REQUIRED_ENVIRONMENT.EXPO_PUBLIC_CATALOG_TERRITORY
+    api?.baseUrl !== REQUIRED_ENVIRONMENT.EXPO_PUBLIC_API_BASE_URL
   ) {
     fail(`extra.api was not resolved from the environment: ${JSON.stringify(api)}`);
     return;
@@ -103,10 +101,8 @@ function checkResolvedConfiguration() {
   const adsPlugin = resolved.plugins?.find(
     (plugin) => Array.isArray(plugin) && plugin[0] === 'react-native-google-mobile-ads',
   );
-  const analyticsPlugin = resolved.plugins?.find(
-    (plugin) => Array.isArray(plugin) && plugin[0] === '@react-native-firebase/analytics',
-  );
   if (
+    resolved.extra?.ads?.mode !== 'test' ||
     resolved.extra?.ads?.androidAppId !== 'ca-app-pub-3940256099942544~3347511713' ||
     resolved.extra?.ads?.rewardedUnitId !== 'ca-app-pub-3940256099942544/5224354917' ||
     adsPlugin?.[1]?.androidAppId !== 'ca-app-pub-3940256099942544~3347511713' ||
@@ -115,8 +111,12 @@ function checkResolvedConfiguration() {
     fail('rewarded ads must use the Google demo app and delay native measurement initialization.');
     return;
   }
-  if (analyticsPlugin?.[1]?.ios?.withoutAdIdSupport !== true) {
-    fail('Firebase Analytics must omit iOS advertising-ID support.');
+  if (resolved.extra?.analytics?.enabled !== true) {
+    fail('local analytics must be enabled for consent-gated validation.');
+    return;
+  }
+  if (!resolved.plugins?.includes('@react-native-firebase/analytics')) {
+    fail('Firebase Analytics plugin is missing.');
     return;
   }
   walk(resolved, '', (key, value, keyPath) => {
@@ -134,8 +134,7 @@ function checkResolvedConfiguration() {
   }
 
   process.stdout.write(
-    `Expo public config resolved for environment "${api.environment}" -> ${api.baseUrl} ` +
-      `(catalog territory ${api.catalogTerritory}); ` +
+    `Expo public config resolved for environment "${api.environment}" -> ${api.baseUrl}; ` +
       'no sensitive keys or credential-shaped values present.\n',
   );
 }
@@ -195,48 +194,10 @@ function checkInvalidEnvironmentFails() {
   process.stdout.write('Invalid environment name fails the Expo config as required.\n');
 }
 
-function checkMissingTerritoryFails() {
-  const result = runExpoConfig({
-    EXPO_PUBLIC_API_ENVIRONMENT: 'local',
-    EXPO_PUBLIC_API_BASE_URL: 'http://10.0.2.2:8000',
-  });
-  if (result.status === 0) {
-    fail('expo config succeeded without EXPO_PUBLIC_CATALOG_TERRITORY; it must fail loudly.');
-    return;
-  }
-  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  if (!output.includes('EXPO_PUBLIC_CATALOG_TERRITORY')) {
-    fail('missing-territory failure did not name EXPO_PUBLIC_CATALOG_TERRITORY.');
-    return;
-  }
-  process.stdout.write(
-    'Missing catalog territory configuration fails the Expo config as required.\n',
-  );
-}
-
-function checkInvalidTerritoryFails() {
-  const result = runExpoConfig({
-    ...REQUIRED_ENVIRONMENT,
-    EXPO_PUBLIC_CATALOG_TERRITORY: 'FRA',
-  });
-  if (result.status === 0) {
-    fail('expo config accepted a catalog territory that is not ISO 3166-1 alpha-2.');
-    return;
-  }
-  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  if (!output.includes('EXPO_PUBLIC_CATALOG_TERRITORY')) {
-    fail('invalid-territory failure did not name EXPO_PUBLIC_CATALOG_TERRITORY.');
-    return;
-  }
-  process.stdout.write('Invalid catalog territory fails the Expo config as required.\n');
-}
-
 checkResolvedConfiguration();
 checkAnalyticsDefaultsOff();
 checkMissingEnvironmentFails();
 checkInvalidEnvironmentFails();
-checkMissingTerritoryFails();
-checkInvalidTerritoryFails();
 
 const publisher = {
   EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: 'ca-app-pub-1111111111111111~3333333333',
@@ -260,7 +221,6 @@ if (publisherResult.status !== 0) {
 }
 for (const overrides of [
   { ...publisher, EXPO_PUBLIC_API_ENVIRONMENT: 'staging' },
-  { ...publisher, EXPO_PUBLIC_API_ENVIRONMENT: 'production' },
   { EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: publisher.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID },
   { EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID: publisher.EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID },
   {
@@ -274,17 +234,37 @@ for (const overrides of [
   { ...publisher, EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID: 'ca-app-pub-9999999999999999/2222222222' },
   { ...publisher, EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: ' ca-app-pub-1111111111111111~3333333333' },
   { EXPO_PUBLIC_API_ENVIRONMENT: 'staging', EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: '' },
+  { EXPO_PUBLIC_API_ENVIRONMENT: 'production', EXPO_PUBLIC_REWARDED_ADS_MODE: 'test' },
+  { EXPO_PUBLIC_REWARDED_ADS_MODE: 'production' },
 ]) {
   const result = runExpoConfig({
     ...REQUIRED_ENVIRONMENT,
     EXPO_PUBLIC_API_BASE_URL: 'https://api.example.invalid',
     ...overrides,
   });
-  if (result.status === 0 || !`${result.stdout}${result.stderr}`.includes('EXPO_PUBLIC_ADMOB'))
-    fail('invalid publisher scope/pair must fail with an AdMob configuration error');
+  if (result.status === 0) fail('invalid publisher scope/pair must fail closed');
 }
 
 if (!process.exitCode)
   process.stdout.write(
     'Publisher test config embeds paired IDs; invalid pairs and nonlocal overrides fail closed.\n',
   );
+
+const productionResult = runExpoConfig({
+  ...REQUIRED_ENVIRONMENT,
+  EXPO_PUBLIC_API_ENVIRONMENT: 'production',
+  EXPO_PUBLIC_API_BASE_URL: 'https://api.example.invalid',
+  EXPO_PUBLIC_REWARDED_ADS_MODE: 'production',
+  EXPO_PUBLIC_ANALYTICS_ENABLED: 'true',
+  ...publisher,
+});
+if (productionResult.status !== 0) {
+  fail('explicit production rewarded ads and analytics must resolve with publisher IDs');
+} else {
+  const productionConfig = JSON.parse(productionResult.stdout);
+  if (
+    productionConfig.extra?.ads?.mode !== 'production' ||
+    productionConfig.extra?.analytics?.enabled !== true
+  )
+    fail('production activation switches were not frozen into the public manifest');
+}

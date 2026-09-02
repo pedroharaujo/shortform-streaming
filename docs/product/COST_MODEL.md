@@ -118,13 +118,13 @@ One table used by all three scenarios. Every volume is **hypothetical**. EUR use
 | 5 | Other `variable_infrastructure` terms | **USD 0.00** | API/DB/analytics/notifications/MMP: **not modeled / pending quotes**. Kept in the sum so the formula identity is visible. Cloud Run request counts are not invented. |
 | 6 | P7 IAP | **0 / N/A / labeled P7** | Payer conversion, store commissions, coins, subscriptions = **P7**. Ads-only uses rewarded ads/user and net eCPM. |
 | 7 | Acquisition spend | **pending D-017 (Decision required)** | **Not assumed.** No dollar or euro UA figure. `cohort_contribution` is shown **before acquisition**. Approved `contribution_LTV_to_CAC` is **not computed or claimed**. |
-| 8 | Content cost | **USD 0.00 / pending catalog terms** | Self-owned/generated test media; licensed MG/share is P0-T02. Pending, not an approved content budget. |
+| 8 | Content cost | **USD 0.00 in this infrastructure model** | MVP catalog is one self-owned series (D-004). Production cost is tracked separately when known; no license MG or revenue share applies to MVP. |
 | 9 | Net eCPM | **hypothetical USD 8.00** (EUR 6.85872 at 0.85734) **per 1,000 rewarded impressions** | Not measured AdMob yield. `net_ad_revenue = (users × ads_per_user / 1000) × eCPM`. |
 | 10 | EUR | 1 USD = 0.85734 EUR on 2026-08-24 | Frankfurter / ECB reference; reused, not a new pull. |
 
 ## Scenario template
 
-Three **hypothetical** scenarios. Same fields throughout. This is **not an approved budget**. D-017 remains **pending** (Decision required). Country/storefront mix **references D-001 EU EUR founder scope, still gated by territorial rights**. Customer currency is EUR under D-001/D-021. First real negotiated quotes remain pending except cited public list prices and the P2-T05 Bunny encode observation.
+Three **hypothetical** scenarios. Same fields throughout. This is **not an approved budget**. D-017 remains **pending** (Decision required). D-001 limits the MVP to France through Google Play; there is no multi-country or licensed-content mix in these scenarios. First real negotiated quotes remain pending except cited public list prices and the P2-T05 Bunny encode observation.
 
 | Field | Small closed beta (**hypothetical**) | Controlled storefront launch (**hypothetical**) | 10× scale (**hypothetical** 10× launch volumes) |
 | --- | --- | --- | --- |
@@ -274,7 +274,7 @@ Record the original amount/currency, converted EUR amount, exchange rate, rate s
 
 ## P2-T05 Bunny Stream spike (public list prices)
 
-Live non-production Bunny Stream smoke ran **2026-08-25** (`spike_bunny_playback`, generated 9:16 clip, non-production library). Bunny did **not** fail; GCP Cloud CDN fallback was not activated; D-014 was not reopened.
+Live non-production Bunny Stream smoke ran **2026-08-25** (generated 9:16 clip, non-production library, using a temporary command later removed). Bunny did **not** fail; GCP Cloud CDN fallback was not activated; D-014 was not reopened.
 
 Observed encode (management-command status; no signed URLs recorded):
 

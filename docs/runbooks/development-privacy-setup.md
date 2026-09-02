@@ -15,9 +15,9 @@ repository; use a rendered document URL only after the exact page passes Google'
 policy-page requirements. A GitHub URL is a candidate, not guaranteed acceptance.
 A plain static document is the fallback; no consumer web client is needed.
 
-Use the founder-controlled Android emulator, synthetic email/password credentials,
-local Auth emulator/database and generated media only. Do not press Google
-Sign-In, use real accounts, onboard public testers or activate production ads.
+Use the founder-controlled Android emulator, a synthetic Google account in the
+local Auth emulator/database, and generated media only. Do not use a real Google
+account, onboard public testers, or activate production ads.
 
 Select a manual cleanup deadline: close the experiment when complete or abandoned,
 then clear its dedicated local state within seven days of its final attempt.

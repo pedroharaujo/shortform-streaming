@@ -23,6 +23,7 @@ PLAYBACK_ENVIRONMENT = (
 )
 CONFIGURATION_ENVIRONMENT = (
     "REWARDED_ADS_MODE",
+    "REWARDED_ADS_UNIT_ID",
     "REWARDED_ADS_TEST_UNIT_ID",
     *REQUIRED_ENVIRONMENT,
     "DATABASE_CONNECT_TIMEOUT",
@@ -153,7 +154,7 @@ def test_production_settings_harden_admin_sessions_csrf_and_passwords() -> None:
 
 
 @pytest.mark.parametrize("unit_id", ["", "ca-app-pub-1111111111111111/2222222222"])
-def test_production_rejects_test_unit_override_even_when_rewards_disabled(unit_id: str) -> None:
+def test_production_rejects_obsolete_test_unit_setting(unit_id: str) -> None:
     result = run_settings_import(
         {
             **IMPORT_VALID_ENVIRONMENT,
@@ -164,6 +165,40 @@ def test_production_rejects_test_unit_override_even_when_rewards_disabled(unit_i
 
     assert result.returncode != 0
     assert "REWARDED_ADS_TEST_UNIT_ID" in result.stderr
+
+
+def test_production_settings_accept_explicit_publisher_rewarded_ads() -> None:
+    result = run_settings_import(
+        {
+            **IMPORT_VALID_ENVIRONMENT,
+            "REWARDED_ADS_MODE": "production",
+            "REWARDED_ADS_UNIT_ID": "ca-app-pub-1111111111111111/2222222222",
+        }
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    ("mode", "unit_id"),
+    [
+        ("test", "ca-app-pub-3940256099942544/5224354917"),
+        ("production", ""),
+        ("production", "ca-app-pub-3940256099942544/5224354917"),
+        ("production", "malformed"),
+    ],
+)
+def test_production_rewarded_ads_fail_closed(mode: str, unit_id: str) -> None:
+    result = run_settings_import(
+        {
+            **IMPORT_VALID_ENVIRONMENT,
+            "REWARDED_ADS_MODE": mode,
+            "REWARDED_ADS_UNIT_ID": unit_id,
+        }
+    )
+
+    assert result.returncode != 0
+    assert "REWARDED_ADS" in result.stderr
 
 
 def test_production_settings_reject_fake_video_provider() -> None:
@@ -178,12 +213,6 @@ def test_production_settings_reject_fake_staff_upload_store() -> None:
 
     assert result.returncode != 0
     assert "STAFF_UPLOAD_STORE" in result.stderr
-
-
-def test_production_settings_accept_unset_staff_upload_store() -> None:
-    result = run_settings_import(IMPORT_VALID_ENVIRONMENT)
-
-    assert result.returncode == 0, result.stderr
 
 
 def test_production_settings_gcs_staff_upload_without_bucket_fails() -> None:

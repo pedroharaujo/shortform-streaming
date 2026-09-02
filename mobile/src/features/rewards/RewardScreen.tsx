@@ -222,7 +222,7 @@ export function RewardScreen({
           unlocked: true,
         };
       } else if (!enabled) {
-        return unavailable('Test ads are unavailable in this build.');
+        return unavailable('Rewarded ads are unavailable in this build.');
       } else if (!profile.data.ads_consent) {
         return unavailable('Ads preference is off. Manage your choices in Account.');
       } else {
@@ -238,7 +238,7 @@ export function RewardScreen({
             description: method.description,
             action: method.title,
           },
-          message: 'Test ads only. Access is confirmed by the server after verification.',
+          message: 'Access is confirmed by the server after the ad is verified.',
           ...(recoveredAttempt === null ? {} : { recoveredAttempt }),
         };
       }
@@ -259,7 +259,6 @@ export function RewardScreen({
   useEffect(() => {
     if (eventEpisode === null || state.phase !== 'loaded') return;
     if (offer !== null) {
-      void analytics.recordOfferPresented(eventEpisode);
     } else if (state.analyticsFailure !== undefined) {
       void analytics.recordFailed(
         eventEpisode,
@@ -435,12 +434,11 @@ export function RewardScreen({
           setAttempt(activeAttempt);
         }
         if (eventEpisode !== null)
-          void analytics.recordOfferSelected(eventEpisode, activeAttempt.requestId);
-        analyticsFailure = {
-          attemptKey: activeAttempt.requestId,
-          stage: 'load',
-          code: 'ad_prepare_failed',
-        };
+          analyticsFailure = {
+            attemptKey: activeAttempt.requestId,
+            stage: 'load',
+            code: 'ad_prepare_failed',
+          };
         setMessage('Checking ad consent…');
         await presenter.prepare(isCurrent);
         analyticsFailure = null;
@@ -477,7 +475,7 @@ export function RewardScreen({
         if (!guard()) return;
         if (created.status === 'pending') {
           const pendingIntent = created;
-          setMessage('Loading test ad…');
+          setMessage('Loading rewarded ad…');
           analyticsFailure = {
             attemptKey: pendingIntent.id,
             stage: 'load',
@@ -515,7 +513,7 @@ export function RewardScreen({
         setMessage(
           created
             ? 'The ad was unavailable or closed. Check reward status; no client reward was granted.'
-            : 'The test ad could not start. Consent or ad service may be unavailable. Try again later.',
+            : 'The rewarded ad could not start. Consent or ad service may be unavailable. Try again later.',
         );
       }
     } finally {
@@ -576,7 +574,7 @@ export function RewardScreen({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={
-                intent || attempt?.intentId ? 'Check reward status' : 'Watch test ad'
+                intent || attempt?.intentId ? 'Check reward status' : 'Watch rewarded ad'
               }
               disabled={busy}
               accessibilityState={{ disabled: busy, busy }}
@@ -586,7 +584,7 @@ export function RewardScreen({
               style={[styles.primary, busy && styles.disabled]}
             >
               <Text style={styles.primaryText}>
-                {intent || attempt?.intentId ? 'Check reward status' : 'Watch test ad'}
+                {intent || attempt?.intentId ? 'Check reward status' : 'Watch rewarded ad'}
               </Text>
             </Pressable>
           ) : null}

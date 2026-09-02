@@ -1,18 +1,15 @@
-import { useEffect, type JSX } from 'react';
+import type { JSX } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CatalogClient, CatalogSeriesCard } from '../../api/catalog/types';
-import type { AnalyticsRuntime } from '../../analytics/runtime';
 import { CatalogArtwork } from './CatalogArtwork';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
 import { useCatalogHome } from './useCatalog';
 
 export interface HomeCatalogScreenProps {
-  readonly analytics: AnalyticsRuntime;
   readonly client: CatalogClient;
   readonly onSelectSeries: (seriesId: string) => void;
-  readonly onOpenHealth?: () => void;
   readonly onOpenSignIn: () => void;
   readonly onOpenAccount?: () => void;
 }
@@ -42,31 +39,12 @@ function SeriesCard({
 }
 
 export function HomeCatalogScreen({
-  analytics,
   client,
   onSelectSeries,
-  onOpenHealth,
   onOpenSignIn,
   onOpenAccount,
 }: HomeCatalogScreenProps): JSX.Element {
   const { state, refresh } = useCatalogHome(client);
-
-  useEffect(() => {
-    if (state.phase !== 'loaded') return;
-    void (async () => {
-      await analytics.logOnce('home_viewed', 'home', {});
-      let position = 0;
-      for (const rail of state.home.rails) {
-        for (const series of rail.series) {
-          await analytics.logOnce('series_impression', `i:${series.id}:${position}`, {
-            series_id: series.id,
-            position,
-          });
-          position += 1;
-        }
-      }
-    })();
-  }, [analytics, state]);
 
   return (
     <SafeAreaView style={styles.container} testID="home-screen">
@@ -123,17 +101,6 @@ export function HomeCatalogScreen({
           style={styles.healthLink}
         >
           <Text style={styles.healthLinkLabel}>Account</Text>
-        </Pressable>
-      ) : null}
-      {__DEV__ && onOpenHealth !== undefined ? (
-        <Pressable
-          accessibilityLabel="Backend availability"
-          accessibilityRole="button"
-          onPress={onOpenHealth}
-          style={styles.healthLink}
-          testID="home-health"
-        >
-          <Text style={styles.healthLinkLabel}>Backend availability</Text>
         </Pressable>
       ) : null}
     </SafeAreaView>

@@ -62,22 +62,17 @@ def test_form_body_is_rejected_before_authentication_or_mutation(client: Client)
     assert not UserProfile.objects.exists()
 
 
-def test_post_form_fields_are_rejected_but_bodyless_post_remains_valid(client: Client) -> None:
+def test_post_form_fields_are_rejected_before_authentication(client: Client) -> None:
     with patch("apps.accounts.authentication.get_token_verifier") as verifier:
         verifier.return_value.verify_id_token.return_value = VerifiedToken(uid="boundary-user")
-        rejected = client.post(
-            "/v1/me/export",
+        response = client.post(
+            "/v1/me/deletion",
             {"unexpected": "field"},
             HTTP_AUTHORIZATION="Bearer synthetic-token",
         )
-        bodyless = client.post(
-            "/v1/me/export",
-            HTTP_AUTHORIZATION="Bearer synthetic-token",
-        )
 
-    _assert_safe_boundary(rejected, 415, "unsupported_media_type")
-    assert bodyless.status_code == 501
-    assert verifier.call_count == 1
+    _assert_safe_boundary(response, 415, "unsupported_media_type")
+    verifier.assert_not_called()
 
 
 @override_settings(API_MAX_REQUEST_BODY_BYTES=8)

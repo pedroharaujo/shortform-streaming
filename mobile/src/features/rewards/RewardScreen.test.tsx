@@ -42,14 +42,6 @@ const INTENT: RewardIntent = {
 
 function analyticsDouble(): jest.Mocked<RewardAnalytics> {
   return {
-    recordOfferPresented: jest.fn<
-      ReturnType<RewardAnalytics['recordOfferPresented']>,
-      Parameters<RewardAnalytics['recordOfferPresented']>
-    >(async () => undefined),
-    recordOfferSelected: jest.fn<
-      ReturnType<RewardAnalytics['recordOfferSelected']>,
-      Parameters<RewardAnalytics['recordOfferSelected']>
-    >(async () => undefined),
     recordAdEvent: jest.fn<
       ReturnType<RewardAnalytics['recordAdEvent']>,
       Parameters<RewardAnalytics['recordAdEvent']>
@@ -199,22 +191,18 @@ it.each([true, false])(
 
 it('discloses the episode and exact reward before opt-in, and client completion cannot unlock', async () => {
   const { view, rewards, presenter, onPlay, analytics } = await setup();
-  await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
+  await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
   expect(view.getByText('Synthetic episode 6')).toBeTruthy();
   expect(view.getByText(INTENT.reward_description)).toBeTruthy();
   expect(presenter.prepare).not.toHaveBeenCalled();
   expect(rewards.create).not.toHaveBeenCalled();
-  await fireEvent.press(view.getByLabelText('Watch test ad'));
+  await fireEvent.press(view.getByLabelText('Watch rewarded ad'));
   await waitFor(() => expect(rewards.get).toHaveBeenCalled());
   expect(presenter.present).toHaveBeenCalledWith(
     INTENT,
     expect.any(Function),
     expect.any(Function),
   );
-  expect(analytics.recordOfferPresented).toHaveBeenCalledWith(
-    expect.objectContaining({ episodeId: 'ep_synthetic', episodeNumber: 6 }),
-  );
-  expect(analytics.recordOfferSelected).toHaveBeenCalledTimes(1);
   expect(analytics.recordAdEvent.mock.calls.map(([, , event]) => event)).toEqual([
     'loaded',
     'started',
@@ -226,7 +214,7 @@ it('discloses the episode and exact reward before opt-in, and client completion 
 
 it('refreshes authoritative access and authorizes before entering playback', async () => {
   const { view, rewards, onPlay, playback, analytics } = await setup();
-  await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
+  await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
   let confirmAccess!: (value: Awaited<ReturnType<RewardsClient['offers']>>) => void;
   rewards.offers.mockImplementation(
     () =>
@@ -238,7 +226,7 @@ it('refreshes authoritative access and authorizes before entering playback', asy
     outcome: 'ok',
     data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
   });
-  await fireEvent.press(view.getByLabelText('Watch test ad'));
+  await fireEvent.press(view.getByLabelText('Watch rewarded ad'));
   await waitFor(() => expect(rewards.offers).toHaveBeenCalledTimes(2));
   expect(playback.authorize).not.toHaveBeenCalled();
   expect(onPlay).not.toHaveBeenCalled();
@@ -255,7 +243,7 @@ it('refreshes authoritative access and authorizes before entering playback', asy
 it('cannot initialize ads without the account preference', async () => {
   const { view, presenter, rewards } = await setup(false);
   await waitFor(() => expect(view.getByText(/Ads preference is off/)).toBeTruthy());
-  expect(view.queryByLabelText('Watch test ad')).toBeNull();
+  expect(view.queryByLabelText('Watch rewarded ad')).toBeNull();
   expect(presenter.prepare).not.toHaveBeenCalled();
   expect(rewards.create).not.toHaveBeenCalled();
 });
@@ -263,8 +251,8 @@ it('cannot initialize ads without the account preference', async () => {
 it('fails closed if UMP consent is unavailable', async () => {
   const { view, presenter, rewards, onPlay, analytics } = await setup();
   presenter.prepare.mockRejectedValue(new Error('synthetic-private-provider-detail'));
-  await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
-  await fireEvent.press(view.getByLabelText('Watch test ad'));
+  await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
+  await fireEvent.press(view.getByLabelText('Watch rewarded ad'));
   await waitFor(() => expect(view.getByText(/could not start/)).toBeTruthy());
   expect(rewards.create).not.toHaveBeenCalled();
   expect(presenter.present).not.toHaveBeenCalled();
@@ -291,8 +279,8 @@ it('guards duplicate taps and ignores a late grant after account replacement', a
     outcome: 'ok',
     data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
   });
-  await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
-  const button = view.getByLabelText('Watch test ad');
+  await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
+  const button = view.getByLabelText('Watch rewarded ad');
   await fireEvent.press(button);
   await fireEvent.press(view.getByLabelText('Check reward status'));
   await waitFor(() => expect(presenter.present).toHaveBeenCalledTimes(1));
@@ -307,7 +295,7 @@ it('guards duplicate taps and ignores a late grant after account replacement', a
 
 it('does not contact the ad SDK for production configuration', async () => {
   const { view, presenter, rewards } = await setup(true, false);
-  await waitFor(() => expect(view.getByText(/Test ads are unavailable/)).toBeTruthy());
+  await waitFor(() => expect(view.getByText(/Rewarded ads are unavailable/)).toBeTruthy());
   expect(presenter.prepare).not.toHaveBeenCalled();
   expect(rewards.create).not.toHaveBeenCalled();
 });
@@ -315,8 +303,8 @@ it('does not contact the ad SDK for production configuration', async () => {
 it('can confirm a delayed reward after ad failure without creating or presenting another ad', async () => {
   const { view, presenter, rewards, onPlay, analytics } = await setup();
   presenter.present.mockRejectedValue(new Error('synthetic no fill'));
-  await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
-  await fireEvent.press(view.getByLabelText('Watch test ad'));
+  await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
+  await fireEvent.press(view.getByLabelText('Watch rewarded ad'));
   await waitFor(() => expect(view.getByLabelText('Check reward status')).toBeEnabled());
   expect(onPlay).not.toHaveBeenCalled();
   rewards.get.mockResolvedValue({
@@ -371,7 +359,7 @@ it.each(['unreachable', 'no-method', 'mismatched'] as const)(
     });
     await waitFor(() => expect(view.getByLabelText('Refresh reward offer')).toBeEnabled());
     if (failure === 'unreachable') expect(view.getByText(/Check your connection/)).toBeTruthy();
-    expect(view.queryByLabelText('Watch test ad')).toBeNull();
+    expect(view.queryByLabelText('Watch rewarded ad')).toBeNull();
     expect(rewards.create).not.toHaveBeenCalled();
     expect(presenter.prepare).not.toHaveBeenCalled();
     expect(view.queryByText('synthetic-private-network-detail')).toBeNull();
@@ -380,7 +368,7 @@ it.each(['unreachable', 'no-method', 'mismatched'] as const)(
 
 it('keeps a granted reward on the sheet when fresh playback authorization denies access', async () => {
   const { view, rewards, onPlay, playback } = await setup();
-  await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
+  await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
   rewards.get.mockResolvedValue({
     outcome: 'ok',
     data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
@@ -390,7 +378,7 @@ it('keeps a granted reward on the sheet when fresh playback authorization denies
     outcome: 'locked',
     lockReasons: ['entitlement_required'],
   });
-  await fireEvent.press(view.getByLabelText('Watch test ad'));
+  await fireEvent.press(view.getByLabelText('Watch rewarded ad'));
   await waitFor(() => expect(playback.authorize).toHaveBeenCalled());
   expect(onPlay).not.toHaveBeenCalled();
   expect(view.getByLabelText('Check reward status')).toBeEnabled();
@@ -400,10 +388,10 @@ it('retries a lost creation response with the same request id', async () => {
   const { view, rewards, presenter } = await setup();
   rewards.create.mockResolvedValueOnce({ outcome: 'unreachable', reason: 'Connection lost' });
   presenter.present.mockRejectedValue(new Error('synthetic no fill'));
-  await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
-  await fireEvent.press(view.getByLabelText('Watch test ad'));
-  await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
-  await fireEvent.press(view.getByLabelText('Watch test ad'));
+  await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
+  await fireEvent.press(view.getByLabelText('Watch rewarded ad'));
+  await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
+  await fireEvent.press(view.getByLabelText('Watch rewarded ad'));
   await waitFor(() => expect(rewards.create).toHaveBeenCalledTimes(2));
   expect(rewards.create.mock.calls[0]).toEqual(rewards.create.mock.calls[1]);
   expect(presenter.present).toHaveBeenCalledTimes(1);
@@ -436,8 +424,8 @@ it('reuses a persisted request id after an ambiguous create response and remount
     outcome: 'unreachable',
     reason: 'Synthetic status interruption',
   });
-  await waitFor(() => expect(recovered.view.getByLabelText('Watch test ad')).toBeEnabled());
-  await fireEvent.press(recovered.view.getByLabelText('Watch test ad'));
+  await waitFor(() => expect(recovered.view.getByLabelText('Watch rewarded ad')).toBeEnabled());
+  await fireEvent.press(recovered.view.getByLabelText('Watch rewarded ad'));
   await waitFor(() => expect(recovered.view.getByLabelText('Check reward status')).toBeEnabled());
 
   expect(recovered.rewards.create).toHaveBeenCalledWith('ep_synthetic', PERSISTED_REQUEST_ID);
@@ -466,7 +454,6 @@ it('recovers a known pending intent with a status check and no second ad impress
   expect(recovered.rewards.create).not.toHaveBeenCalled();
   expect(recovered.presenter.prepare).not.toHaveBeenCalled();
   expect(recovered.presenter.present).not.toHaveBeenCalled();
-  expect(recovered.analytics.recordOfferSelected).not.toHaveBeenCalled();
   expect(recovered.analytics.recordAdEvent).not.toHaveBeenCalled();
 });
 
@@ -481,12 +468,12 @@ it('allows an explicit fresh attempt after a recovered intent becomes terminal',
   await fireEvent.press(recovered.view.getByLabelText('Check reward status'));
   await waitFor(() => expect(recovered.view.getByLabelText('Refresh reward offer')).toBeEnabled());
   await fireEvent.press(recovered.view.getByLabelText('Refresh reward offer'));
-  await waitFor(() => expect(recovered.view.getByLabelText('Watch test ad')).toBeEnabled());
+  await waitFor(() => expect(recovered.view.getByLabelText('Watch rewarded ad')).toBeEnabled());
   recovered.rewards.get.mockResolvedValue({
     outcome: 'unreachable',
     reason: 'Synthetic status interruption',
   });
-  await fireEvent.press(recovered.view.getByLabelText('Watch test ad'));
+  await fireEvent.press(recovered.view.getByLabelText('Watch rewarded ad'));
   await waitFor(() => expect(recovered.rewards.create).toHaveBeenCalledTimes(1));
 
   expect(recovered.rewards.create.mock.calls[0]?.[1]).not.toBe(PERSISTED_REQUEST_ID);
@@ -495,7 +482,7 @@ it('allows an explicit fresh attempt after a recovered intent becomes terminal',
 it("discards another account's persisted intent before any owner-status request", async () => {
   persistAttempt('usr_previous', true);
   const replacement = await setup(true, true, true, undefined, 'usr_replacement');
-  await waitFor(() => expect(replacement.view.getByLabelText('Watch test ad')).toBeEnabled());
+  await waitFor(() => expect(replacement.view.getByLabelText('Watch rewarded ad')).toBeEnabled());
 
   expect(replacement.rewards.get).not.toHaveBeenCalled();
   expect(replacement.rewards.create).not.toHaveBeenCalled();
@@ -506,7 +493,7 @@ it.each(['locked', 'unreachable', 'mismatched'] as const)(
   'does not trust a historical grant when refreshed access is %s',
   async (failure) => {
     const { view, rewards, playback, onPlay } = await setup();
-    await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
+    await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
     rewards.get.mockResolvedValue({
       outcome: 'ok',
       data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
@@ -526,7 +513,7 @@ it.each(['locked', 'unreachable', 'mismatched'] as const)(
               },
             },
     );
-    await fireEvent.press(view.getByLabelText('Watch test ad'));
+    await fireEvent.press(view.getByLabelText('Watch rewarded ad'));
     await waitFor(() => expect(view.getByLabelText('Check reward status')).toBeEnabled());
     expect(playback.authorize).not.toHaveBeenCalled();
     expect(onPlay).not.toHaveBeenCalled();
@@ -537,7 +524,7 @@ it.each(['close', 'session-change'] as const)(
   'ignores a late playback authorization after %s',
   async (ending) => {
     const { view, rewards, playback, onPlay } = await setup();
-    await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
+    await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
     rewards.get.mockResolvedValue({
       outcome: 'ok',
       data: { ...INTENT, status: 'granted', grant_source: 'admob_ssv' },
@@ -550,7 +537,7 @@ it.each(['close', 'session-change'] as const)(
           authorize = resolve;
         }),
     );
-    await fireEvent.press(view.getByLabelText('Watch test ad'));
+    await fireEvent.press(view.getByLabelText('Watch rewarded ad'));
     await waitFor(() => expect(playback.authorize).toHaveBeenCalled());
     if (ending === 'close') await fireEvent.press(view.getByLabelText('Close reward'));
     else setAuthSession({ credential: 'mock.replacement' });
@@ -625,10 +612,10 @@ it('keeps actions unavailable during loading and can recover from an offline off
     ),
   );
   expect(view.getByLabelText('Checking episode access')).toBeTruthy();
-  expect(view.queryByLabelText('Watch test ad')).toBeNull();
+  expect(view.queryByLabelText('Watch rewarded ad')).toBeNull();
   expect(view.queryByLabelText('Refresh reward offer')).toBeNull();
   await act(async () => loadOffer({ outcome: 'unreachable', reason: 'Offline' }));
   await fireEvent.press(view.getByLabelText('Refresh reward offer'));
-  await waitFor(() => expect(view.getByLabelText('Watch test ad')).toBeEnabled());
+  await waitFor(() => expect(view.getByLabelText('Watch rewarded ad')).toBeEnabled());
   expect(rewards.create).not.toHaveBeenCalled();
 });

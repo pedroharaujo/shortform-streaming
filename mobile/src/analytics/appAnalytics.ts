@@ -1,15 +1,13 @@
 /**
- * Process-wide event runtime. Production remains hard-disabled until the
- * privacy, store-disclosure, and final-validation gates explicitly authorize it.
+ * Process-wide event runtime. Collection is enabled only by the public build
+ * switch and the user's current consent decision.
  */
 
 import Constants from 'expo-constants';
 import { randomUUID } from 'expo-crypto';
-import { Platform } from 'react-native';
 
 import { getAuthSessionRevision } from '../auth/session';
-import { getApiConfiguration } from '../config/appConfiguration';
-import type { ApiEnvironment } from '../config/environment';
+import { isAnalyticsEnabled } from '../config/appConfiguration';
 import { createAccountAnalytics, type AccountAnalytics } from './accountAnalytics';
 import { createAppOpenTracker, type AppOpenTracker } from './appOpenTracker';
 import { getAppAnalyticsConsentController } from './appAnalyticsConsent';
@@ -30,19 +28,19 @@ function createNoopSink(): AnalyticsSink {
 }
 
 export function selectAnalyticsEventSink(options: {
-  readonly environment: ApiEnvironment;
+  readonly enabled: boolean;
   readonly createNativeSink: () => AnalyticsSink;
 }): AnalyticsSink {
-  if (options.environment === 'production') return createNoopSink();
+  if (!options.enabled) return createNoopSink();
   return options.createNativeSink();
 }
 
-function createEventSink(environment: ApiEnvironment): AnalyticsSink {
+function createEventSink(enabled: boolean): AnalyticsSink {
   if (isJestRuntime()) return createNoopSink();
   return selectAnalyticsEventSink({
-    environment,
+    enabled,
     createNativeSink: () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy load keeps native Firebase out of Jest and disabled production
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy load keeps native Firebase out of Jest and disabled builds
       const loaded = require('./nativeAnalyticsEvents') as {
         createNativeAnalyticsEventSink: () => AnalyticsSink;
       };
@@ -59,21 +57,20 @@ function buildVersion(): string {
 export function getAppAnalyticsRuntime(): AccountAnalyticsRuntime {
   if (appRuntime !== null) return appRuntime;
 
-  const configuration = getApiConfiguration();
   const consent = getAppAnalyticsConsentController();
-  const environment = configuration.environment;
+  const collectionEnabled = isAnalyticsEnabled();
   const sessionId = randomUUID().replaceAll('-', '').slice(0, 16);
   appRuntime = createAnalyticsRuntime({
     client: createAnalyticsClient({
-      enabled: () => environment !== 'production' && consent.isCollectionEnabled(),
+      enabled: () => collectionEnabled && consent.isCollectionEnabled(),
       mode: __DEV__ ? 'development' : 'production',
-      sink: createEventSink(environment),
+      sink: createEventSink(collectionEnabled),
     }),
     sessionId,
     context: {
       appVersion: Constants.expoConfig?.version ?? '0',
       appBuild: buildVersion(),
-      platform: Platform.OS === 'ios' ? 'ios' : 'android',
+      platform: 'android',
       locale: 'en',
       now: () => new Date(),
     },

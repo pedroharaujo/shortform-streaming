@@ -56,12 +56,7 @@ it('emits an ordered free playback trail only after consent becomes active', asy
   await analytics.recordProgress(EPISODE, 12, false);
   await analytics.recordProgress(EPISODE, 90, true);
 
-  expect(events.map((event) => event.name)).toEqual([
-    'episode_started',
-    'episode_progress',
-    'episode_progress',
-    'episode_completed',
-  ]);
+  expect(events.map((event) => event.name)).toEqual(['episode_started', 'episode_completed']);
   expect(events[0]?.properties).toMatchObject({ access_method: 'free' });
 });
 
@@ -89,8 +84,6 @@ it('deduplicates remounted start, throttled progress, completion, lock, and erro
 
   expect(events.map((event) => event.name)).toEqual([
     'episode_started',
-    'episode_progress',
-    'episode_progress',
     'episode_completed',
     'locked_episode_viewed',
     'playback_error',

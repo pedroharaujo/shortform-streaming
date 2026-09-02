@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -16,15 +15,8 @@ os.environ.setdefault("STAFF_UPLOAD_STORE", "fake")
 from .base import *  # noqa: E402,F403
 
 DEBUG = True
-_rewarded_test_unit = os.environ.get("REWARDED_ADS_TEST_UNIT_ID")
-if _rewarded_test_unit is not None:
-    if REWARDED_ADS_MODE != "test":  # noqa: F405
-        raise ImproperlyConfigured(
-            "REWARDED_ADS_TEST_UNIT_ID requires local rewarded ads test mode."
-        )
-    if re.fullmatch(r"ca-app-pub-[0-9]{16}/[0-9]{10}", _rewarded_test_unit) is None:
-        raise ImproperlyConfigured("REWARDED_ADS_TEST_UNIT_ID must be a valid AdMob ad unit ID.")
-    REWARDED_ADS_TEST_UNIT_ID = _rewarded_test_unit
+if REWARDED_ADS_MODE == "production":  # noqa: F405
+    raise ImproperlyConfigured("Local settings cannot enable production rewarded ads.")
 
 FIREBASE_AUTH_MODE = os.environ.get("FIREBASE_AUTH_MODE", "mock").strip().lower() or "mock"
 if FIREBASE_AUTH_MODE not in {"mock", "admin"}:

@@ -1,6 +1,6 @@
 /**
  * Android app API clients. Routes should call these instead of assembling
- * catalog/playback/progress/me options from Platform.OS or public config.
+ * catalog/playback/progress/me options from the public API base URL.
  */
 
 import { getSessionCredential } from '../auth/session';
@@ -10,9 +10,6 @@ import { createAccountClient } from './account/accountClient';
 import type { AccountClient } from './account/types';
 import { createCatalogClient } from './catalog/catalogClient';
 import type { CatalogClient } from './catalog/types';
-import { MVP_CLIENT_PLATFORM } from './context';
-import { createHealthClient } from './health/healthClient';
-import type { HealthClient } from './health/types';
 import { createMeClient } from './me/meClient';
 import type { MeClient } from './me/types';
 import { createPlaybackClient } from './playback/playbackClient';
@@ -22,23 +19,18 @@ import type { ProgressClient } from './progress/types';
 import { createRewardsClient } from './rewards/rewardsClient';
 import type { RewardsClient } from './rewards/types';
 
-function appCatalogOptions() {
-  const configuration = getApiConfiguration();
-  return {
-    baseUrl: configuration.baseUrl,
-    territory: configuration.catalogTerritory,
-    platform: MVP_CLIENT_PLATFORM,
-  };
+function appApiOptions() {
+  return { baseUrl: getApiConfiguration().baseUrl };
 }
 
 export function createAppCatalogClient(): CatalogClient {
-  return createCatalogClient(appCatalogOptions());
+  return createCatalogClient(appApiOptions());
 }
 
 export function createAppPlaybackClient(
   options?: Pick<Parameters<typeof createPlaybackClient>[0], 'getCredential'>,
 ): PlaybackClient {
-  return createPlaybackClient({ ...appCatalogOptions(), ...options });
+  return createPlaybackClient({ ...appApiOptions(), ...options });
 }
 
 export function createAppPlayerClients(): {
@@ -46,7 +38,7 @@ export function createAppPlayerClients(): {
   readonly playback: PlaybackClient;
   readonly progress: ProgressClient;
 } {
-  const options = appCatalogOptions();
+  const options = appApiOptions();
   return {
     catalog: createCatalogClient(options),
     playback: createPlaybackClient({ ...options, getCredential: getSessionCredential }),
@@ -65,10 +57,6 @@ export function createAppMeClient(): MeClient {
   });
 }
 
-export function createAppHealthClient(): HealthClient {
-  return createHealthClient({ baseUrl: getApiConfiguration().baseUrl });
-}
-
 export function createAppAccountClient(): AccountClient {
   return createAccountClient({
     baseUrl: getApiConfiguration().baseUrl,
@@ -77,5 +65,5 @@ export function createAppAccountClient(): AccountClient {
 }
 
 export function createAppRewardsClient(): RewardsClient {
-  return createRewardsClient({ ...appCatalogOptions(), getCredential: getSessionCredential });
+  return createRewardsClient({ ...appApiOptions(), getCredential: getSessionCredential });
 }

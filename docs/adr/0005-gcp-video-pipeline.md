@@ -1,6 +1,6 @@
 # ADR 0005: Bunny Stream Default HLS Delivery with GCP Cloud CDN Fallback
 
-- **Status:** Accepted default 2026-08-24; **P2-T05 passed on Android under D-026** (2026-08-26 Pixel emulator, isolated `/playback-spike`, per `docs/runbooks/playback-spike.md` and the COST_MODEL spike table); Bunny did **not** fail; GCP Cloud CDN fallback stays **unplugged**; D-014 was **not** reopened; first-license DRM (**D-019**) may still change the production provider. iOS native play is **not** claimed (deferred to the iOS ship pass under D-026).
+- **Status:** Accepted default 2026-08-24; **P2-T05 passed on Android under D-026** (2026-08-26 Pixel emulator using a temporary proof route later removed; see `docs/runbooks/playback-spike.md` and the COST_MODEL spike table). Bunny did **not** fail; GCP Cloud CDN fallback stays **unplugged**; D-014 was **not** reopened. iOS and licensed-content DRM are outside the MVP.
 - **Date:** 2026-08-23
 - **Updated:** 2026-08-28
 
@@ -10,7 +10,7 @@ Vertical episodes need adaptive playback and private access. Django must not ser
 
 ## Decision
 
-**Default production path:** Bunny Stream. Staff upload a vertical master through Django; Bunny encodes ABR HLS (for example 360p, 540p, and 720p), stores, and delivers from its CDN. Django authorizes playback after rights, territory, publication, and entitlement checks, then issues a short-lived Bunny token (or signed HLS URL). The mobile app plays that HLS URL in `expo-video`. The app never uses Bunny’s web player as a lock-in.
+**Default production path:** Bunny Stream. Staff upload a self-owned vertical master through Django Admin; Bunny encodes ABR HLS (for example 360p, 540p, and 720p), stores, and delivers from its CDN. Django authorizes playback after self-owned publication, takedown, and entitlement checks within the fixed France/Android MVP scope, then issues a short-lived Bunny token (or signed HLS URL). The mobile app plays that HLS URL in `expo-video`. The app never uses Bunny’s web player as a lock-in.
 
 **Documented fallback:** private Cloud Storage source bucket → asynchronous Google Transcoder API → private HLS output bucket → Cloud CDN with short-lived signed prefix/cookie access. Activate this path only if Bunny fails P2-T05, a license/residency/support requirement forbids Bunny, measured reliability misses guardrails, or total cost is worse at measured volume.
 
