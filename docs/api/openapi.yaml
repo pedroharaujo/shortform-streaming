@@ -61,7 +61,8 @@ paths:
   /v1/catalog/home:
     get:
       operationId: v1_catalog_home_retrieve
-      description: Published self-owned English series for the France/Android MVP.
+      description: Published self-owned or licensed English series eligible for the
+        fixed France/Android MVP market.
       summary: Home catalog
       tags:
       - catalog

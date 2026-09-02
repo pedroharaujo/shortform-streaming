@@ -1,9 +1,22 @@
 from __future__ import annotations
 
 import hashlib
+from datetime import UTC, datetime, timedelta
 
-from apps.catalog.models import Episode, Genre, PublicationStatus, Season, Series
+from apps.catalog.models import (
+    MVP_CATALOG_LANGUAGE,
+    MVP_DISTRIBUTION_COUNTRY,
+    MVP_PLATFORM,
+    ContentRight,
+    Episode,
+    Genre,
+    PublicationStatus,
+    Season,
+    Series,
+)
 from apps.playback.models import MediaAsset, MediaAssetState
+
+DEFAULT_NOW = datetime(2026, 9, 2, 12, 0, tzinfo=UTC)
 
 
 def make_genre(*, name: str = "Revenge") -> Genre:
@@ -47,6 +60,43 @@ def make_series(
 def make_season(series: Series, *, number: int = 1) -> Season:
     season, _ = Season.objects.get_or_create(series=series, number=number)
     return season
+
+
+def make_right(
+    series: Series,
+    *,
+    licensor: str = "Synthetic Licensor",
+    contract_reference: str | None = None,
+    territories: list[str] | None = None,
+    denylist: list[str] | None = None,
+    platforms: list[str] | None = None,
+    languages: list[str] | None = None,
+    starts_at: datetime | None = None,
+    ends_at: datetime | None = None,
+    takedown: bool = False,
+    drm_required: bool = False,
+    promotional_clip_permission: bool = True,
+) -> ContentRight:
+    right = ContentRight(
+        series=series,
+        licensor=licensor,
+        contract_reference=contract_reference or f"synthetic-contract-{series.public_id}",
+        territory_allowlist=(
+            territories if territories is not None else [MVP_DISTRIBUTION_COUNTRY]
+        ),
+        territory_denylist=denylist if denylist is not None else [],
+        platforms=platforms if platforms is not None else [MVP_PLATFORM],
+        languages=languages if languages is not None else [MVP_CATALOG_LANGUAGE],
+        starts_at=starts_at if starts_at is not None else DEFAULT_NOW - timedelta(days=30),
+        ends_at=ends_at,
+        takedown=takedown,
+        drm_required=drm_required,
+        revenue_share_rule_reference="synthetic-revenue-share-rule",
+        promotional_clip_permission=promotional_clip_permission,
+    )
+    right.full_clean()
+    right.save()
+    return right
 
 
 def make_episode(
@@ -114,4 +164,25 @@ def make_published_title(
         series.publication_status = PublicationStatus.PUBLISHED
         series.full_clean()
         series.save(update_fields=["publication_status", "updated_at"])
+    return series, episode
+
+
+def make_published_licensed_title(
+    *,
+    title: str,
+    editorial_rank: int = 0,
+    **right_kwargs: object,
+) -> tuple[Series, Episode]:
+    series = make_series(
+        title=title,
+        editorial_rank=editorial_rank,
+        self_owned=False,
+        promotional_use_approved=False,
+        provenance_reference="",
+    )
+    make_right(series, **right_kwargs)  # type: ignore[arg-type]
+    episode = make_episode(series, publication_status=PublicationStatus.PUBLISHED)
+    series.publication_status = PublicationStatus.PUBLISHED
+    series.full_clean()
+    series.save(update_fields=["publication_status", "updated_at"])
     return series, episode

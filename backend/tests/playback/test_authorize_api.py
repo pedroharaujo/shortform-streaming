@@ -17,7 +17,12 @@ from apps.entitlements.models import EntitlementSource, EpisodeEntitlement
 from apps.playback.models import MediaAssetState
 from apps.playback.providers.factory import reset_provider_cache
 from apps.playback.providers.fake import FakeVideoProvider
-from tests.catalog.builders import make_episode, make_published_title, make_series
+from tests.catalog.builders import (
+    make_episode,
+    make_published_licensed_title,
+    make_published_title,
+    make_series,
+)
 from tests.entitlements.builders import grant_staff_entitlement
 
 AUTHORIZE = "/v1/playback/{episode_id}/authorize"
@@ -156,6 +161,22 @@ def test_takedown_unpublished_and_non_ready_media_return_404(
         response = client.post(AUTHORIZE.format(episode_id=episode.public_id))
         assert response.status_code == 404
         assert "playback_url" not in response.json()
+
+
+@pytest.mark.django_db
+def test_licensed_right_takedown_immediately_revokes_playback(
+    client: Client, fake_provider: FakeVideoProvider
+) -> None:
+    series, episode = make_published_licensed_title(title="Licensed playback")
+    _seed(fake_provider, episode)
+
+    granted = client.post(AUTHORIZE.format(episode_id=episode.public_id))
+    series.rights.update(takedown=True)
+    revoked = client.post(AUTHORIZE.format(episode_id=episode.public_id))
+
+    _assert_granted(granted.json(), fake_provider, "free")
+    assert revoked.status_code == 404
+    assert "playback_url" not in revoked.json()
 
 
 @pytest.mark.django_db

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+from collections.abc import Callable
 from typing import Any
 
 from django.contrib.postgres.fields import ArrayField
@@ -16,11 +18,50 @@ from apps.catalog.public_ids import (
 MVP_CATALOG_LANGUAGE = "en"
 MVP_DISTRIBUTION_COUNTRY = "FR"
 MVP_PLATFORM = "android"
+ISO_3166_1_ALPHA_2 = re.compile(r"^[A-Za-z]{2}$")
+ISO_639_1 = re.compile(r"^[A-Za-z]{2}$")
+ALLOWED_PLATFORMS = frozenset({"ios", "android"})
 
 
 class PublicationStatus(models.TextChoices):
     DRAFT = "draft", "Draft"
     PUBLISHED = "published", "Published"
+
+
+def _dedupe_codes(values: list[str] | None, transform: Callable[[str], str]) -> list[str]:
+    if not values:
+        return []
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        code = transform(raw.strip())
+        if code in seen:
+            continue
+        seen.add(code)
+        normalized.append(code)
+    return normalized
+
+
+def normalize_territory_codes(values: list[str] | None) -> list[str]:
+    return _dedupe_codes(values, str.upper)
+
+
+def normalize_language_codes(values: list[str] | None) -> list[str]:
+    return _dedupe_codes(values, str.lower)
+
+
+def normalize_platforms(values: list[str] | None) -> list[str]:
+    return _dedupe_codes(values, str.lower)
+
+
+def _validate_territory_codes(values: list[str], field_name: str) -> None:
+    if any(not ISO_3166_1_ALPHA_2.fullmatch(code) for code in values):
+        raise ValidationError({field_name: "Territory codes must be ISO 3166-1 alpha-2."})
+
+
+def _validate_language_codes(values: list[str], field_name: str) -> None:
+    if any(not ISO_639_1.fullmatch(code) for code in values):
+        raise ValidationError({field_name: "Language codes must be ISO 639-1 (two letters)."})
 
 
 class Genre(models.Model):
@@ -35,7 +76,7 @@ class Genre(models.Model):
 
 
 class Series(models.Model):
-    """Self-owned English series for the France/Android MVP."""
+    """Self-owned or licensed English series for the France/Android MVP."""
 
     public_id = models.CharField(max_length=40, unique=True, editable=False)
     title = models.CharField(max_length=200, blank=True, default="")
@@ -50,7 +91,6 @@ class Series(models.Model):
         default=0,
         help_text="Lower values appear first on home, then public_id.",
     )
-    # Dormant compatibility column retained until the destructive contraction.
     original_language = models.CharField(
         max_length=2,
         default=MVP_CATALOG_LANGUAGE,
@@ -73,7 +113,7 @@ class Series(models.Model):
     genres = models.ManyToManyField(Genre, blank=True, related_name="series")
     self_owned = models.BooleanField(
         default=False,
-        help_text="Must be confirmed before publication. Licensed content is outside MVP.",
+        help_text="Select the provenance path; otherwise publication requires a licensed right.",
     )
     provenance_reference = models.CharField(
         max_length=200,
@@ -83,7 +123,7 @@ class Series(models.Model):
     )
     promotional_use_approved = models.BooleanField(
         default=False,
-        help_text="Confirms promotional use for the self-owned launch material.",
+        help_text="Confirms promotional use for self-owned material.",
     )
     takedown = models.BooleanField(default=False, db_index=True)
     free_episode_count = models.PositiveIntegerField(
@@ -118,27 +158,35 @@ class Series(models.Model):
             errors["title"] = "Publishing requires an English title."
         if not self.synopsis.strip():
             errors["synopsis"] = "Publishing requires an English synopsis."
-        if not self.self_owned:
-            errors["self_owned"] = "MVP publication is limited to confirmed self-owned content."
-        if not self.provenance_reference.strip():
-            errors["provenance_reference"] = "Publishing requires a private provenance reference."
-        if not self.promotional_use_approved:
-            errors["promotional_use_approved"] = (
-                "Promotional use must be approved before publication."
-            )
         if self.takedown:
             errors["takedown"] = "A taken-down series cannot be published."
+        if self.self_owned:
+            if not self.provenance_reference.strip():
+                errors["provenance_reference"] = (
+                    "Publishing self-owned content requires a private provenance reference."
+                )
+            if not self.promotional_use_approved:
+                errors["promotional_use_approved"] = (
+                    "Promotional use must be approved before publication."
+                )
+        elif not self.has_publishable_right():
+            errors["publication_status"] = (
+                "Publishing licensed content requires a structurally valid, non-takedown "
+                "ContentRight with promotional-use permission."
+            )
         if errors:
             raise ValidationError(errors)
 
     def is_publishable(self) -> bool:
-        return (
-            bool(self.title.strip())
-            and bool(self.synopsis.strip())
-            and self.self_owned
-            and bool(self.provenance_reference.strip())
-            and self.promotional_use_approved
-            and not self.takedown
+        if not self.title.strip() or not self.synopsis.strip() or self.takedown:
+            return False
+        if self.self_owned:
+            return bool(self.provenance_reference.strip()) and self.promotional_use_approved
+        return self.has_publishable_right()
+
+    def has_publishable_right(self) -> bool:
+        return bool(self.pk) and any(
+            right.is_structurally_publishable() for right in self.rights.all()
         )
 
 
@@ -194,7 +242,6 @@ class Episode(models.Model):
         default=PublicationStatus.DRAFT,
         db_index=True,
     )
-    # Dormant nullable columns retained until the destructive contraction.
     window_starts_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -252,7 +299,7 @@ class Episode(models.Model):
             errors["synopsis"] = "Publishing requires an English episode synopsis."
         if not self.series.is_publishable():
             errors["publication_status"] = (
-                "The parent series must pass self-owned publication gates."
+                "The parent series must pass its self-owned or licensed publication gate."
             )
         if not self.has_ready_media_asset():
             errors["publication_status"] = "Publishing requires a ready media asset."
@@ -286,7 +333,7 @@ class EpisodeTranslation(models.Model):  # noqa: DJ008
 
 
 class ContentRight(models.Model):  # noqa: DJ008
-    """Dormant legacy rows; not used for MVP eligibility or exposed in Admin/API."""
+    """Licensed-series grant metadata with opaque private-system references only."""
 
     series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name="rights")
     licensor = models.CharField(
@@ -325,7 +372,7 @@ class ContentRight(models.Model):  # noqa: DJ008
     takedown = models.BooleanField(default=False, db_index=True)
     drm_required = models.BooleanField(
         default=False,
-        help_text="Stored for D-019; catalog GET does not enforce DRM.",
+        help_text="DRM-required grants fail closed until a compliant provider is approved.",
     )
     revenue_share_rule_reference = models.CharField(
         max_length=200,
@@ -333,7 +380,10 @@ class ContentRight(models.Model):  # noqa: DJ008
         default="",
         help_text="Opaque private-system rule reference. Never store rates.",
     )
-    promotional_clip_permission = models.BooleanField(default=False)
+    promotional_clip_permission = models.BooleanField(
+        default=False,
+        help_text="Required before a licensed series can publish or appear in promotion.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -357,3 +407,75 @@ class ContentRight(models.Model):  # noqa: DJ008
             ),
         ]
         ordering = ("starts_at", "id")
+
+    def __str__(self) -> str:
+        status = "takedown" if self.takedown else "active"
+        return f"{self.licensor} ({status})"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.territory_allowlist = normalize_territory_codes(self.territory_allowlist)
+        self.territory_denylist = normalize_territory_codes(self.territory_denylist)
+        self.platforms = normalize_platforms(self.platforms)
+        self.languages = normalize_language_codes(self.languages)
+        super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        super().clean()
+        self.territory_allowlist = normalize_territory_codes(self.territory_allowlist)
+        self.territory_denylist = normalize_territory_codes(self.territory_denylist)
+        self.platforms = normalize_platforms(self.platforms)
+        self.languages = normalize_language_codes(self.languages)
+
+        errors: dict[str, str] = {}
+        if not self.licensor.strip():
+            errors["licensor"] = "Licensor is required."
+        if not self.contract_reference.strip():
+            errors["contract_reference"] = "Opaque contract reference is required."
+        if not self.territory_allowlist:
+            errors["territory_allowlist"] = "Territory allowlist must contain at least one code."
+        else:
+            try:
+                _validate_territory_codes(self.territory_allowlist, "territory_allowlist")
+            except ValidationError as exc:
+                errors["territory_allowlist"] = exc.message_dict["territory_allowlist"][0]
+        if self.territory_denylist:
+            try:
+                _validate_territory_codes(self.territory_denylist, "territory_denylist")
+            except ValidationError as exc:
+                errors["territory_denylist"] = exc.message_dict["territory_denylist"][0]
+        if not self.platforms:
+            errors["platforms"] = "At least one platform is required."
+        elif set(self.platforms) - ALLOWED_PLATFORMS:
+            errors["platforms"] = "Platforms must be ios and/or android."
+        if not self.languages:
+            errors["languages"] = "At least one language grant is required."
+        else:
+            try:
+                _validate_language_codes(self.languages, "languages")
+            except ValidationError as exc:
+                errors["languages"] = exc.message_dict["languages"][0]
+        if (
+            self.starts_at is not None
+            and self.ends_at is not None
+            and self.starts_at >= self.ends_at
+        ):
+            errors["ends_at"] = "Rights window end must be after start (end is exclusive)."
+        if errors:
+            raise ValidationError(errors)
+
+    def is_structurally_publishable(self) -> bool:
+        return (
+            not self.takedown
+            and self.promotional_clip_permission
+            and bool(self.licensor.strip())
+            and bool(self.contract_reference.strip())
+            and bool(self.territory_allowlist)
+            and all(ISO_3166_1_ALPHA_2.fullmatch(code) for code in self.territory_allowlist)
+            and all(ISO_3166_1_ALPHA_2.fullmatch(code) for code in self.territory_denylist)
+            and bool(self.platforms)
+            and not (set(self.platforms) - ALLOWED_PLATFORMS)
+            and bool(self.languages)
+            and all(ISO_639_1.fullmatch(code) for code in self.languages)
+            and self.starts_at is not None
+            and (self.ends_at is None or self.starts_at < self.ends_at)
+        )

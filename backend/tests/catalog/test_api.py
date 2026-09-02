@@ -3,22 +3,26 @@ from __future__ import annotations
 import pytest
 from django.test import Client
 
-from tests.catalog.builders import make_published_title, make_series
+from tests.catalog.builders import make_published_licensed_title, make_published_title, make_series
 
 HOME = "/v1/catalog/home"
 
 
 @pytest.mark.django_db
-def test_home_returns_only_published_self_owned_series_without_market_headers(
+def test_home_returns_published_self_owned_and_licensed_series_without_market_headers(
     client: Client,
 ) -> None:
     visible, _ = make_published_title(title="Harbor Lights")
+    licensed, _ = make_published_licensed_title(title="Licensed Lights", editorial_rank=1)
     make_series(title="Draft")
 
     response = client.get(HOME)
 
     assert response.status_code == 200
-    assert [item["id"] for item in response.json()["rails"][0]["series"]] == [visible.public_id]
+    assert [item["id"] for item in response.json()["rails"][0]["series"]] == [
+        visible.public_id,
+        licensed.public_id,
+    ]
 
 
 @pytest.mark.django_db

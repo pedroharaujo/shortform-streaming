@@ -5,7 +5,7 @@
 
 The France-only Android MVP may publish one or more English-language series that are either self-owned or properly licensed (D-001, D-004, D-023, D-031, 2026-09-02). Before publication, the founder/content owner must privately record ownership and component provenance or complete the licensed-content rights package, and every media package must pass the delivery checks below.
 
-P2-T03-F2 must enforce the fixed France/Android/English grant for licensed series before this scope is considered implemented. Until that slice lands, licensed-master upload and publication remain blocked. Rights records in this public repository contain only synthetic fixtures or opaque references to private systems—never contracts, rates, production masters, confidential records, provider payloads, or personal data. Once enabled, missing, expired, mismatched, DRM-required, or taken-down grants must fail closed in catalog and playback authorization.
+P2-T03-F2 enforces the fixed France/Android/English grant for licensed series in Admin publication validation, catalog eligibility, and playback authorization. Rights records in this public repository contain only synthetic fixtures or opaque references to private systems—never contracts, rates, production masters, confidential records, provider payloads, or personal data. Missing, expired, mismatched, DRM-required, or taken-down grants fail closed in catalog and playback authorization; the private package and media review remain human gates before licensed-master ingestion.
 
 ## MVP self-owned provenance
 
