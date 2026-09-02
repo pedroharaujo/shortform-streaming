@@ -7,6 +7,9 @@ import type { AnalyticsConsentController } from '../../analytics/consentControll
 import type { AuthOutcome } from '../../auth/localMockFirebaseAuth';
 import { createLocalMockFirebaseAuth } from '../../auth/localMockFirebaseAuth';
 import { getSessionCredential, setAuthSession } from '../../auth/session';
+import { englishMessages } from '../../localization/messages';
+import { compactAndroidMetrics, renderWithSafeArea } from '../../testUtils';
+import { minimumTouchTarget } from '../../ui/theme';
 import { AccountScreen } from './AccountScreen';
 
 const mockDeleteSecureItem = jest.fn(async (_key: string) => {});
@@ -39,7 +42,10 @@ function accountAnalyticsDouble(): jest.Mocked<AccountAnalytics> {
   };
 }
 
-async function setup(writeResponse = jsonResponse(PROFILE, 200)) {
+async function setup(
+  writeResponse = jsonResponse(PROFILE, 200),
+  renderOptions?: Parameters<typeof renderWithSafeArea>[1],
+) {
   setAuthSession({ credential: 'mock.synthetic_account' });
   const requests: Request[] = [];
   const fetchImplementation = jest.fn(async (input: RequestInfo | URL) => {
@@ -80,7 +86,7 @@ async function setup(writeResponse = jsonResponse(PROFILE, 200)) {
     getCredential: getSessionCredential,
     fetchImplementation,
   });
-  const view = await render(
+  const view = await renderWithSafeArea(
     <AccountScreen
       auth={auth}
       analytics={analytics}
@@ -89,8 +95,11 @@ async function setup(writeResponse = jsonResponse(PROFILE, 200)) {
       onSignIn={jest.fn()}
       onHome={jest.fn()}
     />,
+    renderOptions,
   );
-  await waitFor(() => expect(view.getByLabelText('Save preferences')).toBeEnabled());
+  const savePreferencesLabel =
+    renderOptions?.messages?.account.savePreferences ?? englishMessages.account.savePreferences;
+  await waitFor(() => expect(view.getByLabelText(savePreferencesLabel)).toBeEnabled());
   return {
     view,
     analytics,
@@ -204,7 +213,7 @@ it.each(['cancelled', 'error'] as const)(
   async (outcome) => {
     const { view, user, auth, requests } = await setup();
     auth.reauthenticate.mockResolvedValue(
-      outcome === 'cancelled' ? { outcome } : { outcome, message: 'Account verification failed.' },
+      outcome === 'cancelled' ? { outcome } : { outcome, message: 'private provider detail' },
     );
     await user.press(view.getByLabelText('Delete account'));
     await user.press(view.getByLabelText('Verify Google and delete account'));
@@ -213,6 +222,12 @@ it.each(['cancelled', 'error'] as const)(
     expect(auth.signOut).not.toHaveBeenCalled();
     expect(getSessionCredential()).toBe('mock.synthetic_account');
     expect(view.getByLabelText('Verify Google and delete account')).toBeEnabled();
+    if (outcome === 'error') {
+      expect(view.getByTestId('account-message')).toHaveTextContent(
+        englishMessages.account.verificationFailed,
+      );
+      expect(view.queryByText('private provider detail')).toBeNull();
+    }
   },
 );
 
@@ -436,4 +451,35 @@ it('does not sign out a replacement session while analytics cleanup is pending',
   expect(auth.signOut).not.toHaveBeenCalled();
   expect(mockDeleteSecureItem).not.toHaveBeenCalled();
   expect(getSessionCredential()).toBe('mock.replacement_account');
+});
+
+it('keeps long localized account actions reachable on a compact Android screen', async () => {
+  const longMessages = {
+    ...englishMessages,
+    account: {
+      ...englishMessages.account,
+      backHome: 'Return to the catalog home screen without changing these preferences',
+      countryHint:
+        'Your two-letter country preference is stored on the account and does not change content availability in your current territory.',
+      preferencesHint:
+        'These optional preferences use deliberately long English interface copy so the compact-screen layout remains usable at larger text sizes.',
+      savePreferences: 'Save all of these account and consent preferences',
+    },
+  };
+  const { view } = await setup(jsonResponse(PROFILE, 200), {
+    messages: longMessages,
+    metrics: compactAndroidMetrics,
+  });
+
+  expect(view.getByTestId('account-scroll')).toBeTruthy();
+  expect(view.getByRole('header', { name: longMessages.common.account })).toBeTruthy();
+  expect(view.getByLabelText(longMessages.account.savePreferences)).toHaveStyle({
+    minHeight: minimumTouchTarget,
+  });
+  expect(view.getByLabelText(longMessages.account.backHome)).toHaveStyle({
+    minHeight: minimumTouchTarget,
+  });
+  expect(view.getByLabelText(longMessages.account.analyticsConsent).parent).toHaveStyle({
+    minHeight: minimumTouchTarget,
+  });
 });

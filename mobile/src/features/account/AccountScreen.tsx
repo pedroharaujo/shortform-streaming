@@ -8,6 +8,8 @@ import type { AccountAnalytics } from '../../analytics/accountAnalytics';
 import type { AnalyticsConsentController } from '../../analytics/consentController';
 import type { AppAuth, ReauthenticationRequest } from '../../auth/localMockFirebaseAuth';
 import { getAuthSessionRevision, setAuthSession } from '../../auth/session';
+import { type AppMessages, useMessages } from '../../localization/messages';
+import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { clearPendingRewardAttempt } from '../rewards/pendingRewardAttempt';
 
 export interface AccountScreenProps {
@@ -20,17 +22,20 @@ export interface AccountScreenProps {
   readonly onReturnToEpisode?: (() => void) | undefined;
 }
 
-function failureMessage(outcome: Exclude<AccountOutcome<unknown>, { outcome: 'ok' }>): string {
+function failureMessage(
+  outcome: Exclude<AccountOutcome<unknown>, { outcome: 'ok' }>,
+  messages: AppMessages['account'],
+): string {
   if (outcome.outcome === 'unreachable') {
-    return 'Unable to reach the account service. Check your connection and try again.';
+    return messages.serviceUnreachable;
   }
   if (outcome.code === 'reauthentication_required') {
-    return 'Verification expired. Verify your account again to request deletion.';
+    return messages.verificationExpired;
   }
   if (outcome.outcome === 'unauthenticated') {
-    return 'Sign in again to manage your account.';
+    return messages.signInAgain;
   }
-  return 'The request could not be completed. Please try again.';
+  return messages.requestFailed;
 }
 
 export function AccountScreen({
@@ -42,6 +47,7 @@ export function AccountScreen({
   onHome,
   onReturnToEpisode,
 }: AccountScreenProps): JSX.Element {
+  const messages = useMessages();
   const [preferences, setPreferences] = useState<AccountPreferences | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,16 +60,19 @@ export function AccountScreen({
   const [password, setPassword] = useState('');
   const sessionOwner = useRef(getAuthSessionRevision());
 
-  const requireSession = useCallback((revision: number): boolean => {
-    if (getAuthSessionRevision() === revision) return true;
-    setPreferences(null);
-    setPassword('');
-    setConfirming(false);
-    setCleanupFailed(false);
-    setEnded(true);
-    setMessage('Your session changed. Return home and reopen Account.');
-    return false;
-  }, []);
+  const requireSession = useCallback(
+    (revision: number): boolean => {
+      if (getAuthSessionRevision() === revision) return true;
+      setPreferences(null);
+      setPassword('');
+      setConfirming(false);
+      setCleanupFailed(false);
+      setEnded(true);
+      setMessage(messages.account.sessionChanged);
+      return false;
+    },
+    [messages.account.sessionChanged],
+  );
 
   async function run(task: () => Promise<void>): Promise<void> {
     // State updates alone do not guard two taps in the same render.
@@ -74,7 +83,7 @@ export function AccountScreen({
     try {
       await task();
     } catch {
-      setMessage('The request could not be completed. Please try again.');
+      setMessage(messages.account.requestFailed);
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -129,18 +138,22 @@ export function AccountScreen({
         setPreferences({ locale: 'en', country, analytics_consent, ads_consent });
       } else {
         if (result.outcome === 'unauthenticated') await clearSession();
-        if (active && requireSession(sessionOwner.current)) setMessage(failureMessage(result));
+        if (active && requireSession(sessionOwner.current)) {
+          setMessage(failureMessage(result, messages.account));
+        }
       }
       if (active) setLoading(false);
     });
     return () => {
       active = false;
     };
-  }, [analyticsConsent, clearSession, client, reload, requireSession]);
+  }, [analyticsConsent, clearSession, client, messages.account, reload, requireSession]);
 
   async function showFailure(result: Exclude<AccountOutcome<unknown>, { outcome: 'ok' }>) {
     if (result.outcome === 'unauthenticated') await clearSession();
-    if (requireSession(sessionOwner.current)) setMessage(failureMessage(result));
+    if (requireSession(sessionOwner.current)) {
+      setMessage(failureMessage(result, messages.account));
+    }
   }
 
   async function savePreferences() {
@@ -160,7 +173,7 @@ export function AccountScreen({
     if (!requireSession(revision)) return;
     const { country, analytics_consent, ads_consent } = result.data;
     setPreferences({ locale: 'en', country, analytics_consent, ads_consent });
-    setMessage('Preferences saved.');
+    setMessage(messages.account.preferencesSaved);
   }
 
   async function deleteAccount(request: ReauthenticationRequest) {
@@ -170,11 +183,11 @@ export function AccountScreen({
     setPassword('');
     if (!requireSession(verifyingRevision)) return;
     if (verified.outcome === 'cancelled') {
-      setMessage('Verification cancelled. No deletion request was sent.');
+      setMessage(messages.account.verificationCancelled);
       return;
     }
     if (verified.outcome === 'error') {
-      setMessage(verified.message);
+      setMessage(messages.account.verificationFailed);
       return;
     }
     setAuthSession(verified.session);
@@ -183,9 +196,7 @@ export function AccountScreen({
     const result = await client.deleteAccount();
     if (!requireSession(deletingRevision)) return;
     if (result.outcome === 'unreachable') {
-      setMessage(
-        'The response was lost. Your deletion request may already have been accepted. Signing in cannot verify deletion. Contact support to verify completion.',
-      );
+      setMessage(messages.account.deletionResponseLost);
       return;
     }
     if (result.outcome !== 'ok') {
@@ -200,18 +211,22 @@ export function AccountScreen({
     if (!requireSession(sessionOwner.current)) return;
     setMessage(
       result.data.status === 'completed'
-        ? 'Your account has been deleted. You are signed out.'
-        : 'Deletion accepted. App account data has been deleted; identity-provider cleanup is pending. You are signed out.',
+        ? messages.account.deleted
+        : messages.account.deletionPending,
     );
   }
 
   return (
     <SafeAreaView style={styles.container} testID="account-screen">
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        testID="account-scroll"
+      >
         <Text accessibilityRole="header" style={styles.title}>
-          Account
+          {messages.common.account}
         </Text>
-        {loading ? <Text style={styles.body}>Loading account…</Text> : null}
+        {loading ? <Text style={styles.body}>{messages.account.loading}</Text> : null}
         {message !== null ? (
           <Text accessibilityLiveRegion="polite" style={styles.body} testID="account-message">
             {message}
@@ -219,12 +234,9 @@ export function AccountScreen({
         ) : null}
         {cleanupFailed ? (
           <>
-            <Text style={styles.body}>
-              The app session is cleared, but native sign-out failed. Retry to finish signing out on
-              this device.
-            </Text>
+            <Text style={styles.body}>{messages.account.cleanupFailed}</Text>
             <Action
-              label="Retry device sign-out"
+              label={messages.account.retryDeviceSignOut}
               disabled={busy}
               onPress={() =>
                 void run(async () => {
@@ -236,12 +248,10 @@ export function AccountScreen({
         ) : null}
         {preferences !== null && !ended ? (
           <>
-            <Text style={styles.body}>Language: English</Text>
-            <Text style={styles.muted}>
-              Country is an account preference. It does not change where content is available.
-            </Text>
+            <Text style={styles.body}>{messages.account.languageEnglish}</Text>
+            <Text style={styles.muted}>{messages.account.countryHint}</Text>
             <TextInput
-              accessibilityLabel="Country code"
+              accessibilityLabel={messages.account.countryCode}
               autoCapitalize="characters"
               autoCorrect={false}
               editable={!busy}
@@ -249,13 +259,13 @@ export function AccountScreen({
               onChangeText={(country) =>
                 setPreferences({ ...preferences, country: country.toUpperCase() })
               }
-              placeholder="Country code (optional)"
-              placeholderTextColor="#a1a1aa"
+              placeholder={messages.account.countryPlaceholder}
+              placeholderTextColor={colors.muted}
               style={styles.input}
               value={preferences.country}
             />
             <Consent
-              label="Analytics consent"
+              label={messages.account.analyticsConsent}
               value={preferences.analytics_consent}
               disabled={busy}
               onChange={(analytics_consent) =>
@@ -263,50 +273,42 @@ export function AccountScreen({
               }
             />
             <Consent
-              label="Ads consent"
+              label={messages.account.adsConsent}
               value={preferences.ads_consent}
               disabled={busy}
               onChange={(ads_consent) => setPreferences({ ...preferences, ads_consent })}
             />
-            <Text style={styles.muted}>
-              Optional preferences are off by default. Analytics activates only after the server
-              saves consent. Turning it off, signing out, or deleting your account clears the
-              analytics identity and local analytics data.
-            </Text>
+            <Text style={styles.muted}>{messages.account.preferencesHint}</Text>
             <Action
-              label="Save preferences"
+              label={messages.account.savePreferences}
               disabled={
                 busy || (preferences.country !== '' && !/^[A-Z]{2}$/.test(preferences.country))
               }
               onPress={() => void run(savePreferences)}
             />
             <Action
-              label="Sign out"
+              label={messages.account.signOut}
               disabled={busy}
               onPress={() =>
                 void run(async () => {
                   const cleared = await clearSession();
                   if (requireSession(sessionOwner.current)) {
-                    setMessage(cleared ? 'Signed out.' : 'Signed out of the app.');
+                    setMessage(
+                      cleared ? messages.account.signedOut : messages.account.signedOutApp,
+                    );
                   }
                 })
               }
             />
             {confirming ? (
               <View style={styles.confirmation}>
-                <Text accessibilityRole="header" style={styles.body}>
-                  Confirm account deletion
+                <Text accessibilityRole="header" style={styles.sectionTitle}>
+                  {messages.account.confirmDeletion}
                 </Text>
-                <Text style={styles.body}>
-                  This permanently removes your profile, watch progress, and access grants. This
-                  cannot be undone. Identity-provider cleanup may remain pending.
-                </Text>
-                <Text style={styles.muted}>
-                  Verify using the account you are currently signed in to. Use your password or the
-                  same Google account.
-                </Text>
+                <Text style={styles.body}>{messages.account.deletionWarning}</Text>
+                <Text style={styles.muted}>{messages.account.verificationHint}</Text>
                 <TextInput
-                  accessibilityLabel="Current password"
+                  accessibilityLabel={messages.account.currentCredential}
                   autoComplete="password"
                   editable={!busy}
                   onChangeText={setPassword}
@@ -315,17 +317,17 @@ export function AccountScreen({
                   value={password}
                 />
                 <Action
-                  label="Verify password and delete account"
+                  label={messages.account.verifyCredentialDelete}
                   disabled={busy || password === ''}
                   onPress={() => void run(() => deleteAccount({ provider: 'password', password }))}
                 />
                 <Action
-                  label="Verify Google and delete account"
+                  label={messages.account.verifyGoogleDelete}
                   disabled={busy}
                   onPress={() => void run(() => deleteAccount({ provider: 'google' }))}
                 />
                 <Action
-                  label="Cancel deletion"
+                  label={messages.account.cancelDeletion}
                   disabled={busy}
                   onPress={() => {
                     setConfirming(false);
@@ -334,15 +336,19 @@ export function AccountScreen({
                 />
               </View>
             ) : (
-              <Action label="Delete account" disabled={busy} onPress={() => setConfirming(true)} />
+              <Action
+                label={messages.account.deleteAccount}
+                disabled={busy}
+                onPress={() => setConfirming(true)}
+              />
             )}
           </>
         ) : !loading && !cleanupFailed ? (
           <>
-            <Action label="Sign in" disabled={busy} onPress={onSignIn} />
+            <Action label={messages.common.signIn} disabled={busy} onPress={onSignIn} />
             {!ended ? (
               <Action
-                label="Retry account loading"
+                label={messages.account.retryLoading}
                 disabled={busy}
                 onPress={() => {
                   setLoading(true);
@@ -353,9 +359,13 @@ export function AccountScreen({
             ) : null}
           </>
         ) : null}
-        <Action label="Back to home" disabled={busy} onPress={onHome} />
+        <Action label={messages.account.backHome} disabled={busy} onPress={onHome} />
         {onReturnToEpisode ? (
-          <Action label="Back to episode" disabled={busy} onPress={onReturnToEpisode} />
+          <Action
+            label={messages.account.backToEpisode}
+            disabled={busy}
+            onPress={onReturnToEpisode}
+          />
         ) : null}
       </ScrollView>
     </SafeAreaView>
@@ -375,6 +385,7 @@ function Action({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={[styles.button, disabled && styles.disabled]}
@@ -409,14 +420,41 @@ function Consent({
 }
 
 const styles = StyleSheet.create({
-  body: { color: '#fafafa', fontSize: 16 },
-  button: { borderColor: '#3f3f46', borderRadius: 8, borderWidth: 1, padding: 14 },
-  confirmation: { borderColor: '#ef4444', borderRadius: 8, borderWidth: 1, padding: 16, gap: 16 },
-  consent: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  container: { backgroundColor: '#09090b', flex: 1 },
-  content: { padding: 24, gap: 16 },
+  body: { color: colors.foreground, fontSize: fontSizes.body },
+  button: {
+    alignItems: 'center',
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: minimumTouchTarget,
+    paddingHorizontal: spacing.md,
+  },
+  confirmation: {
+    borderColor: colors.danger,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    gap: spacing.lg,
+    padding: spacing.lg,
+  },
+  consent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: minimumTouchTarget,
+  },
+  container: { backgroundColor: colors.background, flex: 1 },
+  content: { flexGrow: 1, gap: spacing.lg, padding: spacing.xxl },
   disabled: { opacity: 0.5 },
-  input: { borderColor: '#3f3f46', borderRadius: 8, borderWidth: 1, color: '#fafafa', padding: 12 },
-  muted: { color: '#a1a1aa', fontSize: 14 },
-  title: { color: '#fafafa', fontSize: 22, fontWeight: '600' },
+  input: {
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    color: colors.foreground,
+    minHeight: minimumTouchTarget,
+    paddingHorizontal: spacing.md,
+  },
+  muted: { color: colors.muted, fontSize: fontSizes.label },
+  sectionTitle: { color: colors.foreground, fontSize: fontSizes.section, fontWeight: '600' },
+  title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
 });
