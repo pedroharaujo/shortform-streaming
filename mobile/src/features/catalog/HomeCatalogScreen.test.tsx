@@ -2,6 +2,7 @@ import { fireEvent, render, userEvent, waitFor } from '@testing-library/react-na
 
 import type { CatalogClient, CatalogHome, CatalogRequestOutcome } from '../../api/catalog/types';
 import { expectNoFreeOrLockedBadges } from '../../testUtils';
+import { minimumTouchTarget } from '../../ui/theme';
 import { HomeCatalogScreen } from './HomeCatalogScreen';
 
 const harborLightsHome: CatalogHome = {
@@ -59,11 +60,28 @@ describe('HomeCatalogScreen', () => {
     );
 
     await waitFor(() => expect(view.getByTestId('home-error')).toBeTruthy());
-    expect(view.getByText('Catalog request is invalid.')).toBeTruthy();
+    expect(view.getByTestId('home-error')).toHaveProp('accessibilityLiveRegion', 'assertive');
+    expect(view.getByText('The catalog could not be loaded. Please try again.')).toBeTruthy();
+    expect(view.queryByText('Catalog request is invalid.')).toBeNull();
     expect(calls).toBe(1);
 
     await userEvent.setup().press(view.getByTestId('home-retry'));
     await waitFor(() => expect(calls).toBe(2));
+  });
+
+  it('localizes transport failures instead of displaying implementation details', async () => {
+    const view = await render(
+      <HomeCatalogScreen
+        client={stubClient({ outcome: 'unreachable', reason: 'private transport detail' })}
+        onOpenSignIn={() => {}}
+        onSelectSeries={() => {}}
+      />,
+    );
+
+    expect(
+      await view.findByText('Unable to reach the catalog. Check your connection and try again.'),
+    ).toBeTruthy();
+    expect(view.queryByText('private transport detail')).toBeNull();
   });
 
   it('renders a published featured Harbor Lights series and selects it', async () => {
@@ -78,7 +96,12 @@ describe('HomeCatalogScreen', () => {
 
     await waitFor(() => expect(view.getByTestId('home-rail-featured')).toBeTruthy());
     expect(view.getByText('Harbor Lights')).toBeTruthy();
+    expect(view.getByRole('header', { name: 'Featured' })).toBeTruthy();
     expectNoFreeOrLockedBadges(view);
+    expect(view.getByTestId('home-sign-in')).toHaveStyle({
+      minHeight: minimumTouchTarget,
+      minWidth: minimumTouchTarget,
+    });
     await fireEvent.press(view.getByTestId('series-card-ser_harbor'));
     expect(onSelectSeries).toHaveBeenCalledWith('ser_harbor');
   });

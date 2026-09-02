@@ -17,6 +17,11 @@ The catalog is fixed server-side to France, Android, and English. There is no
 client market setting. Never place secrets in `EXPO_PUBLIC_*`; they are compiled
 into the public JavaScript bundle.
 
+The P6-T01 mobile-quality foundation keeps English interface copy in
+`src/localization/messages.tsx` and semantic visual/touch-target values in
+`src/ui/theme.ts`. The catalog-selection journey uses these foundations; remaining
+feature surfaces are tracked in P6-T01 and must not add new hard-coded user copy.
+
 Optional release switches:
 
 | Variable                             | Behavior                                                               |

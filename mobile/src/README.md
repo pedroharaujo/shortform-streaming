@@ -11,6 +11,8 @@
 | `api/me/`, `api/account/`             | Verified profile, preferences, and deletion                              |
 | `auth/`                               | Email/password + Google Jest/native Firebase boundary and session holder |
 | `analytics/`                          | Consent-gated launch/auth/playback/reward outcome events                 |
+| `localization/`                       | Typed English MVP interface copy and provider                            |
+| `ui/`                                 | Semantic visual and accessibility-size tokens                            |
 | `features/catalog/`                   | Home, series, and episode screens                                        |
 | `features/playback/`                  | Product player                                                           |
 | `features/rewards/`                   | AdMob reward flow                                                        |

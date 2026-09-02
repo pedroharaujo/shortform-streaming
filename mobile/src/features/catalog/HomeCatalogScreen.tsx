@@ -3,6 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CatalogClient, CatalogSeriesCard } from '../../api/catalog/types';
+import { useMessages } from '../../localization/messages';
+import { colors, fontSizes, minimumTouchTarget, spacing } from '../../ui/theme';
 import { CatalogArtwork } from './CatalogArtwork';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
 import { useCatalogHome } from './useCatalog';
@@ -45,25 +47,26 @@ export function HomeCatalogScreen({
   onOpenAccount,
 }: HomeCatalogScreenProps): JSX.Element {
   const { state, refresh } = useCatalogHome(client);
+  const messages = useMessages();
 
   return (
     <SafeAreaView style={styles.container} testID="home-screen">
       <Text accessibilityRole="header" style={styles.title}>
-        Home
+        {messages.catalog.homeTitle}
       </Text>
 
       <CatalogFetchStatus
-        errorMessage={state.phase === 'error' ? state.message : undefined}
-        loadingAccessibilityLabel="Loading catalog"
-        loadingText="Loading catalog…"
+        errorKind={state.phase === 'error' ? state.kind : undefined}
+        loadingAccessibilityLabel={messages.catalog.loadingLabel}
+        loadingText={messages.catalog.loading}
         onRetry={refresh}
         phase={state.phase}
         testIDPrefix="home"
       />
 
       {state.phase === 'empty' ? (
-        <View style={styles.centered} testID="home-empty">
-          <Text style={styles.body}>No titles are available.</Text>
+        <View accessibilityLiveRegion="polite" style={styles.centered} testID="home-empty">
+          <Text style={styles.body}>{messages.catalog.empty}</Text>
         </View>
       ) : null}
 
@@ -72,7 +75,9 @@ export function HomeCatalogScreen({
           {state.home.rails.map((rail) =>
             rail.series.length === 0 ? null : (
               <View key={rail.id} style={styles.rail} testID={`home-rail-${rail.id}`}>
-                <Text style={styles.railTitle}>{rail.title}</Text>
+                <Text accessibilityRole="header" style={styles.railTitle}>
+                  {rail.title}
+                </Text>
                 <View style={styles.railRow}>
                   {rail.series.map((series) => (
                     <SeriesCard key={series.id} onSelect={onSelectSeries} series={series} />
@@ -85,22 +90,22 @@ export function HomeCatalogScreen({
       ) : null}
 
       <Pressable
-        accessibilityLabel="Sign in"
+        accessibilityLabel={messages.common.signIn}
         accessibilityRole="button"
         onPress={onOpenSignIn}
         style={styles.healthLink}
         testID="home-sign-in"
       >
-        <Text style={styles.healthLinkLabel}>Sign in</Text>
+        <Text style={styles.healthLinkLabel}>{messages.common.signIn}</Text>
       </Pressable>
       {onOpenAccount !== undefined ? (
         <Pressable
-          accessibilityLabel="Account"
+          accessibilityLabel={messages.common.account}
           accessibilityRole="button"
           onPress={onOpenAccount}
           style={styles.healthLink}
         >
-          <Text style={styles.healthLinkLabel}>Account</Text>
+          <Text style={styles.healthLinkLabel}>{messages.common.account}</Text>
         </Pressable>
       ) : null}
     </SafeAreaView>
@@ -108,17 +113,40 @@ export function HomeCatalogScreen({
 }
 
 const styles = StyleSheet.create({
-  body: { color: '#fafafa', fontSize: 16, textAlign: 'center' },
-  card: { marginRight: 12, width: 160 },
-  cardSynopsis: { color: '#a1a1aa', fontSize: 13, marginTop: 4 },
-  cardTitle: { color: '#fafafa', fontSize: 16, fontWeight: '600', marginTop: 8 },
-  centered: { alignItems: 'center', flex: 1, gap: 12, justifyContent: 'center' },
-  container: { backgroundColor: '#09090b', flex: 1, padding: 24 },
-  healthLink: { alignSelf: 'center', marginTop: 16, padding: 8 },
-  healthLinkLabel: { color: '#a1a1aa', fontSize: 14 },
-  rail: { marginBottom: 24 },
+  body: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
+  card: { marginEnd: spacing.md, width: 160 },
+  cardSynopsis: { color: colors.muted, fontSize: fontSizes.caption, marginTop: spacing.xs },
+  cardTitle: {
+    color: colors.foreground,
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    marginTop: spacing.sm,
+  },
+  centered: { alignItems: 'center', flex: 1, gap: spacing.md, justifyContent: 'center' },
+  container: { backgroundColor: colors.background, flex: 1, padding: spacing.xxl },
+  healthLink: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    minHeight: minimumTouchTarget,
+    minWidth: minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+  },
+  healthLinkLabel: { color: colors.muted, fontSize: fontSizes.label, textAlign: 'center' },
+  rail: { marginBottom: spacing.xxl },
   railRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  railTitle: { color: '#fafafa', fontSize: 18, fontWeight: '600', marginBottom: 12 },
-  rails: { paddingBottom: 16 },
-  title: { color: '#fafafa', fontSize: 22, fontWeight: '600', marginBottom: 16 },
+  railTitle: {
+    color: colors.foreground,
+    fontSize: fontSizes.section,
+    fontWeight: '600',
+    marginBottom: spacing.md,
+  },
+  rails: { paddingBottom: spacing.lg },
+  title: {
+    color: colors.foreground,
+    fontSize: fontSizes.title,
+    fontWeight: '600',
+    marginBottom: spacing.lg,
+  },
 });
