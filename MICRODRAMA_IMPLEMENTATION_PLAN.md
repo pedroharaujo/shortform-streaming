@@ -1264,9 +1264,16 @@ the primary action reachable, and catalog transport/provider details are mapped 
 localized static copy before display. Automated component coverage exercises long
 copy, compact safe-area metrics, and touch targets.
 
-This foundation does not complete P6-T01. Auth, account, playback, and reward
-surfaces still need migration; automated screenshot coverage and the Android
-TalkBack/device pass remain required before the task and checkpoint can close.
+**Account extension implemented (P6-T01-F2):** Sign-in and account management now
+use the same localized copy and visual tokens, scroll on compact Android screens,
+and expose 48dp inputs, actions, and consent rows. Authentication, profile, and
+account-verification failures are reduced to stable app-owned messages rather than
+displaying provider or transport details. Existing session-race, consent, sign-out,
+and deletion safeguards remain covered alongside long-copy and compact-screen tests.
+
+These foundations do not complete P6-T01. Playback and reward surfaces still need
+migration; automated screenshot coverage and the Android TalkBack/device pass remain
+required before the task and checkpoint can close.
 
 **Description:** Standardize typography, color, spacing, safe areas, motion, skeletons, errors, accessibility, locale formatting, translated strings, and RTL readiness.
 

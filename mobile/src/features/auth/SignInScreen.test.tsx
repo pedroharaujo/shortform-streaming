@@ -5,6 +5,9 @@ import type { AccountAnalytics } from '../../analytics/accountAnalytics';
 import type { AnalyticsConsentController } from '../../analytics/consentController';
 import { createLocalMockFirebaseAuth } from '../../auth/localMockFirebaseAuth';
 import { getAuthSessionRevision, getSessionCredential, setAuthSession } from '../../auth/session';
+import { englishMessages } from '../../localization/messages';
+import { compactAndroidMetrics, renderWithSafeArea } from '../../testUtils';
+import { minimumTouchTarget } from '../../ui/theme';
 import { SignInScreen } from './SignInScreen';
 
 const PROFILE = {
@@ -231,11 +234,40 @@ describe('SignInScreen', () => {
 
     await waitFor(() => expect(view.getByTestId('sign-in-message')).toBeTruthy());
     expect(view.getByTestId('sign-in-message')).toHaveTextContent(
-      'Google Play services are not available.',
+      englishMessages.auth.authenticationFailed,
     );
+    expect(view.queryByText('Google Play services are not available.')).toBeNull();
     expect(getMe).not.toHaveBeenCalled();
     expect(getSessionCredential()).toBeNull();
     expect(analyticsConsent.clear).not.toHaveBeenCalled();
+  });
+
+  it('recovers from an unexpected provider rejection with localized copy', async () => {
+    const auth = {
+      ...createLocalMockFirebaseAuth(),
+      signInWithGoogle: jest.fn(async () => {
+        throw new Error('private provider rejection');
+      }),
+    };
+    const user = userEvent.setup();
+    const view = await render(
+      <SignInScreen
+        auth={auth}
+        analytics={accountAnalyticsDouble()}
+        analyticsConsent={analyticsConsentDouble()}
+        meClient={okMeClient().meClient}
+        onFinished={jest.fn()}
+      />,
+    );
+
+    await user.press(view.getByTestId('sign-in-google'));
+
+    await waitFor(() => expect(view.getByTestId('sign-in-google')).toBeEnabled());
+    expect(view.getByTestId('sign-in-message')).toHaveTextContent(
+      englishMessages.auth.authenticationFailed,
+    );
+    expect(view.queryByText('private provider rejection')).toBeNull();
+    expect(getSessionCredential()).toBeNull();
   });
 
   it('does not link a late profile response after the session is replaced', async () => {
@@ -360,5 +392,44 @@ describe('SignInScreen', () => {
     expect(analyticsConsent.clear).not.toHaveBeenCalled();
     expect(auth.signOut).not.toHaveBeenCalled();
     expect(getSessionCredential()).toBe('mock.replacement_account');
+  });
+
+  it('keeps long localized actions reachable on a compact Android screen', async () => {
+    const longMessages = {
+      ...englishMessages,
+      auth: {
+        ...englishMessages.auth,
+        createAccount: 'Create a new account using this email address and password',
+        description:
+          'Sign in with deliberately long English interface copy that still leaves every primary action reachable.',
+        signInGoogle: 'Continue by signing in with the Google account on this Android device',
+      },
+      common: {
+        ...englishMessages.common,
+        signIn: 'Sign in securely with this email address and password',
+      },
+    };
+    const view = await renderWithSafeArea(
+      <SignInScreen
+        auth={createLocalMockFirebaseAuth()}
+        analytics={accountAnalyticsDouble()}
+        analyticsConsent={analyticsConsentDouble()}
+        meClient={okMeClient().meClient}
+        onFinished={jest.fn()}
+      />,
+      { messages: longMessages, metrics: compactAndroidMetrics },
+    );
+
+    expect(view.getByTestId('sign-in-scroll')).toBeTruthy();
+    expect(view.getByRole('header', { name: longMessages.auth.title })).toBeTruthy();
+    expect(view.getByLabelText(longMessages.common.signIn)).toHaveStyle({
+      minHeight: minimumTouchTarget,
+    });
+    expect(view.getByLabelText(longMessages.auth.signInGoogle)).toHaveStyle({
+      minHeight: minimumTouchTarget,
+    });
+    expect(view.getByLabelText(longMessages.auth.email)).toHaveStyle({
+      minHeight: minimumTouchTarget,
+    });
   });
 });
