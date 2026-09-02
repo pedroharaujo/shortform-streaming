@@ -3,7 +3,13 @@ import type {
   CatalogEpisodeDetail,
   CatalogRequestOutcome,
 } from '../../api/catalog/types';
-import { expectNoFreeOrLockedBadges, renderWithSafeArea } from '../../testUtils';
+import { englishMessages } from '../../localization/messages';
+import {
+  compactAndroidMetrics,
+  expectNoFreeOrLockedBadges,
+  renderWithSafeArea,
+} from '../../testUtils';
+import { minimumTouchTarget } from '../../ui/theme';
 import { EpisodeSelectedScreen } from './EpisodeSelectedScreen';
 
 const harborEpisode: CatalogEpisodeDetail = {
@@ -64,5 +70,41 @@ describe('EpisodeSelectedScreen', () => {
     expect(await view.findByTestId('episode-selected-not-found')).toBeTruthy();
     expectNoFreeOrLockedBadges(view);
     expect(view.queryByTestId('episode-selected')).toBeNull();
+  });
+
+  it('keeps long English actions reachable on a compact Android screen', async () => {
+    const longMessages = {
+      ...englishMessages,
+      common: {
+        ...englishMessages.common,
+        back: 'Back to the complete season and episode list',
+        play: 'Play this selected episode from the beginning',
+      },
+      catalog: {
+        ...englishMessages.catalog,
+        selectedEpisode:
+          'Selected episode with deliberately long English interface copy for accessibility',
+      },
+    };
+    const view = await renderWithSafeArea(
+      <EpisodeSelectedScreen
+        client={stubEpisodeClient({ outcome: 'ok', data: harborEpisode })}
+        episodeId="ep_harbor_1"
+        onBack={() => {}}
+        onPlay={() => {}}
+      />,
+      { messages: longMessages, metrics: compactAndroidMetrics },
+    );
+
+    expect(await view.findByText(longMessages.catalog.selectedEpisode)).toBeTruthy();
+    expect(view.getByTestId('episode-selected')).toBeTruthy();
+    expect(view.getByLabelText(longMessages.common.play)).toHaveStyle({
+      minHeight: minimumTouchTarget,
+      minWidth: minimumTouchTarget,
+    });
+    expect(view.getByLabelText(longMessages.common.back)).toHaveStyle({
+      minHeight: minimumTouchTarget,
+      minWidth: minimumTouchTarget,
+    });
   });
 });

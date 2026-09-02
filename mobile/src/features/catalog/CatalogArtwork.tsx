@@ -1,6 +1,8 @@
 import { useState, type JSX } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
+import { colors, fontSizes, radii } from '../../ui/theme';
+
 export interface CatalogArtworkProps {
   readonly title: string;
   readonly uri: string | null;
@@ -38,12 +40,12 @@ export function CatalogArtwork({ title, uri, size }: CatalogArtworkProps): JSX.E
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 8, height: 160, width: 120 },
+  card: { borderRadius: radii.md, height: 160, width: 120 },
   fallback: {
     alignItems: 'center',
-    backgroundColor: '#18181b',
+    backgroundColor: colors.surface,
     justifyContent: 'center',
   },
-  fallbackLabel: { color: '#a1a1aa', fontSize: 28, fontWeight: '600' },
-  hero: { alignSelf: 'stretch', borderRadius: 8, height: 220, width: '100%' },
+  fallbackLabel: { color: colors.muted, fontSize: fontSizes.artworkFallback, fontWeight: '600' },
+  hero: { alignSelf: 'stretch', borderRadius: radii.md, height: 220, width: '100%' },
 });

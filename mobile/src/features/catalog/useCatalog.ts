@@ -39,7 +39,7 @@ export function useCatalogQuery<TState>(load: () => Promise<TState>): CatalogQue
 
 export type CatalogHomeState =
   | { readonly phase: 'loading' }
-  | { readonly phase: 'error'; readonly message: string }
+  | { readonly phase: 'error'; readonly kind: 'request' | 'unreachable' }
   | { readonly phase: 'empty' }
   | { readonly phase: 'loaded'; readonly home: CatalogHome };
 
@@ -61,9 +61,9 @@ export function useCatalogHome(client: CatalogClient): CatalogHomeQuery {
         : { phase: 'empty' };
     }
     if (result.outcome === 'unreachable') {
-      return { phase: 'error', message: result.reason };
+      return { phase: 'error', kind: 'unreachable' };
     }
-    return { phase: 'error', message: result.message };
+    return { phase: 'error', kind: 'request' };
   }, [client]);
 
   return useCatalogQuery(load);
@@ -71,7 +71,7 @@ export function useCatalogHome(client: CatalogClient): CatalogHomeQuery {
 
 export type CatalogSeriesState =
   | { readonly phase: 'loading' }
-  | { readonly phase: 'error'; readonly message: string }
+  | { readonly phase: 'error'; readonly kind: 'request' | 'unreachable' }
   | { readonly phase: 'not-found' }
   | { readonly phase: 'loaded'; readonly series: CatalogSeriesDetail };
 
@@ -90,9 +90,9 @@ export function useCatalogSeries(client: CatalogClient, publicId: string): Catal
       return { phase: 'not-found' };
     }
     if (result.outcome === 'unreachable') {
-      return { phase: 'error', message: result.reason };
+      return { phase: 'error', kind: 'unreachable' };
     }
-    return { phase: 'error', message: result.message };
+    return { phase: 'error', kind: 'request' };
   }, [client, publicId]);
 
   return useCatalogQuery(load);
@@ -100,7 +100,7 @@ export function useCatalogSeries(client: CatalogClient, publicId: string): Catal
 
 export type CatalogEpisodeState =
   | { readonly phase: 'loading' }
-  | { readonly phase: 'error'; readonly message: string }
+  | { readonly phase: 'error'; readonly kind: 'request' | 'unreachable' }
   | { readonly phase: 'not-found' }
   | { readonly phase: 'loaded'; readonly episode: CatalogEpisodeDetail };
 
@@ -119,9 +119,9 @@ export function useCatalogEpisode(client: CatalogClient, publicId: string): Cata
       return { phase: 'not-found' };
     }
     if (result.outcome === 'unreachable') {
-      return { phase: 'error', message: result.reason };
+      return { phase: 'error', kind: 'unreachable' };
     }
-    return { phase: 'error', message: result.message };
+    return { phase: 'error', kind: 'request' };
   }, [client, publicId]);
 
   return useCatalogQuery(load);

@@ -1255,6 +1255,19 @@ or live-environment result is inferred from the local correlation tests.
 
 #### P6-T01 — Complete mobile design system, accessibility, and localization
 
+**Foundation implemented (P6-T01-F1):** The root app now supplies one typed
+English message catalog and the anonymous browse → series → episode-selection
+journey consumes it instead of embedding interface copy. Shared semantic color,
+type, spacing, radius, and 48dp minimum-touch-target tokens cover that journey.
+Episode selection scrolls so long English copy and compact Android screens keep
+the primary action reachable, and catalog transport/provider details are mapped to
+localized static copy before display. Automated component coverage exercises long
+copy, compact safe-area metrics, and touch targets.
+
+This foundation does not complete P6-T01. Auth, account, playback, and reward
+surfaces still need migration; automated screenshot coverage and the Android
+TalkBack/device pass remain required before the task and checkpoint can close.
+
 **Description:** Standardize typography, color, spacing, safe areas, motion, skeletons, errors, accessibility, locale formatting, translated strings, and RTL readiness.
 
 **Objective:** Deliver a coherent, accessible English-language Android product for France.

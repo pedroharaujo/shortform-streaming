@@ -4,6 +4,7 @@ import type {
   CatalogSeriesDetail,
 } from '../../api/catalog/types';
 import { expectNoFreeOrLockedBadges, renderWithSafeArea } from '../../testUtils';
+import { minimumTouchTarget } from '../../ui/theme';
 import { SeriesDetailScreen } from './SeriesDetailScreen';
 
 const harborLightsDetail: CatalogSeriesDetail = {
@@ -64,6 +65,9 @@ describe('SeriesDetailScreen', () => {
     expect(view.getByTestId('series-season-1')).toBeTruthy();
     expect(view.getByTestId('episode-row-ep_harbor_1')).toBeTruthy();
     expect(view.getByTestId('episode-row-ep_harbor_6')).toBeTruthy();
+    expect(view.getByTestId('episode-row-ep_harbor_1')).toHaveStyle({
+      minHeight: minimumTouchTarget,
+    });
     expectNoFreeOrLockedBadges(view);
   }, 10000);
 
