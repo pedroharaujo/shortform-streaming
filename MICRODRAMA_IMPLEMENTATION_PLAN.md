@@ -1271,9 +1271,15 @@ account-verification failures are reduced to stable app-owned messages rather th
 displaying provider or transport details. Existing session-race, consent, sign-out,
 and deletion safeguards remain covered alongside long-copy and compact-screen tests.
 
-These foundations do not complete P6-T01. Playback and reward surfaces still need
-migration; automated screenshot coverage and the Android TalkBack/device pass remain
-required before the task and checkpoint can close.
+**Player extension implemented (P6-T01-F3):** Playback loading, unavailable, locked,
+failure, close, and reward-navigation copy now comes from the typed message catalog.
+The player presents stable lock copy instead of raw server reason codes, uses the
+shared visual tokens and 48dp controls, and has compact-screen coverage without
+changing authorization, progress, completion, or next-episode behavior.
+
+These foundations do not complete P6-T01. The reward surface still needs migration;
+automated screenshot coverage and the Android TalkBack/device pass remain required
+before the task and checkpoint can close.
 
 **Description:** Standardize typography, color, spacing, safe areas, motion, skeletons, errors, accessibility, locale formatting, translated strings, and RTL readiness.
 

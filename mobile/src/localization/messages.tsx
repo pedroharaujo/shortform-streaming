@@ -61,6 +61,15 @@ export interface AppMessages {
     readonly retry: string;
     readonly signIn: string;
   };
+  readonly playback: {
+    readonly close: string;
+    readonly episodeUnavailable: string;
+    readonly failed: string;
+    readonly loading: string;
+    readonly loadingLabel: string;
+    readonly rewardRequired: string;
+    readonly viewReward: string;
+  };
   readonly catalog: {
     readonly empty: string;
     readonly episode: (order: number) => string;
@@ -148,6 +157,15 @@ export const englishMessages: AppMessages = {
     play: 'Play',
     retry: 'Try again',
     signIn: 'Sign in',
+  },
+  playback: {
+    close: 'Close',
+    episodeUnavailable: 'This episode is not available.',
+    failed: 'Playback could not be started.',
+    loading: 'Loading playback…',
+    loadingLabel: 'Loading playback',
+    rewardRequired: 'Watch a rewarded ad to unlock this episode.',
+    viewReward: 'View episode reward',
   },
   catalog: {
     empty: 'No titles are available.',

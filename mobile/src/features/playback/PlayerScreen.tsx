@@ -10,6 +10,8 @@ import type {
 } from '../../api/catalog/types';
 import type { PlaybackClient, PlaybackRequestOutcome } from '../../api/playback/types';
 import type { ProgressClient } from '../../api/progress/types';
+import { useMessages } from '../../localization/messages';
+import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { useCatalogQuery } from '../catalog/useCatalog';
 import { HlsVideoView } from './HlsVideoView';
 import type {
@@ -25,9 +27,6 @@ import {
   resumePlaybackPosition,
   shouldSkipProgressPut,
 } from './playbackProgress';
-
-const EPISODE_NOT_AVAILABLE = 'This episode is not available.';
-const PLAYBACK_FAILED = 'Playback could not be started.';
 
 export interface PlayerScreenProps {
   readonly analytics: PlaybackAnalytics;
@@ -127,6 +126,7 @@ export function PlayerScreen({
   onClose,
   onReward,
 }: PlayerScreenProps): JSX.Element {
+  const messages = useMessages();
   const [activeEpisodeId, setActiveEpisodeId] = useState(episodeId);
   const [paused, setPaused] = useState(false);
   const [nextGate, setNextGate] = useState<
@@ -218,7 +218,7 @@ export function PlayerScreen({
     if (authorizeResult.outcome !== 'ok') {
       return {
         phase: 'error',
-        message: PLAYBACK_FAILED,
+        message: messages.playback.failed,
         failure: {
           episodeId: activeEpisodeId,
           code: authorizeErrorCode(authorizeResult.outcome),
@@ -229,7 +229,7 @@ export function PlayerScreen({
     if (episodeResult.outcome !== 'ok') {
       return {
         phase: 'error',
-        message: PLAYBACK_FAILED,
+        message: messages.playback.failed,
         failure: { episodeId: activeEpisodeId, code: 'episode_load_failed', phase: 'load' },
       };
     }
@@ -266,7 +266,7 @@ export function PlayerScreen({
       playbackUri: authorizeResult.data.playback_url,
       series,
     };
-  }, [activeEpisodeId, catalog, playback, progress]);
+  }, [activeEpisodeId, catalog, messages.playback.failed, playback, progress]);
 
   const { state: phase } = useCatalogQuery(load);
 
@@ -338,7 +338,7 @@ export function PlayerScreen({
     if (nextAuthorize.outcome !== 'ok') {
       setNextGate({
         phase: 'error',
-        message: PLAYBACK_FAILED,
+        message: messages.playback.failed,
         failure: {
           episodeId: nextId,
           code: authorizeErrorCode(nextAuthorize.outcome),
@@ -349,7 +349,7 @@ export function PlayerScreen({
     }
     setNextGate(null);
     setActiveEpisodeId(nextId);
-  }, [clearThrottle, flushProgress, playback]);
+  }, [clearThrottle, flushProgress, messages.playback.failed, playback]);
 
   const handlePosition = useCallback(
     (seconds: number) => {
@@ -381,15 +381,15 @@ export function PlayerScreen({
     displayed.phase === 'error'
       ? displayed.message
       : displayed.phase === 'unavailable'
-        ? EPISODE_NOT_AVAILABLE
+        ? messages.playback.episodeUnavailable
         : displayed.phase === 'locked'
-          ? displayed.reasons.join(', ')
+          ? messages.playback.rewardRequired
           : null;
 
   return (
     <SafeAreaView style={styles.container} testID="player-screen">
       <Pressable
-        accessibilityLabel="Close"
+        accessibilityLabel={messages.playback.close}
         accessibilityRole="button"
         onPress={() => {
           void flushProgress(false);
@@ -398,27 +398,28 @@ export function PlayerScreen({
         style={styles.close}
         testID="player-close"
       >
-        <Text style={styles.closeLabel}>Close</Text>
+        <Text style={styles.closeLabel}>{messages.playback.close}</Text>
       </Pressable>
       {displayed.phase === 'playing' ? (
-        <Text
-          accessibilityRole="header"
-          numberOfLines={2}
-          style={styles.nowPlaying}
-          testID="player-now-playing"
-        >
+        <Text accessibilityRole="header" style={styles.nowPlaying} testID="player-now-playing">
           {displayed.episodeTitle}
         </Text>
       ) : null}
 
       {displayed.phase === 'loading' ? (
-        <View accessibilityLiveRegion="polite" style={styles.centered} testID="player-loading">
-          <Text style={styles.muted}>Loading playback…</Text>
+        <View
+          accessibilityLabel={messages.playback.loadingLabel}
+          accessibilityLiveRegion="polite"
+          style={styles.centered}
+          testID="player-loading"
+        >
+          <Text style={styles.muted}>{messages.playback.loading}</Text>
         </View>
       ) : null}
 
       {errorText !== null ? (
         <View
+          accessibilityLiveRegion="assertive"
           style={styles.centered}
           testID={displayed.phase === 'locked' ? 'player-locked' : 'player-error'}
         >
@@ -426,13 +427,13 @@ export function PlayerScreen({
           {displayed.phase === 'locked' && onReward ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="View episode reward"
+              accessibilityLabel={messages.playback.viewReward}
               onPress={() =>
                 onReward(nextGate?.phase === 'locked' ? nextGate.episodeId : activeEpisodeId)
               }
-              style={styles.close}
+              style={styles.rewardAction}
             >
-              <Text style={styles.body}>View episode reward</Text>
+              <Text style={styles.body}>{messages.playback.viewReward}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -449,7 +450,7 @@ export function PlayerScreen({
             onError={() => {
               setNextGate({
                 phase: 'error',
-                message: PLAYBACK_FAILED,
+                message: messages.playback.failed,
                 failure: {
                   episodeId: activeEpisodeRef.current,
                   code: 'video_playback_failed',
@@ -478,12 +479,34 @@ export function PlayerScreen({
 }
 
 const styles = StyleSheet.create({
-  body: { color: '#fafafa', fontSize: 16, textAlign: 'center' },
-  centered: { alignItems: 'center', flex: 1, gap: 12, justifyContent: 'center' },
-  close: { alignSelf: 'flex-start', paddingVertical: 4 },
-  closeLabel: { color: '#a1a1aa', fontSize: 16 },
-  container: { backgroundColor: '#09090b', flex: 1, padding: 24 },
-  muted: { color: '#a1a1aa', fontSize: 14 },
-  nowPlaying: { color: '#fafafa', fontSize: 16, fontWeight: '600', marginBottom: 4, marginTop: 8 },
-  playerWrap: { flex: 1, marginTop: 12 },
+  body: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
+  centered: { alignItems: 'center', flex: 1, gap: spacing.md, justifyContent: 'center' },
+  close: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    minHeight: minimumTouchTarget,
+    minWidth: minimumTouchTarget,
+    paddingHorizontal: spacing.md,
+  },
+  closeLabel: { color: colors.muted, fontSize: fontSizes.body },
+  container: { backgroundColor: colors.background, flex: 1, padding: spacing.xxl },
+  muted: { color: colors.muted, fontSize: fontSizes.label },
+  nowPlaying: {
+    color: colors.foreground,
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  playerWrap: { flex: 1, marginTop: spacing.md },
+  rewardAction: {
+    alignItems: 'center',
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: minimumTouchTarget,
+    paddingHorizontal: spacing.md,
+  },
 });
