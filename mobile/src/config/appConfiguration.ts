@@ -5,7 +5,11 @@
  */
 
 import Constants from 'expo-constants';
-import { resolveAdsConfiguration, type AdsConfiguration } from '../../app.config';
+import {
+  resolveAdsConfiguration,
+  type AdsConfiguration,
+  type AppCheckConfiguration,
+} from '../../app.config';
 
 import {
   API_ENVIRONMENTS,
@@ -18,6 +22,7 @@ interface ExtraShape {
   readonly api?: unknown;
   readonly ads?: unknown;
   readonly analytics?: unknown;
+  readonly appCheck?: unknown;
 }
 
 function isApiEnvironment(value: unknown): value is ApiEnvironment {
@@ -94,4 +99,20 @@ export function readAnalyticsEnabled(extra: ExtraShape | null | undefined): bool
 
 export function isAnalyticsEnabled(): boolean {
   return readAnalyticsEnabled(Constants.expoConfig?.extra as ExtraShape | undefined);
+}
+
+export function readAppCheckConfiguration(
+  extra: ExtraShape | null | undefined,
+): AppCheckConfiguration {
+  const mode = (extra?.appCheck as { mode?: unknown } | undefined)?.mode;
+  if (mode !== 'disabled' && mode !== 'enforce') {
+    throw new EnvironmentConfigurationError(
+      'Expo manifest is missing a valid extra.appCheck.mode. Rebuild the development client.',
+    );
+  }
+  return { mode };
+}
+
+export function getAppCheckConfiguration(): AppCheckConfiguration {
+  return readAppCheckConfiguration(Constants.expoConfig?.extra as ExtraShape | undefined);
 }

@@ -38,6 +38,11 @@ if not FIREBASE_PROJECT_ID:
     raise ImproperlyConfigured("FIREBASE_PROJECT_ID is required in production")
 if os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "").strip():
     raise ImproperlyConfigured("FIREBASE_AUTH_EMULATOR_HOST is not allowed in production.")
+FIREBASE_APP_CHECK_VERIFIER = (
+    os.environ.get("FIREBASE_APP_CHECK_VERIFIER", "admin").strip().lower() or "admin"
+)
+if FIREBASE_APP_CHECK_VERIFIER != "admin":
+    raise ImproperlyConfigured("Production App Check verification must use firebase-admin.")
 if not ALLOWED_HOSTS:
     raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must contain at least one host")
 

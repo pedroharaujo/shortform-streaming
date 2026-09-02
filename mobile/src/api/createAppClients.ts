@@ -4,7 +4,9 @@
  */
 
 import { getSessionCredential } from '../auth/session';
-import { getApiConfiguration } from '../config/appConfiguration';
+import { createAppCheckFetch } from '../appCheck/appCheckFetch';
+import { getNativeAppCheckToken } from '../appCheck/nativeAppCheck';
+import { getApiConfiguration, getAppCheckConfiguration } from '../config/appConfiguration';
 import { getOrCreateDeviceId } from '../device/deviceId';
 import { createAccountClient } from './account/accountClient';
 import type { AccountClient } from './account/types';
@@ -20,7 +22,12 @@ import { createRewardsClient } from './rewards/rewardsClient';
 import type { RewardsClient } from './rewards/types';
 
 function appApiOptions() {
-  return { baseUrl: getApiConfiguration().baseUrl };
+  const appCheck = getAppCheckConfiguration();
+  return {
+    baseUrl: getApiConfiguration().baseUrl,
+    fetchImplementation:
+      appCheck.mode === 'enforce' ? createAppCheckFetch(getNativeAppCheckToken) : globalThis.fetch,
+  };
 }
 
 export function createAppCatalogClient(): CatalogClient {
@@ -52,14 +59,14 @@ export function createAppPlayerClients(): {
 
 export function createAppMeClient(): MeClient {
   return createMeClient({
-    baseUrl: getApiConfiguration().baseUrl,
+    ...appApiOptions(),
     getCredential: getSessionCredential,
   });
 }
 
 export function createAppAccountClient(): AccountClient {
   return createAccountClient({
-    baseUrl: getApiConfiguration().baseUrl,
+    ...appApiOptions(),
     getCredential: getSessionCredential,
   });
 }

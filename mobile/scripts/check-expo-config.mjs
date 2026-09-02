@@ -119,6 +119,14 @@ function checkResolvedConfiguration() {
     fail('Firebase Analytics plugin is missing.');
     return;
   }
+  if (!resolved.plugins?.includes('@react-native-firebase/app-check')) {
+    fail('Firebase App Check plugin is missing.');
+    return;
+  }
+  if (resolved.extra?.appCheck?.mode !== 'disabled') {
+    fail('Firebase App Check must remain disabled until private provider validation passes.');
+    return;
+  }
   walk(resolved, '', (key, value, keyPath) => {
     if (SENSITIVE_NAME.test(key)) {
       offenders.push(`${keyPath} (sensitive key name)`);
@@ -149,6 +157,7 @@ function checkAnalyticsDefaultsOff() {
   }
   const native = firebaseConfig['react-native'];
   const requiredFalse = [
+    'app_check_token_auto_refresh',
     'analytics_auto_collection_enabled',
     'analytics_default_allow_analytics_storage',
     'analytics_default_allow_ad_storage',
@@ -236,6 +245,7 @@ for (const overrides of [
   { EXPO_PUBLIC_API_ENVIRONMENT: 'staging', EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: '' },
   { EXPO_PUBLIC_API_ENVIRONMENT: 'production', EXPO_PUBLIC_REWARDED_ADS_MODE: 'test' },
   { EXPO_PUBLIC_REWARDED_ADS_MODE: 'production' },
+  { EXPO_PUBLIC_FIREBASE_APP_CHECK_MODE: 'invalid' },
 ]) {
   const result = runExpoConfig({
     ...REQUIRED_ENVIRONMENT,
@@ -249,6 +259,16 @@ if (!process.exitCode)
   process.stdout.write(
     'Publisher test config embeds paired IDs; invalid pairs and nonlocal overrides fail closed.\n',
   );
+
+const enforcedAppCheckResult = runExpoConfig({
+  ...REQUIRED_ENVIRONMENT,
+  EXPO_PUBLIC_FIREBASE_APP_CHECK_MODE: 'enforce',
+});
+if (enforcedAppCheckResult.status !== 0) {
+  fail('explicit App Check enforcement must resolve');
+} else if (JSON.parse(enforcedAppCheckResult.stdout).extra?.appCheck?.mode !== 'enforce') {
+  fail('App Check enforcement was not frozen into the public manifest');
+}
 
 const productionResult = runExpoConfig({
   ...REQUIRED_ENVIRONMENT,

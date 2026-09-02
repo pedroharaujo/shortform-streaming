@@ -35,6 +35,13 @@ export interface AdsConfiguration {
   readonly rewardedUnitId: string;
 }
 
+export const APP_CHECK_MODES = ['disabled', 'enforce'] as const;
+export type AppCheckMode = (typeof APP_CHECK_MODES)[number];
+
+export interface AppCheckConfiguration {
+  readonly mode: AppCheckMode;
+}
+
 export const API_ENVIRONMENT_VARIABLE = 'EXPO_PUBLIC_API_ENVIRONMENT';
 export const API_BASE_URL_VARIABLE = 'EXPO_PUBLIC_API_BASE_URL';
 
@@ -203,10 +210,23 @@ export function resolveAnalyticsConfiguration(
   return { enabled: raw === 'true' };
 }
 
+export function resolveAppCheckConfiguration(
+  source: Readonly<Record<string, string | undefined>>,
+): AppCheckConfiguration {
+  const mode = source.EXPO_PUBLIC_FIREBASE_APP_CHECK_MODE ?? 'disabled';
+  if (!(APP_CHECK_MODES as readonly string[]).includes(mode)) {
+    throw new EnvironmentConfigurationError(
+      `EXPO_PUBLIC_FIREBASE_APP_CHECK_MODE must be one of ${APP_CHECK_MODES.join(', ')}.`,
+    );
+  }
+  return { mode: mode as AppCheckMode };
+}
+
 export default ({ config }: ConfigContext): ExpoConfig => {
   const api = resolveApiConfiguration(process.env);
   const ads = resolveAdsConfiguration(process.env, api.environment);
   const analytics = resolveAnalyticsConfiguration(process.env, api.environment);
+  const appCheck = resolveAppCheckConfiguration(process.env);
 
   return {
     ...config,
@@ -227,6 +247,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-video',
       'expo-secure-store',
       '@react-native-firebase/app',
+      '@react-native-firebase/app-check',
       '@react-native-firebase/analytics',
       [
         'react-native-google-mobile-ads',
@@ -237,6 +258,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
     ],
     experiments: { typedRoutes: true },
-    extra: { api, ads, analytics },
+    extra: { api, ads, analytics, appCheck },
   };
 };

@@ -1140,6 +1140,20 @@ read rights metadata without its own permission. Cloud Run remains internal-only
 This slice does not complete provider-backed MFA/SSO, edge login abuse controls,
 or the live staging authorization matrix; those remain required before release.
 
+**App Check foundation implemented (P5-T05-F3 / #122):** Android development
+builds select Firebase's debug provider without embedding a debug token; release
+builds select Play Integrity. When the public rollout switch is enforced, all app
+API clients attach an ephemeral `X-Firebase-AppCheck` token. Django can enforce
+Firebase project and exact Android
+app ID verification before protected `/v1/` view work while excluding health,
+Admin, and the authentic AdMob callback. Production settings forbid the mock
+verifier, but the mobile and server switches plus Cloud Run IaC remain disabled by default until the
+recorded provider/device matrix passes under D-029.
+
+This foundation is not live Play Integrity evidence, per-request replay
+prevention, distributed edge abuse protection, or a substitute for Firebase user
+authentication, rights checks, reward binding, or endpoint authorization.
+
 **Description:** Apply OWASP ASVS/MASVS-informed controls: secure storage, TLS, validation, authorization, rate limiting, CORS/CSRF, admin hardening, App Check signals, dependency scanning, and abuse controls.
 
 **Objective:** Protect accounts, the self-owned catalog, rewarded-ad entitlements, and operational interfaces.

@@ -34,6 +34,13 @@ and fails closed when a token cannot be verified. Optional emulator host for
 admin-mode local work: `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`. Never commit
 service-account JSON.
 
+Every consumer `/v1/` operation also passes through the Firebase App Check
+middleware when `FIREBASE_APP_CHECK_MODE=enforce`. The middleware verifies
+`X-Firebase-AppCheck` with Firebase Admin and requires the exact configured public
+Android app ID before view work. Health, Admin, and the separately signed AdMob SSV
+callback are excluded. Production requires the Admin verifier; enforcement remains
+disabled pending `docs/runbooks/app-check.md` provider/device evidence.
+
 `playback` owns the existing Django Admin media-ingestion workflow and authorizes
 playback. Staff upload self-owned masters through Admin; production uses a
 private signed landing bucket before provider submission. The workflow tracks

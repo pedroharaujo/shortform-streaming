@@ -1,5 +1,6 @@
 {
   "react-native": {
+    "app_check_token_auto_refresh": false,
     "analytics_auto_collection_enabled": false,
     "analytics_default_allow_analytics_storage": false,
     "analytics_default_allow_ad_storage": false,

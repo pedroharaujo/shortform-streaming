@@ -1,7 +1,7 @@
 # Android mobile app
 
 Expo SDK 57 / React Native development client for the Android-only MVP. Expo Go
-is unsupported because Firebase Auth, Analytics, Google Sign-In, AdMob, and the
+is unsupported because Firebase Auth, App Check, Analytics, Google Sign-In, AdMob, and the
 native video player require native modules.
 
 ## Public configuration
@@ -32,7 +32,7 @@ verifies AdMob server-side verification callbacks.
 
 ## Identity
 
-The MVP offers Google Sign-In only. Catalog and free playback work anonymously;
+The MVP offers email/password and Google Sign-In. Catalog and free playback work anonymously;
 an account is required to receive a persistent rewarded-ad unlock. Django trusts
 only verified Firebase ID tokens and never accepts client user IDs.
 
@@ -55,6 +55,16 @@ For a local Android development build:
    ```
 
 Jest uses the email/password-and-Google local mock and never loads native Firebase modules.
+
+## App verification
+
+When `EXPO_PUBLIC_FIREBASE_APP_CHECK_MODE=enforce`, every app API request obtains
+a Firebase App Check token on demand and sends it only in
+`X-Firebase-AppCheck`. Development builds use the debug provider; release builds
+use Play Integrity. The switch defaults to `disabled` until private provider
+validation passes. No debug token belongs in JavaScript or `EXPO_PUBLIC_*`.
+Backend enforcement and Cloud Run configuration remain disabled until the private
+provider/device procedure in `../docs/runbooks/app-check.md` passes.
 
 ## Local run
 

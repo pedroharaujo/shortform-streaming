@@ -91,6 +91,28 @@ variable "firebase_project_id" {
   description = "FIREBASE_PROJECT_ID for Cloud Run and jobs. Required with no default."
 }
 
+variable "firebase_app_check_mode" {
+  type        = string
+  description = "FIREBASE_APP_CHECK_MODE for the API service. Keep disabled until P5-T05-F3 provider/device validation passes."
+  default     = "disabled"
+
+  validation {
+    condition     = contains(["disabled", "enforce"], var.firebase_app_check_mode)
+    error_message = "firebase_app_check_mode must be disabled or enforce."
+  }
+}
+
+variable "firebase_app_check_app_id" {
+  type        = string
+  description = "Public Firebase Android app ID for exact App Check subject validation."
+  default     = ""
+
+  validation {
+    condition     = var.firebase_app_check_mode == "disabled" || length(trimspace(var.firebase_app_check_app_id)) > 0
+    error_message = "firebase_app_check_app_id is required when App Check enforcement is enabled."
+  }
+}
+
 variable "video_provider" {
   type        = string
   description = "Optional video provider. Empty default injects no Bunny env into Cloud Run or jobs."

@@ -641,6 +641,15 @@ export interface operations {
                     "application/json": components["schemas"]["CatalogHome"];
                 };
             };
+            /** @description Missing or invalid app or user verification. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
         };
     };
     v1_episodes_retrieve: {
@@ -661,6 +670,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CatalogEpisodeDetail"];
+                };
+            };
+            /** @description Missing or invalid app or user verification. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
@@ -1146,6 +1164,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CatalogSeriesDetail"];
+                };
+            };
+            /** @description Missing or invalid app or user verification. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
