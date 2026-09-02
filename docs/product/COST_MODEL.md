@@ -112,13 +112,13 @@ One table used by all three scenarios. Every volume is **hypothetical**. EUR use
 | # | Input | Value | Label |
 | --- | --- | --- | --- |
 | 1 | GB / watch-hour | **0.721 GB / watch-hour** | **Hypothetical** mix, not all at 1080p: 40% 480p @ 1.2 Mbps, 40% 720p @ 2.5 Mbps, 20% 360p @ 0.8 Mbps. `0.4×1.2 + 0.4×2.5 + 0.2×0.8 = 1.64 Mbps`. `1.64 × 3600 / 8 / 1024 = 0.720703125` ≈ **0.721** (3 d.p.). **Hypothetical modeling assumption from the bitrate formula**; P2-T05 did not meter GB. |
-| 2 | Catalog source minutes | **60** | D-004 one series; **hypothetical** 40 episodes × 1.5 min. Not a licensed catalog. |
+| 2 | Catalog source minutes | **60** | **Hypothetical one-series baseline**: 40 episodes × 1.5 min. D-004 allows a larger approved catalog; scale this input to the actual total. |
 | 3 | Stored GB | **≈ 4.13 GB** | **Modeling, not metered.** Aggregate ladder bitrates 0.4+0.8+1.2+2.5+4.5 = 9.4 Mbps × 1.0 h source → `9.4 × 3600 / 8 / 1024 = 4.130859375` ≈ **4.13 GB** stored for 60 source minutes. Formula-derived. |
 | 4 | Bunny variable video | encode **USD 0.00**; storage **USD 0.0413 / month**; CDN = watch-hours × 0.721 × USD 0.010 | encode = 60 × USD 0.00 = **USD 0.00**; storage = 4.13 × 0.01 = **USD 0.0413** (table ~USD 0.041). CDN uses Bunny Standard list USD 0.010 / GB. |
 | 5 | Other `variable_infrastructure` terms | **USD 0.00** | API/DB/analytics/notifications/MMP: **not modeled / pending quotes**. Kept in the sum so the formula identity is visible. Cloud Run request counts are not invented. |
 | 6 | P7 IAP | **0 / N/A / labeled P7** | Payer conversion, store commissions, coins, subscriptions = **P7**. Ads-only uses rewarded ads/user and net eCPM. |
 | 7 | Acquisition spend | **pending D-017 (Decision required)** | **Not assumed.** No dollar or euro UA figure. `cohort_contribution` is shown **before acquisition**. Approved `contribution_LTV_to_CAC` is **not computed or claimed**. |
-| 8 | Content cost | **USD 0.00 in this infrastructure model** | MVP catalog is one self-owned series (D-004). Production cost is tracked separately when known; no license MG or revenue share applies to MVP. |
+| 8 | Content cost | **USD 0.00 in this infrastructure-only baseline** | Production, minimum-guarantee, or revenue-share costs are intentionally not assumed. Add the actual privately approved cost/terms to the business model before admitting licensed content; never record confidential rates here. |
 | 9 | Net eCPM | **hypothetical USD 8.00** (EUR 6.85872 at 0.85734) **per 1,000 rewarded impressions** | Not measured AdMob yield. `net_ad_revenue = (users × ads_per_user / 1000) × eCPM`. |
 | 10 | EUR | 1 USD = 0.85734 EUR on 2026-08-24 | Frankfurter / ECB reference; reused, not a new pull. |
 

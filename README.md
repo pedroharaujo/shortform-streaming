@@ -233,11 +233,11 @@ protections. Do not reuse the local example values or commit a populated `.env`.
 
 ## Project status
 
-Implementation targets a France-only Android launch through Google Play (D-001/D-027), with an English interface and exactly one self-owned English-language series (D-004/D-023). The ads-only MVP has no IAP; one verified AdMob rewarded ad unlocks one episode. EUR remains the company reporting and desired future store-settlement currency for the later P7 IAP path.
+Implementation targets a France-only Android launch through Google Play (D-001/D-027), with an English interface and one or more independently approved self-owned or licensed English-language series (D-004/D-023/D-031). The ads-only MVP has no IAP; one verified AdMob rewarded ad unlocks one episode. EUR remains the company reporting and desired future store-settlement currency for the later P7 IAP path.
 
-Development and automated tests use only short self-owned or generated media and local/emulated/provider-fake integrations. Licensed third-party content, licensor contracts, royalties, contract-driven territory enforcement, and DRM decisions are post-MVP.
+Development and automated tests use only short self-owned or generated media, synthetic licensed-right metadata, and local/emulated/provider-fake integrations. P2-T03-F2 restores fixed France/Android/English licensed-right enforcement. Actual contracts, rates, provider payloads, personal data, and licensed media stay outside this public repository; DRM-required grants remain ineligible until a compliant provider path is approved.
 
-The narrow scope is not final launch clearance. Ownership/provenance for the self-owned series, France-specific GDPR/privacy and legal review, age/content controls, Google Play compliance, incorporation and registration details of the intended French entity, and AdMob production configuration remain mandatory **ads-only** release gates. Store IAP settlement configuration is required before P7 IAP, not before ads-only launch. No public distribution or real advertising may be enabled before ads-only clearance. Real purchase or subscription flows wait for P7.
+The narrow scope is not final launch clearance. Ownership/provenance or the private licensed-rights package for every candidate series, France-specific GDPR/privacy and legal review, age/content controls, Google Play compliance, incorporation and registration details of the intended French entity, and AdMob production configuration remain mandatory **ads-only** release gates. Store IAP settlement configuration is required before P7 IAP, not before ads-only launch. No public distribution, licensed-media publication, or real advertising may be enabled before its applicable clearance. Real purchase or subscription flows wait for P7.
 
 ## Source of truth
 
