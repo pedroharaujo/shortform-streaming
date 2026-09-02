@@ -19,9 +19,9 @@ into the public JavaScript bundle.
 
 The P6-T01 mobile-quality foundation keeps English interface copy in
 `src/localization/messages.tsx` and semantic visual/touch-target values in
-`src/ui/theme.ts`. The catalog-selection, sign-in, and account journeys use these
-foundations; remaining feature surfaces are tracked in P6-T01 and must not add new
-hard-coded user copy.
+`src/ui/theme.ts`. The catalog-selection, sign-in, account, and playback journeys use
+these foundations; remaining feature surfaces are tracked in P6-T01 and must not add
+new hard-coded user copy.
 
 Optional release switches:
 

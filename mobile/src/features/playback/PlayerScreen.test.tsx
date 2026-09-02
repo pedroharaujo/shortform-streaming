@@ -11,7 +11,9 @@ import type {
   ProgressRequestOutcome,
   WatchProgressWrite,
 } from '../../api/progress/types';
-import { renderWithSafeArea } from '../../testUtils';
+import { englishMessages } from '../../localization/messages';
+import { compactAndroidMetrics, renderWithSafeArea } from '../../testUtils';
+import { minimumTouchTarget } from '../../ui/theme';
 import { PlayerScreen } from './PlayerScreen';
 import type { PlaybackAnalytics } from './playbackAnalytics';
 
@@ -398,9 +400,19 @@ describe('PlayerScreen', () => {
     });
   });
 
-  it('shows lock reasons for a locked next episode and does not keep a next URI', async () => {
+  it('localizes a locked next episode without exposing server reasons on a compact screen', async () => {
     const onReward = jest.fn();
     const analytics = analyticsDouble();
+    const longMessages = {
+      ...englishMessages,
+      playback: {
+        ...englishMessages.playback,
+        close: 'Close this episode player and return to the episode details',
+        rewardRequired:
+          'Watch a rewarded advertisement to unlock this episode before continuing playback.',
+        viewReward: 'Review the rewarded-ad option for this selected episode',
+      },
+    };
     const authorize = jest.fn(async (id: string): Promise<PlaybackRequestOutcome> => {
       if (id === 'ep_harbor_6') {
         return { outcome: 'locked', lockReasons: ['login_required'] };
@@ -417,14 +429,24 @@ describe('PlayerScreen', () => {
         playback={stubPlayback(authorize)}
         progress={stubProgress()}
       />,
+      { messages: longMessages, metrics: compactAndroidMetrics },
     );
 
     expect(await view.findByTestId('player-loaded')).toBeTruthy();
     const user = userEvent.setup();
     await user.press(view.getByTestId('player-simulate-end'));
     expect(await view.findByTestId('player-locked')).toBeTruthy();
-    expect(view.getByText('login_required')).toBeTruthy();
-    await user.press(view.getByLabelText('View episode reward'));
+    expect(view.getByTestId('player-locked')).toHaveProp('accessibilityLiveRegion', 'assertive');
+    expect(view.getByText(longMessages.playback.rewardRequired)).toBeTruthy();
+    expect(view.queryByText('login_required')).toBeNull();
+    expect(view.getByLabelText(longMessages.playback.close)).toHaveStyle({
+      minHeight: minimumTouchTarget,
+      minWidth: minimumTouchTarget,
+    });
+    expect(view.getByLabelText(longMessages.playback.viewReward)).toHaveStyle({
+      minHeight: minimumTouchTarget,
+    });
+    await user.press(view.getByLabelText(longMessages.playback.viewReward));
     expect(onReward).toHaveBeenCalledWith('ep_harbor_6');
     expect(view.queryByTestId('player-loaded')).toBeNull();
     expect(view.queryByTestId('player-video')).toBeNull();
