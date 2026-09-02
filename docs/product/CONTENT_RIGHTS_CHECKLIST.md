@@ -1,11 +1,11 @@
-# Self-Owned Content Provenance and Media Delivery Checklist
+# Content Rights and Media Delivery Checklist
 
 **Plan task:** P0-T02  
-**Status:** MVP self-owned-content gate; third-party licensing section deferred beyond MVP
+**Status:** Required per-series publication gate for self-owned and licensed content
 
-The France-only Android MVP publishes exactly one self-owned English-language series (D-001, D-004, D-023, 2026-09-01). It does not require a licensor, license agreement, royalty terms, contract-driven territorial rights, or custom DRM. Before publication, the founder/content owner must privately record ownership and component provenance and the media package must pass the delivery checks below.
+The France-only Android MVP may publish one or more English-language series that are either self-owned or properly licensed (D-001, D-004, D-023, D-031, 2026-09-02). Before publication, the founder/content owner must privately record ownership and component provenance or complete the licensed-content rights package, and every media package must pass the delivery checks below.
 
-Legacy rights/territory tables remain only as dormant database-compatibility state until a later destructive schema contraction. They are not used by the MVP API, Admin, or authorization path. MVP completion requires no multi-territory or licensed-content implementation. The public repository must contain only approved short self-owned/generated fixtures, never production masters, confidential records, or personal data.
+P2-T03-F2 must enforce the fixed France/Android/English grant for licensed series before this scope is considered implemented. Until that slice lands, licensed-master upload and publication remain blocked. Rights records in this public repository contain only synthetic fixtures or opaque references to private systems—never contracts, rates, production masters, confidential records, provider payloads, or personal data. Once enabled, missing, expired, mismatched, DRM-required, or taken-down grants must fail closed in catalog and playback authorization.
 
 ## MVP self-owned provenance
 
@@ -15,11 +15,11 @@ Legacy rights/territory tables remain only as dormant database-compatibility sta
 - [ ] Provisional age rating, warnings, credits, and required notices are recorded.
 - [ ] The accepted master/caption/artwork package passes the automated and human media checks in this document.
 
-Completion of this section and the media-delivery checks closes the MVP portion of P0-T02. The licensing material below is retained for a later decision to admit third-party content and is **not an MVP gate**.
+Completion of this section and the media-delivery checks closes the self-owned path for a series. It does not approve any licensed series.
 
-## Future licensed-content package (post-MVP)
+## Licensed-content package
 
-Decision D-019 and every licensor/territory/contract item below apply only before future licensed-media ingestion. They do not block the self-owned MVP catalog or production video-provider configuration for that catalog.
+Decision D-019 and every applicable licensor/territory/contract item below must be completed privately before that licensed series is ingested or published. They do not block unrelated self-owned titles or other independently approved licensed series.
 
 ### Rights package
 
@@ -66,7 +66,7 @@ Decision D-019 and every licensor/territory/contract item below apply only befor
 - [ ] Archive/deletion obligations for masters, renditions, subtitles, analytics, and backups are explicit.
 - [ ] Audit, usage reporting, and royalty statement requirements are implementable.
 
-## Future licensed catalog metadata (post-MVP)
+## Licensed catalog metadata
 
 - Licensor and secure contract reference.
 - Canonical and localized title identifiers.
@@ -111,12 +111,12 @@ Decision D-019 and every licensor/territory/contract item below apply only befor
 
 - Content operator checks the beginning, midpoint, and ending of every episode.
 - Content operator verifies crop, rotation, subtitles, audio language, loudness, and cliffhanger boundary.
-- For the self-owned MVP, the founder/content owner confirms the delivered cut is the approved launch version.
-- For future licensed content, the legal/content owner confirms the delivered cut matches the licensed version.
+- For self-owned content, the founder/content owner confirms the delivered cut is the approved launch version.
+- For licensed content, the legal/content owner confirms the delivered cut matches the licensed version.
 
 ## Sample-package validation record
 
-Before admitting future licensed content, evaluate one real or representative supplier package and record. This validation is post-MVP and does not block the self-owned launch:
+Before admitting licensed content, evaluate the real supplier package in the approved private rights system. Keep only its opaque reference in the public repository; do not record the supplier identity, gaps, contract amendments, rates, provider payloads, personal data, or licensed media here.
 
 - Supplier/package identifier:
 - Review date and reviewers:

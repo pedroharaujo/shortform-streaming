@@ -61,7 +61,7 @@ Ads-only MVP ships Android / Google Play only (D-027). iOS AdMob remains relevan
 
 ## Privacy and data protection baseline
 
-The MVP app interface and self-owned microdrama catalog are in English. Decision D-001 limits the ads-only MVP to France through Google Play. Complete the France-specific consumer, tax, age-rating, accessibility, privacy, advertising, and language review for the exact binary and catalog. Additional countries are post-MVP and require a new explicit decision plus their own review before distribution is enabled.
+The MVP app interface and independently approved self-owned or licensed microdrama catalog are in English. Decision D-001 limits the ads-only MVP to France through Google Play. Complete the France-specific consumer, tax, age-rating, accessibility, privacy, advertising, rights, and language review for the exact binary and catalog. Additional countries are post-MVP and require a new explicit decision plus their own review before distribution is enabled.
 
 - Maintain a data inventory: field/event, purpose, lawful basis/consent, processor, region, retention, access roles, deletion behavior. Engineering inventory: [`SDK_DATA_INVENTORY.md`](SDK_DATA_INVENTORY.md) (P0-T03 remaining engineering slice; not a P0-T03 completion record).
 - Minimize identifiers and avoid email, tokens, receipts, signed media URLs, exact IP, or contract references in analytics.
@@ -82,7 +82,7 @@ The MVP app interface and self-owned microdrama catalog are in English. Decision
 - [ ] Actual public operator identity and monitored privacy-contact email are established, with completed notice/UMP setup and genuine rewarded-ad release evidence in #98. D-028 defers these from P3-T07/PR #97 to release readiness; required setup still precedes publisher-owned ad testing.
 - [ ] Reviewer receives a test account and deterministic instructions for free, locked, rewarded-ad, and deletion flows. Coin, subscription, and restore instructions wait for P7.
 - [ ] Review notes explain why rewarded ads are optional and how rewards are verified.
-- [ ] Screenshots and review media use only the approved self-owned series and assets covered by its private provenance record.
+- [ ] Screenshots and review media use only approved series and assets covered by their private provenance or licensed promotional-use grant.
 
 ## Required approvals before P0-T03 completion (ads-only MVP)
 

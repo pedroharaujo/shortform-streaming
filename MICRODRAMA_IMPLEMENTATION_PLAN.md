@@ -38,23 +38,23 @@ Execution rules:
 
 ## 2. Product Summary
 
-Build an Android-first streaming app for one self-owned English-language vertical microdrama series in France. Users discover the series, watch short episodes in a vertical player, and continue through a hardcoded free window plus verified rewarded-ad unlocks. Coin unlocks and an all-access subscription remain in the accepted architecture and ship in P7, not at MVP launch.
+Build an Android-first streaming app for an independently approved catalog of English-language vertical microdrama series in France. Series may be self-owned or licensed. Users discover a series, watch short episodes in a vertical player, and continue through a hardcoded free window plus verified rewarded-ad unlocks. Coin unlocks and an all-access subscription remain in the accepted architecture and ship in P7, not at MVP launch.
 
 The first product goal is not to become a large streaming catalog. It is to validate the minimum viewing and monetization loop:
 
 > App open → series → episode progression → verified rewarded-ad unlock → more viewing.
 
-Launch with **one self-owned series**. The catalog data model may continue to support N series, but licensed third-party content, additional countries/languages, and iOS are post-MVP. Expand only after ads-only unit economics are validated — or after a P7 IAP test if ads cannot carry UA.
+Launch with **one or more independently approved series**. Each title must pass either the self-owned provenance path or the licensed-rights path. Additional countries/languages and iOS remain post-MVP. Expand the catalog prudently while measuring ads-only unit economics — or after a P7 IAP test if ads cannot carry UA.
 
 ### Business layers and long-term sequence
 
-1. **Owned-content test first:** publish one self-owned series, acquire viewers, and learn what monetizes.
-2. **Catalog expansion second:** produce or add more owned content based on validated demand.
-3. **Licensing/distribution later:** evaluate third-party catalogs and external distribution only after validation.
+1. **Rights-safe catalog first:** publish only independently approved self-owned or licensed series and learn what viewers engage with.
+2. **Catalog expansion second:** produce or license more content based on validated demand and sustainable terms.
+3. **External distribution later:** evaluate distributing the company catalog through additional channels only after validation.
 
 ### MVP hypothesis
 
-> Will viewers progress through one self-owned series and use rewarded ads to unlock more episodes?
+> Will viewers progress through an approved microdrama catalog and use rewarded ads to unlock more episodes?
 
 The ads-only MVP is valuable when the viewing loop works reliably and enough engaged viewers choose a rewarded-ad unlock to justify the next acquisition/IAP experiment. Paid-acquisition economics, cohort LTV/CAC, and IAP are P7 work. A weak result on one series is evidence about the test, not a verdict on microdrama.
 
@@ -66,14 +66,14 @@ The ads-only MVP is valuable when the viewing loop works reliably and enough eng
 
 - One Android / Google Play app built with React Native/Expo TypeScript. iOS release work is post-MVP.
 - Django REST API and Django Admin.
-- Catalog (data model supports N series; launch catalog is 1 title), series detail, episode list, vertical adaptive-streaming player, autoplay next, and watch progress.
+- Catalog of one or more independently approved self-owned or licensed English-language series, series detail, episode list, vertical adaptive-streaming player, autoplay next, and watch progress.
 - Anonymous browsing and free playback; account required before the first monetized unlock (rewarded ad) or cross-device sync.
 - Google Sign-In through Firebase Authentication. Other providers are post-MVP.
 - Episode access policy for MVP: free vs rewarded ad only (hardcoded / admin-configured free window).
 - Rewarded ads through Google AdMob, with server-side verification.
 - Server-authoritative entitlements for ad grants.
 - Thin consent-gated Firebase Analytics events for app, auth, viewing, locks, and rewards.
-- Provider-managed self-owned media, ownership/provenance metadata, signed playback access, and basic editorial curation.
+- Provider-managed approved media, ownership/provenance or licensed-rights metadata, signed playback access, and basic editorial curation.
 - Staging and production deployment, CI/CD, observability, privacy controls, and account deletion.
 
 ### Explicitly excluded from MVP
@@ -92,7 +92,7 @@ The ads-only MVP is valuable when the viewing loop works reliably and enough eng
 - Push notifications and lifecycle campaigns until P7 (deferred, not deleted).
 - BigQuery/Looker metric models, Remote Config experiments, and MMP until P7 (deferred, not deleted).
 - Campaign attribution, Install Referrer, and custom deferred-deep-link handling until P7.
-- iOS release work, additional launch countries/languages, licensed third-party content, licensor contracts/royalties, and contract-driven territorial rights.
+- iOS release work, additional launch countries/languages, public contract/rate storage, and automated royalty accounting.
 
 ### Default access and monetization rules
 
@@ -110,14 +110,14 @@ The ads-only MVP is valuable when the viewing loop works reliably and enough eng
 - Use interstitial ads only after a later experiment proves they improve contribution without damaging retention.
 - Store purchase restoration and subscription resynchronization are mandatory in P7; they are not MVP launch requirements.
 
-### Self-owned content decisions
+### Content rights decisions
 
-- The initial catalog is exactly one self-owned English-language series (D-004/D-023).
-- Before publication, the founder/content owner records private ownership and component provenance for episodes, music, voices, likenesses, artwork, clips, stock assets, and AI tools/models.
-- No licensor, license contract, royalty/revenue-share rule, contract window, multi-territory matrix, or custom DRM is required for MVP.
+- The catalog may contain multiple English-language series that are self-owned or licensed for the fixed France/Android product (D-004/D-023/D-031).
+- Before publication, the founder/content owner records private ownership and component provenance or completes the private licensed-content package for episodes, music, voices, likenesses, artwork, clips, stock assets, AI tools/models, grant scope, and protection requirements.
+- Contracts, rates, provider payloads, personal data, and licensed media never enter the public repository. Runtime rows store only opaque private-system references and non-confidential enforcement metadata.
 - The API must still hide unpublished, blocked, or taken-down content. Playback authorization must still re-check publication and entitlement at request time.
-- Legacy rights/territory tables remain dormant only for non-destructive migration compatibility. MVP runtime eligibility uses the fixed France/Android/English self-owned rules.
-- Originals and subtitles are private assets. Public bucket access is prohibited; tokenized HLS remains the MVP protection level.
+- Licensed runtime eligibility uses the fixed France/Android/English grant and fails closed for missing, mismatched, expired, DRM-required, or taken-down rights.
+- Originals and subtitles are private assets. Public bucket access is prohibited; tokenized HLS is allowed only when the ownership/license package permits it.
 
 ### Initial success metrics
 
@@ -344,7 +344,7 @@ shortform-streaming/
 - `Series`: English metadata, artwork, genre, publication/takedown state, self-owned provenance, free count, and rewarded-ad kill switch.
 - `Season`: optional grouping; model now even if MVP normally has one.
 - `Episode`: order, English metadata, duration, and publication state.
-- Dormant legacy `ContentRight`/translation fields remain only until a later destructive schema contraction; they are not MVP runtime policy or Admin surfaces.
+- `ContentRight`: staff-only licensed-series grant metadata and opaque private-system references; fixed France/Android/English runtime eligibility fails closed for invalid, expired, mismatched, DRM-required, or taken-down grants. Translation tables remain dormant migration-compatibility state.
 - `MediaAsset`: ready provider asset ID, captions, thumbnails, duration, renditions, and removed state. Django stores no video bytes.
 - Free count and rewarded-ad availability live directly on `Series`; dormant legacy `AccessPolicy` rows remain only for safe migration/deletion compatibility.
 - `EpisodeEntitlement`: user, episode, source, granted/expiry/revocation metadata.
@@ -439,7 +439,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 Two decision classes apply throughout the roadmap:
 
 - **Required for architecture/coding:** must be approved before implementing the affected behavior. The accepted technical ADR baseline is sufficient to begin Phase 1 now.
-- **Required before public release:** company registration and organization-account details, banking/payout verification, self-owned catalog provenance, France-specific legal/privacy review, Google Play/AdMob configuration, and launch approvals may be completed later, but public production activation, traffic promotion, storefront distribution, and real advertising remain disabled until they pass. Licensed-media publication is post-MVP. Isolated production-candidate provisioning and test-data validation may proceed earlier under P5-T08.
+- **Required before public release:** company registration and organization-account details, banking/payout verification, per-series provenance or licensed-rights clearance, France-specific legal/privacy review, Google Play/AdMob configuration, and launch approvals may be completed later, but public production activation, traffic promotion, storefront distribution, real advertising, and uncleared media remain disabled until they pass. Isolated production-candidate provisioning and synthetic/test-data validation may proceed earlier under P5-T08.
 
 ### Phase 0 — Product, Content, and Delivery Foundations
 
@@ -447,7 +447,7 @@ Two decision classes apply throughout the roadmap:
 
 **Description:** Maintain one brief that separates the approved development baseline from Public Release Readiness decisions covering distribution, customer-localized pricing, EUR reporting/settlement, legal entity and registration details, target audience, content rating, catalog, and success/stop criteria.
 
-**Objective:** Allow approved architecture and bootstrap work to proceed while preventing release or real monetization with unresolved legal, self-owned provenance, financial, privacy, or store requirements.
+**Objective:** Allow approved architecture and bootstrap work to proceed while preventing release or real monetization with unresolved legal, content-rights, financial, privacy, or store requirements.
 
 **Dependencies:** None.
 
@@ -458,7 +458,7 @@ Two decision classes apply throughout the roadmap:
 - [x] Decision D-001 approves France-only Google Play distribution, and D-024 records France as the intended legal-entity country (scope narrowed 2026-09-01).
 - [x] Phase 1 may start with local/emulated/fake services, generated test data, and self-owned/generated test media without real credentials.
 - [ ] Before ads-only public release, the French entity's legal name/form, incorporation, registered address, D-U-N-S where required, organization accounts, and AdMob production configuration are approved and verified. Store IAP EUR-compatible Apple/Google bank configuration is required before P7 IAP, not before ads-only launch.
-- [x] MVP inclusions/exclusions and monetization defaults are approved (France-only Android, one self-owned English series, ads-only, hardcoded free window, guest boundary; updated 2026-09-01).
+- [x] MVP inclusions/exclusions and monetization defaults are approved (France-only Android, one or more approved self-owned/licensed English series, ads-only, hardcoded free window, guest boundary; catalog scope updated 2026-09-02).
 - [ ] KPI definitions, ads-only UA budget ceiling, and stop/go review date are documented. Experiment guardrails belong to P4-T05 / P7, not this remaining P0-T01 closer.
 
 **Validation and integration tests:**
@@ -466,24 +466,24 @@ Two decision classes apply throughout the roadmap:
 - [ ] Product, engineering, growth, and legal/content owners review the same brief.
 - [ ] Trace every MVP screen and backend domain in this plan to at least one approved user journey.
 
-#### P0-T02 — Confirm self-owned content provenance and media requirements
+#### P0-T02 — Confirm per-series content rights and media requirements
 
-**Description:** Record ownership/component provenance for the exact self-owned launch series and validate its technical delivery package. The licensor, contract, royalty, territory-window, and DRM sections of the checklist are retained for future licensed content and are post-MVP.
+**Description:** For every candidate series, record ownership/component provenance or complete the private licensor, contract, royalty, territory-window, and protection package, then validate its technical delivery package.
 
-**Objective:** Ensure every MVP asset is owned/controlled by the founder/company, suitable for France/Google Play promotion, and technically publishable.
+**Objective:** Ensure every MVP asset is owned or licensed for the intended use, suitable for France/Google Play promotion, and technically publishable.
 
 **Dependencies:** Approved decisions D-001, D-002, D-004, and D-023. Remaining P0-T01 Public Release Readiness items are not dependencies.
 
 **Acceptance criteria:**
 
-- [ ] Private provenance covers scripts, music, voices, likenesses, artwork, clips, stock assets, locations, and AI tools/models used in the self-owned series.
+- [ ] Each self-owned series has private provenance covering scripts, music, voices, likenesses, artwork, clips, stock assets, locations, and AI tools/models; each licensed series has an approved private D-031 rights package.
 - [ ] Media specification covers vertical aspect ratio, codecs, audio, captions, posters, episode numbering, checksums, and source quality.
-- [ ] The exact series is approved for France/Google Play publication, advertising, screenshots, and promotional use, with rating/warnings recorded.
+- [ ] Each candidate series is approved for France/Google Play publication, advertising, screenshots, and promotional use, with rating/warnings recorded.
 
 **Validation and integration tests:**
 
-- [ ] Run the checklist against the actual self-owned launch package and record gaps.
-- [ ] Founder/content owner signs off before the production master is published. A legal licensing review is required only before future third-party content.
+- [ ] Run the applicable checklist path against every actual launch package and record gaps.
+- [ ] Founder/content owner signs off before a self-owned production master is published; legal/content approval of the private rights package is required before a licensed master is ingested or published.
 
 #### P0-T03 — Create product policy and store-compliance matrix
 
@@ -510,7 +510,7 @@ Two decision classes apply throughout the roadmap:
 
 **Objective:** Make technical tradeoffs and contribution economics explicit.
 
-**Dependencies:** Accepted technical decisions D-010 through D-013, D-015, and D-016, plus approved pricing/reporting decisions D-021/D-022. D-014 is accepted as Bunny Stream default with GCP Cloud CDN fallback; P0-T04 records that ADR and a provisional cost baseline. P2-T05 **Android** proved Bunny (2026-08-26, D-026). Production provider configuration still waits for credentials and public-release gates, but D-019 is post-MVP and does not block the self-owned catalog. P0-T01, P0-T02, and P0-T03 may proceed in parallel.
+**Dependencies:** Accepted technical decisions D-010 through D-013, D-015, and D-016, plus approved pricing/reporting decisions D-021/D-022. D-014 is accepted as Bunny Stream default with GCP Cloud CDN fallback; P0-T04 records that ADR and a provisional cost baseline. P2-T05 **Android** proved Bunny (2026-08-26, D-026). Production provider configuration still waits for credentials and public-release gates. D-019 permits tokenized HLS only for titles whose ownership/license package allows it; DRM-required titles remain ineligible. P0-T01, P0-T02, and P0-T03 may proceed in parallel.
 
 **Acceptance criteria:**
 
@@ -526,11 +526,11 @@ Two decision classes apply throughout the roadmap:
 
 ### Checkpoint 0 — Public-release feasibility (not a Phase 1 gate)
 
-- [ ] Launch configuration, self-owned provenance/media checklist, policy matrix, and cost model are approved.
+- [ ] Launch configuration, per-series rights/media checklist, policy matrix, and cost model are approved.
 - [ ] A sample content package can meet the proposed ingestion contract.
-- [x] D-019 records no custom DRM for the self-owned MVP catalog; DRM is reconsidered only before future licensed third-party content.
+- [x] D-019 allows tokenized HLS only for approved self-owned or licensed titles that permit it; DRM-required titles fail closed until a compliant provider path is approved.
 
-Phase 1 may begin before Checkpoint 0 passes. The narrowed Checkpoint 0 remains mandatory before the self-owned series and real advertising are publicly released in France. Licensed-content clearance is post-MVP.
+Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory before any series and real advertising are publicly released in France. Licensed-content clearance is per series and does not block unrelated cleared titles.
 
 ---
 
@@ -716,24 +716,24 @@ checks, operational follow-ups, retention gates, and rollback restrictions.
 Push identifiers and financial audit models are not implemented yet; their
 processor-specific deletion/retention integration is required before they ship.
 
-#### P2-T03 — Implement catalog, publication controls, localization, and Django Admin
+#### P2-T03 — Implement catalog, rights, publication controls, localization, and Django Admin
 
-**Description:** Add Series, Season, Episode, Genre, direct English text, publication/takedown state, self-owned provenance, artwork, and usable Admin screens. Legacy rights/translation tables are dormant migration compatibility only.
+**Description:** Add Series, Season, Episode, Genre, direct English text, publication/takedown state, self-owned provenance or licensed ContentRight grants, artwork, and usable Admin screens. Licensed grants are evaluated only for the fixed France/Android/English product; broader market routing remains out of scope.
 
-**Objective:** Let staff manage the approved self-owned catalog without a custom web product.
+**Objective:** Let staff manage an independently approved self-owned or licensed catalog without a custom web product.
 
-**Dependencies:** P1-T02. Implement and test with generated metadata and self-owned/generated test media. The narrowed P0-T02 provenance/media sign-off is required before the production self-owned series is published; licensed-media admission is post-MVP.
+**Dependencies:** P1-T02. Implement and test with generated metadata and self-owned/generated test media. P0-T02 provenance/media sign-off is required for self-owned publication; the D-031 private rights package and media acceptance are required before each licensed-series ingestion/publication.
 
 **Acceptance criteria:**
 
-- [ ] Admin supports ordered episodes, provenance visibility, draft/published/takedown states, and search/filtering.
-- [ ] Publication validation prevents missing self-owned provenance, promotional approval, English metadata, or ready media.
-- [ ] API returns only the published English launch series for the fixed France/Android context; clients cannot supply market context.
+- [ ] Admin supports ordered episodes, provenance/licensed-right visibility, draft/published/takedown states, and search/filtering.
+- [ ] Publication validation prevents missing self-owned provenance or a structurally valid licensed grant, promotional approval where applicable, English metadata, or ready media.
+- [ ] API returns only published English series with valid fixed France/Android eligibility; clients cannot supply market context.
 
 **Validation and integration tests:**
 
-- [ ] Model/admin tests cover missing provenance/publication metadata, duplicate ordering, and publish restrictions.
-- [ ] Seed exactly one synthetic self-owned series and verify unpublished or taken-down titles remain hidden.
+- [ ] Model/admin tests cover self-owned and licensed publication metadata, missing/mismatched/expired/DRM-required/taken-down grants, duplicate ordering, and publish restrictions.
+- [ ] Seed synthetic self-owned content only; tests may create synthetic licensed-right metadata and must verify ineligible titles remain hidden.
 
 #### P2-T04 — Build home catalog and series-detail mobile screens
 
@@ -776,9 +776,9 @@ processor-specific deletion/retention integration is required before they ship.
 
 #### P2-T06 — Implement production media ingestion workflow
 
-**Description:** Use the existing MediaAsset state machine, checksum/deduplication, signed staff upload, Bunny Stream job submission/status reconciliation, caption validation, thumbnail output, and Admin retry/takedown that also expires/deletes the provider asset. Use only self-owned/generated media for the MVP.
+**Description:** Use the existing MediaAsset state machine, checksum/deduplication, signed staff upload, Bunny Stream job submission/status reconciliation, caption validation, thumbnail output, and Admin retry/takedown that also expires/deletes the provider asset. Automated/local fixtures remain self-owned or generated; production ingestion accepts only independently cleared self-owned or licensed media.
 
-**Objective:** Make ingestion repeatable, auditable, and safe for the self-owned launch series.
+**Objective:** Make ingestion repeatable, auditable, and safe for every approved series.
 
 **Dependencies:** P2-T03, P2-T05.
 
@@ -786,7 +786,7 @@ processor-specific deletion/retention integration is required before they ship.
 
 - [x] States cover pending upload, uploaded, processing, ready, failed, blocked, and removed.
 - [x] Duplicate completions/retries are idempotent and failures expose safe Admin diagnostics.
-- [x] An episode cannot publish until ready media and self-owned publication gates pass.
+- [x] An episode cannot publish until ready media and the applicable self-owned or licensed publication gate passes.
 
 **Validation and integration tests:**
 
@@ -796,7 +796,7 @@ Evidence (2026-08-27): PR #56 merged; Fake CI ingest tests; optional Bunny smoke
 
 #### P2-T07 — Implement entitlement-aware playback authorization
 
-**Description:** Create the server policy evaluator and playback authorization endpoint that checks fixed-market self-owned publication/takedown, auth, episode entitlement, and the series free count before signing playback access. Subscription evaluation waits for P7.
+**Description:** Create the server policy evaluator and playback authorization endpoint that checks fixed-market self-owned or licensed publication/takedown eligibility, auth, episode entitlement, and the series free count before signing playback access. Subscription evaluation waits for P7.
 
 **Objective:** Centralize content authorization and keep storage private.
 
@@ -810,7 +810,7 @@ Evidence (2026-08-27): PR #56 merged; Fake CI ingest tests; optional Bunny smoke
 
 **Validation and integration tests:**
 
-- [x] Decision-table tests cover free, entitled, unpublished, takedown, missing/not-ready media, and anonymous cases. Licensed-rights, multi-territory, and subscription cases are post-MVP.
+- [x] Decision-table tests cover free, entitled, unpublished, takedown, missing/not-ready media, and anonymous cases. Fixed-market licensed-rights coverage is restored under P2-T03-F2; multi-market routing and subscription cases remain post-MVP.
 - [x] Integration test confirms a granted URL plays and the same path fails after expiry or rights removal.
 
 Evidence (2026-08-28): P2-T07 / #68; Fake provider decision-table authorize tests; D-006 hardcoded `Episode.order` 1–5 per season; optional Firebase on authorize; no AccessPolicy/offers/AdMob.
@@ -838,7 +838,7 @@ Evidence (P2-T08 / #78): anonymous device-scoped progress without `UserProfile`;
 
 ### Checkpoint 2 — First playable product
 
-- [ ] Staff can ingest and publish the provenance-approved self-owned launch series.
+- [ ] Staff can ingest and publish every independently cleared self-owned or licensed launch series.
 - [ ] Anonymous user discovers and watches free episodes end to end.
 - [ ] Signed playback, France/Android launch availability, progress, and takedown are verified. Multi-territory validation is post-MVP.
 - [ ] Playback performance baseline and cost per watch-hour are recorded.
@@ -1156,7 +1156,7 @@ authentication, rights checks, reward binding, or endpoint authorization.
 
 **Description:** Apply OWASP ASVS/MASVS-informed controls: secure storage, TLS, validation, authorization, rate limiting, CORS/CSRF, admin hardening, App Check signals, dependency scanning, and abuse controls.
 
-**Objective:** Protect accounts, the self-owned catalog, rewarded-ad entitlements, and operational interfaces.
+**Objective:** Protect accounts, the approved catalog, rewarded-ad entitlements, and operational interfaces.
 
 **Dependencies:** P3-T07, P5-T04. Full commerce reconciliation (P3-T09) remains P7; MVP security covers ad-grant integrity.
 
@@ -1379,16 +1379,16 @@ before the task and checkpoint can close.
 
 #### P6-T05A — Obtain Public Release Clearance
 
-**Description:** Assemble one signed ads-only release record proving product, self-owned catalog provenance, ads/privacy/deletion policy, ads-path cost, entity, AdMob production, security, and launch decisions are complete for the exact Android binary, catalog, configuration, and France release. Store IAP finance, EUR settlement, and D-018 are not part of this ads-only record.
+**Description:** Assemble one signed ads-only release record proving product, per-series provenance/licensed-rights clearance, ads/privacy/deletion policy, ads-path cost, entity, AdMob production, security, and launch decisions are complete for the exact Android binary, catalog, configuration, and France release. Store IAP finance, EUR settlement, and D-018 are not part of this ads-only record.
 
 **Objective:** Provide one auditable hard gate between isolated validation and public distribution or real commercial activity.
 
-**Dependencies:** P0-T01, P0-T02, P0-T03 ads/privacy/deletion slice, P0-T04, P5-T08, P6-T04, and P6-T05; every ads-only release-applicable Decision Register entry must be approved, including D-007 (approved 2026-08-27), D-017 before any paid acquisition, D-020 before public production activation, and D-025 before organization/store/payout activation. D-008 and D-009 are **not** required for ads-only public release; they are required before P7 IAP. D-018 and D-019 are **not** required for the self-owned ads-only release; they apply to later MMP and licensed-content decisions. Do not silently approve D-017, D-018, D-020, or D-025.
+**Dependencies:** P0-T01, P0-T02, P0-T03 ads/privacy/deletion slice, P0-T04, P5-T08, P6-T04, and P6-T05; every ads-only release-applicable Decision Register entry must be approved, including D-007 (approved 2026-08-27), D-017 before any paid acquisition, D-020 before public production activation, and D-025 before organization/store/payout activation. D-008 and D-009 are **not** required for ads-only public release; they are required before P7 IAP. D-018 applies only to later MMP adoption. D-019 and D-031 apply to each licensed release candidate but do not block an independently cleared self-owned title. Do not silently approve D-017, D-018, D-020, or D-025.
 
 **Acceptance criteria:**
 
 - [ ] P0-T01 through P0-T04 have current owner approvals and evidence for the ads-only release candidate; no proposal is silently treated as approval. P0-T03 IAP/coin/subscription/EUR-settlement rows are P7 and do not block this clearance.
-- [ ] The exact self-owned series has private ownership/component provenance, tokenized-media protection, age/content classification, and promotional-use approval for France/Google Play. No licensor, territory contract, royalty, or custom DRM approval is an MVP gate.
+- [ ] Every release-candidate series has private ownership/component provenance or an approved licensed-rights package, contract-compatible media protection, age/content classification, and promotional-use approval for France/Google Play. Confidential contracts and rates remain outside this public record.
 - [ ] GDPR/privacy-by-design, consent, account deletion, security, accessibility, store policy/declarations, national legal/language requirements, support, incident response, and rollback checks pass.
 - [ ] The French entity and required registration/organization data are verified; AdMob production configuration is approved for activation. Store IAP products and store IAP EUR settlement wait for P7.
 - [ ] Release blocker #98 is closed with genuine completed test-ad → signed Google callback → one entitlement → fresh authorized Android playback evidence and independently reviewed production enablement. P3-T07 development completion does not satisfy this gate (D-028).
@@ -1410,7 +1410,7 @@ before the task and checkpoint can close.
 **Acceptance criteria:**
 
 - [ ] Rollout stages, owners, halt thresholds, support coverage, and rollback options are documented.
-- [ ] Self-owned catalog availability, ads, Firebase DebugView, AdMob earnings versus ads-manager spend, alerts, and budgets are checked immediately before release. Store prices/products and Looker dashboards wait for P7.
+- [ ] Approved catalog availability, ads, Firebase DebugView, AdMob earnings versus ads-manager spend, alerts, and budgets are checked immediately before release. Store prices/products and Looker dashboards wait for P7.
 - [ ] Paid acquisition begins only within the D-017 approved cap, using traceable creative IDs.
 
 **Validation and integration tests:**
@@ -1859,7 +1859,7 @@ The backend is intentionally client-neutral. Do not start this phase until mobil
 
 - Use generated users and short self-owned, generated, or purpose-made test videos in automated/local/staging tests; record provenance and permitted test use.
 - Never copy production personal data into staging.
-- MVP uses only self-owned media. Keep production masters out of Git, fixtures, screenshots, and public test builds; future licensed masters remain prohibited until a separate licensing decision and review.
+- Keep all production masters out of Git, fixtures, screenshots, and public test builds. Automated/local media is self-owned, generated, or purpose-made; licensed masters remain prohibited until their private D-031 package and media review pass.
 - Provider payload fixtures must be redacted and immutable.
 
 ---
@@ -1903,8 +1903,8 @@ The backend is intentionally client-neutral. Do not start this phase until mobil
 Use three logical environments:
 
 - **Local:** Docker PostgreSQL, Firebase emulators/mocks where practical, provider fakes, and self-owned/generated test video. Local bootstrap and its automated checks require no real cloud, store, advertising, payout, or organization-account credentials.
-- **Staging:** isolated real cloud integrations, AdMob test units, approved self-owned test media. RevenueCat sandbox/store testers wait for P7.
-- **Production:** isolated paid database, real ad units (public-release gate), the provenance-approved self-owned series, strict access and audit. Real store products wait for P7 IAP.
+- **Staging:** isolated real cloud integrations, AdMob test units, approved self-owned/generated test media, and synthetic licensed-right metadata. RevenueCat sandbox/store testers wait for P7.
+- **Production:** isolated paid database, real ad units (public-release gate), only independently cleared self-owned or licensed series, strict access and audit. Real store products wait for P7 IAP.
 
 Configuration categories:
 
@@ -1921,7 +1921,7 @@ Include `.env.example` with names and descriptions but no usable values.
 
 | Risk | Impact | Mitigation / decision gate |
 |---|---|---|
-| Self-owned series includes an asset without clear ownership or promotional permission | Critical | Private component-provenance record and publication gate; third-party licensing/DRM is post-MVP |
+| A series includes an asset without clear ownership, licensed scope, or promotional permission | Critical | Private provenance/rights package plus per-series publication gate; DRM-required grants fail closed |
 | LTV does not exceed CAC | Critical | Ads-only test on one series with capped acquisition. A miss means ads cannot carry UA — **not** that microdrama or P7 IAP is dead. Explicit stop/cap on ads spend; next test is P7 IAP. |
 | CDN egress destroys contribution margin | High | Watch-hour cost model, adaptive bitrates, caching, regional measurement, provider negotiation/abstraction |
 | Store rejection or policy change | High | Ads-only MVP listings; store billing by default when P7 IAP ships; transparent disclosures; policy matrix reviewed before every submission |
@@ -1951,7 +1951,7 @@ These do not all block Phase 1. Resolve each before implementing the feature tha
 - Rewarded-ad grant model before P3-T07 (approved 2026-08-27, D-007).
 - Coin pack sizes, episode prices, subscription period/price, and trial choice before **P7 IAP**, not before MVP ads.
 - Data residency and retention behavior before production-shaped retention/deletion automation.
-- Technical DRM/provider choice only before future licensed content or if measured leakage justifies it; not an MVP coding gate.
+- Technical DRM/provider choice only before admitting a grant that requires DRM or if measured leakage justifies it; DRM-required titles remain ineligible meanwhile.
 
 ### Required before public release (ads-only MVP)
 
@@ -1960,7 +1960,7 @@ These are deferred from the Phase 1 coding path but remain hard ads-only release
 - French entity legal name and form, incorporation, registered address, D-U-N-S where required, tax/organization enrollment data, and store-account countries.
 - Actual public operator identity and monitored privacy contact, published notice/UMP setup, and genuine rewarded-ad release validation (#98, D-028). These do not block MVP coding or PR #97; required consent setup still precedes any publisher-owned ad test.
 - France-specific GDPR/privacy, consumer/tax/language requirements, age rating, allowed content categories, Google Play declarations, and consent behavior for the exact Android binary.
-- Private ownership/component provenance, promotional-use approval, and tokenized-media protection for the exact self-owned launch series. Licensor contracts, royalties, multi-territory grants, and custom DRM are post-MVP.
+- Private ownership/component provenance or licensed-rights package, promotional-use approval, and contract-compatible media protection for every candidate series. Public contract/rate storage and automated royalty accounting remain out of scope.
 - AdMob production configuration before real advertising.
 - Initial acquisition budget (D-017), support owners, incident-response owners, ads-only launch guardrails, and stop/go review date. D-017 remains **Decision required** until the founder approves it.
 
@@ -1970,12 +1970,12 @@ These are deferred from the Phase 1 coding path but remain hard ads-only release
 - Coin pack sizes, subscription period/price, IAP disclosures, and restore/sync policy (D-008/D-009 remain Proposed).
 - MMP adoption threshold (D-018) before P4-T07 / material MMP. D-018 remains **Decision required**; it is not an ads-only public-release gate.
 
-No public production activation, traffic promotion, France Google Play distribution, paid acquisition, or real advertising may be enabled until every applicable **ads-only** Public Release Readiness gate is approved and verified. Licensed-media publication is outside MVP. Real purchase/subscription stays disabled until the Phase 7 IAP gates pass. Isolated production-candidate provisioning and test-data validation remain permitted under P5-T08.
+No public production activation, traffic promotion, France Google Play distribution, paid acquisition, or real advertising may be enabled until every applicable **ads-only** Public Release Readiness gate is approved and verified. Each licensed series additionally requires its private D-031 package before ingestion/publication. Real purchase/subscription stays disabled until the Phase 7 IAP gates pass. Isolated production-candidate provisioning and synthetic/test-data validation remain permitted under P5-T08.
 
 Already approved by the founder:
 
 - The MVP user interface is in English.
-- The initial catalog is exactly one self-owned English-language series (D-004/D-023, narrowed 2026-09-01).
+- The English-language catalog may contain multiple independently approved self-owned or licensed series (D-004/D-023/D-031, updated 2026-09-02).
 - Guest browse/watch free episodes anonymously; login required before rewarded-ad unlock (D-005, 2026-08-27).
 - Initial free window is the first five episodes, hardcoded / admin-configured (D-006, 2026-08-27).
 - One verified rewarded ad permanently unlocks one episode; this is the only MVP monetization path (D-007, 2026-08-27).
@@ -1996,7 +1996,7 @@ The accepted technical baseline permits this sequence now; Public Release Readin
 4. P1-T04 (M) — Establish OpenAPI and the generated client.
 5. P1-T05 (M) — Establish credential-free baseline CI.
 6. P0-T02/P0-T03/P0-T04 (S–M each) — Complete self-owned provenance/media, France compliance, ADR, and cost readiness in parallel; do not block engineering on company/store registration data.
-7. P2-T03 (M) — Build the self-owned catalog and publication controls using generated metadata and self-owned/generated test media.
+7. P2-T03 (M) — Build the self-owned/licensed catalog and publication controls using generated metadata and self-owned/generated test media.
 8. P2-T04 (M) — Build anonymous home/detail screens against local seeded data.
 9. P2-T05 (M) — Prove Bunny Stream HLS (GCP Cloud CDN fallback only if Bunny fails) using only approved test media.
 10. P2-T01 (M) — Add identity with emulator/mocked verification while preserving anonymous catalog access.
@@ -2052,16 +2052,16 @@ These are primary sources used to validate changeable decisions. Recheck them at
 
 ## 16. Public Release Readiness and Final MVP Completion Checklist
 
-This is a hard publication gate, not a prerequisite for development or isolated production-candidate validation. Until every applicable **ads-only** item is independently verified, production-candidate environments remain isolated and must not enable public traffic, France Google Play distribution, paid acquisition, or real advertising. Licensed-media publication is outside MVP. Real purchase/subscription stays off until the Phase 7 checklist passes.
+This is a hard publication gate, not a prerequisite for development or isolated production-candidate validation. Until every applicable **ads-only** item is independently verified, production-candidate environments remain isolated and must not enable public traffic, France Google Play distribution, paid acquisition, or real advertising. Licensed media additionally remains unpublished until its per-series D-031 clearance passes. Real purchase/subscription stays off until the Phase 7 checklist passes.
 
 ### Ads-only MVP launch
 
 When every item in this subsection is satisfied, the platform is suitable for ads-only real-market validation (rewarded-ad LTV versus capped UA). It does **not** wait on P7 coin/IAP/subscription, BigQuery/Looker models, Remote Config A/B, MMP, or push.
 
-- [ ] Product, self-owned provenance, ads/privacy/deletion policy, architecture, and ads-path cost decisions approved. IAP/coin/subscription/EUR-settlement policy remains P7.
-- [ ] P6-T05A Public Release Clearance is independently approved for the exact ads-only Android revision, self-owned catalog, France configuration, and production environment.
+- [ ] Product, per-series provenance/licensed-rights, ads/privacy/deletion policy, architecture, and ads-path cost decisions approved. IAP/coin/subscription/EUR-settlement policy remains P7.
+- [ ] P6-T05A Public Release Clearance is independently approved for the exact ads-only Android revision, per-series-cleared catalog, France configuration, and production environment.
 - [ ] Public protected monorepo and full CI operational, with no secrets, licensed media, or confidential contracts committed.
-- [ ] Self-owned catalog, publication/takedown controls, and Django Admin operational.
+- [ ] Self-owned/licensed catalog, publication/takedown controls, and Django Admin operational.
 - [ ] Firebase auth and account deletion operational.
 - [ ] Bunny Stream HLS pipeline and tokenized playback operational (GCP Cloud CDN fallback documented and unused unless activated).
 - [ ] Vertical player, progress, and free episode journey operational.
@@ -2070,7 +2070,7 @@ When every item in this subsection is satisfied, the platform is suitable for ad
 - [ ] Thin Firebase Analytics events operational in Firebase DebugView; no campaign attribution is required for MVP.
 - [ ] Staging/production IaC, secure CI/CD, backups, observability, security controls, and runbooks operational.
 - [ ] Accessibility, localization, regression matrix, beta, and ads-only store compliance complete.
-- [ ] The self-owned launch series and its promotional assets pass ownership/component-provenance, age/content, and promotional-use review.
+- [ ] Every launch series and its promotional assets pass the applicable provenance/licensed-rights, age/content, and promotional-use review.
 - [ ] Controlled rollout and daily ads-only unit-economics review are ready.
 
 ### Phase 7 — IAP, warehouse analytics, experiments, MMP, and push
