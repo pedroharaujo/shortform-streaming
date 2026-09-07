@@ -183,7 +183,7 @@ Initial paid-test activation also requires one approved audience, approximately 
 
 ### P3-T08-F2 — Android wallet and configured unlock choices
 
-- **Source:** #142 and the 2026-09-07 local UI slice; #144 owns ambiguous-request
+- **Source:** #142 / PR #145, implementation `08a8151`; #144 owns ambiguous-request
   resolution. D-029 defers only native/provider evidence. Full P3-T08-F2 remains
   open; automated financial and account-boundary checks run before merge.
 - **Disabled state:** coin controls require Android with the local API environment

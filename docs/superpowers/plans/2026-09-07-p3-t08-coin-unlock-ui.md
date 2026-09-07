@@ -79,11 +79,13 @@ router.push({ pathname: '/wallet', params: { returnEpisode: episodeId } });
 - [x] Review financial recovery, ownership, runtime validation and privacy independently.
 - [x] Run `pnpm mobile:check`, `pnpm mobile:bundle:check`, `pnpm contract:check`
   and `python scripts/check_repository_foundation.py`; resolve failures.
-- [ ] Record exact evidence and unchecked native/provider gates, commit, push
+- [x] Record exact evidence and unchecked native/provider gates, commit, push
   and open one reviewable PR. Leave issue #142 and full P3-T08-F2 open.
 
 ## Verification evidence
 
+- Implementation `08a8151` is published in
+  [PR #145](https://github.com/pedroharaujo/shortform-streaming/pull/145), unmerged.
 - `pnpm check`: repository foundation (50 tests + secret/governance checks),
   backend lint/format/types/migrations and 418 tests, and OpenAPI generation/drift
   stages passed. Its mobile stage caught a missing `coin` helper type; corrected
