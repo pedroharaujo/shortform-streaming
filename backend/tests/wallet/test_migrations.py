@@ -62,10 +62,27 @@ def test_wallet_expansion_preserves_existing_accounts_and_entitlements() -> None
         entry = expanded.get_model("wallet", "CoinLedgerEntry").objects.create(
             wallet=wallet, reference=uuid4(), kind="purchase", amount=10
         )
-        new_profile.delete()
+        debit = expanded.get_model("wallet", "CoinLedgerEntry").objects.create(
+            wallet=wallet, reference=uuid4(), kind="unlock", amount=-4
+        )
+        receipt = expanded.get_model("wallet", "CoinUnlock").objects.create(
+            wallet=wallet,
+            request_id=uuid4(),
+            episode_public_id=episode.public_id,
+            policy_version="synthetic-migration-v1",
+            expected_coin_price=4,
+            charged_coins=4,
+            ledger_entry=debit,
+        )
+        # During a rolling deployment an old process can delete an account
+        # after a new process has created its wallet. Its ORM does not know
+        # the wallet relation, so database-level detachment must also work.
+        profile.delete()
         wallet.refresh_from_db()
         assert wallet.user_profile_id is None
         assert expanded.get_model("wallet", "CoinLedgerEntry").objects.filter(pk=entry.pk).exists()
+        assert expanded.get_model("wallet", "CoinLedgerEntry").objects.filter(pk=debit.pk).exists()
+        assert expanded.get_model("wallet", "CoinUnlock").objects.filter(pk=receipt.pk).exists()
         assert (
             not expanded.get_model("entitlements", "EpisodeEntitlement")
             .objects.filter(pk=entitlement.pk)

@@ -54,12 +54,26 @@ requires DEBUG and COIN_SPENDING_MODE=test. Both HTTP views require Firebase aut
 
 ## Task 3: Review, documentation and delivery
 
-- [ ] Independently review financial invariants, deletion and authorization; fix
+- [x] Independently review financial invariants, deletion and authorization; fix
   findings with focused regression tests.
-- [ ] Document synthetic setup and release-disabled boundary in a wallet runbook.
+- [x] Document synthetic setup and release-disabled boundary in a wallet runbook.
   Update P3-T02 evidence honestly and create follow-up issues for P3-T03/T04/T06
   and P3-T08-F2 without claiming provider/UI completion.
-- [ ] Run `pnpm check`, `pnpm mobile:bundle:check`, secret history scan and
+- [x] Run `pnpm check`, `pnpm mobile:bundle:check`, secret history scan and
   `git diff --check`. Record exact commands/results and limitations in PR.
 - [ ] Publish one P3-T02 PR and inspect its required CI. Leave merging to founder.
+## Execution evidence
 
+Issue #141; PR #143; dependent store/purchase/UI work tracked in #142.
+
+- `pnpm check`: passed (418 backend, 177 mobile, 50 repository tests and all
+  static, migration and generated-contract checks).
+- `pnpm mobile:bundle:check`: Android production JavaScript export passed.
+- Focused PostgreSQL wallet/Admin suite: 60 passed. Financial review reproduced
+  an eligibility-expiry bug before fixing the final decision branch.
+- Rolling-compatibility review reproduced old-process account deletion failing
+  its wallet FK; database-level detachment fixed it. Updated model/migration suite:
+  24 passed, with retained ledger/debit/receipt evidence.
+- Independent final review found no remaining actionable issues after both fixes.
+- Real store/provider/native-device checks and D-008/D-020 commercial/privacy
+  approvals remain outside this backend slice; production spending stays disabled.

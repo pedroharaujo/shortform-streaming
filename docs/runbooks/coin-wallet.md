@@ -52,7 +52,9 @@ access, not a support workflow. Corrections must use future reviewed compensatin
 entries, never edits to history.
 
 Account deletion removes the profile and entitlements and detaches the wallet's
-profile link. It retains the wallet UUID and immutable accounting/receipt facts;
+profile link. A database deletion trigger also performs detachment when an older
+application process deletes the account during a rolling deployment or rollback.
+It retains the wallet UUID and immutable accounting/receipt facts;
 these have no Firebase UID or copied profile ID and are never reattached to a new
 account. Catalog deletion also cannot cascade this financial history away. The
 remaining opaque wallet, episode, request and reference identifiers are restricted

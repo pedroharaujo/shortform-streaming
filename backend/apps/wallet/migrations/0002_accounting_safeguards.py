@@ -34,6 +34,21 @@ CREATE TRIGGER wallet_identity_guard
 BEFORE UPDATE ON wallet_wallet
 FOR EACH ROW EXECUTE FUNCTION wallet_protect_identity();
 
+CREATE FUNCTION wallet_detach_deleted_profile() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    -- Old application processes do not know the wallet relation during a
+    -- rolling deployment, so ORM-level SET_NULL alone cannot support deletion.
+    UPDATE wallet_wallet SET user_profile_id = NULL
+    WHERE user_profile_id = OLD.id;
+    RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER wallet_profile_deletion_guard
+BEFORE DELETE ON accounts_userprofile
+FOR EACH ROW EXECUTE FUNCTION wallet_detach_deleted_profile();
+
 CREATE FUNCTION wallet_guard_ledger_insert() RETURNS trigger
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -98,6 +113,8 @@ DROP TRIGGER wallet_unlock_insert_guard ON wallet_coinunlock;
 DROP FUNCTION wallet_guard_unlock_insert();
 DROP TRIGGER wallet_ledger_insert_guard ON wallet_coinledgerentry;
 DROP FUNCTION wallet_guard_ledger_insert();
+DROP TRIGGER wallet_profile_deletion_guard ON accounts_userprofile;
+DROP FUNCTION wallet_detach_deleted_profile();
 DROP TRIGGER wallet_identity_guard ON wallet_wallet;
 DROP FUNCTION wallet_protect_identity();
 DROP TRIGGER wallet_unlock_immutable ON wallet_coinunlock;
