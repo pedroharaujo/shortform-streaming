@@ -66,7 +66,7 @@ type PlayerPhase =
 function analyticsEpisode(
   episode: CatalogEpisodeDetail,
   options?: {
-    readonly accessMethod?: 'free' | 'rewarded_ad';
+    readonly accessMethod?: 'free' | 'rewarded_ad' | 'coin';
     readonly startPositionSeconds?: number;
   },
 ): PlaybackAnalyticsEpisode {
@@ -250,7 +250,8 @@ export function PlayerScreen({
     positionRef.current = resumeSeconds;
     const accessMethod =
       authorizeResult.data.access_method === 'free' ||
-      authorizeResult.data.access_method === 'rewarded_ad'
+      authorizeResult.data.access_method === 'rewarded_ad' ||
+      authorizeResult.data.access_method === 'coin'
         ? authorizeResult.data.access_method
         : undefined;
     analyticsEpisodeRef.current = analyticsEpisode(episodeResult.data, {
@@ -365,8 +366,8 @@ export function PlayerScreen({
 
   useEffect(() => {
     if (displayed.phase === 'locked') {
-      // Both server lock reasons lead to the ads-only reward unlock path.
-      void analytics.recordLocked(displayed.episode, 'reward_required');
+      // The server's current offer decides which unlock methods are available.
+      void analytics.recordLocked(displayed.episode, 'unlock_required');
     } else if (displayed.phase === 'unavailable') {
       void analytics.recordError({
         episodeId: displayed.episodeId,

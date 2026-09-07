@@ -46,12 +46,11 @@ D-032 changes the MVP business hypothesis to contribution LTV versus CAC. D-007/
 
 Dependency order for the next development phase: P2-T03-F3 → P3-T01-F1 → P3-T02 and P3-T03 → P3-T04 → P3-T06 → P3-T08-F2/P3-T09. Then P4-T01-F5 and P4-T06 feed P4-T02 → P4-T03 → P6-T03/T04/T05/T05A → capped launch. Independent foundational work may proceed in parallel; product prices, private license approvals, privacy and D-017 spend approval remain gates for their dependent production behavior. No extra worktrees are required.
 
-P2-T03-F3 merged in PR #139. P3-T01-F1 implementation, automated acceptance and
-independent review are complete in [PR #140](https://github.com/pedroharaujo/shortform-streaming/pull/140)
-(2026-09-07); see the task evidence below. After its PR is approved and merged, the next task is P3-T02:
-an auditable coin wallet and an atomic episode unlock. P3-T03 product configuration
-can proceed separately in parallel. Commercial prices and production activation
-remain separate approvals.
+P2-T03-F3, P3-T01-F1 and P3-T02 merged in PRs #139, #140 and #143. The local
+Android wallet/coin-choice slice of P3-T08-F2 is implemented under #142; full
+P3-T08-F2 remains open. Next, P3-T03/T04/T06 must connect known Google Play products
+to verified server credits, and #144 must safely resolve ambiguous unlocks.
+Commercial prices and production activation remain separate approvals.
 
 ### Definition of Done for Every Task
 
@@ -1088,6 +1087,18 @@ playback URLs. See `docs/runbooks/rewarded-ads.md` for evidence.
 #### P3-T08-F2 — Extend the offer sheet for configured coin/ad choices
 
 **Description/objective:** Show the server's configured ad-only, coin-only or both methods, account boundary and wallet/purchase recovery while preserving P3-T08 ad recovery.
+
+Implementation evidence (2026-09-07, #142, local Android slice): the app reads the
+server wallet and configured choices, confirms the current coin price, securely
+retains the original request through interruption, refreshes balance/access and
+freshly authorizes playback. Account replacement hides old state; resumed ad
+grants retain their existing verification path. The UI requires local Android
+configuration plus server spending availability; purchases remain unavailable.
+This foundational slice is independent of P3-T06's unfinished purchase pipeline.
+Ambiguous replay rejection stays blocked with a support reference; #144 owns safe
+resolution. Full acceptance below remains unchecked until that work and the
+purchase/native journeys pass. Reproduction and remaining gates:
+`docs/runbooks/final-validation.md` (P3-T08-F2 wallet and choices).
 
 **Dependencies:** P3-T08, P3-T01-F1, P3-T02, P3-T06.
 

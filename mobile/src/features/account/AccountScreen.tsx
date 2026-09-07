@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,7 +7,12 @@ import type { AccountClient, AccountOutcome, AccountPreferences } from '../../ap
 import type { AccountAnalytics } from '../../analytics/accountAnalytics';
 import type { AnalyticsConsentController } from '../../analytics/consentController';
 import type { AppAuth, ReauthenticationRequest } from '../../auth/localMockFirebaseAuth';
-import { getAuthSessionRevision, setAuthSession } from '../../auth/session';
+import {
+  getAuthSessionRevision,
+  getSessionCredential,
+  setAuthSession,
+  subscribeAuthSession,
+} from '../../auth/session';
 import { type AppMessages, useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { clearPendingRewardAttempt } from '../rewards/pendingRewardAttempt';
@@ -19,6 +24,7 @@ export interface AccountScreenProps {
   readonly client: AccountClient;
   readonly onSignIn: () => void;
   readonly onHome: () => void;
+  readonly onWallet?: (() => void) | undefined;
   readonly onReturnToEpisode?: (() => void) | undefined;
 }
 
@@ -45,10 +51,12 @@ export function AccountScreen({
   client,
   onSignIn,
   onHome,
+  onWallet,
   onReturnToEpisode,
 }: AccountScreenProps): JSX.Element {
   const messages = useMessages();
   const [preferences, setPreferences] = useState<AccountPreferences | null>(null);
+  const [profileRevision, setProfileRevision] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
@@ -59,6 +67,7 @@ export function AccountScreen({
   const [confirming, setConfirming] = useState(false);
   const [password, setPassword] = useState('');
   const sessionOwner = useRef(getAuthSessionRevision());
+  const revision = useSyncExternalStore(subscribeAuthSession, getAuthSessionRevision);
 
   const requireSession = useCallback(
     (revision: number): boolean => {
@@ -136,6 +145,7 @@ export function AccountScreen({
         }
         const { country, analytics_consent, ads_consent } = result.data;
         setPreferences({ locale: 'en', country, analytics_consent, ads_consent });
+        setProfileRevision(loadingRevision);
       } else {
         if (result.outcome === 'unauthenticated') await clearSession();
         if (active && requireSession(sessionOwner.current)) {
@@ -173,6 +183,7 @@ export function AccountScreen({
     if (!requireSession(revision)) return;
     const { country, analytics_consent, ads_consent } = result.data;
     setPreferences({ locale: 'en', country, analytics_consent, ads_consent });
+    setProfileRevision(revision);
     setMessage(messages.account.preferencesSaved);
   }
 
@@ -248,6 +259,15 @@ export function AccountScreen({
         ) : null}
         {preferences !== null && !ended ? (
           <>
+            {onWallet && revision === profileRevision && getSessionCredential() !== null ? (
+              <Action
+                label={messages.wallet.title}
+                disabled={busy}
+                onPress={() => {
+                  if (requireSession(sessionOwner.current)) onWallet();
+                }}
+              />
+            ) : null}
             <Text style={styles.body}>{messages.account.languageEnglish}</Text>
             <Text style={styles.muted}>{messages.account.countryHint}</Text>
             <TextInput

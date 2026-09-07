@@ -89,12 +89,15 @@ function stubCatalog(series: CatalogSeriesDetail = harborSeries): CatalogClient 
   };
 }
 
-function grantedAuthorize(_id: string): PlaybackRequestOutcome {
+function grantedAuthorize(
+  _id: string,
+  accessMethod: 'free' | 'coin' = 'free',
+): PlaybackRequestOutcome {
   return {
     outcome: 'ok',
     data: {
       decision: 'granted',
-      access_method: 'free',
+      access_method: accessMethod,
       playback_url: GRANTED_URI,
       expires_at: '2026-08-28T12:10:00Z',
     },
@@ -158,7 +161,7 @@ function visibleHasSecrets(view: Awaited<ReturnType<typeof renderWithSafeArea>>)
 }
 
 describe('PlayerScreen', () => {
-  it('plays a granted episode without displaying the playback URI', async () => {
+  it('plays a coin-authorized episode without displaying the playback URI', async () => {
     const analytics = analyticsDouble();
     const view = await renderWithSafeArea(
       <PlayerScreen
@@ -166,7 +169,7 @@ describe('PlayerScreen', () => {
         catalog={stubCatalog()}
         episodeId="ep_harbor_1"
         onClose={() => {}}
-        playback={stubPlayback()}
+        playback={stubPlayback(async (id) => grantedAuthorize(id, 'coin'))}
         progress={stubProgress()}
       />,
     );
@@ -184,7 +187,7 @@ describe('PlayerScreen', () => {
     await waitFor(() =>
       expect(analytics.recordStarted).toHaveBeenCalledWith(
         expect.objectContaining({
-          accessMethod: 'free',
+          accessMethod: 'coin',
           episodeId: 'ep_harbor_1',
           startPositionSeconds: 0,
         }),
@@ -456,7 +459,7 @@ describe('PlayerScreen', () => {
     await waitFor(() =>
       expect(analytics.recordLocked).toHaveBeenCalledWith(
         expect.objectContaining({ episodeId: 'ep_harbor_6' }),
-        'reward_required',
+        'unlock_required',
       ),
     );
   });

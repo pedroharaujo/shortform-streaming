@@ -11,7 +11,8 @@ export interface PlaybackAnalyticsEpisode {
   readonly startPositionSeconds?: number;
 }
 
-export type PlaybackAnalyticsLockReason = 'reward_required' | 'unavailable' | 'ineligible';
+export type PlaybackAnalyticsLockReason =
+  'unlock_required' | 'reward_required' | 'unavailable' | 'ineligible';
 export type PlaybackAnalyticsErrorPhase = 'authorize' | 'load' | 'play' | 'progress';
 export type PlaybackAnalyticsErrorCode =
   | 'authorize_failed'
