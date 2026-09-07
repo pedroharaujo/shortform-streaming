@@ -100,3 +100,29 @@ class CoinUnlock(models.Model):
 
     def __str__(self) -> str:
         return str(self.pk)
+
+
+class CoinUnlockCancellation(models.Model):
+    """Immutable terminal decision that prevents a delayed original from charging."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name="cancellations")
+    request_id = models.UUIDField()
+    episode_public_id = models.CharField(max_length=40)
+    policy_version = models.CharField(max_length=64)
+    expected_coin_price = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("wallet", "request_id"), name="wallet_cancel_unique_request"
+            ),
+            models.CheckConstraint(
+                condition=Q(expected_coin_price__gte=1, expected_coin_price__lte=MAX_ENTRY_COINS),
+                name="wallet_cancel_bounded_price",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return str(self.pk)

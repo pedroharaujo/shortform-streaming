@@ -27,6 +27,7 @@ export interface AppMessages {
     readonly watchAd: string;
     readonly adsConsent: string;
     readonly pending: string;
+    readonly cancelled: string;
     readonly checkPending: string;
     readonly unresolved: (reference: string) => string;
     readonly storageUnavailable: string;
@@ -151,7 +152,9 @@ export const englishMessages: AppMessages = {
     watchAd: 'Watch an ad',
     adsConsent: 'Turn on your ads preference in Account to watch a rewarded ad.',
     pending:
-      'An unlock request needs to be checked. Retry it before starting another unlock for this episode.',
+      'An unlock request needs to be checked before starting another unlock for this episode.',
+    cancelled:
+      'The interrupted request was cancelled without spending coins. Review the current options and confirm the price to unlock.',
     checkPending: 'Check coin unlock',
     unresolved: (reference) =>
       `This unlock needs a support review. Keep this unlock reference: ${reference}. No new coin request will be sent for this episode.`,

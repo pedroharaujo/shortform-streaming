@@ -93,3 +93,66 @@ def test_wallet_expansion_preserves_existing_accounts_and_entitlements() -> None
         )
     finally:
         MigrationExecutor(connection).migrate(current_targets)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_cancellation_expansion_preserves_preexisting_accounting_history() -> None:
+    executor = MigrationExecutor(connection)
+    current_targets = executor.loader.graph.leaf_nodes()
+    previous_targets = [target for target in current_targets if target[0] != "wallet"] + [
+        ("wallet", "0002_accounting_safeguards")
+    ]
+    executor.migrate(previous_targets)
+    try:
+        previous = executor.loader.project_state(previous_targets).apps
+        profile = previous.get_model("accounts", "UserProfile").objects.create(
+            public_id="usr_synthetic_resolution_migration",
+            firebase_uid="synthetic-resolution-migration",
+        )
+        wallet = previous.get_model("wallet", "Wallet").objects.create(user_profile=profile)
+        entries = previous.get_model("wallet", "CoinLedgerEntry")
+        entries.objects.create(wallet=wallet, reference=uuid4(), kind="purchase", amount=10)
+        debit = entries.objects.create(wallet=wallet, reference=uuid4(), kind="unlock", amount=-4)
+        receipt = previous.get_model("wallet", "CoinUnlock").objects.create(
+            wallet=wallet,
+            request_id=uuid4(),
+            episode_public_id="ep_synthetic_resolution",
+            policy_version="a" * 64,
+            expected_coin_price=4,
+            charged_coins=4,
+            ledger_entry=debit,
+        )
+        before_wallet = list(previous.get_model("wallet", "Wallet").objects.values())
+        before_entries = list(entries.objects.order_by("id").values())
+        before_receipts = list(previous.get_model("wallet", "CoinUnlock").objects.values())
+
+        executor = MigrationExecutor(connection)
+        executor.migrate(current_targets)
+        expanded = executor.loader.project_state(current_targets).apps
+        assert list(expanded.get_model("wallet", "Wallet").objects.values()) == before_wallet
+        assert (
+            list(expanded.get_model("wallet", "CoinLedgerEntry").objects.order_by("id").values())
+            == before_entries
+        )
+        assert list(expanded.get_model("wallet", "CoinUnlock").objects.values()) == before_receipts
+        assert not expanded.get_model("wallet", "CoinUnlockCancellation").objects.exists()
+        # The new endpoint resolves the original receipt without rewriting it.
+        from apps.accounts.models import UserProfile
+        from apps.wallet.models import CoinUnlock
+        from apps.wallet.services import resolve_unlock
+
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr("apps.wallet.services.coin_spending_enabled", lambda: True)
+            resolved, balance = resolve_unlock(
+                UserProfile.objects.get(pk=profile.pk),
+                receipt.episode_public_id,
+                receipt.request_id,
+                expected_policy_version=receipt.policy_version,
+                expected_coin_price=receipt.expected_coin_price,
+            )
+        assert isinstance(resolved, CoinUnlock)
+        assert resolved.pk == receipt.pk
+        assert balance == 6
+        assert list(expanded.get_model("wallet", "CoinUnlock").objects.values()) == before_receipts
+    finally:
+        MigrationExecutor(connection).migrate(current_targets)

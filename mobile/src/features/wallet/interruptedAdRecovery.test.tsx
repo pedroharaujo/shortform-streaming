@@ -102,6 +102,7 @@ it('reconciles an interrupted ad granted by the server when reopening episode ch
     create: jest.fn(),
   };
   const wallet: WalletClient = {
+    resolve: jest.fn(),
     getWallet: jest.fn<ReturnType<WalletClient['getWallet']>, []>(async () => ({
       outcome: 'ok',
       data: { balance: 20, spending_available: false },

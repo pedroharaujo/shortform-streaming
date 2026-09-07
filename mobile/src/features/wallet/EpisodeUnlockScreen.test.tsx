@@ -6,8 +6,10 @@ import type { MeClient } from '../../api/me/types';
 import type { PlaybackClient } from '../../api/playback/types';
 import type { EpisodeOffers, RewardsClient } from '../../api/rewards/types';
 import type { WalletClient } from '../../api/wallet/types';
+import { createWalletClient } from '../../api/wallet/walletClient';
 import { setAuthSession } from '../../auth/session';
 import { EpisodeUnlockScreen } from './EpisodeUnlockScreen';
+import { writePendingCoinUnlock } from './pendingCoinUnlock';
 
 const mockSecureStore = new Map<string, string>();
 let mockSequence = 0;
@@ -70,6 +72,9 @@ function setup(methods: ('coin' | 'rewarded_ad')[] = ['coin'], adsEnabled = fals
     offers: jest.fn(async () => ({ outcome: 'ok', data: offers })),
   } as unknown as jest.Mocked<RewardsClient>;
   const wallet: jest.Mocked<WalletClient> = {
+    resolve: jest.fn<ReturnType<WalletClient['resolve']>, Parameters<WalletClient['resolve']>>(
+      async () => ({ outcome: 'unreachable', reason: 'timeout' }),
+    ),
     getWallet: jest.fn<
       ReturnType<WalletClient['getWallet']>,
       Parameters<WalletClient['getWallet']>
@@ -126,6 +131,208 @@ beforeEach(() => {
 });
 afterEach(() => {
   jest.restoreAllMocks();
+});
+
+const savedRequest = {
+  episode_id: 'ep_synthetic',
+  request_id: '11111111-1111-4111-8111-111111111111',
+  expected_policy_version: 'a'.repeat(64),
+  expected_coin_price: 5,
+};
+
+async function saveInterruptedUnlock() {
+  await writePendingCoinUnlock({ version: 1, profileId: 'usr_synthetic', request: savedRequest });
+}
+
+const resolution = (status: 'completed' | 'cancelled') => ({
+  episode_id: savedRequest.episode_id,
+  request_id: savedRequest.request_id,
+  charged_coins: status === 'completed' ? 5 : 0,
+  balance: status === 'completed' ? 15 : 20,
+  status,
+});
+
+it('cancels a saved-before-send request and requires fresh confirmation with a new UUID', async () => {
+  await saveInterruptedUnlock();
+  const { props, wallet, rewards, offers } = setup();
+  wallet.resolve.mockImplementation(async () => {
+    rewards.offers.mockResolvedValue({
+      outcome: 'ok',
+      data: { ...offers, coin_price: 8, policy_version: 'b'.repeat(64) },
+    });
+    return { outcome: 'ok', data: resolution('cancelled') };
+  });
+  const view = await render(<EpisodeUnlockScreen {...props} />);
+  await fireEvent.press(await view.findByText('Check coin unlock'));
+  await view.findByText('Use 8 coins');
+  expect(wallet.resolve).toHaveBeenCalledWith(savedRequest);
+  expect(wallet.unlock).not.toHaveBeenCalled();
+  expect(mockSecureStore.size).toBe(0);
+  expect(view.queryByText('Confirm 8 coins')).toBeNull();
+  await fireEvent.press(view.getByText('Use 8 coins'));
+  await fireEvent.press(view.getByText('Confirm 8 coins'));
+  expect(wallet.unlock).toHaveBeenCalledWith({
+    ...savedRequest,
+    request_id: expect.not.stringMatching(savedRequest.request_id),
+    expected_coin_price: 8,
+    expected_policy_version: 'b'.repeat(64),
+  });
+});
+
+it('resolves a lost completed response before already-granted playback using fresh authority', async () => {
+  await saveInterruptedUnlock();
+  const { props, wallet, rewards, offers, playback } = setup();
+  rewards.offers.mockResolvedValue({
+    outcome: 'ok',
+    data: { ...offers, decision: 'granted', methods: [] },
+  });
+  wallet.resolve.mockImplementation(
+    createWalletClient({
+      baseUrl: 'https://api.example.test',
+      getCredential: () => 'mock.synthetic_coin',
+      fetchImplementation: async () =>
+        new Response(JSON.stringify(resolution('completed')), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    }).resolve,
+  );
+  const view = await render(<EpisodeUnlockScreen {...props} />);
+  await view.findByText('Check coin unlock');
+  expect(view.queryByText('Play')).toBeNull();
+  await fireEvent.press(view.getByText('Check coin unlock'));
+  await waitFor(() => expect(props.onPlay).toHaveBeenCalledWith('ep_synthetic'));
+  expect(wallet.resolve).toHaveBeenCalledWith(savedRequest);
+  expect(wallet.unlock).not.toHaveBeenCalled();
+  expect(rewards.offers).toHaveBeenCalledTimes(2);
+  expect(wallet.getWallet).toHaveBeenCalledTimes(2);
+  expect(playback.authorize).toHaveBeenCalledTimes(1);
+  expect(mockSecureStore.size).toBe(0);
+});
+
+it.each(['completed', 'cancelled'] as const)(
+  'resolves %s accounting after takedown without playable access or enabled spending',
+  async (status) => {
+    await saveInterruptedUnlock();
+    const { props, wallet, rewards, playback } = setup();
+    jest.mocked(props.catalog.getEpisode).mockResolvedValue({
+      outcome: 'not-found',
+      httpStatus: 404,
+      code: 'not_found',
+      message: 'Unavailable',
+    });
+    rewards.offers.mockResolvedValue({
+      outcome: 'not-found',
+      httpStatus: 404,
+      code: 'not_found',
+      message: 'Unavailable',
+    });
+    wallet.getWallet.mockResolvedValue({ outcome: 'unreachable', reason: 'offline' });
+    wallet.resolve.mockResolvedValue({ outcome: 'ok', data: resolution(status) });
+    const view = await render(<EpisodeUnlockScreen {...props} coinsEnabled={false} />);
+    await fireEvent.press(await view.findByText('Check coin unlock'));
+    await waitFor(() => expect(mockSecureStore.size).toBe(0));
+    expect(wallet.resolve).toHaveBeenCalledWith(savedRequest);
+    expect(wallet.unlock).not.toHaveBeenCalled();
+    expect(playback.authorize).not.toHaveBeenCalled();
+    expect(props.onPlay).not.toHaveBeenCalled();
+  },
+);
+
+it.each([
+  { status: 'unknown' },
+  { status: 'cancelled', charged_coins: 5 },
+  { episode_id: 'ep_other' },
+  { request_id: '22222222-2222-4222-8222-222222222222' },
+  { charged_coins: 7 },
+  { charged_coins: -1 },
+  { balance: '20' },
+  { balance: 0.5 },
+])('preserves pending recovery for malformed or mismatched resolution %s', async (change) => {
+  await saveInterruptedUnlock();
+  const { props, wallet } = setup();
+  const performRequest = jest.fn<Promise<Response>, [RequestInfo | URL, RequestInit?]>(
+    async () =>
+      new Response(JSON.stringify({ ...resolution('completed'), ...change }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+  );
+  const client = createWalletClient({
+    baseUrl: 'https://api.example.test',
+    getCredential: () => 'mock.synthetic_coin',
+    fetchImplementation: performRequest,
+  });
+  wallet.resolve.mockImplementation(client.resolve);
+  const view = await render(<EpisodeUnlockScreen {...props} />);
+  await fireEvent.press(await view.findByText('Check coin unlock'));
+  await waitFor(() => expect(performRequest).toHaveBeenCalledTimes(1));
+  await waitFor(() =>
+    expect(view.queryByText('Checking your balance and episode access…')).toBeNull(),
+  );
+  const sent = performRequest.mock.calls[0]![0] as Request;
+  expect(sent.url).toBe('https://api.example.test/v1/coins/unlock/resolve');
+  expect(sent.headers.get('Authorization')).toBe('Bearer mock.synthetic_coin');
+  expect(await sent.clone().json()).toEqual(savedRequest);
+  expect(mockSecureStore.size).toBe(1);
+  expect(view.queryByText('Use 5 coins')).toBeNull();
+  expect(props.onPlay).not.toHaveBeenCalled();
+});
+
+it.each(['session', 'account'] as const)(
+  'preserves a resolution arriving after a changed %s',
+  async (change) => {
+    await saveInterruptedUnlock();
+    const { props, wallet, me } = setup();
+    let finish!: (value: Awaited<ReturnType<WalletClient['resolve']>>) => void;
+    wallet.resolve.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const view = await render(<EpisodeUnlockScreen {...props} />);
+    await fireEvent.press(await view.findByText('Check coin unlock'));
+    await waitFor(() => expect(wallet.resolve).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      if (change === 'session') setAuthSession({ credential: 'mock.synthetic_other' });
+      else {
+        const profile = await me.getMe();
+        if (profile.outcome !== 'ok') throw new Error('Expected profile');
+        me.getMe.mockResolvedValue({
+          outcome: 'ok',
+          data: { ...profile.data, public_id: 'usr_replacement' },
+        });
+      }
+      finish({ outcome: 'ok', data: resolution('cancelled') });
+    });
+    expect(mockSecureStore.size).toBe(1);
+    expect(view.queryByText('Use 5 coins')).toBeNull();
+    expect(props.onPlay).not.toHaveBeenCalled();
+  },
+);
+
+it('preserves the terminal request when the session changes while cleanup reads storage', async () => {
+  await saveInterruptedUnlock();
+  const { props, wallet } = setup();
+  let finishRead!: () => void;
+  wallet.resolve.mockImplementation(async () => {
+    jest.mocked(SecureStore.getItemAsync).mockImplementationOnce(
+      (key) =>
+        new Promise((resolve) => {
+          finishRead = () => resolve(mockSecureStore.get(key) ?? null);
+        }),
+    );
+    return { outcome: 'ok', data: resolution('cancelled') };
+  });
+  const view = await render(<EpisodeUnlockScreen {...props} />);
+  await fireEvent.press(await view.findByText('Check coin unlock'));
+  await waitFor(() => expect(finishRead).toBeDefined());
+  await act(async () => {
+    setAuthSession({ credential: 'mock.synthetic_other' });
+    finishRead();
+  });
+  expect(mockSecureStore.size).toBe(1);
+  expect(props.onPlay).not.toHaveBeenCalled();
 });
 
 async function confirm(view: Awaited<ReturnType<typeof render>>) {
@@ -212,8 +419,8 @@ it('reuses the original request after a lost response and remount, even if terms
   });
   const resumed = await render(<EpisodeUnlockScreen {...props} />);
   await fireEvent.press(await resumed.findByText('Check coin unlock'));
-  expect(wallet.unlock).toHaveBeenCalledTimes(2);
-  expect(wallet.unlock.mock.calls[1]?.[0]).toEqual(original);
+  expect(wallet.unlock).toHaveBeenCalledTimes(1);
+  expect(wallet.resolve).toHaveBeenCalledWith(original);
   expect(resumed.queryByText('Use 9 coins')).toBeNull();
   expect(props.onPlay).not.toHaveBeenCalled();
 });
@@ -409,7 +616,7 @@ it('keeps an ambiguously rejected replay for support instead of starting another
   await first.findByText('Check coin unlock');
   const original = wallet.unlock.mock.calls[0]![0];
   await first.unmount();
-  wallet.unlock.mockResolvedValue({
+  wallet.resolve.mockResolvedValue({
     outcome: 'unavailable',
     httpStatus: 409,
     code: 'unavailable',
@@ -420,11 +627,11 @@ it('keeps an ambiguously rejected replay for support instead of starting another
   await resumed.findByText(
     new RegExp(`This unlock needs a support review.*${original.request_id}`),
   );
-  expect(wallet.unlock.mock.calls[1]![0]).toEqual(original);
+  expect(wallet.resolve).toHaveBeenCalledWith(original);
   expect([...mockSecureStore.values()].some((raw) => raw.includes(original.request_id))).toBe(true);
   expect(resumed.queryByText('Use 5 coins')).toBeNull();
   await fireEvent.press(resumed.getByText('Check coin unlock'));
-  expect(wallet.unlock).toHaveBeenCalledTimes(2);
+  expect(wallet.unlock).toHaveBeenCalledTimes(1);
   expect(props.onPlay).not.toHaveBeenCalled();
 });
 
@@ -449,4 +656,24 @@ it('cannot post with replacement credentials while the original request is being
   });
   expect(wallet.unlock).not.toHaveBeenCalled();
   expect(view.queryByText('20 coins')).toBeNull();
+});
+
+it('preserves an initial receipt when the server profile changes without changing credentials', async () => {
+  const { props, wallet, me } = setup();
+  wallet.unlock.mockImplementation(async (request) => {
+    const profile = await me.getMe();
+    if (profile.outcome !== 'ok') throw new Error('Expected profile');
+    me.getMe.mockResolvedValue({
+      outcome: 'ok',
+      data: { ...profile.data, public_id: 'usr_replacement' },
+    });
+    return { outcome: 'ok', data: { ...resolution('completed'), request_id: request.request_id } };
+  });
+  const view = await render(<EpisodeUnlockScreen {...props} />);
+  await confirm(view);
+  await waitFor(() =>
+    expect(view.queryByText('Checking your balance and episode access…')).toBeNull(),
+  );
+  expect(mockSecureStore.size).toBe(1);
+  expect(props.onPlay).not.toHaveBeenCalled();
 });

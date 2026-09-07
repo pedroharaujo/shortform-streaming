@@ -3,6 +3,7 @@ import type { EnvelopeOutcome, UnreachableOutcome } from '../outcomes';
 
 export type Wallet = components['schemas']['Wallet'];
 export type CoinUnlock = components['schemas']['CoinUnlock'];
+export type CoinUnlockResolution = components['schemas']['CoinUnlockResolution'];
 export type CoinUnlockRequest = Readonly<components['schemas']['CoinUnlockRequestRequest']>;
 export type WalletOutcome<T> =
   | { readonly outcome: 'ok'; readonly data: T }
@@ -12,4 +13,5 @@ export type WalletOutcome<T> =
 export interface WalletClient {
   getWallet(): Promise<WalletOutcome<Wallet>>;
   unlock(request: CoinUnlockRequest): Promise<WalletOutcome<CoinUnlock>>;
+  resolve(request: CoinUnlockRequest): Promise<WalletOutcome<CoinUnlockResolution>>;
 }

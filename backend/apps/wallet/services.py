@@ -19,7 +19,7 @@ from apps.entitlements.policy import (
     resolve_episode_policy,
 )
 from apps.wallet.capabilities import coin_spending_enabled
-from apps.wallet.models import CoinLedgerEntry, CoinUnlock, Wallet
+from apps.wallet.models import CoinLedgerEntry, CoinUnlock, CoinUnlockCancellation, Wallet
 
 
 class CoinUnavailable(APIException):
@@ -51,6 +51,11 @@ def unlock_episode(
     with transaction.atomic():
         profile = lock_current_profile(profile)
         if not coin_spending_enabled():
+            raise CoinUnavailable()
+
+        if CoinUnlockCancellation.objects.filter(
+            wallet__user_profile=profile, request_id=request_id
+        ).exists():
             raise CoinUnavailable()
 
         # Look up the key while the account lock prevents competing owner commands.
@@ -113,3 +118,46 @@ def unlock_episode(
             ledger_entry=ledger_entry,
         )
         return receipt, wallet_balance(wallet)
+
+
+def resolve_unlock(
+    profile: UserProfile,
+    episode_id: str,
+    request_id: UUID,
+    *,
+    expected_policy_version: str,
+    expected_coin_price: int,
+) -> tuple[CoinUnlock | CoinUnlockCancellation, int]:
+    """Return committed history or durably prevent this exact request from committing.
+
+    Current catalog eligibility is deliberately not part of historical resolution.
+    A completed receipt never implies current playback access.
+    """
+    with transaction.atomic():
+        profile = lock_current_profile(profile)
+        if not coin_spending_enabled():
+            raise CoinUnavailable()
+        wallet, _ = Wallet.objects.select_for_update().get_or_create(user_profile=profile)
+        existing: CoinUnlock | CoinUnlockCancellation | None = CoinUnlock.objects.filter(
+            wallet=wallet, request_id=request_id
+        ).first()
+        if existing is None:
+            existing = CoinUnlockCancellation.objects.filter(
+                wallet=wallet, request_id=request_id
+            ).first()
+        if existing is not None:
+            if (
+                existing.episode_public_id != episode_id
+                or existing.policy_version != expected_policy_version
+                or existing.expected_coin_price != expected_coin_price
+            ):
+                raise CoinUnavailable()
+            return existing, wallet_balance(wallet)
+        cancelled = CoinUnlockCancellation.objects.create(
+            wallet=wallet,
+            request_id=request_id,
+            episode_public_id=episode_id,
+            policy_version=expected_policy_version,
+            expected_coin_price=expected_coin_price,
+        )
+        return cancelled, wallet_balance(wallet)
