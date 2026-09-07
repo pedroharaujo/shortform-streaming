@@ -19,6 +19,23 @@ def lock_account_identity(firebase_uid: str) -> None:
         cursor.execute("SELECT pg_advisory_xact_lock(%s)", [key])
 
 
+def lock_current_profile(profile: UserProfile) -> UserProfile:
+    """Lock an authenticated identity and reject concurrent/completed deletion."""
+    from apps.accounts.authentication import FirebaseAuthenticationFailed
+
+    lock_account_identity(profile.firebase_uid)
+    fresh = UserProfile.objects.select_for_update(of=("self",)).filter(pk=profile.pk).first()
+    if (
+        fresh is None
+        or fresh.firebase_uid != profile.firebase_uid
+        or AccountDeletion.objects.filter(
+            uid_fingerprint=deletion_fingerprint(profile.firebase_uid)
+        ).exists()
+    ):
+        raise FirebaseAuthenticationFailed()
+    return fresh
+
+
 def get_or_create_profile(firebase_uid: str) -> UserProfile:
     """Return the unique profile for a verified Firebase UID.
 

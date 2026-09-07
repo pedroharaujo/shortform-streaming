@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.entitlements",
     "apps.progress",
     "apps.advertising",
+    "apps.wallet",
 ]
 
 MIDDLEWARE = [
@@ -202,6 +203,9 @@ except ValueError:
 # Rewarded ads are fail-closed. Test and production use the same server-side
 # verification path; production activation is an explicit release setting.
 REWARDED_ADS_MODE = os.environ.get("REWARDED_ADS_MODE", "disabled").strip().lower()
+COIN_SPENDING_MODE = os.environ.get("COIN_SPENDING_MODE", "disabled").strip().lower()
+if COIN_SPENDING_MODE not in {"disabled", "test"}:
+    raise ImproperlyConfigured("COIN_SPENDING_MODE must be disabled or test.")
 if REWARDED_ADS_MODE not in {"disabled", "test", "production"}:
     raise ImproperlyConfigured("REWARDED_ADS_MODE must be disabled, test, or production.")
 REWARDED_ADS_DEMO_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"

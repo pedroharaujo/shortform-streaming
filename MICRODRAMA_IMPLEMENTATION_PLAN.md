@@ -937,15 +937,28 @@ Human approval is required before merge.
 
 **Acceptance criteria:**
 
-- [ ] Ledger changes are append-only; balance derives from auditable entries and persists across login/reinstall. Support corrections use compensating entries, never edits/deletes.
-- [ ] Row locking and idempotency make debit plus entitlement atomic; a valid pre-existing entitlement causes no duplicate charge. No negative spendable balance.
-- [ ] Current rights, eligibility, configured coin method and price are checked; insufficient balance, stale price and concurrent takedown/policy changes fail safely.
-- [ ] Owner-only wallet/unlock APIs, least-privilege support and deletion/financial-retention boundary are documented. Financial records are not accidentally cascaded away or exposed cross-account.
+- [x] Ledger changes are append-only; balance derives from auditable entries and persists across login/reinstall. Support corrections use compensating entries, never edits/deletes.
+- [x] Row locking and idempotency make debit plus entitlement atomic; a valid pre-existing entitlement causes no duplicate charge. No negative spendable balance.
+- [x] Current rights, eligibility, configured coin method and price are checked; insufficient balance, stale price and concurrent takedown/policy changes fail safely.
+- [x] Owner-only wallet/unlock APIs, least-privilege support and deletion/financial-retention boundary are documented. Financial records are not accidentally cascaded away or exposed cross-account.
 
 **Validation and integration tests:**
 
-- [ ] PostgreSQL integration tests cover duplicate/competing unlocks, rollback between debit/grant, price/eligibility changes, IDOR and reconciliation between wallet/ledger/entitlements.
-- [ ] Expand/migrate tests and `pnpm contract:check` pass. Financial integrity and authorization tests cannot be deferred under D-029.
+- [x] PostgreSQL integration tests cover duplicate/competing unlocks, rollback between debit/grant, price/eligibility changes, IDOR and reconciliation between wallet/ledger/entitlements.
+- [x] Expand/migrate tests and `pnpm contract:check` pass. Financial integrity and authorization tests cannot be deferred under D-029.
+
+Implementation evidence (2026-09-07, issue #141, feature branch): P3-T02 backend
+and generated contract implemented with production spending disabled. Only local
+debug synthetic tests may enable coin methods. There is no public credit API or
+Admin balance editor; compensating entry structure exists but no support adjustment
+operation or unapproved refund policy is activated. Account deletion detaches the
+wallet and preserves restricted immutable facts without profile identifiers.
+`pnpm check` passed: 418 backend tests, 177 mobile tests, 50 repository tests, all
+static/migration/contract checks. The Android production JavaScript bundle passed.
+Independent financial/security review found and verified a fix for an expiry race.
+Store funding, native purchase/refund evidence and coin UI remain dependent tasks;
+no financial test was deferred. See [the wallet runbook](docs/runbooks/coin-wallet.md)
+and [implementation plan](docs/superpowers/plans/2026-09-07-p3-t02-coin-wallet.md).
 
 #### P3-T03 — Configure Google Play coin products and RevenueCat environments
 

@@ -12,8 +12,8 @@ from django.utils import timezone
 from rest_framework.exceptions import APIException, NotFound
 
 from apps.accounts.authentication import FirebaseAuthenticationFailed
-from apps.accounts.models import AccountDeletion, UserProfile, deletion_fingerprint
-from apps.accounts.profiles import lock_account_identity
+from apps.accounts.models import UserProfile
+from apps.accounts.profiles import lock_current_profile
 from apps.advertising.models import RewardIntent
 from apps.advertising.verification import InvalidCallback, VerifiedReward
 from apps.catalog.eligibility import episode_is_eligible
@@ -41,16 +41,7 @@ class RewardUnavailable(APIException):
 
 
 def current_profile(profile: UserProfile) -> UserProfile:
-    lock_account_identity(profile.firebase_uid)
-    fresh = UserProfile.objects.select_for_update(of=("self",)).filter(pk=profile.pk).first()
-    if (
-        fresh is None
-        or AccountDeletion.objects.filter(
-            uid_fingerprint=deletion_fingerprint(profile.firebase_uid)
-        ).exists()
-    ):
-        raise FirebaseAuthenticationFailed()
-    return fresh
+    return lock_current_profile(profile)
 
 
 def offer_available(episode: Episode, profile: UserProfile) -> bool:

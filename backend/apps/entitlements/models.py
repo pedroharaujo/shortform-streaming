@@ -8,6 +8,7 @@ from django.db.models import Q
 class EntitlementSource(models.TextChoices):
     STAFF = "staff", "Staff"
     REWARDED_AD = "rewarded_ad", "Rewarded ad"
+    COIN = "coin", "Coin"
 
 
 class EpisodeEntitlement(models.Model):
