@@ -210,3 +210,58 @@ variable "budget_notification_channel_ids" {
   description = "Optional Monitoring notification channel IDs for budget updates. Empty by default."
   default     = []
 }
+
+variable "observability_enabled" {
+  type        = bool
+  description = "Create reviewed staging log metrics and dashboard. Disabled by default pending intentional apply."
+  default     = false
+}
+
+variable "observability_alerts_enabled" {
+  type        = bool
+  description = "Create API alert policies after operator channels, owner, runbook and thresholds are supplied."
+  default     = false
+}
+
+variable "observability_notification_channel_ids" {
+  type        = list(string)
+  description = "Existing Monitoring notification-channel resource names. Empty by default."
+  default     = []
+}
+
+variable "observability_owner" {
+  type        = string
+  description = "Operational alert owner. Empty until a real owner is assigned."
+  default     = ""
+}
+
+variable "observability_severity" {
+  type        = string
+  description = "Operator-selected alert severity. Empty until alerts are intentionally configured."
+  default     = ""
+
+  validation {
+    condition     = contains(["", "info", "warning", "critical"], var.observability_severity)
+    error_message = "observability_severity must be empty, info, warning, or critical."
+  }
+}
+
+variable "observability_runbook_url" {
+  type        = string
+  description = "HTTPS operational runbook URL. Empty until a reachable runbook is assigned."
+  default     = ""
+}
+
+variable "observability_api_5xx_count_threshold" {
+  type        = number
+  description = "Operator-selected API 5xx count per minute. Null means no approved threshold."
+  default     = null
+  nullable    = true
+}
+
+variable "observability_api_p95_latency_ms" {
+  type        = number
+  description = "Operator-selected API p95 latency threshold in milliseconds. Null means no approved threshold."
+  default     = null
+  nullable    = true
+}

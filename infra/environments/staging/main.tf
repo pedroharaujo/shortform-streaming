@@ -22,7 +22,7 @@ locals {
   # Enable only APIs this composition uses. Enable iamcredentials and sts for
   # WIF. Do not enable transcoder, dns, sqladmin, cloudtasks, cloudscheduler,
   # or compute.
-  required_services = toset([
+  required_services = toset(concat([
     "run.googleapis.com",
     "artifactregistry.googleapis.com",
     "secretmanager.googleapis.com",
@@ -35,7 +35,11 @@ locals {
     "firebaseappcheck.googleapis.com",
     "billingbudgets.googleapis.com",
     "cloudbilling.googleapis.com",
-  ])
+    ], var.observability_enabled ? [
+    "logging.googleapis.com",
+    "monitoring.googleapis.com",
+    ] : []
+  ))
 
   # Stdlib-only in-project smoke. SMOKE_AUDIENCE (service URL) and
   # SMOKE_BASE_URL (tagged candidate URL) are supplied at job execute
