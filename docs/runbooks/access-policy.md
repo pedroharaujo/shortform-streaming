@@ -1,4 +1,26 @@
-# Access policy (P3-T01)
+# Access policy (P3-T01 and planned P3-T01-F1)
+
+**Updated 2026-09-07.** Current implementation uses `Series.free_episode_count` and `Series.rewarded_ads_enabled`; `AccessPolicy`/revision rows are dormant compatibility state after the 2026-09-02 change. The older operational instructions below are historical only. This documentation task changes no runtime or migration.
+
+## Current operation
+
+Staff configure the series free count and rewarded-ad availability in Django Admin. Authorize and `GET /v1/offers/{episode_id}` use the same server policy, after current eligibility. The initial default is the first five episodes per season; anonymous locked offers require login and return no ad method. Authenticated locked offers include `rewarded_ad` only when enabled. Clients never set policy or entitlement authority, and missing/ineligible rights never mint playback.
+
+Do not put AdMob unit IDs, secrets, licensed media, contract terms or provider payloads on policy models or into public evidence.
+
+## Planned MVP extension
+
+D-006/D-007/D-008 (2026-09-07) require editorial per-episode **free, rewarded-ad, coin or both** choices. P2-T03-F3 makes France/Android/English active server launch configuration with generalized rights/language/segment dimensions; P3-T01-F1 adds policy and license-permission intersection. P3-T08-F2 extends the offer sheet. No automatic cliffhanger detection or Remote Config requirement.
+
+Existing eligibility precedes entitlement/free access; locked methods intersect operator policy, license permissions and enabled verified provider capability. Revalidate at grant/debit, including stale prices, takedown and rights expiry. Android coins and persistent balances/reconciliation are MVP; subscriptions remain P7. Current code has no coin offers yet.
+
+Use expand/migrate for new configuration and conservative rights backfills; unknown coin/promotion rights are not approval. Do not apply historical rollback instructions to the current schema. Roll back application traffic first and obtain a separately reviewed schema/data plan; destructive contraction remains a later release.
+
+## Historical P3-T01 runbook — superseded operation
+
+The original text below records the earlier AccessPolicy implementation and its rollback assumptions. **Superseded by the 2026-09-02 Series configuration and the 2026-09-07 MVP direction; not executable current guidance.** Its P7 coin statement is historical, not current scope.
+
+### Original P3-T01 record
 
 Staff configure the D-006 free window and rewarded-ad availability in Django Admin.
 Authorize and `GET /v1/offers/{episode_id}` read the same server policy. The mobile

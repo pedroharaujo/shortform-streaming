@@ -1,8 +1,8 @@
 # Microdrama Platform — Product and Implementation Plan
 
-**Document status:** Implementation-ready baseline  
+**Document status:** Founder strategy updated; new MVP work planned, release readiness open
 **Language:** English  
-**Last reviewed:** 2026-09-02
+**Last reviewed:** 2026-09-07
 **Repository:** `pedroharaujo/shortform-streaming` (public monorepo)  
 **MVP client:** Android / Google Play only; Django Admin is the only web interface. iOS is post-MVP (D-027).
 
@@ -25,6 +25,27 @@ Execution rules:
 9. Do not trust the mobile client for purchases, coin balances, rewarded-ad grants, or entitlements.
 10. Recheck provider prices and app-store policies before production launch; they change over time.
 
+### Strategy amendment and task traceability (P0-T01, 2026-09-07)
+
+D-032 changes the MVP business hypothesis to contribution LTV versus CAC. D-007/D-008/D-015 bring Android coins into MVP; D-016 brings minimum economics measurement forward. This is a documentation/planning update only. Prior completed evidence remains valid for its original slice, not for newly added acceptance. Historical decisions and the 2026-08-27 P7 move are preserved in the decision register; this amendment supersedes their affected timing.
+
+| Original task | Current MVP scope / sequence | Retained post-MVP scope |
+|---|---|---|
+| P2-T03, P3-T01 | Follow-ups P2-T03-F3 and P3-T01-F1: launch configuration, rights permissions, per-episode access | Additional market/language rollout UX |
+| P3-T02 | Phase 3: immutable wallet, atomic coin unlock | None of the required Android coin integrity deferred |
+| P3-T03 | Phase 3: Google Play coin products/RevenueCat setup | P3-T03-P7: Apple products and subscription setup |
+| P3-T04 | Phase 3: verified coin purchase/webhook lifecycle | P3-T04-P7: subscription state/renewal/grace/expiry |
+| P3-T06 | Phase 3: Android coin-pack fulfillment | Apple fulfillment with later iOS phase |
+| P3-T08 | Existing rewarded-ad foundation; P3-T08-F2 adds configured coin/both options | Subscription offer UX with P3-T05 |
+| P3-T09 | Phase 3: Android purchase/ledger/refund/reward reconciliation/support | Subscription reconciliation with P3-T04-P7/P3-T05 |
+| P4-T01 | Existing events; P4-T01-F5 adds commerce and acquisition schemas/facts | Subscription/push/experiment events |
+| P4-T02 | Phase 4: minimum Firebase→BigQuery, financial/spend/cost joins, SQL economics | P4-T02-P7: expanded exports/experiment models |
+| P4-T03 | Phase 4: reproducible daily report and required data-quality checks | P4-T03-P7: Looker/advanced dashboards |
+| P4-T06 | Phase 4: minimum reliable source/campaign/creative cohort attribution | P4-T06-P7: advanced deferred deep linking unless required for the first test |
+| P4-T07 | Conditional D-018 decision if initial attribution is insufficient | Full MMP integration only when justified; no default SDK |
+
+Dependency order for the next development phase: P2-T03-F3 → P3-T01-F1 → P3-T02 and P3-T03 → P3-T04 → P3-T06 → P3-T08-F2/P3-T09. Then P4-T01-F5 and P4-T06 feed P4-T02 → P4-T03 → P6-T03/T04/T05/T05A → capped launch. Independent foundational work may proceed in parallel; product prices, private license approvals, privacy and D-017 spend approval remain gates for their dependent production behavior. No extra worktrees are required.
+
 ### Definition of Done for Every Task
 
 - Acceptance criteria are demonstrably satisfied.
@@ -38,108 +59,74 @@ Execution rules:
 
 ## 2. Product Summary
 
-Build an Android-first streaming app for an independently approved catalog of English-language vertical microdrama series in France. Series may be self-owned or licensed. Users discover a series, watch short episodes in a vertical player, and continue through a hardcoded free window plus verified rewarded-ad unlocks. Coin unlocks and an all-access subscription remain in the accepted architecture and ship in P7, not at MVP launch.
+Build an Android-first microdrama app to answer: **Can we acquire users profitably? Can contribution LTV become greater than CAC for acquired users in our initial market and target audience?** Engagement and retention alone are insufficient; MVP includes real rewarded-ad and purchased-coin monetization plus a small capped paid-acquisition test.
 
-The first product goal is not to become a large streaming catalog. It is to validate the minimum viewing and monetization loop:
+> Campaign/creative → acquired user → series → free episodes → configured ad or coin unlock → continued viewing → reconciled cohort contribution.
 
-> App open → series → episode progression → verified rewarded-ad unlock → more viewing.
+Launch with approximately **3–5 independently approved series**, France, English and one defined target audience (selection pending D-035). Prefer €0 upfront license cost, €0 minimum guarantee where possible, revenue share and non-exclusive agreements where possible. This commercial target does not restrict supported contract structures; private percentages, terms, suppliers and assets stay outside public Git.
 
-Launch with **one or more independently approved series**. Each title must pass either the self-owned provenance path or the licensed-rights path. Additional countries/languages and iOS remain post-MVP. Expand the catalog prudently while measuring ads-only unit economics — or after a P7 IAP test if ads cannot carry UA.
+**Build the platform so it can grow, but validate the business with the smallest possible market scope.** France/Android/English/one audience are launch configuration, not permanent domain assumptions. Additional markets/languages/clients require later activation approval, but market/rights/localization/segment dimensions must not require a core-domain redesign.
 
 ### Business layers and long-term sequence
 
-1. **Rights-safe catalog first:** publish only independently approved self-owned or licensed series and learn what viewers engage with.
-2. **Catalog expansion second:** produce or license more content based on validated demand and sustainable terms.
-3. **External distribution later:** evaluate distributing the company catalog through additional channels only after validation.
-
-### MVP hypothesis
-
-> Will viewers progress through an approved microdrama catalog and use rewarded ads to unlock more episodes?
-
-The ads-only MVP is valuable when the viewing loop works reliably and enough engaged viewers choose a rewarded-ad unlock to justify the next acquisition/IAP experiment. Paid-acquisition economics, cohort LTV/CAC, and IAP are P7 work. A weak result on one series is evidence about the test, not a verdict on microdrama.
-
----
+1. Clear approximately 3–5 titles and their acquisition creatives independently.
+2. Validate engagement, retention, real monetization and acquisition economics in the narrow approved test.
+3. Expand catalog, markets and distribution only on evidence and new approvals.
 
 ## 3. MVP Scope and Product Decisions
 
 ### Included in MVP
 
-- One Android / Google Play app built with React Native/Expo TypeScript. iOS release work is post-MVP.
-- Django REST API and Django Admin.
-- Catalog of one or more independently approved self-owned or licensed English-language series, series detail, episode list, vertical adaptive-streaming player, autoplay next, and watch progress.
-- Anonymous browsing and free playback; account required before the first monetized unlock (rewarded ad) or cross-device sync.
-- Google Sign-In through Firebase Authentication. Other providers are post-MVP.
-- Episode access policy for MVP: free vs rewarded ad only (hardcoded / admin-configured free window).
-- Rewarded ads through Google AdMob, with server-side verification.
-- Server-authoritative entitlements for ad grants.
-- Thin consent-gated Firebase Analytics events for app, auth, viewing, locks, and rewards.
-- Provider-managed approved media, ownership/provenance or licensed-rights metadata, signed playback access, and basic editorial curation.
-- Staging and production deployment, CI/CD, observability, privacy controls, and account deletion.
+- Android / Google Play React Native/Expo app; Django/DRF modular monolith and Django Admin.
+- Independently approved English self-owned/licensed catalog in France, vertical HLS player, discovery, captions, autoplay and progress.
+- Anonymous free viewing; Firebase email/password and Google Sign-In (D-030); account required before purchases, monetized unlocks and cross-device sync.
+- Server/Admin per-episode policy: free, rewarded-ad, coin, or both ad and coin methods. First five episodes remain an initial free default, not a permanent hardcoded rule.
+- Opt-in AdMob rewards verified by SSV; no interstitials or forced mid-episode ads.
+- Google Play consumable coin packs via RevenueCat, immutable Django ledger, persistent balance, idempotent credit, atomic debit plus entitlement, refunds/chargebacks and reconciliation.
+- Typed consent-gated product/commerce events and minimum Firebase→BigQuery/server/provider/spend/cost joins, SQL models and daily reporting for contribution LTV/CAC.
+- Simplest reliable campaign/creative attribution for the D-017 capped acquisition test, with privacy/coverage limitations explicit.
+- Fail-closed rights/publication/window/territory/language/platform/protection/takedown checks, private media, staging/production, CI, security, observability, consent and deletion.
 
 ### Explicitly excluded from MVP
 
-- Consumer web streaming client.
-- User-generated content, comments, social feed, chat, creator uploads, and profiles visible to other users.
-- Offline downloads.
-- Live streaming.
-- Multiple profiles per account and household sharing.
-- Smart-TV apps.
-- Recommendation machine learning; MVP recommendations are editorial/rule-based.
-- Microservices, Kubernetes, Kafka, Elasticsearch, GraphQL, and a custom admin frontend.
-- Custom DRM.
-- Direct credit-card checkout inside mobile apps for digital goods.
-- Store IAP, subscriptions, coin packs, and RevenueCat until P7 (deferred, not deleted).
-- Push notifications and lifecycle campaigns until P7 (deferred, not deleted).
-- BigQuery/Looker metric models, Remote Config experiments, and MMP until P7 (deferred, not deleted).
-- Campaign attribution, Install Referrer, and custom deferred-deep-link handling until P7.
-- iOS release work, additional launch countries/languages, public contract/rate storage, and automated royalty accounting.
+- iOS/Apple commerce and release work, subscriptions, consumer web, additional-market/language rollout UX.
+- Recommendation ML, automated royalty accounting, public contracts/rates/suppliers/media.
+- UGC, social/chat, offline downloads, live streaming, household profiles, TV apps.
+- Microservices, Kubernetes, Kafka, Elasticsearch, GraphQL, custom Admin or custom DRM.
+- Direct credit-card checkout for mobile digital goods.
+- Remote Config A/B experiments, Looker dashboards, push/lifecycle campaigns, expanded warehouse exports.
+- Full MMP unless D-018 justifies it; advanced deferred deep linking unless necessary for the initial paid test.
 
 ### Default access and monetization rules
 
-- The MVP user interface, catalog metadata, captions, and default product copy are in English.
-- Decision D-001 limits the ads-only MVP to France through Google Play. Additional countries require a post-MVP decision and their own legal, language, privacy, tax, and store review.
-- Customer prices and billing periods come from store-localized product metadata for the active App Store or Google Play storefront when P7 IAP ships. The app never infers currency from language or builds monetary strings manually. Although every approved MVP market uses EUR, localized price presentation, VAT treatment, and national requirements can still vary. MVP has no IAP.
-- EUR is the company's base reporting currency and desired settlement currency. Production setup must validate the Apple bank-account currency and Google payments-profile/bank eligibility for EUR payouts before P7 IAP.
-- The number of free episodes is hardcoded / admin-configured; the seed is the first five episodes (D-006). Remote Config / experiment cohorts wait for P7.
-- A free episode requires no login.
-- At a locked episode, the server returns the rewarded-ad offer (the only MVP unlock method).
-- Access precedence is: existing episode entitlement → free policy → locked (rewarded-ad offer). Subscription and coin precedence wait for P7.
-- A successful verified rewarded ad grants one persistent episode entitlement to the authenticated account. This is the only MVP monetization path (D-007).
-- Coin unlock, coin ledger, and subscription access remain accepted architecture and ship in P7 (D-008, D-009, D-015).
-- Rewarded ads are always opt-in, clearly state the reward, and never interrupt playback.
-- Use interstitial ads only after a later experiment proves they improve contribution without damaging retention.
-- Store purchase restoration and subscription resynchronization are mandatory in P7; they are not MVP launch requirements.
+- Treat launch territory, client/storefront and language as server-controlled configuration, with generalized localized metadata and audience/content segment dimensions (D-034). Clients cannot widen eligibility by supplying headers/profile locale or market values.
+- Check rights, publication, takedown, availability window, territory/platform/language, age/content restrictions and protection before any playable media or monetized grant. Existing entitlements never bypass ineligibility.
+- Within eligible content: valid existing entitlement → configured free access → locked with only operator-configured, license-permitted methods. Revalidate method, server coin price and eligibility during debit/grant, including concurrent policy/takedown changes.
+- Operators may set early episodes free, later ad-enabled or both, and particular cliffhangers coin-only. No automatic cliffhanger detection.
+- Rewarded ads stay opt-in, state the reward and occur between episodes. One verified reward can grant the configured persistent episode entitlement.
+- Coin packs and episode costs are configurable; D-008 commercial sizes/prices/terms remain open. Never infer coin balance, purchase verification or entitlement from client success.
+- Use store-provided localized Google Play monetary strings in MVP. Preserve original financial currency; report in EUR with traceable FX. Verify Google settlement before real IAP. Apple settlement remains later.
+- Reinstall/second Android device loads the server balance and entitlements. Reconcile consumables without duplicate fulfillment; subscription restore remains P7.
 
 ### Content rights decisions
 
-- The catalog may contain multiple English-language series that are self-owned or licensed for the fixed France/Android product (D-004/D-023/D-031).
-- Before publication, the founder/content owner records private ownership and component provenance or completes the private licensed-content package for episodes, music, voices, likenesses, artwork, clips, stock assets, AI tools/models, grant scope, and protection requirements.
-- Contracts, rates, provider payloads, personal data, and licensed media never enter the public repository. Runtime rows store only opaque private-system references and non-confidential enforcement metadata.
-- The API must still hide unpublished, blocked, or taken-down content. Playback authorization must still re-check publication and entitlement at request time.
-- Licensed runtime eligibility uses the fixed France/Android/English grant and fails closed for missing, mismatched, expired, DRM-required, or taken-down rights.
-- Originals and subtitles are private assets. Public bucket access is prohibited; tokenized HLS is allowed only when the ownership/license package permits it.
+- Every MVP licensed title must permit France streaming, Android/Google Play, required English originals/subtitles/dubs, free episodes, rewarded ads, coin transactional access and paid acquisition using cleared clips/trailers/posters/stills/likenesses (D-031).
+- Record private revenue-share/reporting, windows, takedown/termination, exclusivity and protection obligations. €0 upfront/MG does not eliminate content cost.
+- Only opaque private references and synthetic non-confidential enforcement fixtures enter public Git. No contracts, suppliers, rates, production payloads, personal data or licensed media.
+- Missing, mismatched, expired, taken-down or unsupported-DRM rights fail closed. Future territories/languages and monetization permissions remain separate grant dimensions.
 
 ### Initial success metrics
 
-Primary business metric (MVP ads-only):
+Primary: **contribution LTV / CAC**, with observed contribution and explicit projection assumptions. No universal pass/fail threshold is approved. D-017 must approve budget and business guardrails before spend.
 
-- **MVP variable contribution:** verified rewarded-ad revenue − variable infrastructure − applicable taxes. Content cost, CAC, and store revenue join the full contribution model in P7.
+- Acquisition: spend, installs/acquired users, CAC, source/campaign/creative and unmatched coverage.
+- Engagement: first play, episode completion/continuation, lock reach, D1/D7/D30 retention.
+- Advertising: rewarded-ad acceptance, verified impressions/rewards, net ad revenue/user.
+- Commerce: payer conversion, coin-pack purchase conversion/sales, ARPPU, IAP revenue/user, refunds/chargebacks.
+- Business: blended net revenue/user, revenue-share and other content cost, contribution LTV, LTV:CAC, series and practical campaign/creative economics.
+- Quality: playback startup/rebuffer/error, crashes/API reliability and financial/entitlement mismatches.
 
-Core product metrics (MVP-required):
-
-- Install-to-first-play conversion.
-- Episode 1 start and completion rates.
-- Episode N continuation curve and lock reach.
-- Rewarded-ad offer acceptance and verified reward rate.
-- Verified ad revenue per active and engaged viewer.
-- D1, D7, and D30 retention.
-- D7/D30 cohort LTV from ad yield.
-- Playback start time, rebuffer ratio, completion rate, and playback error rate.
-- Aggregate rewarded-ad yield and contribution for the launch series.
-
-Paywall view-to-purchase conversion, trial-to-paid, subscription renewal/churn, and IAP payer conversion are P7 metrics.
-
-Launch gates should be set after the first controlled distribution countries/storefronts are chosen. Do not invent universal thresholds before baseline data exists.
+[Analytics definitions](docs/analytics/README.md) and [COST_MODEL.md](docs/product/COST_MODEL.md) own denominators, source authority, cohort maturity, consent coverage and cost/revenue allocation. Do not equate MAU, installs, accounts and deduplicated acquired users.
 
 ---
 
@@ -159,7 +146,7 @@ Install stable supported releases and commit lockfiles. Avoid pinning this plann
 - Firebase CLI.
 - OpenTofu or Terraform CLI.
 - Optional: PostgreSQL client, Bruno/Insomnia, and Maestro CLI.
-- For local iOS builds: macOS and Xcode. On Windows/Linux, use EAS cloud builds for iOS.
+- Post-MVP iOS development will require a separate macOS/Xcode/EAS setup; it is not an MVP prerequisite.
 
 ### Accounts required before beta
 
@@ -168,9 +155,9 @@ Install stable supported releases and commit lockfiles. Avoid pinning this plann
 - Firebase staging/production projects.
 - Supabase organization and database projects.
 - Expo/EAS project.
-- Apple Developer Program and App Store Connect.
+- Apple Developer Program and App Store Connect only for later iOS work.
 - Google Play Console.
-- Google AdMob. RevenueCat is **not** required for MVP beta; it is required before P7 IAP.
+- Google AdMob and RevenueCat/Google Play license-tester setup for MVP beta; production configuration remains separately gated.
 - A transactional email provider for production auth email if Firebase requires customization.
 - DNS/domain provider.
 - Sentry is optional if Firebase Crashlytics plus Cloud Error Reporting is sufficient.
@@ -200,7 +187,7 @@ Install stable supported releases and commit lockfiles. Avoid pinning this plann
 
 - React Native with Expo and TypeScript.
 - Expo Router.
-- Expo development builds; Expo Go is not sufficient for AdMob and native Firebase modules. Store purchases wait for P7.
+- Expo development builds; Expo Go is not sufficient for AdMob and native Firebase modules. Google Play coin purchases require the RevenueCat native module in MVP.
 - TanStack Query for server state; a small Zustand store only for transient UI/session state.
 - `expo-video` for HLS playback, subject to an early proof-of-concept.
 - React Hook Form and Zod for forms and client validation.
@@ -208,7 +195,7 @@ Install stable supported releases and commit lockfiles. Avoid pinning this plann
 
 **Identity and mobile platform services**
 
-- Firebase Authentication with Google Sign-In for the Android MVP.
+- Firebase Authentication with email/password and Google Sign-In for the Android MVP (D-030).
 - Firebase Analytics and Crashlytics in MVP; App Check remains MVP-facing. Remote Config, A/B Testing, and Cloud Messaging wait for P7 (ADR 0003 timing). Performance Monitoring may land with observability or wait for P7.
 - Django verifies Firebase ID tokens and owns application profiles and authorization.
 
@@ -229,17 +216,17 @@ Install stable supported releases and commit lockfiles. Avoid pinning this plann
 **Monetization**
 
 - Google AdMob rewarded ads in MVP, using test ad units outside production and server-side verification in production.
-- RevenueCat SDK/webhooks for store product presentation, receipt lifecycle, and subscription entitlements — **P7**, accepted architecture (ADR 0006).
-- Apple In-App Purchase and Google Play Billing for mobile digital subscriptions and coin packs — **P7**.
-- Django coin ledger for currency balance and episode unlocks — **P7**.
+- RevenueCat Android SDK/webhooks for coin product presentation and verified purchase lifecycle in **MVP**; subscription state is **P7** (ADR 0006).
+- Google Play Billing consumable coin packs in **MVP**. Apple IAP and all subscriptions remain **P7**.
+- Immutable Django coin ledger for persistent virtual-coin balance and atomic episode unlocks — **MVP**.
 
 **Analytics and experimentation**
 
 - Firebase Analytics typed event collection in MVP.
 - Firebase Remote Config and A/B Testing for paywall position, free-episode count, coin price, ad offer, and messaging — **P7**.
-- BigQuery export for raw event analysis and cohort joins — **P7**.
+- Minimum supported Firebase Analytics export, server/store/ad facts, private spend/cost imports and cohort LTV/CAC SQL — **MVP**.
 - Looker Studio for the first dashboards — **P7**.
-- Campaign attribution, Install Referrer, deferred deep linking, and any MMP wait for P7 and D-018. Normal Expo series routing remains sufficient for the MVP.
+- P4-T06 implements minimum source/campaign/creative attribution (Google Play Install Referrer where needed) and spend joins for MVP. Advanced deferred deep linking remains P7 unless essential; MMP is conditional on D-018.
 
 **Infrastructure and operations**
 
@@ -268,7 +255,11 @@ Android --------- HTTPS ---- Cloud Run: Django API/Admin
      +-- Firebase Auth / Analytics / Crashlytics / App Check   (MVP)
      +-- AdMob rewarded ad                                      (MVP)
      +-- Firebase Remote Config / FCM                           (P7)
-     +-- RevenueCat -> Apple IAP / Google Play Billing          (P7)
+     +-- RevenueCat -> Google Play coin Billing                (MVP)
+     +-- Apple IAP / subscriptions                             (P7)
+     +-- consented Analytics -> BigQuery <- server/store/ad facts
+                                    ^
+                         private spend/cost imports -> LTV:CAC
      |
      +-- authorized HLS request
             |
@@ -284,8 +275,8 @@ Android --------- HTTPS ---- Cloud Run: Django API/Admin
 
 - Mobile input is untrusted.
 - Firebase authenticates identity; Django authorizes every business action.
-- AdMob callbacks are untrusted until signature/authenticity and idempotency checks pass. RevenueCat callbacks follow the same rule in P7.
-- Database transactions are the authority for permanent episode entitlements. The coin ledger is the authority for coin balance in P7.
+- AdMob and RevenueCat callbacks are untrusted until authenticity, identity, environment and idempotency checks pass in MVP.
+- Database transactions are the authority for permanent episode entitlements. The immutable coin ledger is the authority for persistent coin balance in MVP.
 - Firebase Analytics is not the financial ledger.
 - CDN URLs are bearer credentials and must be short-lived and excluded from logs/analytics.
 
@@ -341,16 +332,16 @@ shortform-streaming/
 ### Core domain model
 
 - `UserProfile`: Firebase UID, locale, country, consent state, timestamps, deletion state.
-- `Series`: English metadata, artwork, genre, publication/takedown state, self-owned provenance, free count, and rewarded-ad kill switch.
+- `Series`: language-independent identity, localized metadata, artwork, genres/content segments, publication/takedown state, private provenance and editorial defaults. English is the active locale.
 - `Season`: optional grouping; model now even if MVP normally has one.
-- `Episode`: order, English metadata, duration, and publication state.
-- `ContentRight`: staff-only licensed-series grant metadata and opaque private-system references; fixed France/Android/English runtime eligibility fails closed for invalid, expired, mismatched, DRM-required, or taken-down grants. Translation tables remain dormant migration-compatibility state.
+- `Episode`: stable identity/order, localizable metadata, duration, publication/window state and editorial access configuration.
+- `ContentRight`: territory allow/deny, platform/storefront, original/subtitle/dub language, free/ad/coin/subscription and promotional permissions, windows/exclusivity/takedown/protection plus opaque private references. Absent/invalid grants fail closed. P2-T03-F3 owns planned evolution from current fixed context and dormant translations.
 - `MediaAsset`: ready provider asset ID, captions, thumbnails, duration, renditions, and removed state. Django stores no video bytes.
-- Free count and rewarded-ad availability live directly on `Series`; dormant legacy `AccessPolicy` rows remain only for safe migration/deletion compatibility.
+- Launch configuration selects active markets/storefronts/languages/segments; per-episode policy overrides series defaults and intersects rights. Current `Series` free/ad fields and dormant `AccessPolicy` rows are implementation history; P3-T01-F1 selects an expand/migrate path without destructive contraction.
 - `EpisodeEntitlement`: user, episode, source, granted/expiry/revocation metadata.
-- `Wallet`: one per user and currency namespace (**P7**).
-- `CoinLedgerEntry`: immutable credit/debit/adjustment with idempotency key and running audit fields (**P7**).
-- `StoreTransaction`: store/provider transaction identity, product, state, raw-event reference, user, timestamps (**P7**).
+- `Wallet`: persistent account balance in a virtual-coin namespace (**MVP**), never a cash/FX balance.
+- `CoinLedgerEntry`: immutable credit/debit/adjustment with idempotency key and running audit fields (**MVP**).
+- `StoreTransaction`: verified store/provider transaction identity, product/environment, state, restricted private-event reference, owner, original currency/amount and timestamps (**MVP**); no raw payloads in Git/Analytics.
 - `SubscriptionState`: provider entitlement, status, expiry, grace/billing-retry state (**P7**).
 - `RewardClaim`: ad network transaction, user, episode/reward, verification state, idempotency key.
 - `WatchProgress`: user/device, episode, position, completion, last watched.
@@ -371,6 +362,8 @@ Critical constraints:
 
 ## 6. API and Event Contracts
 
+This is the target surface, not a claim that each endpoint/event is implemented. Runtime/OpenAPI changes follow their owning task; this update edits documentation only.
+
 ### Initial REST surface
 
 - `GET /v1/config/bootstrap`
@@ -381,13 +374,13 @@ Critical constraints:
 - `PUT /v1/progress/{episode_id}`
 - `GET /v1/me`
 - `DELETE /v1/me`
-- `GET /v1/me/wallet` (**P7**)
+- `GET /v1/me/wallet` (**planned MVP**)
 - `GET /v1/me/entitlements`
 - `GET /v1/offers/{episode_id}`
-- `POST /v1/unlocks/coins` (**P7**)
+- `POST /v1/unlocks/coins` (**planned MVP**)
 - `POST /v1/rewards/intents`
 - `GET /v1/rewards/{id}`
-- `POST /v1/webhooks/revenuecat` (**P7**)
+- `POST /v1/webhooks/revenuecat` (**planned MVP**, coin lifecycle)
 - `GET /v1/webhooks/admob/ssv` or the provider-required verified callback form
 - `POST /v1/push/register` (**P7**)
 - `DELETE /v1/push/register/{token}` (**P7**)
@@ -398,37 +391,19 @@ Rules:
 - Cursor pagination for lists that can grow.
 - Stable opaque public IDs; never expose sequential database IDs as an assumption.
 - Consistent error envelope with code, safe message, correlation ID, and field errors.
-- `Idempotency-Key` required on wallet-changing client commands (**P7**). Reward-intent creation is idempotent in MVP.
+- `Idempotency-Key` required on wallet-changing client commands in MVP. Reward-intent creation remains idempotent.
 - OpenAPI is generated in CI; the TypeScript client is generated from it.
 - Version breaking changes under a new API prefix; additive changes are preferred.
 
 ### Canonical analytics events
 
-MVP (thin measurement; P4-T01):
+Current P4-T01 schemas contain `app_open`, `sign_up`, `login`, `account_deleted`, `episode_started`, `episode_completed`, `playback_error`, `locked_episode_viewed`, `rewarded_ad_started`, `reward_granted`, `reward_failed`. Earlier discovery/progress/offer/ad-lifecycle events were removed in the 2026-09-02 narrowing; their prior completion notes below remain historical. Restore only the exposure/selection and engagement measurements needed for MVP under P4-T01-F5.
 
-- `app_open`, `sign_up`, `login`, `account_deleted`
-- `home_viewed`, `series_impression`, `series_opened`
-- `episode_started`, `episode_progress`, `episode_completed`, `playback_error`
-- `locked_episode_viewed` (lock_shown), `offer_presented` (ad_offer), `offer_selected`
-- `rewarded_ad_loaded`, `rewarded_ad_started`, `rewarded_ad_completed`, `reward_granted` (ad_rewarded), `reward_failed`
+Planned MVP extension (P4-T01-F5): `coin_pack_viewed`, `purchase_started`, `purchase_completed`, `purchase_failed`, `purchase_refunded`, `coins_credited`, `coins_spent`, `episode_unlocked`. `locked_episode_viewed` is the paywall/lock-view concept; `offer_presented` means the configured unlock options were actually shown. Use one canonical name per concept: the older planned `purchase_succeeded` name maps to `purchase_completed`, not a second counted event.
 
-P7 (deferred from MVP 2026-08-27; issue #52):
+Common allowed dimensions: stable event ID/time, consented opaque installation/profile join keys, session, app version/build, platform, locale, active market, series/episode, server-provided access/unlock method, safe outcome; coin/product quantities only where appropriate. Acquisition source/campaign/creative IDs are bounded and consent/retention-reviewed. Financial records separately preserve original currency/amount, verified transaction and adjustment identity, occurrence/ingestion time and FX provenance. Client events diagnose the funnel; only verified backend/store/provider records determine purchase completion, refunds, credits, spends, entitlements and revenue. Full definitions and authority: [analytics contract](docs/analytics/README.md).
 
-- `coin_pack_viewed`, `purchase_started`, `purchase_succeeded`, `purchase_failed`, `purchase_restored`
-- `coins_spent`, `episode_unlocked`
-- `subscription_started`, `subscription_renewed`, `subscription_cancelled`, `subscription_expired`
-- `push_permission_prompted`, `push_permission_result`, `notification_opened`
-- `experiment_exposure`
-
-Common properties:
-
-- `event_id`, anonymous/app-instance ID, authenticated user ID where consent permits.
-- App version/build, platform, locale, country, timestamp, and session ID.
-- Series/episode IDs and episode number.
-- Access method and the minimum episode/reward outcome fields needed for the MVP loop.
-- Coin price, store product ID, and experiment ID/variant are P7 properties.
-
-Never send email, auth token, signed video URL, full IP address, payment receipt, contract reference, or free-form error payload to analytics.
+P7 only: subscription lifecycle, push and experiment exposure. No email, UID, tokens, signed media URLs, full IP, receipts, raw provider callbacks, contracts/rates or free-form errors in Analytics. No raw acquisition URL/referrer containing personal data; recover only approved bounded attribution dimensions.
 
 ---
 
@@ -439,7 +414,7 @@ The sequence below is dependency-ordered and keeps high-risk proofs early. Estim
 Two decision classes apply throughout the roadmap:
 
 - **Required for architecture/coding:** must be approved before implementing the affected behavior. The accepted technical ADR baseline is sufficient to begin Phase 1 now.
-- **Required before public release:** company registration and organization-account details, banking/payout verification, per-series provenance or licensed-rights clearance, France-specific legal/privacy review, Google Play/AdMob configuration, and launch approvals may be completed later, but public production activation, traffic promotion, storefront distribution, real advertising, and uncleared media remain disabled until they pass. Isolated production-candidate provisioning and synthetic/test-data validation may proceed earlier under P5-T08.
+- **Required before public release:** company registration and organization-account details, banking/payout verification, per-series provenance or licensed-rights clearance, France-specific legal/privacy review, Google Play/RevenueCat/AdMob configuration, Google IAP settlement, coin terms and launch approvals may be completed later, but public production activation, traffic promotion, storefront distribution, real purchases/advertising/paid spend, and uncleared media remain disabled until they pass. Isolated production-candidate provisioning and synthetic/test-data validation may proceed earlier under P5-T08.
 
 ### Phase 0 — Product, Content, and Delivery Foundations
 
@@ -457,9 +432,9 @@ Two decision classes apply throughout the roadmap:
 - [x] Storefront-localized customer prices and EUR reporting/desired settlement are approved.
 - [x] Decision D-001 approves France-only Google Play distribution, and D-024 records France as the intended legal-entity country (scope narrowed 2026-09-01).
 - [x] Phase 1 may start with local/emulated/fake services, generated test data, and self-owned/generated test media without real credentials.
-- [ ] Before ads-only public release, the French entity's legal name/form, incorporation, registered address, D-U-N-S where required, organization accounts, and AdMob production configuration are approved and verified. Store IAP EUR-compatible Apple/Google bank configuration is required before P7 IAP, not before ads-only launch.
-- [x] MVP inclusions/exclusions and monetization defaults are approved (France-only Android, one or more approved self-owned/licensed English series, ads-only, hardcoded free window, guest boundary; catalog scope updated 2026-09-02).
-- [ ] KPI definitions, ads-only UA budget ceiling, and stop/go review date are documented. Experiment guardrails belong to P4-T05 / P7, not this remaining P0-T01 closer.
+- [ ] Before public commercial release, verify French entity/registration/organization accounts, AdMob and Google Play/RevenueCat production configuration, Google IAP finance and EUR settlement; Apple setup remains post-MVP.
+- [x] Founder strategy approved 2026-09-07: France/Android/English as launch configuration, approximately 3–5 approved titles, ads plus coins, configured episode access, guest boundary and contribution LTV/CAC experiment. Implementation is not claimed.
+- [ ] Founder approves one audience (D-035), D-008 commercial coin values/terms, D-017 budget, business guardrails and stop/go review date. Metric definitions include contribution LTV/CAC; Remote Config experimentation remains P7.
 
 **Validation and integration tests:**
 
@@ -478,7 +453,7 @@ Two decision classes apply throughout the roadmap:
 
 - [ ] Each self-owned series has private provenance covering scripts, music, voices, likenesses, artwork, clips, stock assets, locations, and AI tools/models; each licensed series has an approved private D-031 rights package.
 - [ ] Media specification covers vertical aspect ratio, codecs, audio, captions, posters, episode numbering, checksums, and source quality.
-- [ ] Each candidate series is approved for France/Google Play publication, advertising, screenshots, and promotional use, with rating/warnings recorded.
+- [ ] Each candidate series is approved for France/Google Play, English localization, free episodes, rewarded ads, coin transactional access and paid acquisition clips/trailers/posters/stills/likenesses; rating, windows, takedown, reporting, exclusivity and protection recorded privately. Target approximately 3–5 independent approvals with D-033 preferred terms.
 
 **Validation and integration tests:**
 
@@ -487,22 +462,22 @@ Two decision classes apply throughout the roadmap:
 
 #### P0-T03 — Create product policy and store-compliance matrix
 
-**Description:** For the France-only Android ads MVP, map rewarded ads, account deletion, privacy, consent, age rating, and the English-language catalog to Google Play, AdMob, GDPR, and French requirements. Apple/iOS and every additional country are post-MVP. IAP/coin/subscription disclosures, store billing, restore, and storefront EUR settlement are **P7 policy** and do not close this task.
+**Description:** Map the France/Android ad-plus-coin product, capped acquisition, privacy/deletion, consent, age/content, Google Play consumables, refunds, persistent balance, store pricing and EUR settlement to the actual binary/data flows. Apple and subscriptions remain post-MVP.
 
-**Objective:** Avoid building ads, privacy, and deletion flows that stores or regulators reject. Do not wait on P7 IAP finance to document the ads-only path.
+**Objective:** Make the new MVP reviewable before commercial release.
 
-**Dependencies:** Approved decisions D-001, D-002, D-021, and the approved business target in D-022. D-005 through D-007 are founder-approved for MVP ads (2026-08-27). D-008 and D-009 remain Proposed and are required only before P7 IAP, not before ads-only MVP behavior. Store IAP EUR settlement (D-022 financial setup) is required before P7 IAP, not before this ads-only P0-T03 slice.
+**Dependencies:** D-001/D-002/D-005–D-008/D-015/D-021/D-022 approved directions. D-008 commercial values/terms, D-020 and owner finance/legal approvals remain open where applicable.
 
 **Acceptance criteria:**
 
-- [ ] Rewarded-ad consent, reward disclosure, SSV/grant authority, and account deletion are documented for ads-only MVP.
-- [ ] Privacy policy, terms, content policy, support contact, and data-deletion process have owners and deadlines for the ads-only binary.
-- [ ] IAP/coin/subscription disclosures, store billing default, restore, and EUR store settlement remain **P7 policy**; they do not close P0-T03 for ads-only MVP.
+- [ ] Matrix covers ad consent/SSV and coin purchases/unlocks/refunds/reconciliation, store-provided prices and Google settlement.
+- [ ] Privacy/terms/support/deletion/data inventory and notices have owners; include RevenueCat, minimal attribution and warehouse data, retention and processor cleanup.
+- [ ] No subscription, Apple or unnecessary MMP requirement is introduced into MVP.
 
 **Validation and integration tests:**
 
-- [ ] Compliance reviewer walks through free, locked, rewarded-ad, and deletion screens against the matrix. Coin, subscription, and restore walkthroughs wait for P7.
-- [ ] Store review notes template explains the ads-only business model and test account path.
+- [ ] Reviewer walks free, ad-only, coin-only, both-method, pending/refund/reinstall and deletion journeys against matrix; release declarations match observed Android SDK/network behavior.
+- [ ] Review notes explain the actual ads-plus-coins business model and deterministic Google Play tester paths.
 
 #### P0-T04 — Establish architecture decision records and cost model
 
@@ -521,7 +496,8 @@ Two decision classes apply throughout the roadmap:
 
 **Validation and integration tests:**
 
-- [x] Model one small beta, target launch, and 10× scenario.
+- [x] Historical infrastructure-only beta/launch/10× arithmetic was recorded before 2026-09-07; it is not approval of the new business economics.
+- [ ] Review the updated parameterized beta, paid-launch and 10× ads-plus-coins models with content share, fees/taxes/refunds, infrastructure and acquisition; replace pending private inputs before claiming LTV:CAC.
 - [x] Confirm infrastructure variable cost flows into cohort contribution margin.
 
 ### Checkpoint 0 — Public-release feasibility (not a Phase 1 gate)
@@ -530,7 +506,7 @@ Two decision classes apply throughout the roadmap:
 - [ ] A sample content package can meet the proposed ingestion contract.
 - [x] D-019 allows tokenized HLS only for approved self-owned or licensed titles that permit it; DRM-required titles fail closed until a compliant provider path is approved.
 
-Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory before any series and real advertising are publicly released in France. Licensed-content clearance is per series and does not block unrelated cleared titles.
+Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory before public content/monetization release and paid acquisition in France. Licensed-content clearance is per series and does not block unrelated cleared titles.
 
 ---
 
@@ -683,20 +659,21 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **P2-T01-F2** (GitHub issue #85) adds Android Google Sign-In on the same native Auth path; Jest/CI remain mock; iOS Apple/Google observation is a later D-026 ship pass.
 
-**P2-T01-F3** (GitHub issue #89) is **deferred under D-027** (ads-only MVP is Android / Google Play only). Apple Sign-In is still required before any iOS public storefront / TestFlight-quality pass; it is not N/A and is not an ads-only MVP blocker.
+**P2-T01-F3** (GitHub issue #89) is **deferred under D-027** (MVP is Android / Google Play only). Apple Sign-In is still required before any iOS public storefront / TestFlight-quality pass; it is not N/A and is not an Android MVP blocker.
 
 #### P2-T02 — Implement account lifecycle, consent, and deletion
 
-**Description:** Add locale/country/consent state, profile API, logout behavior, and a Google-reauthenticated deletion workflow spanning Django and Firebase. Account export is post-MVP and has no placeholder endpoint.
+**Description:** Add locale/country/consent state, profile API, logout behavior, and a same-provider reauthentication and deletion workflow for both retained login methods spanning Django and Firebase. Account export is post-MVP and has no placeholder endpoint.
 
 **Objective:** Provide privacy-safe account control from the beginning.
 
-**Dependencies:** P2-T01, P0-T03 ads/privacy/deletion slice. IAP/coin/subscription disclosures and store EUR settlement are P7 policy and do not block this task.
+**Dependencies:** P2-T01 and the P0-T03 privacy/deletion matrix for the implemented foundation. Planned MVP coin/attribution/warehouse integration must extend deletion and approved financial retention before P3/P4 release; subscriptions remain P7.
 
 **Acceptance criteria:**
 
 - [x] User can initiate deletion in-app with reauthentication where required.
-- [x] Personal profile and push identifiers are deleted or irreversibly anonymized; financial audit records retain only legally necessary pseudonymous fields.
+- [x] Implemented personal profile/progress/entitlement cleanup passes the historical P2-T02 tests.
+- [ ] Planned MVP coin financial audit retention and new RevenueCat/attribution/warehouse cleanup must be integrated and tested before shipping; push remains P7. No financial-retention completion is claimed by the existing deletion evidence.
 - [x] Deletion is idempotent and has an auditable status.
 
 **Validation and integration tests:**
@@ -718,7 +695,9 @@ processor-specific deletion/retention integration is required before they ship.
 
 #### P2-T03 — Implement catalog, rights, publication controls, localization, and Django Admin
 
-**Description:** Add Series, Season, Episode, Genre, direct English text, publication/takedown state, self-owned provenance or licensed ContentRight grants, artwork, and usable Admin screens. Licensed grants are evaluated only for the fixed France/Android/English product; broader market routing remains out of scope.
+**Historical implementation scope:** Checked evidence below describes the earlier free/rewarded-ad, fixed-launch-context slice. D-034/P2-T03-F3 and P3-T01-F1/P3-T08-F2 add new MVP requirements; those are unchecked and are not satisfied by this historical completion.
+
+**Description:** Add Series, Season, Episode, Genre, direct English text, publication/takedown state, self-owned provenance or licensed ContentRight grants, artwork, and usable Admin screens. The completed slice evaluates the fixed France/Android/English context; P2-T03-F3 makes it active configuration with generalized dimensions.
 
 **Objective:** Let staff manage an independently approved self-owned or licensed catalog without a custom web product.
 
@@ -736,6 +715,26 @@ processor-specific deletion/retention integration is required before they ship.
 - [x] Seed synthetic self-owned content only; tests create synthetic licensed-right metadata and verify ineligible titles remain hidden.
 
 Evidence (2026-09-02): P2-T03-F2 restored the surviving `ContentRight` model validation and Admin surfaces, fixed France/Android/English query enforcement, episode availability windows, and catalog/playback regression coverage. No real contract, rate, provider payload, personal data, or licensed media fixture is included.
+
+#### P2-T03-F3 — Configure launch context and preserve generalized rights/domain dimensions
+
+**Description:** Follow D-034 from the fixed-context P2-T03-F2 implementation: active server launch configuration for France/Android/English, stable content identity, localized metadata, audience/content-segment associations and territory/platform/language/monetization grants. Retain or evolve existing models instead of replacing generalized dimensions with launch constants. Add the minimum permission metadata needed for D-031 free/ad/coin/promotion admission; keep confidential rights/finance records private.
+
+**Objective:** Add another approved market or segment later without core-domain/API redesign, while keeping MVP UX narrow and eligibility fail-closed.
+
+**Dependencies:** P2-T03/P2-T07, D-031/D-034 approved direction. Synthetic fixtures only; no new country rollout or legal approval is implied.
+
+**Acceptance criteria:**
+
+- [ ] Active market/storefront/language configuration is resolved by the server. Profile locale, request headers and client targeting cannot widen access.
+- [ ] Stable domain IDs and separate localized metadata/segment associations support future values without destructive redesign; generalized territory/license and store-currency dimensions survive.
+- [ ] Per-series rights include required free/ad/coin/paid-promotion grants; no grant means no permission. Admin ingestion/publication review and catalog/playback rechecks preserve window/takedown/DRM/age/authorization safeguards.
+- [ ] Migration plan is expand/migrate, with conservative backfill: unknown rights do not become approved. Destructive contraction is a separate release.
+
+**Validation and integration tests:**
+
+- [ ] Backend decision-table tests use synthetic additional-market/language/segment grants and inactive configurations to prove dimensions work without enabling new public scope; spoofed client context fails to widen eligibility.
+- [ ] Existing France/self-owned/licensed regression and no-secret/private-media tests pass; OpenAPI/client updated together with `pnpm contract:check` for any API changes.
 
 #### P2-T04 — Build home catalog and series-detail mobile screens
 
@@ -798,6 +797,8 @@ Evidence (2026-08-27): PR #56 merged; Fake CI ingest tests; optional Bunny smoke
 
 #### P2-T07 — Implement entitlement-aware playback authorization
 
+**Historical implementation scope:** Checked evidence below describes the earlier free/rewarded-ad, fixed-launch-context slice. D-034/P2-T03-F3 and P3-T01-F1/P3-T08-F2 add new MVP requirements; those are unchecked and are not satisfied by this historical completion.
+
 **Description:** Create the server policy evaluator and playback authorization endpoint that checks fixed-market self-owned or licensed publication/takedown eligibility, auth, episode entitlement, and the series free count before signing playback access. Subscription evaluation waits for P7.
 
 **Objective:** Centralize content authorization and keep storage private.
@@ -842,20 +843,22 @@ Evidence (P2-T08 / #78): anonymous device-scoped progress without `UserProfile`;
 
 - [ ] Staff can ingest and publish every independently cleared self-owned or licensed launch series.
 - [ ] Anonymous user discovers and watches free episodes end to end.
-- [ ] Signed playback, France/Android launch availability, progress, and takedown are verified. Multi-territory validation is post-MVP.
+- [ ] Signed playback, France/Android launch availability, progress, and takedown are verified. Additional-market rollout/device validation is post-MVP; synthetic generalized-config/rights tests are required by P2-T03-F3.
 - [ ] Playback performance baseline and cost per watch-hour are recorded.
 
 ---
 
-### Phase 3 — Rewarded ads and episode unlock
+### Phase 3 — Rewarded ads, Android coins and episode access
 
 #### P3-T01 — Implement access-policy and offer configuration
 
-**Description:** Store the free episode count and rewarded-ad kill switch directly on `Series`. Do not model per-episode overrides, coins, or subscriptions for MVP.
+**Historical implementation scope:** Checked evidence below describes the earlier free/rewarded-ad, fixed-launch-context slice. D-034/P2-T03-F3 and P3-T01-F1/P3-T08-F2 add new MVP requirements; those are unchecked and are not satisfied by this historical completion.
+
+**Description:** Store the free episode count and rewarded-ad kill switch directly on `Series`. This completed slice did not model per-episode overrides or coins; P3-T01-F1 adds them for MVP. Subscriptions remain post-MVP.
 
 **Objective:** Change free-window and ad availability without treating the client as authoritative.
 
-**Dependencies:** P2-T07, P0-T03 ads/privacy slice. IAP/coin/subscription disclosures and store EUR settlement are P7 policy and do not block this task.
+**Dependencies:** P2-T07, the historical P0-T03 ads/privacy slice; the new coin follow-up depends on the updated MVP policy matrix.
 
 **Acceptance criteria:**
 
@@ -868,6 +871,99 @@ Evidence (P2-T08 / #78): anonymous device-scoped progress without `UserProfile`;
 - [x] Changing free count in staging updates the lock screen without an app release and cannot bypass server checks.
 
 Evidence updated 2026-09-02: `GET /v1/offers/{episode_id}` reads `Series.free_episode_count` and `Series.rewarded_ads_enabled`; authorize ignores client free-window; anonymous locked offers omit rewarded-ad (D-005). Legacy `AccessPolicy` rows are dormant until schema contraction.
+
+#### P3-T01-F1 — Add editorial episode methods and license-aware offers
+
+**Description:** Extend the completed Series free/ad defaults to operator-configured per-episode free, ad, coin or both access, preserving entitlement authority and private rights boundaries. No automated cliffhanger detection or Remote Config dependency.
+
+**Dependencies:** P3-T01, P2-T03-F3, updated P0-T03 MVP policy; D-008 price fields configurable with synthetic test values until business approval.
+
+**Acceptance criteria:**
+
+- [ ] Eligibility precedes entitlement/free access; locked offers intersect configured methods, current license permissions and enabled provider capability. Server controls coin price and policy version; unavailable methods stay disabled/fail-closed.
+- [ ] Existing ad-only behavior migrates safely; per-episode overrides support free/ad/coin/both and licensed permission changes take effect at offer and grant/debit time.
+- [ ] Admin edits are authorized/auditable and cannot silently grant missing rights; existing grants never bypass takedown or expiry.
+
+**Validation and integration tests:**
+
+- [ ] One backend decision table covers all methods, anonymous/login boundary, invalid grants, stale price/policy, takedown/expiry races and disabled provider paths. Test schema/data migration and generated client together; no duplicate screen tests for the same policy outcome.
+
+#### P3-T02 — Implement immutable coin wallet and atomic episode unlock
+
+**Timing:** Moved from P7 into MVP on 2026-09-07; original ID retained (prior deferral: issue #52, 2026-08-27).
+
+**Description/objective:** Build persistent Wallet/CoinLedgerEntry and auditable idempotent debit plus episode entitlement in one PostgreSQL transaction.
+
+**Dependencies:** P3-T01-F1, P2-T01/P2-T02; D-008 direction. Use configurable synthetic amounts; commercial values remain unapproved.
+
+**Acceptance criteria:**
+
+- [ ] Ledger changes are append-only; balance derives from auditable entries and persists across login/reinstall. Support corrections use compensating entries, never edits/deletes.
+- [ ] Row locking and idempotency make debit plus entitlement atomic; a valid pre-existing entitlement causes no duplicate charge. No negative spendable balance.
+- [ ] Current rights, eligibility, configured coin method and price are checked; insufficient balance, stale price and concurrent takedown/policy changes fail safely.
+- [ ] Owner-only wallet/unlock APIs, least-privilege support and deletion/financial-retention boundary are documented. Financial records are not accidentally cascaded away or exposed cross-account.
+
+**Validation and integration tests:**
+
+- [ ] PostgreSQL integration tests cover duplicate/competing unlocks, rollback between debit/grant, price/eligibility changes, IDOR and reconciliation between wallet/ledger/entitlements.
+- [ ] Expand/migrate tests and `pnpm contract:check` pass. Financial integrity and authorization tests cannot be deferred under D-029.
+
+#### P3-T03 — Configure Google Play coin products and RevenueCat environments
+
+**Timing:** Android coin scope moved from P7 into MVP 2026-09-07. Apple/subscription setup retained as P3-T03-P7.
+
+**Description/objective:** Map Google Play consumable IDs to RevenueCat offerings and server-approved coin quantities by environment; validate native Expo integration without inventing pack sizes or prices.
+
+**Dependencies:** P3-T01-F1, P0-T03 MVP matrix. D-008 values/terms and relevant D-025/Google account prerequisites before real product setup; generic code uses synthetic fixtures.
+
+**Acceptance criteria:**
+
+- [ ] Product registry defines type, store/environment identity, server quantity, localized-price source, finance ownership and approval reference; no confidential values/credentials in Git.
+- [ ] Android test build fetches known offerings and shows the exact Google-provided price string. No currency derived from English/France constants.
+- [ ] Separate sandbox/production credentials, webhook auth and least-privilege access/rotation are defined with P5-T04. Production remains disabled until release approval.
+
+**Validation and integration tests:**
+
+- [ ] Configuration checks reject missing/unknown/wrong-environment products. Synthetic multi-currency display tests validate store strings without adding another launch market.
+- [ ] Google Play license-tester Android device fetches offerings and matches the native purchase sheet. Apple/two-store device testing remains post-MVP.
+
+#### P3-T04 — Verify RevenueCat Android purchase and webhook lifecycle
+
+**Timing:** Coin lifecycle moved from P7 into MVP 2026-09-07. Subscription state lives in P3-T04-P7.
+
+**Description/objective:** Authenticate/validate provider events, preserve restricted references, bind account/product/environment/transaction, quarantine unresolved identity and converge on verified coin-purchase/refund state.
+
+**Dependencies:** P3-T03, P2-T01/P2-T02; ADR 0006 and D-008 approved refund/chargeback rules before live fulfillment.
+
+**Acceptance criteria:**
+
+- [ ] Forged/replayed/wrong-environment/unknown-product events never credit; duplicates, delayed/out-of-order purchase/refund/chargeback events converge idempotently.
+- [ ] Pending/cancelled/failed purchases create no credit; verified completed purchases alone are fulfillable. Provider acknowledgement/consumption ownership and retry/recovery are explicit.
+- [ ] Unknown/deleted users, alias/transfer conflicts and events arriving during deletion are quarantined/reconciled rather than reassigned. Logs/Analytics never receive raw payloads/receipts.
+
+**Validation and integration tests:**
+
+- [ ] Synthetic provider-contract tests replay ordered, reordered, forged and duplicate lifecycle events and assert financial state; test environment/product/user isolation.
+- [ ] Google tester purchase/refund lifecycle converges after callback outage/retry. Private device/provider evidence never enters public fixtures; do not mark unavailable checks passed.
+
+#### P3-T06 — Implement Android coin-pack purchase fulfillment
+
+**Timing:** Moved from P7 into MVP 2026-09-07; original ID retained. Apple fulfillment remains with later iOS work.
+
+**Description/objective:** Present Google Play/RevenueCat coin packs, complete native checkout and credit coins only from a verified server purchase. Client success starts synchronization, never a grant.
+
+**Dependencies:** P3-T02, P3-T03, P3-T04.
+
+**Acceptance criteria:**
+
+- [ ] At most one credit per verified transaction; client cannot choose quantity or owner. Persistent balance/entitlements reload after reinstall and second-device login without re-crediting consumables.
+- [ ] Cancel/pending/offline/delayed callback states are recoverable. Refunds/chargebacks use compensating entries and approved D-008 handling including already-spent coins; unresolved cases stay quarantined.
+- [ ] User sees store-provided prices, safe support reference and authoritative balance/fulfillment state; commercial launch waits for D-008 terms/prices and Google settlement approval.
+
+**Validation and integration tests:**
+
+- [ ] Backend transaction tests replay purchases/refunds, concurrent fulfillment, crash boundaries and ownership conflicts; no double credit or financial corruption.
+- [ ] Google license-tester purchase → verified credit → atomic unlock → fresh playback → reinstall/second-device sync. Cancellation/pending/network interruption and refund after spend receive device/provider evidence with server reconciliation.
 
 #### P3-T07 — Implement rewarded-ad intent and verified reward grant
 
@@ -905,7 +1001,9 @@ Setup prerequisites still apply before any publisher-owned ad test. P6-T04,
 P6-T05A and the final launch checklist carry these gates; P3-T08 development may
 proceed with production ads disabled.
 
-#### P3-T08 — Build locked-episode offer sheet (ads-only)
+#### P3-T08 — Build locked-episode offer sheet (rewarded-ad foundation)
+
+**Historical implementation scope:** Checked evidence below describes the earlier free/rewarded-ad, fixed-launch-context slice. D-034/P2-T03-F3 and P3-T01-F1/P3-T08-F2 add new MVP requirements; those are unchecked and are not satisfied by this historical completion.
 
 **Development complete (founder-approved deferral, 2026-08-31, D-029):** The mobile offer sheet,
 current-access refresh, playback authorization, and login/preferences return
@@ -918,9 +1016,9 @@ release setup remain #98/D-028/P6-T05A. P3-T08-F1 / #99 adds account-bound,
 sanitized cross-remount/restart recovery without persisting provider bindings or
 playback URLs. See `docs/runbooks/rewarded-ads.md` for evidence.
 
-**Description:** Present the rewarded-ad unlock offer from the API, including loading, accessibility, errors, and post-success transition to playback. Coin and subscription offers wait for P7.
+**Description:** Present the rewarded-ad unlock offer from the API, including loading, accessibility, errors, and post-success transition to playback. Coin/both-method offers are added by P3-T08-F2; subscription offers remain P7.
 
-**Objective:** Create one coherent ads-only monetization surface for MVP.
+**Objective:** Provide the completed rewarded-ad surface that P3-T08-F2 extends for MVP coins.
 
 **Dependencies:** P3-T01, P3-T07, P2-T08.
 
@@ -935,18 +1033,56 @@ playback URLs. See `docs/runbooks/rewarded-ads.md` for evidence.
 - [x] Component tests cover the ad offer, unavailable ads, offline, and success.
 - [ ] Maestro validates the ad unlock path from a locked episode. **Deferred to P6-T03 under D-029; required before release/production enablement.**
 
-### Checkpoint 3 — Ads-only integrity
+#### P3-T08-F2 — Extend the offer sheet for configured coin/ad choices
 
-- [ ] Rewarded-ad unlock works on real test devices and converges on server entitlements (SSV, unused intent, authentic callback).
-- [ ] Concurrency, replay, mismatched, expired, and forged reward-grant tests pass.
-- [ ] No mobile request can directly set entitlement.
-- [ ] Store-policy checklist for IAP/restore moves with P7 IAP tasks; it is not an MVP checkpoint.
+**Description/objective:** Show the server's configured ad-only, coin-only or both methods, account boundary and wallet/purchase recovery while preserving P3-T08 ad recovery.
+
+**Dependencies:** P3-T08, P3-T01-F1, P3-T02, P3-T06.
+
+**Acceptance criteria:**
+
+- [ ] Only server-authorized, available methods appear; no ad is offered on a coin-only episode. Purchase/coin amount never comes from an editable client assumption.
+- [ ] Atomic unlock retries and account-switch/remount recovery cannot charge twice or adopt another account's pending transaction.
+- [ ] Success refreshes server balance/entitlement and obtains fresh playback authorization; offline/pending/cancelled paths never imply success.
+
+**Validation and integration tests:**
+
+- [ ] Focused mobile interaction tests cover offer selection, purchase recovery and identity replacement; reuse backend policy/ledger tests instead of duplicating them.
+- [ ] Android regression covers free, ad-only, coin-only and both choices, accessible prices/terms and provider interruptions.
+
+#### P3-T09 — Add MVP commerce reconciliation and support tools
+
+**Timing:** Moved from P7 into MVP 2026-09-07; subscription-specific reconciliation retained with P3-T04-P7/P3-T05.
+
+**Description/objective:** Reconcile Google/RevenueCat transactions, ledger, wallet, entitlements and refunds/rewards; safely operate real money without direct database edits.
+
+**Dependencies:** P3-T04, P3-T06, P3-T07; P2-T02 retention/deletion integration and D-020 approval before production retention.
+
+**Acceptance criteria:**
+
+- [ ] Scheduled/repeatable reconciliation detects missing, duplicate, delayed, refunded, charged-back and quarantined records; adjustments never silently alter money.
+- [ ] Least-privilege support can inspect safe identifiers and issue authorized reasoned compensating entries with actor/reason audit; no normal staff editing ledger/history.
+- [ ] Refund-after-spend, account ownership/deletion and provider outage recovery follow approved rules; finance exports preserve original currency/amount and private provenance.
+
+**Validation and integration tests:**
+
+- [ ] Synthetic known discrepancies produce exact reports and idempotent repair where approved; role tests deny unauthorized adjustments/payload access.
+- [ ] Reconcile a Google tester purchase/refund and reinstall journey end to end. Financial integrity tests and unresolved mismatches block release and cannot be deferred as passed.
+
+### Checkpoint 3 — Ad and coin integrity
+
+- [ ] Genuine AdMob SSV and Google Play coin purchase/refund journeys converge on authoritative server entitlements and balances.
+- [ ] Forgery, replay, transaction atomicity, concurrency, rights/price race, IDOR and reconciliation tests pass.
+- [ ] No mobile request/event can set balance, purchase success or entitlement; consumed purchase sync never duplicates credits.
+- [ ] MVP coin/ad disclosures, Google settlement and approved D-008 terms are covered; subscriptions remain P7.
 
 ---
 
-### Phase 4 — Thin measurement for UA validation
+### Phase 4 — Acquisition and contribution LTV/CAC measurement
 
 #### P4-T01 — Implement analytics governance and event SDK
+
+**Implementation-history caveat (2026-09-07):** The dated F1–F4 notes below preserve prior completed slices. The 2026-09-02 narrowed schema now contains only the 11 events in Section 6; historical discovery/progress/offer/full-ad trails are not current capability. P4-T01-F5 must implement the required missing exposure/selection and new coin/acquisition measurement, and P6 must update exact device trails before claiming a pass.
 
 **Foundation in progress (P4-T01-F1 / #104):** The canonical event dictionary,
 typed mobile schemas, deterministic event IDs, prohibited-value filtering and a
@@ -991,7 +1127,7 @@ grant event. Stable request/intent keys deduplicate retries, pending recovery,
 callback replay, and remounts without exposing those keys as event properties.
 Provider bindings, SSV data, tokens, transaction identifiers, and signed URLs never
 enter Analytics, and no event creates an intent, entitlement, or playable access.
-The F1–F4 ads-only viewing-loop slices are complete.
+The earlier F1–F4 viewing/reward slices are complete; the new MVP commerce/acquisition scope is P4-T01-F5.
 
 **Account-funnel instrumentation implemented (P4-T01 / #104):** Confirmed `/v1/me`
 results now own Google `sign_up` and `login` diagnostics. A result that
@@ -1003,11 +1139,11 @@ sends the profile ID, deletion receipt ID, email, credential, country, or sessio
 Automated P4-T01 engineering is complete. Deferred device/DebugView evidence and
 production activation remain blocked by D-020/privacy/store and P6 clearance.
 
-**Description:** Publish event schemas and a typed, consent-gated mobile wrapper for the minimum MVP events: app open; Google sign-up/login; account deletion; episode start/complete/error; locked episode; rewarded-ad start/grant/failure. Campaign, coin, subscription, push, and experiment events wait for P7.
+**Description:** Publish event schemas and a typed, consent-gated mobile wrapper for the minimum MVP events: app open; Google sign-up/login; account deletion; episode start/complete/error; locked episode; rewarded-ad start/grant/failure. P4-T01-F5 adds campaign/coin events for MVP; subscription, push and experiment events remain P7.
 
-**Objective:** Produce decision-grade events for the ads-only loop instead of inconsistent ad hoc tracking.
+**Objective:** Provide the governed product-event foundation, extended for MVP business economics by P4-T01-F5.
 
-**Dependencies:** P2-T08, P3-T08, P0-T03 ads/privacy slice. IAP/coin/subscription disclosures and store EUR settlement are P7 policy and do not block this task.
+**Dependencies:** P2-T08, P3-T08, the updated P0-T03 MVP privacy/commerce matrix. Historical event foundations do not imply approval of new financial/acquisition data.
 
 **Acceptance criteria:**
 
@@ -1018,21 +1154,89 @@ production activation remain blocked by D-020/privacy/store and P6 clearance.
 **Validation and integration tests:**
 
 - [ ] Analytics contract tests validate representative MVP events against schemas.
-- [ ] Execute free and rewarded-ad journeys and verify one correctly ordered event trail per journey in Firebase DebugView. Coin and subscription journeys wait for P7.
+- [ ] Execute free and rewarded-ad journeys and verify one correctly ordered event trail per journey in Firebase DebugView. Coin trails are required under P4-T01-F5 for MVP; subscriptions remain P7.
 
-#### P4-T06 — Campaign attribution and deferred deep linking (P7)
+#### P4-T01-F5 — Extend governed events and facts for MVP commerce/acquisition
 
-**Deferred and removed from MVP (2026-09-02):** The custom campaign parser,
-landing route, attribution properties, and their tests were deleted. Normal Expo
-Router series navigation remains. Install Referrer, campaign persistence,
-deferred deep linking, attribution windows, and paid-acquisition joins require an
-approved P7 scope, D-017/D-018, and D-020 retention/privacy decisions before code
-is added.
+**Dependencies:** P4-T01, P3-T08-F2, P3-T09, P0-T03; coordinate attribution properties with P4-T06.
 
-### Checkpoint 4 — Thin MVP measurement
+**Description/objective:** Add canonical lock/options/coin-pack/purchase/refund/credit/spend/unlock concepts from Section 6 and the analytics contract. Backend/provider finance facts remain authoritative; client funnel events never create financial state.
 
-- [ ] Typed consent-gated MVP events fire for free and rewarded-ad journeys.
-- [ ] Warehouse models, Looker dashboards, Remote Config experiments, MMP, and push remain P7.
+**Acceptance criteria:**
+
+- [ ] Event names, exact triggers, IDs/deduplication, unlock method and allowed product/series/campaign properties are documented/typed. Map prior `purchase_succeeded` planning name to `purchase_completed` without double counting.
+- [ ] Store/provider/backend facts include lifecycle identity, original amount/currency, refunds, ledger/entitlement links and restricted provenance suitable for reconciliation.
+- [ ] Consent/identity/deletion/retention cover new data; disclose anonymous/non-consented measurement gaps without repurposing operational identifiers into tracking.
+
+**Validation and integration tests:**
+
+- [ ] Schema tests reject prohibited values; transaction-derived facts cannot arise from forged client analytics. One deduplicated synthetic funnel contains the correct failed/pending/completed/refunded and unlock-method outcomes.
+- [ ] Android DebugView verifies consented diagnostic order and opt-out silence; backend/provider totals independently reconcile. No financial test deferred under D-029.
+
+#### P4-T06 — Implement minimum paid-acquisition attribution
+
+**Timing/history:** The earlier custom campaign parser/landing/attribution properties were removed 2026-09-02. That removal is historical, not a current P7 requirement. D-016/D-032 move the minimum reliable paid-test scope back to MVP; original ID retained. P4-T06-P7 owns advanced deferred links.
+
+**Description/objective:** Recover bounded source/campaign/creative at acquired-cohort level using the simplest reliable Google Play/native attribution path (Install Referrer where required), consented identity joins and repeatable ad-network spend imports. Do not add an MMP or network SDK by default.
+
+**Dependencies:** P4-T01, P0-T03, D-035 audience before actual test design. D-020 legal/retention before live attribution collection; D-017 approved cap/guardrails before spend. D-018 only if MMP is justified.
+
+**Acceptance criteria:**
+
+- [ ] Record a chosen first-touch/window/cohort definition, deduplication/reinstall/account-linking rules and consent coverage. Keep bounded campaign/creative identifiers and allowed aggregate spend provenance, not raw URLs/referrers/PII.
+- [ ] Network/date/currency/campaign/creative spend joins to deduplicated acquired users and later financial outcomes; organic, unmatched and consent-limited cases remain visible. Creative-level estimates are labeled when exact linkage is unavailable.
+- [ ] Existing catalog eligibility still controls destinations; missing/invalid links recover safely. No multi-country UX or advanced deferred link platform unless documented necessity for the capped test.
+
+**Validation and integration tests:**
+
+- [ ] Synthetic link/referrer/import tests cover malformed input, duplicates, reinstall, identity/consent changes, missing keys and wrong campaign/date/currency joins.
+- [ ] Controlled Google Play tester install/first open and spend-import rehearsal recover expected cohort keys without collecting before approval; live paid campaign waits for D-017 and P6 clearance. Insufficient attribution blocks spend, not automatically solved by adding an SDK.
+
+#### P4-T02 — Build minimum BigQuery cohort economics models
+
+**Timing:** Required export/models moved from P7 into MVP 2026-09-07; advanced exports retained in P4-T02-P7.
+
+**Description/objective:** Use supported Firebase Analytics export plus verified backend/store/AdMob facts and repeatable private spend/content-cost/infra imports to calculate engagement, D1/D7/D30 retention, ad/IAP/blended revenue and contribution LTV/CAC. No new data platform or automated royalty engine.
+
+**Dependencies:** P4-T01-F5, P4-T06, P3-T09; approved D-020 region/retention/access/deletion before real-data export. Synthetic model development may proceed earlier.
+
+**Acceptance criteria:**
+
+- [ ] Versioned SQL and data contracts implement the analytics/COST_MODEL definitions, deduplication, occurrence/ingestion times, original currency/FX, refund restatement and cohort maturity.
+- [ ] Acquisition spend, verified revenue, content revenue share/MG/localization/delivery and variable infrastructure reconcile by cohort; private terms/rates and provider payloads never enter public Git.
+- [ ] Series-level allocation avoids counting pack-sale revenue again when coins are spent; unallocated balances/costs remain explicit. Campaign/creative reporting states measured versus estimated coverage.
+- [ ] Dataset IAM, partition filters/query limits, budget/freshness controls and deletion propagation are defined; minimum BigQuery export is required, Looker/experiments are not.
+
+**Validation and integration tests:**
+
+- [ ] A generated cohort with known free/ad/coin paths, late/refunded events, missing attribution and private-cost placeholders yields expected metric identities. Unknown inputs remain unknown, not zero.
+- [ ] Test duplicate/reordered imports, missing joins, zero users/spend, immature cohorts, FX and export deletion/retention; reconcile to restricted source totals before real reporting.
+
+#### P4-T03 — Produce daily economics report and data-quality checks
+
+**Timing:** Minimum reporting/quality slice moved from P7 into MVP 2026-09-07. Looker/advanced dashboards retained in P4-T03-P7.
+
+**Description/objective:** Produce a reproducible daily table/export or simple report for founder/growth/finance: spend, acquired users, retention/funnel, ads/coins/refunds, allocated costs, observed contribution and projected LTV:CAC. Private output only for real data; no dashboard platform required.
+
+**Dependencies:** P4-T02; D-017 approved business guardrails and reporting owners before paid-test operation.
+
+**Acceptance criteria:**
+
+- [ ] Filter/group by cohort date, active market/platform, series and practical campaign/creative dimensions; expose projection horizon/assumptions, maturity and unmatched/consent coverage.
+- [ ] Freshness, uniqueness, missing joins and provider/ledger/spend reconciliation checks flag unreliable results and pause affected spend/review claims.
+- [ ] Exact source versions, import provenance and SQL reproduce a daily result; private reports omit unnecessary identifiers and public evidence remains synthetic.
+
+**Validation and integration tests:**
+
+- [ ] Reconcile a controlled reporting day and generated cohort back to source facts; stop a synthetic feed and verify the documented failure notification/hold procedure.
+- [ ] Founder/finance can distinguish observed versus projected contribution and approve D-017 guardrails without a universal invented LTV:CAC threshold.
+
+### Checkpoint 4 — MVP economics measurement
+
+- [ ] Free/ad/coin diagnostics and verified financial facts are governed, consent/deletion-aware and reconciled.
+- [ ] Source/campaign/creative cohort attribution and spend imports are sufficient for the approved test; unmatched/estimated coverage visible.
+- [ ] Minimum BigQuery SQL and daily reporting calculate CAC, D1/D7/D30, ad/IAP metrics, content/infra contribution and explicit projected LTV:CAC; missing inputs never silently become zero.
+- [ ] D-017 budget/guardrails and required D-020 collection/export approvals pass before paid operation. Looker, experiments, push and default MMP remain deferred.
 
 ---
 
@@ -1105,7 +1309,7 @@ is added.
 
 **Acceptance criteria:**
 
-- [ ] Each environment has distinct database, Firebase, AdMob, CDN, and Django secrets. RevenueCat secrets are required before P7 IAP; staging can exist without RevenueCat for MVP.
+- [ ] Each environment has distinct database, Firebase, AdMob, CDN and Django secrets. RevenueCat/Google coin integration adds its own environment-specific vault/auth/rotation gates before MVP testing/activation; earlier staging foundations may remain disabled until then.
 - [ ] Runtime identities can access only needed secret versions.
 - [ ] Rotation supports overlap where external callbacks/signing require it.
 
@@ -1158,9 +1362,9 @@ authentication, rights checks, reward binding, or endpoint authorization.
 
 **Description:** Apply OWASP ASVS/MASVS-informed controls: secure storage, TLS, validation, authorization, rate limiting, CORS/CSRF, admin hardening, App Check signals, dependency scanning, and abuse controls.
 
-**Objective:** Protect accounts, the approved catalog, rewarded-ad entitlements, and operational interfaces.
+**Objective:** Protect accounts, the approved catalog, rewards, coin purchases/balances/entitlements and operational interfaces.
 
-**Dependencies:** P3-T07, P5-T04. Full commerce reconciliation (P3-T09) remains P7; MVP security covers ad-grant integrity.
+**Dependencies:** P3-T07, P3-T09, P5-T04 for final MVP completion. Historical security foundations can proceed earlier; final review includes coin/refund/reconciliation integrity.
 
 **Acceptance criteria:**
 
@@ -1214,7 +1418,7 @@ or live-environment result is inferred from the local correlation tests.
 **Acceptance criteria:**
 
 - [ ] Production database plan includes automated backups and point-in-time recovery appropriate to launch risk.
-- [ ] Runbooks cover API outage, database issue, CDN/video failure, auth outage, reward discrepancy, media takedown, and data incident. Purchase incidents wait for P7.
+- [ ] Runbooks cover API outage, database issue, CDN/video failure, auth outage, reward discrepancy, media takedown, and data incident. MVP runbooks also cover purchase/refund/ledger/reconciliation incidents.
 - [ ] Provider dependencies and fallback user messaging are documented.
 
 **Validation and integration tests:**
@@ -1292,7 +1496,7 @@ before the task and checkpoint can close.
 **Acceptance criteria:**
 
 - [ ] Core screens meet WCAG-informed contrast/touch-target expectations and support dynamic text/screen readers where practical for video UI.
-- [ ] No user-facing string is hard-coded outside localization. Store price strings wait for P7 IAP.
+- [ ] No user-facing string is hard-coded outside localization. MVP coin products display the store-provided localized price strings.
 - [ ] Long English strings and small supported Android screens do not block primary actions.
 
 **Validation and integration tests:**
@@ -1316,7 +1520,7 @@ before the task and checkpoint can close.
 
 **Validation and integration tests:**
 
-- [ ] Test airplane mode and network loss during playback, rewarded-ad unlock, auth, progress, and config fetch. Store purchase paths wait for P7.
+- [ ] Test airplane mode and network loss during playback, rewarded-ad unlock, auth, progress, and config fetch. Include Google coin purchase/debit/refund synchronization paths in MVP.
 - [ ] Verify compatible EAS update applies and incompatible runtime update is rejected.
 
 #### P6-T03 — Build full regression and device matrix
@@ -1329,7 +1533,7 @@ before the task and checkpoint can close.
 
 **Acceptance criteria:**
 
-- [ ] Automated suite covers anonymous free viewing, login at lock, progress, rewarded-ad unlock, deletion, and takedown. Campaign attribution, coin, subscription, store restore, and push are P7 regression.
+- [ ] Automated suite covers anonymous free viewing, login at lock, progress, rewarded-ad unlock, deletion, and takedown. Include campaign attribution, coin purchase/debit/refund/reconciliation and persistent balance on reinstall/second Android device. Subscription/Apple restore and push remain P7.
 - [ ] Matrix includes low/mid/high Android devices, poor network, and current/oldest supported Android versions. iPhone/iOS coverage is post-MVP.
 - [ ] Flaky tests have owners and cannot silently pass via unlimited retries.
 - [ ] Every D-029 deferral is present in the consolidated runbook and is either passed with evidence or remains an explicit blocker; P3-T08 Android Maestro and #98 genuine provider validation are included.
@@ -1341,18 +1545,18 @@ before the task and checkpoint can close.
 
 #### P6-T04 — Prepare store listings, privacy declarations, and review package
 
-**Description:** Create Google Play metadata, screenshots, preview, age rating, Data safety declaration, support/privacy URLs, review notes, and test account/content for the France-only English listing. Apple/iOS and IAP review paths are post-MVP.
+**Description:** Create Google Play metadata, screenshots, preview, age rating, Data safety declaration, support/privacy URLs, review notes, and test account/content for the France-only English listing. Include Google Play coin products/prices/terms and refund/sync review. Apple/iOS and subscriptions remain post-MVP.
 
-**Objective:** Submit a transparent, reviewable ads-only product.
+**Objective:** Submit a transparent, reviewable ads-plus-coins Android product.
 
-**Dependencies:** P0-T03 ads/privacy/deletion slice, P6-T01, P6-T03. IAP/coin/subscription disclosures and store EUR settlement are P7 policy and do not block this task.
+**Dependencies:** updated P0-T03 MVP policy/Google settlement, P6-T01, P6-T03.
 
 **Acceptance criteria:**
 
-- [ ] Listings disclose that some episodes require a rewarded ad and match actual functionality. IAP/subscription metadata waits for P7.
+- [ ] Listings disclose configured free/rewarded-ad/coin access, coin products and Google prices/terms accurately. Subscription metadata remains P7.
 - [ ] Privacy declarations match SDK/data inventory and consent behavior.
 - [ ] Actual public operator identity, monitored privacy contact, final notice URL and app-specific UMP setup are verified before the applicable ad test/distribution; deferred P3-T07 setup is tracked in #98 (D-028).
-- [ ] Reviewer can access representative free, locked, and rewarded-ad flows with provided instructions. Test ad units only.
+- [ ] Reviewer can access representative free, locked, rewarded-ad, coin purchase/unlock, pending/refund/sync and deletion flows with provided instructions. Test ad units only.
 
 **Validation and integration tests:**
 
@@ -1370,36 +1574,34 @@ before the task and checkpoint can close.
 **Acceptance criteria:**
 
 - [ ] Beta has agreed minimum Android devices/users and uses Google Play closed testing only.
-- [ ] Beta uses AdMob test ad units only; no live commercial product, ad, payout, or acquisition configuration is enabled. Store sandbox products wait for P7 IAP.
+- [ ] Beta uses AdMob test ad units only; no live commercial product, ad, payout, or acquisition configuration is enabled. Google Play license-tester sandbox coin products are required for MVP; no real charges or production monetization in this beta.
 - [ ] No open severity-1/2 issue, reward/entitlement mismatch, unauthorized media exposure, or unexplained critical funnel break remains.
 - [ ] Playback, crash-free use, monetization, retention baseline, and support burden are reviewed.
 
 **Validation and integration tests:**
 
-- [ ] Reconcile every beta reward with server records. Store transaction reconciliation waits for P7.
+- [ ] Reconcile every beta reward and Google tester purchase/refund with provider, ledger and entitlement records.
 - [ ] Repeat regression and rollback drill on the final release candidate.
 
 #### P6-T05A — Obtain Public Release Clearance
 
-**Description:** Assemble one signed ads-only release record proving product, per-series provenance/licensed-rights clearance, ads/privacy/deletion policy, ads-path cost, entity, AdMob production, security, and launch decisions are complete for the exact Android binary, catalog, configuration, and France release. Store IAP finance, EUR settlement, and D-018 are not part of this ads-only record.
+**Description/objective:** Assemble one independently approved record for the exact Android revision, approximately 3–5 cleared titles/creatives, France/English/one-audience configuration, environment and ads-plus-coins acquisition experiment. Documentation approval is not production clearance.
 
-**Objective:** Provide one auditable hard gate between isolated validation and public distribution or real commercial activity.
-
-**Dependencies:** P0-T01, P0-T02, P0-T03 ads/privacy/deletion slice, P0-T04, P5-T08, P6-T04, and P6-T05; every ads-only release-applicable Decision Register entry must be approved, including D-007 (approved 2026-08-27), D-017 before any paid acquisition, D-020 before public production activation, and D-025 before organization/store/payout activation. D-008 and D-009 are **not** required for ads-only public release; they are required before P7 IAP. D-018 applies only to later MMP adoption. D-019 and D-031 apply to each licensed release candidate but do not block an independently cleared self-owned title. Do not silently approve D-017, D-018, D-020, or D-025.
+**Dependencies:** P0-T01–P0-T04, Checkpoints 3/4/5, P5-T08, P6-T03/T04/T05 and every applicable decision. D-008 commercial terms/values, D-017 budget/guardrails, D-020 privacy/retention and D-025 organization/accounts remain owner gates. D-009 subscriptions is not a dependency; D-018 only if an MMP is justified.
 
 **Acceptance criteria:**
 
-- [ ] P0-T01 through P0-T04 have current owner approvals and evidence for the ads-only release candidate; no proposal is silently treated as approval. P0-T03 IAP/coin/subscription/EUR-settlement rows are P7 and do not block this clearance.
-- [ ] Every release-candidate series has private ownership/component provenance or an approved licensed-rights package, contract-compatible media protection, age/content classification, and promotional-use approval for France/Google Play. Confidential contracts and rates remain outside this public record.
-- [ ] GDPR/privacy-by-design, consent, account deletion, security, accessibility, store policy/declarations, national legal/language requirements, support, incident response, and rollback checks pass.
-- [ ] The French entity and required registration/organization data are verified; AdMob production configuration is approved for activation. Store IAP products and store IAP EUR settlement wait for P7.
-- [ ] Release blocker #98 is closed with genuine completed test-ad → signed Google callback → one entitlement → fresh authorized Android playback evidence and independently reviewed production enablement. P3-T07 development completion does not satisfy this gate (D-028).
-- [ ] D-017 defines the paid-acquisition ceiling and D-020 defines approved production data residency/retention before those activities start. D-018 is not an ads-only public-release gate. All other decisions applicable to the ads-only release are Approved rather than Proposed or Decision required.
+- [ ] Dated owner approvals cover product/audience, content/media/paid-creative rights, ads/coin policy, costs, entity, Google Play/RevenueCat/AdMob and Google IAP EUR settlement.
+- [ ] Every title has private provenance or full D-031 free/ad/coin/paid-promotion grant, scope/window/takedown/reporting/exclusivity/protection and age/content approval. No private terms/assets in public evidence.
+- [ ] GDPR/privacy/consent/deletion, D-020 processors/exports, Google declarations, security, accessibility, support, incident response and rollback match observed binary behavior.
+- [ ] #98 genuine test ad → signed Google callback → one entitlement → fresh playback and independent activation review pass (D-028).
+- [ ] Google tester purchase/refund/chargeback handling, persistent balance, atomic unlock, idempotency, reconciliation and financial-retention safeguards have evidence. No financial integrity deferral.
+- [ ] Minimum attribution/spend/revenue/cost joins and daily report pass controlled reconciliation. D-017 caps, test period, sufficient-attribution criteria, business guardrails and stop/go owners/date are approved before spend.
 
 **Validation and integration tests:**
 
-- [ ] An independent reviewer traces every clearance item to dated evidence, named owner, release revision, France-only configuration, and rollback/expiry condition.
-- [ ] A release dry run with test accounts and approved self-owned test media proves that public traffic, real ads, and paid acquisition remain disabled until the clearance approval is recorded.
+- [ ] Independent review traces every item to owner/date/revision/configuration and rollback/expiry condition; no stale checked foundation substitutes for new scope.
+- [ ] Test-data dry run proves public traffic, real purchases/ads, licensed media and paid campaigns remain disabled until their exact applicable clearance.
 
 #### P6-T06 — Launch with controlled rollout and daily command center
 
@@ -1412,89 +1614,42 @@ before the task and checkpoint can close.
 **Acceptance criteria:**
 
 - [ ] Rollout stages, owners, halt thresholds, support coverage, and rollback options are documented.
-- [ ] Approved catalog availability, ads, Firebase DebugView, AdMob earnings versus ads-manager spend, alerts, and budgets are checked immediately before release. Store prices/products and Looker dashboards wait for P7.
+- [ ] Check cleared titles/creatives, actual Google coin products/prices, ad setup, verified finance facts, campaign attribution/spend joins, daily contribution report, alerts and D-017 budget immediately before release. Looker is optional post-MVP.
 - [ ] Paid acquisition begins only within the D-017 approved cap, using traceable creative IDs.
 
 **Validation and integration tests:**
 
 - [ ] Production synthetic journey verifies catalog, free playback, lock, and non-financial health after each rollout stage.
-- [ ] First rewards are manually reconciled end to end. Campaign cohorts and first store purchases wait for P7.
+- [ ] First rewards and store purchases/refunds are manually reconciled end to end; initial campaign cohorts join spend to verified revenue and costs before any spend increase.
 
 ### Checkpoint 6 — MVP launched
 
 - [ ] The Android app is approved and released through Google Play in France.
-- [ ] The provenance-approved self-owned series is available and all other content remains unpublished.
-- [ ] Daily contribution, quality, and funnel reporting is operating (Firebase DebugView and AdMob versus ads-manager spend; Looker is P7).
+- [ ] Approximately 3–5 independently cleared self-owned/licensed series are available; each uncleared title remains unpublished.
+- [ ] Daily cohort contribution, acquisition/commerce, retention, quality and funnel reporting operates from reconciled sources; observed/projection coverage is explicit. Looker remains P7.
 - [ ] Rollout decisions follow documented technical and business guardrails.
 
 ---
 
-### Phase 7 — First phase after MVP launch: IAP, experiments, push, and growth platform
+### Phase 7 — Subscriptions, iOS commerce, experiments and advanced growth tools
 
-Phase 7 is the first phase after ads-only MVP launch. Relocated IAP, warehouse analytics, experiments, MMP, and push tasks keep their original IDs. Existing optimization tasks P7-T01–T04 remain after them and stay post-MVP.
+Phase 7 follows the Android ad-plus-coin MVP. Required Android coin and minimum economics tasks were returned to Phases 3/4 on 2026-09-07. The split tasks below preserve traceability for the remaining Apple/subscription and advanced scope; P7-T01–T04 remain post-MVP. Full MMP remains conditional, not an automatic next purchase.
 
-#### P3-T02 — Implement immutable coin wallet and atomic episode unlock
+#### P3-T03-P7 — Extend store setup to Apple and subscriptions
 
-Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
+**Traceability:** Remainder of original P3-T03; Android consumable products moved to MVP.
 
-**Description:** Build Wallet, immutable CoinLedgerEntry, balance calculation, idempotent debit command, and permanent episode entitlement grant in one transaction.
+**Dependencies:** P3-T03, separately approved iOS phase for Apple, D-009 subscription terms/prices and platform-specific finance/store review.
 
-**Objective:** Prevent double spend and make virtual currency auditable.
+**Acceptance/validation:** Configure Apple coin products and approved subscription groups/entitlements/offerings; verify eligible bank settlement, localized pricing and platform sandbox offerings. No Apple or subscription activation is required for MVP.
 
-**Dependencies:** P3-T01, P2-T01.
+#### P3-T04-P7 — Implement subscription lifecycle and reconciliation
 
-**Acceptance criteria:**
+**Traceability:** Subscription portion of original P3-T04/P3-T09 retained post-MVP.
 
-- [ ] Balance changes only through ledger entries; entries cannot be edited/deleted through normal admin.
-- [ ] Debit and entitlement grant are atomic with row locking and idempotency.
-- [ ] Insufficient balance, duplicate request, and price-change races return deterministic outcomes.
+**Dependencies:** P3-T04, P3-T03-P7, approved D-009 and applicable per-license subscription permissions.
 
-**Validation and integration tests:**
-
-- [ ] Concurrent test submits duplicate and competing unlocks; no negative balance or duplicate charge occurs.
-- [ ] Ledger reconciliation equals wallet balance and each successful debit maps to one entitlement.
-
-#### P3-T03 — Configure store products and RevenueCat environments
-
-Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
-
-**Description:** Define non-production and production product IDs, coin-pack consumables, subscription group/entitlement, offerings, webhook credentials, and product catalog ownership.
-
-**Objective:** Align Apple, Google, RevenueCat, backend, analytics, and UI identifiers.
-
-**Dependencies:** P0-T03 P7 IAP policy slice, P3-T01.
-
-**Acceptance criteria:**
-
-- [ ] Product matrix states type, base price tier, store-localized customer currency behavior, EUR settlement/reconciliation behavior, entitlement effect, and environment.
-- [ ] Sandbox/test products are visible through RevenueCat in both platform builds.
-- [ ] Secrets are environment-specific and stored outside source control.
-
-**Validation and integration tests:**
-
-- [ ] Automated configuration check detects missing/unknown product IDs.
-- [ ] Sandbox devices fetch offerings from Apple and Google paths and display store-provided localized prices for test accounts in at least two currencies per platform; the app and backend never construct the price string.
-
-#### P3-T04 — Implement RevenueCat webhook ingestion and subscription state
-
-Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
-
-**Description:** Verify RevenueCat webhooks, store raw-event references safely, process idempotently, map customer identity, and maintain subscription state including renewal, grace, billing retry, cancellation, expiry, refund, and transfer.
-
-**Objective:** Make server access reflect store lifecycle rather than client claims.
-
-**Dependencies:** P3-T03, P2-T01.
-
-**Acceptance criteria:**
-
-- [ ] Webhook authenticity, replay protection, idempotency, and unknown-user quarantine exist.
-- [ ] Subscription state changes are auditable and playback evaluator consumes them.
-- [ ] Out-of-order and duplicate events converge to the correct current state.
-
-**Validation and integration tests:**
-
-- [ ] Replay recorded sandbox lifecycle events in different orders and verify final state.
-- [ ] Active subscription authorizes a locked episode; expiry/refund removes subscription access but preserves separately unlocked episodes.
+**Acceptance/validation:** Verified renewal/grace/billing-retry/cancel/expiry/refund/transfer state converges under replay/out-of-order events and scheduled reconciliation. Playback honors active subscriptions only within current eligibility; expiry/refund does not erase separate valid coin/ad entitlements. Test both stores only when their client phase is approved.
 
 #### P3-T05 — Implement mobile subscription purchase and restore
 
@@ -1504,7 +1659,7 @@ Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
 
 **Objective:** Allow compliant all-access subscription purchase on both stores.
 
-**Dependencies:** P3-T04, P2-T08.
+**Dependencies:** P3-T04-P7, P2-T08, approved D-009 and applicable platform release.
 
 **Acceptance criteria:**
 
@@ -1517,89 +1672,29 @@ Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
 - [ ] Apple sandbox and Google license-tester purchase, renewal/expiry simulation, cancellation, and restore are executed.
 - [ ] Maestro opens a locked episode, subscribes in test mode, synchronizes, and plays it.
 
-#### P3-T06 — Implement coin-pack purchase fulfillment
+#### P4-T02-P7 — Expand warehouse exports and experiment models
 
-Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
+**Traceability:** Advanced scope split from original P4-T02; minimum cohort/finance/spend models are MVP.
 
-**Description:** Purchase consumable coin packs through RevenueCat/store billing, credit the Django ledger from verified provider events, and handle retries/refunds according to the approved policy.
+**Dependencies:** P4-T02 and the feature/processor approval for each added export.
 
-**Objective:** Sell coins without trusting the device or double-crediting transactions.
+**Acceptance/validation:** Add Crashlytics/Remote Config/experiment/subscription models only as needed, with reviewed region/retention/deletion/cost contracts and synthetic known-outcome reconciliation. Existing financial definitions must not drift.
 
-**Dependencies:** P3-T02, P3-T03, P3-T04.
+#### P4-T03-P7 — Build Looker and advanced dashboards
 
-**Acceptance criteria:**
+**Traceability:** Looker/advanced presentation split from original P4-T03; daily report and required data-quality checks are MVP.
 
-- [ ] One verified store transaction creates at most one ledger credit.
-- [ ] Client cannot choose the credited amount; backend maps known product ID to coins.
-- [ ] Pending, cancelled, duplicate, delayed webhook, refund, and account-transfer cases are defined.
+**Dependencies:** P4-T03, relevant P4-T02-P7 models.
 
-**Validation and integration tests:**
+**Acceptance/validation:** Reproduce existing authoritative daily totals in Looker, add justified filters/experiment views and verify least-privilege access and refresh. No dashboard adoption is needed to begin the capped MVP test.
 
-- [ ] Replay the same purchase/webhook repeatedly and confirm one credit.
-- [ ] Sandbox purchase credits coins, coin unlock debits them, app reinstall restores server balance after login.
+#### P4-T06-P7 — Add advanced deferred deep linking
 
-#### P3-T09 — Add commerce reconciliation and support tools
+**Traceability:** Advanced routing/persistence split from original P4-T06 and historical P4-T06-F1/F2/#113 work. Minimum attribution is MVP; move only a demonstrably necessary subset earlier with a recorded dependency.
 
-Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
+**Dependencies:** P4-T06, explicit privacy/retention and routing requirements.
 
-**Description:** Add scheduled reconciliation, quarantined-event review, safe admin views, compensating adjustments, and a user-facing purchase support identifier.
-
-**Objective:** Operate real money and rewards without direct database edits.
-
-**Dependencies:** P3-T04, P3-T06, P3-T07.
-
-**Acceptance criteria:**
-
-- [ ] Reconciliation detects provider/ledger/subscription mismatches without silently changing money.
-- [ ] Authorized support staff can inspect history and create reasoned compensating entries, never edit history.
-- [ ] Every action is audit logged with actor and reason.
-
-**Validation and integration tests:**
-
-- [ ] Seed missing, duplicate, delayed, refunded, and quarantined events; reconciliation reports expected cases.
-- [ ] Role tests prove normal staff cannot issue adjustments or view sensitive provider payloads.
-
-#### P4-T02 — Link Firebase data to BigQuery and build metric models
-
-Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
-
-**Description:** Export Analytics/Crashlytics/Remote Config data, ingest server commerce/ad facts, and create version-controlled SQL models for funnels, retention, LTV, revenue, and playback quality.
-
-**Objective:** Join behavior and authoritative financial outcomes in one analysis layer.
-
-**Dependencies:** P4-T01, P3-T09.
-
-**Acceptance criteria:**
-
-- [ ] Dataset location, retention, partitioning, access, and cost controls are documented.
-- [ ] Revenue models use verified server facts; client purchase events are diagnostic only.
-- [ ] Definitions exist for net revenue, payer, active subscriber, ad revenue, CAC, LTV, and contribution.
-
-**Validation and integration tests:**
-
-- [ ] Seed a synthetic cohort with known outcomes and verify every metric exactly.
-- [ ] Cost guardrails include partition filters, query limits, and budget alerts.
-
-#### P4-T03 — Build launch dashboards and data-quality monitors
-
-Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
-
-**Description:** Create Looker Studio dashboards for acquisition, content funnel, monetization, retention, playback, and experiment results; add freshness/volume/uniqueness monitors.
-
-**Objective:** Make product and unit-economics decisions observable daily.
-
-**Dependencies:** P4-T02.
-
-**Acceptance criteria:**
-
-- [ ] Dashboard filters include date, country, platform, app version, campaign, creative, series, episode, and experiment.
-- [ ] Revenue and entitlement dashboards trace to authoritative records.
-- [ ] Alerts detect missing exports, event collapse/spikes, duplicate transaction IDs, and broken funnels.
-
-**Validation and integration tests:**
-
-- [ ] Compare dashboard totals with database/provider samples for a controlled day.
-- [ ] Stop a synthetic data feed and verify freshness alert reaches the documented channel.
+**Acceptance/validation:** Test installed/fresh/reinstall/account/consent transitions and safe fallback for expired/ineligible destinations; no raw personal referrers, tracking without approval or eligibility bypass.
 
 #### P4-T04 — Implement Remote Config and experiment safety layer
 
@@ -1626,11 +1721,11 @@ Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
 
 Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
 
-**Description:** Define hypothesis template, primary metric, guardrails, sample-size check, duration, exposure, segmentation, stopping rules, and decision record. Queue free-episode count, offer order, coin price, and paywall copy experiments. Experiment guardrails formerly listed on remaining P0-T01 AC live here (P7), not as an ads-only launch closer.
+**Description:** Define hypothesis template, primary metric, guardrails, sample-size check, duration, exposure, segmentation, stopping rules, and decision record. Queue free-episode count, offer order, coin price, and paywall copy experiments. Remote Config experiment-specific design remains here; D-017 budget/business guardrails are MVP release/spend requirements.
 
 **Objective:** Turn experimentation into a disciplined product process.
 
-**Dependencies:** P4-T03, P4-T04.
+**Dependencies:** P4-T03-P7, P4-T04.
 
 **Acceptance criteria:**
 
@@ -1643,15 +1738,15 @@ Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
 - [ ] Run an A/A or internal-only experiment to validate assignment and exposure joins.
 - [ ] Reproduce experiment totals between Firebase and BigQuery within an explained tolerance.
 
-#### P4-T07 — Decide and integrate an MMP at the paid-acquisition gate
+#### P4-T07 — Decide and integrate an MMP when attribution justifies it
 
-Deferred from MVP 2026-08-27 (issue #52); task ID unchanged.
+Conditional under D-018: retain post-MVP unless initial approved spend or attribution ambiguity makes it necessary. Never require a full MMP automatically. Prior blanket deferral (issue #52) superseded 2026-09-07.
 
-**Description:** Before material ad spend, compare native attribution with Adjust/AppsFlyer or another approved MMP on required networks, SKAN/AdAttributionKit, fraud controls, cost, privacy, raw export, and BigQuery integration.
+**Description:** Before material ad spend, compare native attribution with Adjust/AppsFlyer or another approved MMP on required networks, Android attribution (Apple SKAN/AdAttributionKit only with later iOS), fraud controls, cost, privacy, raw export, and BigQuery integration.
 
 **Objective:** Buy reliable attribution only when its value exceeds cost and native limitations.
 
-**Dependencies:** P4-T03, P4-T06.
+**Dependencies:** P4-T03, P4-T06, D-018 explicit adoption/cost decision and D-020 privacy approval before integration.
 
 **Acceptance criteria:**
 
@@ -1834,28 +1929,29 @@ The backend is intentionally client-neutral. Do not start this phase until mobil
 - **Backend integration tests:** PostgreSQL transactions/locks, API auth, migrations, tasks, provider adapters.
 - **Mobile unit/component tests:** state, rendering, analytics triggers, paywall branches, offline/error handling.
 - **Contract tests:** generated OpenAPI client against Django and provider webhook fixtures.
-- **Device E2E:** Maestro on Android and iOS development/release candidates.
-- **Cloud smoke tests:** real staging Firebase, Supabase, Cloud Run, Bunny Stream (or GCS/CDN/Transcoder if the fallback is active), and AdMob test ads. RevenueCat sandbox waits for P7.
+- **Device E2E:** Maestro on Android development/release candidates; iOS is post-MVP. Follow CONTRIBUTING.md: one test at the highest level that catches a behavior, without duplicating client/screen/smoke coverage.
+- **Cloud smoke tests:** real staging Firebase, Supabase, Cloud Run, Bunny Stream (or GCS/CDN/Transcoder if the fallback is active), and AdMob test ads. Google Play/RevenueCat license-tester sandbox is required for MVP.
 - **Security tests:** authorization matrix, webhook forgery/replay, rate limits, dependency/container scans, OWASP checklist.
 - **Performance tests:** API load, playback authorization latency, catalog response, database concurrency, HLS startup/rebuffer.
 - **Recovery tests:** database restore, deploy rollback, key rotation, provider event replay/reconciliation.
 
 ### Required MVP release regression journeys
 
-1. Anonymous app open → series → free episode → progress/resume.
-2. Sign up at locked episode → continue same journey.
-3. Rewarded ad → verified entitlement → playback.
-4. Offline/network-loss cases during free playback and rewarded-ad unlock.
-5. Account deletion removes/anonymizes data and detaches tokens.
-6. Rights takedown immediately removes catalog/playback access.
+1. Bounded campaign/creative → Google Play install/first open → deduplicated acquisition cohort → eligible series → free episode → progress/resume.
+2. Locked episode → login/return → configured ad-only, coin-only or both options, honoring current per-license permission.
+3. Opt-in test ad → genuine SSV → one entitlement → fresh playback authorization; no mid-episode interruption.
+4. Google coin pack → verified completed purchase → one credit → atomic coin debit/entitlement → playback.
+5. Cancel/pending/offline/callback delay → retry/reconcile; replay/competing unlock/price change/takedown never causes false or double fulfillment.
+6. Reinstall/second Android device → server balance/entitlements; refund/chargeback including spent coins → approved compensating policy and reconciled state.
+7. Consent withdrawal/account replacement/deletion → no tracking leakage, proper processor cleanup and approved financial retention; late events cannot recreate/transfer a deleted account's funds.
+8. Rights expiry/takedown/missing grant/unsupported DRM/spoofed market → catalog/playback/monetized grants fail closed, including previously entitled content.
+9. Known cohort spend → ad/IAP/refund/ledger facts → content/infra costs → daily report; duplicate/late/missing data, currency conversion and immature D1/D7/D30 remain explicit.
 
-### Required P7 regression journeys (deferred from MVP 2026-08-27)
+### Required post-MVP regression journeys
 
-4. Coin pack purchase → verified credit → atomic debit → playback.
-5. Subscription purchase → server sync → catalog access → expiry/refund behavior.
-6. Restore on second device.
-7. Offline/network-loss cases during every IAP monetization path.
-8. Push opens eligible series/episode; expired content falls back safely.
+- Subscription purchase/renewal/grace/expiry/refund/restore with separately approved license permissions.
+- Apple purchase and second-device restore only with later iOS implementation/release.
+- Push/deferred-link routing and experiments after their adoption, preserving eligibility and consent.
 
 ### Test data rules
 
@@ -1905,8 +2001,8 @@ The backend is intentionally client-neutral. Do not start this phase until mobil
 Use three logical environments:
 
 - **Local:** Docker PostgreSQL, Firebase emulators/mocks where practical, provider fakes, and self-owned/generated test video. Local bootstrap and its automated checks require no real cloud, store, advertising, payout, or organization-account credentials.
-- **Staging:** isolated real cloud integrations, AdMob test units, approved self-owned/generated test media, and synthetic licensed-right metadata. RevenueCat sandbox/store testers wait for P7.
-- **Production:** isolated paid database, real ad units (public-release gate), only independently cleared self-owned or licensed series, strict access and audit. Real store products wait for P7 IAP.
+- **Staging:** isolated real cloud integrations, AdMob test units, approved self-owned/generated test media, and synthetic licensed-right metadata. Google Play/RevenueCat license testers are part of MVP commerce validation.
+- **Production:** isolated paid database, real ad units (public-release gate), only independently cleared self-owned or licensed series, strict access and audit. Real Google coin products remain disabled until applicable MVP commercial clearance; Apple/subscriptions remain post-MVP.
 
 Configuration categories:
 
@@ -1924,67 +2020,48 @@ Include `.env.example` with names and descriptions but no usable values.
 | Risk | Impact | Mitigation / decision gate |
 |---|---|---|
 | A series includes an asset without clear ownership, licensed scope, or promotional permission | Critical | Private provenance/rights package plus per-series publication gate; DRM-required grants fail closed |
-| LTV does not exceed CAC | Critical | Ads-only test on one series with capped acquisition. A miss means ads cannot carry UA — **not** that microdrama or P7 IAP is dead. Explicit stop/cap on ads spend; next test is P7 IAP. |
+| LTV does not exceed CAC | Critical | Capped ad-plus-coin acquisition test across approximately 3–5 titles; reconciled contribution including content share/infra, measured retention and explicit LTV projection. D-017 defines spend/business stop/go guardrails. |
 | CDN egress destroys contribution margin | High | Watch-hour cost model, adaptive bitrates, caching, regional measurement, provider negotiation/abstraction |
-| Store rejection or policy change | High | Ads-only MVP listings; store billing by default when P7 IAP ships; transparent disclosures; policy matrix reviewed before every submission |
+| Store rejection or policy change | High | Google coin and rewarded-ad MVP listings/disclosures; store billing by default, current matrix reviewed before each submission |
 | Fraudulent reward grants | High | Verified SSV, unused intent, authentic callback, idempotency, replay protection, anomaly detection |
-| Fraudulent coin/IAP grants | High | P7: server ledger, verified webhooks, idempotency, replay protection, anomaly detection |
+| Fraudulent coin/IAP grants | High | MVP server ledger, verified lifecycle/webhooks, atomicity/idempotency, replay protection and reconciliation |
 | Free database pauses or lacks recovery | High | Free only for development/early staging; paid production with backups/PITR |
-| Expo native-module incompatibility | High | Development-build spike for video, Firebase, and AdMob before UI expansion; RevenueCat spike before P7 IAP |
-| Attribution is too weak for growth decisions | High | Do not run paid acquisition in MVP; implement the P7 attribution gate before spend (D-017/D-018) |
-| Analytics numbers conflict | High | Server reward facts in MVP; P7 adds warehouse models, metric contracts, synthetic cohorts, reconciliation/data-quality alerts |
+| Expo native-module incompatibility | High | Development-build spike for video, Firebase, and AdMob before UI expansion; RevenueCat Android spike before MVP coin beta |
+| Attribution is too weak for growth decisions | High | Validate minimum attribution/spend/outcome joins before capped MVP spend (D-017); D-018 MMP only when justified |
+| Analytics numbers conflict | High | MVP backend/store/ad facts, minimum SQL models, synthetic cohorts and reconciliation/data-quality checks; client Analytics is diagnostic |
 | Signed URLs are shared | Medium | Short TTL/prefix access, private origin, abuse monitoring; DRM/provider if contracts or leakage demand it |
-| Webhooks arrive late/out of order | High | P7 IAP: immutable events, idempotent state reducers, reconciliation, quarantine, support tooling. MVP ads use SSV replay protection. |
+| Webhooks arrive late/out of order | High | MVP coin lifecycle: immutable events, idempotent reducers, reconciliation/quarantine/support; AdMob SSV replay protection remains. |
 | Small team operational overload | High | Managed services, modular monolith, runbooks, alerts with owners, no premature infrastructure |
 | Privacy/SDK overcollection | High | Data inventory, consent, minimization, SDK review, deletion propagation, store declaration audit |
 | Vendor lock-in | Medium | Standard PostgreSQL, provider adapters, OpenAPI, exportable analytics, ADR thresholds |
-| Catalog is too small for retention | Medium | Validate acquisition/monetization first, then expand only evidence-backed genres |
+| Catalog is too small for retention | Medium | Start with approximately 3–5 independently approved series and one defined audience; expand on series/cohort evidence |
 
 ---
 
 ## 13. Decisions Required for Coding vs. Public Release
 
-### Required before coding the affected behavior
+### Approved directions (2026-09-07)
 
-These do not all block Phase 1. Resolve each before implementing the feature that depends on it:
+Contribution LTV/CAC business hypothesis (D-032); Android/France/English launch configuration (D-001/D-002/D-023/D-027/D-034); approximately 3–5 independent titles and preferred €0 upfront/MG revenue-share/non-exclusive licensing (D-004/D-033); configured free/ad/coin/both access (D-006/D-007); Android coin architecture/timing (D-008/D-015); required MVP measurement/acquisition (D-016); and full free/ad/coin/paid-promotion licensed admission (D-031). No real commercial values or release activation are implied.
 
-- Product/app name, visual brand, and repository organization owner before final branded UI/assets.
-- Initial series/free-episode baseline and guest-to-account conversion point before their catalog/auth UX behavior. D-004–D-007 approved 2026-08-27.
-- Rewarded-ad grant model before P3-T07 (approved 2026-08-27, D-007).
-- Coin pack sizes, episode prices, subscription period/price, and trial choice before **P7 IAP**, not before MVP ads.
-- Data residency and retention behavior before production-shaped retention/deletion automation.
-- Technical DRM/provider choice only before admitting a grant that requires DRM or if measured leakage justifies it; DRM-required titles remain ineligible meanwhile.
+### Open founder/business decisions
 
-### Required before public release (ads-only MVP)
+- One precise target audience and content/creative fit (D-035), provisional rating/content direction (D-003), actual cleared titles/private commercial agreements.
+- D-008 coin pack sizes/prices, episode costs, final consumer terms and refund/chargeback handling including spent coins. Generic configurable implementation uses synthetic values; commercial product configuration waits for approval.
+- D-017 capped paid budget, test period/allocation, business guardrails, attribution sufficiency criteria, review date/owners. No spend until approved; no universal LTV:CAC ratio invented.
 
-These are deferred from the Phase 1 coding path but remain hard ads-only release gates. They do **not** include P7 IAP, store EUR settlement, Looker/BigQuery models, Remote Config A/B, push, or MMP adoption:
+### Required release/provider/legal work
 
-- French entity legal name and form, incorporation, registered address, D-U-N-S where required, tax/organization enrollment data, and store-account countries.
-- Actual public operator identity and monitored privacy contact, published notice/UMP setup, and genuine rewarded-ad release validation (#98, D-028). These do not block MVP coding or PR #97; required consent setup still precedes any publisher-owned ad test.
-- France-specific GDPR/privacy, consumer/tax/language requirements, age rating, allowed content categories, Google Play declarations, and consent behavior for the exact Android binary.
-- Private ownership/component provenance or licensed-rights package, promotional-use approval, and contract-compatible media protection for every candidate series. Public contract/rate storage and automated royalty accounting remain out of scope.
-- AdMob production configuration before real advertising.
-- Initial acquisition budget (D-017), support owners, incident-response owners, ads-only launch guardrails, and stop/go review date. D-017 remains **Decision required** until the founder approves it.
+- French entity and Google organization/merchant/AdMob setup (D-024/D-025), Google IAP finance/tax/refund treatment and EUR settlement (D-022); actual public operator/contact/notice/UMP and genuine provider evidence (#98/D-028).
+- Per-series private rights/provenance and media acceptance, license-compatible free/ad/coin/paid creatives, territory/language/window/takedown/exclusivity/reporting/protection (D-019/D-031).
+- France legal/privacy/store/rating review for actual binary/data flows; D-020 residency/retention/deletion, RevenueCat and minimal attribution/warehouse processors and financial audit retention.
+- Completed Android purchase/refund/reconciliation, security/entitlement and minimum cohort-economics evidence. D-029 never defers financial or protected-data safeguards; unchecked release checks stay blockers.
 
-### Required before Phase 7 IAP / growth platform (not ads-only launch)
+### Conditional or post-MVP decisions
 
-- Verified Apple bank-account currency and Google payments profile/bank configuration for **store IAP** EUR settlement.
-- Coin pack sizes, subscription period/price, IAP disclosures, and restore/sync policy (D-008/D-009 remain Proposed).
-- MMP adoption threshold (D-018) before P4-T07 / material MMP. D-018 remains **Decision required**; it is not an ads-only public-release gate.
+D-018 MMP spend/ambiguity/adoption threshold stays open and conditional; do not block a reliably attributed small test on buying an MMP. If initial attribution is insufficient, hold spend and resolve scope/measurement, requesting adoption only when justified. D-009 subscription terms/prices and Apple/iOS banking/store work remain post-MVP. Looker, push, Remote Config experiments and advanced deferred links remain deferred.
 
-No public production activation, traffic promotion, France Google Play distribution, paid acquisition, or real advertising may be enabled until every applicable **ads-only** Public Release Readiness gate is approved and verified. Each licensed series additionally requires its private D-031 package before ingestion/publication. Real purchase/subscription stays disabled until the Phase 7 IAP gates pass. Isolated production-candidate provisioning and synthetic/test-data validation remain permitted under P5-T08.
-
-Already approved by the founder:
-
-- The MVP user interface is in English.
-- The English-language catalog may contain multiple independently approved self-owned or licensed series (D-004/D-023/D-031, updated 2026-09-02).
-- Guest browse/watch free episodes anonymously; login required before rewarded-ad unlock (D-005, 2026-08-27).
-- Initial free window is the first five episodes, hardcoded / admin-configured (D-006, 2026-08-27).
-- One verified rewarded ad permanently unlocks one episode; this is the only MVP monetization path (D-007, 2026-08-27).
-- Decision D-001 defines the approved MVP distribution scope as France only through Google Play (narrowed 2026-09-01).
-- France is the intended legal-entity country; incorporation and legal/finance validation remain pending.
-- Customer monetary prices use the localized currency and price string supplied by the active App Store or Google Play storefront (applies when P7 IAP ships).
-- EUR is the company reporting currency and desired payout currency; actual settlement depends on eligible store-account, payments-profile, legal-entity, and bank configuration.
+No public production activation, real purchases/ads, paid spend, Google Play distribution or licensed-media publication before its applicable exact-candidate clearance. Isolated P5-T08 test-data validation may proceed earlier.
 
 ---
 
@@ -2005,7 +2082,7 @@ The accepted technical baseline permits this sequence now; Public Release Readin
 11. P2-T06/P2-T07 (M each) — Exercise ingestion and playback authorization with provider fakes and non-production credentials only where a smoke test requires them.
 12. P2-T08 (M) — Complete anonymous discovery-to-free-play, progress, resume, and autoplay.
 
-Do not start rewarded ads until Checkpoint 2 passes. Coins and subscriptions wait for P7.
+Historical foundation sequence retained above. The next development phase follows the amendment dependency table: launch/domain configuration, configured access, Android coins, reconciliation and cohort economics before P6 clearance. Subscriptions remain P7.
 
 ---
 
@@ -2037,7 +2114,7 @@ These are primary sources used to validate changeable decisions. Recheck them at
 - GCP Workload Identity Federation for deployment pipelines: https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines
 - OWASP Mobile Application Security/MASVS: https://owasp.org/www-project-mobile-app-security/ and https://mas.owasp.org/MASVS/
 
-### Current cost/policy assumptions reviewed on 2026-08-23
+### Historical cost/policy assumptions reviewed on 2026-08-23 (revalidate before use)
 
 - Supabase Free is appropriate for prototypes but can pause after inactivity and lacks production-grade backup/SLA features; public production should be paid.
 - Cloud Run has an always-free allowance, but network and dependent services can still incur costs.
@@ -2047,42 +2124,37 @@ These are primary sources used to validate changeable decisions. Recheck them at
 - Firebase Analytics, A/B Testing, Crashlytics, and several engagement tools have no-cost allowances, but quotas/pricing can change; Remote Config pricing changes begin in September 2026.
 - Apple and Google generally require their purchase systems for in-app digital content and virtual currency, subject to evolving regional programs and legal exceptions. The conservative default is store billing.
 - Customer price currency and developer payout currency are separate: storefronts localize customer prices, while Apple pays in the configured bank-account currency and Google pays in the payments-profile currency. The business target is EUR settlement, subject to account and bank eligibility.
-- RevenueCat and AdMob require native modules, so Expo development builds are required. AdMob is an MVP beta requirement; RevenueCat is required before P7 IAP.
+- RevenueCat and AdMob require native modules, so Expo development builds are required. AdMob and Android RevenueCat/Google license-tester purchase evidence are MVP beta requirements; Apple/subscriptions remain post-MVP.
 - Rewarded ads are user-initiated exchanges for a stated reward; production rewards should use provider verification and idempotent server grants.
 
 ---
 
 ## 16. Public Release Readiness and Final MVP Completion Checklist
 
-This is a hard publication gate, not a prerequisite for development or isolated production-candidate validation. Until every applicable **ads-only** item is independently verified, production-candidate environments remain isolated and must not enable public traffic, France Google Play distribution, paid acquisition, or real advertising. Licensed media additionally remains unpublished until its per-series D-031 clearance passes. Real purchase/subscription stays off until the Phase 7 checklist passes.
+This is a hard commercial/publication gate, not permission to activate from a documentation change. Production candidates remain isolated until every applicable item has exact-revision, catalog, environment and configuration evidence. Licensed ingestion/publication and paid creative use additionally require per-title private clearance. Historical completed foundations do not satisfy newly added scope.
 
-### Ads-only MVP launch
+### Android ad-plus-coin MVP and capped acquisition validation
 
-When every item in this subsection is satisfied, the platform is suitable for ads-only real-market validation (rewarded-ad LTV versus capped UA). It does **not** wait on P7 coin/IAP/subscription, BigQuery/Looker models, Remote Config A/B, MMP, or push.
+- [ ] Product hypothesis, one audience, approximately 3–5 cleared titles, configured access and full free/ad/coin/paid-promotion rights approved; private contracts/rates/suppliers/media remain outside Git.
+- [ ] D-008 commercial sizes/prices/episode costs, terms and refund/chargeback policy approved; D-017 budget, test period, business/attribution guardrails, owners and stop/go review approved before spend.
+- [ ] French entity/registration/Google Play/RevenueCat/AdMob production setup, Google IAP finance/tax/EUR settlement and public notices/contact reviewed.
+- [ ] P6-T05A independently clears exact Android revision, France/English/one-audience configuration, catalog/creatives and environment.
+- [ ] Public repository/CI/security gates pass; no secrets/private/licensed assets or provider payloads in evidence.
+- [ ] Generalized rights/market/language/segment domain supports future configuration; MVP active scope remains narrow and client input cannot widen eligibility.
+- [ ] Admin/catalog/ingestion, Firebase password/Google auth/deletion, Bunny HLS authorization, free viewing/progress and takedown operate safely.
+- [ ] Per-episode free/ad/coin/both policy and licensed permission intersection are verified at offers, grant/debit and playback.
+- [ ] AdMob intent/SSV path is idempotent and genuine provider→entitlement→Android evidence passes #98/D-028.
+- [ ] Google coins: verified purchase lifecycle, immutable ledger, atomic debit/entitlement, persistent balance, refunds/chargebacks, interrupted/replayed events, reconciliation and support pass. No financial integrity deferral.
+- [ ] Typed commerce/product events and consent/identity/deletion controls pass; D-020 and actual Google Data safety/processor/retention declarations match binary and exports.
+- [ ] Minimum reliable cohort attribution and spend imports join authoritative ad/IAP/refund and private content/infra costs; BigQuery SQL and daily report reproduce known outcomes. CAC, D1/D7/D30, ARPPU, ad/IAP/blended revenue and observed/projected contribution LTV:CAC expose maturity/coverage/unknowns.
+- [ ] Staging/production IaC, secrets/rotation, backups/recovery, observability, incident/support, accessibility, Android device/regression and sandbox beta checks pass, including all permitted D-029 deferrals.
+- [ ] Controlled rollout, campaign/creative permissions and daily business/quality review operate within D-017; pause unreliable measurement or breached guardrails before further spend.
 
-- [ ] Product, per-series provenance/licensed-rights, ads/privacy/deletion policy, architecture, and ads-path cost decisions approved. IAP/coin/subscription/EUR-settlement policy remains P7.
-- [ ] P6-T05A Public Release Clearance is independently approved for the exact ads-only Android revision, per-series-cleared catalog, France configuration, and production environment.
-- [ ] Public protected monorepo and full CI operational, with no secrets, licensed media, or confidential contracts committed.
-- [ ] Self-owned/licensed catalog, publication/takedown controls, and Django Admin operational.
-- [ ] Firebase auth and account deletion operational.
-- [ ] Bunny Stream HLS pipeline and tokenized playback operational (GCP Cloud CDN fallback documented and unused unless activated).
-- [ ] Vertical player, progress, and free episode journey operational.
-- [ ] Rewarded-ad intent, SSV, and ad-grant entitlements operational (MVP ads path).
-- [ ] MVP reward path is server-verified, idempotent, and supportable; #98 provides genuine provider/device evidence, operator/privacy setup and production approval (D-028).
-- [ ] Thin Firebase Analytics events operational in Firebase DebugView; no campaign attribution is required for MVP.
-- [ ] Staging/production IaC, secure CI/CD, backups, observability, security controls, and runbooks operational.
-- [ ] Accessibility, localization, regression matrix, beta, and ads-only store compliance complete.
-- [ ] Every launch series and its promotional assets pass the applicable provenance/licensed-rights, age/content, and promotional-use review.
-- [ ] Controlled rollout and daily ads-only unit-economics review are ready.
+### Retained post-MVP work
 
-### Phase 7 — IAP, warehouse analytics, experiments, MMP, and push
-
-These items keep their original task IDs. They are the first post-MVP phase. Completing them is **not** required before ads-only market validation.
-
-- [ ] Coin ledger/unlock, store coin packs, subscription, and restore operational.
-- [ ] Full IAP commerce reconciliation operational.
-- [ ] Store IAP EUR settlement, IAP disclosures, and restore/sync policy approved (D-008/D-009 remain Proposed until then).
-- [ ] BigQuery models, Looker dashboards, Remote Config experiments, and push operational.
-- [ ] MMP adopted or explicitly declined at the D-018 spend/ambiguity threshold (P4-T07). D-018 stays Decision required until that gate.
+- [ ] Subscription products/state/purchase/restore/reconciliation and license permissions (D-009, P3-T03-P7/P3-T04-P7/P3-T05).
+- [ ] Apple/iOS implementation, device evidence, banking/store setup and commerce.
+- [ ] Expanded warehouse exports, Looker dashboards, Remote Config experiments, push and advanced deferred links (P4 split tasks).
+- [ ] Conditional MMP decision/integration when D-018 spend or ambiguity justifies it; no automatic MVP adoption.
 
 The platform is not yet a studio, distributor, consumer web service, or mature recommendation platform; those expansions depend on evidence from the mobile acquisition and monetization loop.

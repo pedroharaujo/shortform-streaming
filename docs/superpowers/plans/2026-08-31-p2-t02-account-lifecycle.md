@@ -1,5 +1,8 @@
 # P2-T02 — Account lifecycle, preferences, and deletion
 
+> Historical implementation record. Any exclusive-ad MVP timing is superseded by D-007/D-008/D-015/D-016 on 2026-09-07. Android-only scope remains; new coin financial retention and attribution cleanup must be integrated under the main plan before shipping.
+
+
 ## Scope and repository assessment
 
 Baseline: `1af3c44` on main; GitHub had no open PRs or issues on 2026-08-31.
