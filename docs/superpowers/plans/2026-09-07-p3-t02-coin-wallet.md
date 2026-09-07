@@ -61,7 +61,7 @@ requires DEBUG and COIN_SPENDING_MODE=test. Both HTTP views require Firebase aut
   and P3-T08-F2 without claiming provider/UI completion.
 - [x] Run `pnpm check`, `pnpm mobile:bundle:check`, secret history scan and
   `git diff --check`. Record exact commands/results and limitations in PR.
-- [ ] Publish one P3-T02 PR and inspect its required CI. Leave merging to founder.
+- [x] Publish one P3-T02 PR and inspect its required CI. Leave merging to founder.
 ## Execution evidence
 
 Issue #141; PR #143; dependent store/purchase/UI work tracked in #142.
