@@ -4,6 +4,7 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -290,6 +291,14 @@ class SeriesTranslation(models.Model):  # noqa: DJ008
         ordering = ("language",)
 
 
+class EpisodeAccessMode(models.TextChoices):
+    INHERIT = "inherit", "Series defaults"
+    FREE = "free", "Free"
+    REWARDED_AD = "rewarded_ad", "Rewarded ad"
+    COIN = "coin", "Coin"
+    BOTH = "both", "Rewarded ad or coin"
+
+
 class Episode(models.Model):
     """English episode metadata; playback still requires a ready provider asset."""
 
@@ -297,6 +306,13 @@ class Episode(models.Model):
     series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name="episodes")
     season = models.ForeignKey(Season, on_delete=models.CASCADE, related_name="episodes")
     order = models.PositiveIntegerField(help_text="1-based order unique within the season.")
+    access_mode = models.CharField(
+        max_length=16,
+        choices=EpisodeAccessMode.choices,
+        default=EpisodeAccessMode.INHERIT,
+        db_default=EpisodeAccessMode.INHERIT,
+    )
+    coin_price = models.PositiveIntegerField(null=True, blank=True)
     title = models.CharField(max_length=200, blank=True, default="")
     synopsis = models.TextField(blank=True, default="")
     duration_seconds = models.PositiveIntegerField(default=0)
@@ -321,6 +337,13 @@ class Episode(models.Model):
 
     class Meta:
         constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(access_mode__in=["coin", "both"], coin_price__isnull=False, coin_price__gt=0)
+                    | Q(access_mode__in=["inherit", "free", "rewarded_ad"], coin_price__isnull=True)
+                ),
+                name="catalog_episode_access_price_valid",
+            ),
             models.UniqueConstraint(
                 fields=("season", "order"),
                 name="catalog_episode_unique_season_order",
@@ -348,6 +371,13 @@ class Episode(models.Model):
 
     def clean(self) -> None:
         super().clean()
+        if self.access_mode not in EpisodeAccessMode.values:
+            raise ValidationError({"access_mode": "Select a supported episode access mode."})
+        if self.access_mode in (EpisodeAccessMode.COIN, EpisodeAccessMode.BOTH):
+            if self.coin_price is None or self.coin_price < 1:
+                raise ValidationError({"coin_price": "Coin access requires a positive price."})
+        elif self.coin_price is not None:
+            raise ValidationError({"coin_price": "Only coin access can specify a price."})
         if self.season_id and self.series_id and self.season.series_id != self.series_id:
             raise ValidationError({"season": "Season must belong to the same series."})
         if self.season_id and not self.series_id:
@@ -385,6 +415,21 @@ class Episode(models.Model):
         from apps.playback.models import MediaAssetState
 
         return self.media_assets.filter(state=MediaAssetState.READY).exists()
+
+
+class EditorialAccessRevision(models.Model):  # noqa: DJ008
+    """Bounded operator configuration history, separate from financial evidence."""
+
+    series = models.ForeignKey(Series, null=True, on_delete=models.SET_NULL)
+    episode = models.ForeignKey(Episode, null=True, blank=True, on_delete=models.SET_NULL)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    before = models.JSONField(default=dict)
+    after = models.JSONField(default=dict)
+    policy_version = models.CharField(max_length=64, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at", "-pk")
 
 
 class EpisodeTranslation(models.Model):  # noqa: DJ008

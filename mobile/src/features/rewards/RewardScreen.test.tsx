@@ -102,6 +102,8 @@ async function setup(
         data: {
           decision: 'locked',
           episode_id: 'ep_synthetic',
+          policy_version: 'a'.repeat(64),
+          coin_price: null,
           lock_reasons: ['entitlement_required'],
           methods: [
             { type: 'rewarded_ad', title: 'Watch an ad', description: INTENT.reward_description },
@@ -330,6 +332,8 @@ const GRANTED_ACCESS = {
   data: {
     decision: 'granted' as const,
     episode_id: 'ep_synthetic',
+    policy_version: 'a'.repeat(64),
+    coin_price: null,
     methods: [
       { type: 'entitlement' as const, title: 'Unlocked', description: 'Already unlocked.' },
     ],
@@ -348,6 +352,8 @@ it.each(['unreachable', 'no-method', 'mismatched'] as const)(
               data: {
                 decision: 'locked',
                 episode_id: failure === 'mismatched' ? 'ep_other' : 'ep_synthetic',
+                policy_version: 'a'.repeat(64),
+                coin_price: null,
                 lock_reasons: ['entitlement_required'],
                 methods:
                   failure === 'mismatched'
@@ -509,6 +515,8 @@ it.each(['locked', 'unreachable', 'mismatched'] as const)(
                 decision: 'locked',
                 episode_id: 'ep_synthetic',
                 lock_reasons: ['entitlement_required'],
+                policy_version: 'a'.repeat(64),
+                coin_price: null,
                 methods: [],
               },
             },

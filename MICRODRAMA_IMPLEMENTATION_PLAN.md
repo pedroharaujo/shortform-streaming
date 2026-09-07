@@ -46,11 +46,12 @@ D-032 changes the MVP business hypothesis to contribution LTV versus CAC. D-007/
 
 Dependency order for the next development phase: P2-T03-F3 → P3-T01-F1 → P3-T02 and P3-T03 → P3-T04 → P3-T06 → P3-T08-F2/P3-T09. Then P4-T01-F5 and P4-T06 feed P4-T02 → P4-T03 → P6-T03/T04/T05/T05A → capped launch. Independent foundational work may proceed in parallel; product prices, private license approvals, privacy and D-017 spend approval remain gates for their dependent production behavior. No extra worktrees are required.
 
-P2-T03-F3 implementation and automated acceptance are complete in its feature
-branch (2026-09-07); see the task evidence below. After that PR is approved and
-merged, the next task is P3-T01-F1: editorial choices for each episode's free,
-rewarded-ad, or coin access. Commercial prices and production activation remain
-separate approvals.
+P2-T03-F3 merged in PR #139. P3-T01-F1 implementation, automated acceptance and
+independent review are complete in [PR #140](https://github.com/pedroharaujo/shortform-streaming/pull/140)
+(2026-09-07); see the task evidence below. After its PR is approved and merged, the next task is P3-T02:
+an auditable coin wallet and an atomic episode unlock. P3-T03 product configuration
+can proceed separately in parallel. Commercial prices and production activation
+remain separate approvals.
 
 ### Definition of Done for Every Task
 
@@ -898,13 +899,33 @@ Evidence updated 2026-09-02: `GET /v1/offers/{episode_id}` reads `Series.free_ep
 
 **Acceptance criteria:**
 
-- [ ] Eligibility precedes entitlement/free access; locked offers intersect configured methods, current license permissions and enabled provider capability. Server controls coin price and policy version; unavailable methods stay disabled/fail-closed.
-- [ ] Existing ad-only behavior migrates safely; per-episode overrides support free/ad/coin/both and licensed permission changes take effect at offer and grant/debit time.
-- [ ] Admin edits are authorized/auditable and cannot silently grant missing rights; existing grants never bypass takedown or expiry.
+- [x] Eligibility precedes entitlement/free access; locked offers intersect configured methods, current license permissions and enabled provider capability. Server controls coin price and policy version; unavailable methods stay disabled/fail-closed.
+- [x] Existing ad-only behavior migrates safely; per-episode overrides support free/ad/coin/both and licensed permission changes take effect at offer and grant/debit time.
+- [x] Admin edits are authorized/auditable and cannot silently grant missing rights; existing grants never bypass takedown or expiry.
 
 **Validation and integration tests:**
 
-- [ ] One backend decision table covers all methods, anonymous/login boundary, invalid grants, stale price/policy, takedown/expiry races and disabled provider paths. Test schema/data migration and generated client together; no duplicate screen tests for the same policy outcome.
+- [x] One backend decision table covers all methods, anonymous/login boundary, invalid grants, stale price/policy, takedown/expiry races and disabled provider paths. Test schema/data migration and generated client together; no duplicate screen tests for the same policy outcome.
+
+Implementation evidence (2026-09-07, feature branch): per-episode overrides,
+server-owned price/version, bounded Admin history, and version-bound reward
+intents are implemented. PostgreSQL transaction tests cover current rights/policy
+changes, expiry while waiting, and Admin segment mutation at grant commit. Existing
+segment identifiers cannot be renamed or deleted through Admin. Additive migrations
+also verify inserts from historical models after expansion. Coin methods remain
+unavailable until the P3-T02 debit service and P3-T08-F2 offer flow are implemented;
+this task neither debits coins nor activates commerce.
+
+`pnpm check` passed before the final Admin correction (351 backend tests, 177 mobile
+tests, 50 repository tests, contract and static checks); the complete affected
+`pnpm backend:check` then passed with 355 tests. Expo Doctor passed 21/21 and the
+Android production JavaScript bundle passed. Independent task reviews and the
+final whole-branch review passed after corrections. See
+[`docs/runbooks/access-policy.md`](docs/runbooks/access-policy.md) and the
+[execution evidence](docs/superpowers/plans/2026-09-07-p3-t01-f1-episode-access.md).
+Final-head GitHub check evidence is recorded in
+[PR #140](https://github.com/pedroharaujo/shortform-streaming/pull/140).
+Human approval is required before merge.
 
 #### P3-T02 — Implement immutable coin wallet and atomic episode unlock
 

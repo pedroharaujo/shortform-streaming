@@ -193,17 +193,22 @@ def test_provider_failure_is_only_reached_after_a_grant(client: Client) -> None:
 
 
 @pytest.mark.django_db
-def test_series_free_count_is_the_only_access_policy(
-    client: Client, fake_provider: FakeVideoProvider
+@pytest.mark.parametrize("override", ["inherit", "coin"])
+def test_series_defaults_and_episode_overrides_are_server_owned(
+    client: Client, fake_provider: FakeVideoProvider, override: str
 ) -> None:
     series, episode = _episode(4)
     _seed(fake_provider, episode)
-    series.free_episode_count = 3
+    series.free_episode_count = 3 if override == "inherit" else 5
     series.save(update_fields=["free_episode_count"])
+    if override == "coin":
+        episode.access_mode = "coin"
+        episode.coin_price = 7
+        episode.save(update_fields=["access_mode", "coin_price"])
 
     response = client.post(
         AUTHORIZE.format(episode_id=episode.public_id),
-        data='{"free_episode_count": 10}',
+        data='{"free_episode_count": 10, "access_mode": "free", "coin_price": 0}',
         content_type="application/json",
     )
 
