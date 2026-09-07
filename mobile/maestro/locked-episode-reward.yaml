@@ -13,7 +13,11 @@ appId: com.shortformstreaming.app
     visible:
       id: player-locked
     timeout: 20000
-- tapOn: View episode reward
+- tapOn: View episode options
+- extendedWaitUntil:
+    visible: Watch an ad
+    timeout: 15000
+- tapOn: Watch an ad
 - extendedWaitUntil:
     visible: Watch test ad
     timeout: 15000

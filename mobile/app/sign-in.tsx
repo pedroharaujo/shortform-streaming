@@ -25,7 +25,7 @@ export default function SignInRoute(): JSX.Element {
       meClient={meClient}
       onFinished={() => {
         if (returnEpisode) {
-          router.replace({ pathname: '/reward/[id]', params: { id: returnEpisode } });
+          router.dismissTo({ pathname: '/unlock/[id]', params: { id: returnEpisode } });
           return;
         }
         if (router.canGoBack()) {

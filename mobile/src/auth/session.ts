@@ -9,10 +9,20 @@ import type { AuthUserSession } from './localMockFirebaseAuth';
 
 let session: AuthUserSession | null = null;
 let revision = 0;
+const listeners = new Set<() => void>();
 
 export function setAuthSession(next: AuthUserSession | null): void {
   session = next;
   revision += 1;
+  listeners.forEach((listener) => listener());
+}
+
+/** Invalidate account-scoped UI as soon as credentials are replaced or cleared. */
+export function subscribeAuthSession(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 /** Distinguishes session replacement even when Firebase reuses the same token. */

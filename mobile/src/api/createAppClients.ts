@@ -20,6 +20,8 @@ import { createProgressClient } from './progress/progressClient';
 import type { ProgressClient } from './progress/types';
 import { createRewardsClient } from './rewards/rewardsClient';
 import type { RewardsClient } from './rewards/types';
+import { createWalletClient } from './wallet/walletClient';
+import type { WalletClient } from './wallet/types';
 
 function appApiOptions() {
   const appCheck = getAppCheckConfiguration();
@@ -73,4 +75,8 @@ export function createAppAccountClient(): AccountClient {
 
 export function createAppRewardsClient(): RewardsClient {
   return createRewardsClient({ ...appApiOptions(), getCredential: getSessionCredential });
+}
+
+export function createAppWalletClient(): WalletClient {
+  return createWalletClient({ ...appApiOptions(), getCredential: getSessionCredential });
 }

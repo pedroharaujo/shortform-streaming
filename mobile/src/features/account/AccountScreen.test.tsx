@@ -81,6 +81,7 @@ async function setup(
     >(() => () => undefined),
   };
   const analytics = accountAnalyticsDouble();
+  const onWallet = jest.fn();
   const client = createAccountClient({
     baseUrl: 'https://api.example.test',
     getCredential: getSessionCredential,
@@ -94,6 +95,7 @@ async function setup(
       client={client}
       onSignIn={jest.fn()}
       onHome={jest.fn()}
+      onWallet={onWallet}
     />,
     renderOptions,
   );
@@ -107,11 +109,21 @@ async function setup(
     auth,
     fetchImplementation,
     requests,
+    onWallet,
     user: userEvent.setup(),
   };
 }
 
 afterEach(() => setAuthSession(null));
+
+it('opens the authenticated wallet and hides that action as soon as the account changes', async () => {
+  const { view, onWallet, user } = await setup();
+  await user.press(view.getByLabelText(englishMessages.wallet.title));
+  expect(onWallet).toHaveBeenCalledTimes(1);
+
+  await act(() => setAuthSession({ credential: 'mock.replacement_account' }));
+  expect(view.queryByLabelText(englishMessages.wallet.title)).toBeNull();
+});
 
 it('loads consent as off and writes only explicit preferences with the authenticated session', async () => {
   const saved = { ...PROFILE, country: 'FR', analytics_consent: true };
@@ -302,7 +314,7 @@ it('does not apply late reauthentication to a replacement session or send deleti
   await user.press(view.getByLabelText('Delete account'));
   await user.press(view.getByLabelText('Verify Google and delete account'));
   await view.unmount();
-  setAuthSession({ credential: 'mock.replacement_account' });
+  await act(() => setAuthSession({ credential: 'mock.replacement_account' }));
   await act(async () => {
     resolveVerification({ outcome: 'ok', session: { credential: 'mock.original_account' } });
   });
@@ -372,7 +384,7 @@ it('ignores an old profile-load rejection after the session changes', async () =
       onHome={jest.fn()}
     />,
   );
-  setAuthSession({ credential: 'mock.replacement_account' });
+  await act(() => setAuthSession({ credential: 'mock.replacement_account' }));
   await act(async () => {
     resolveResponse(jsonResponse({ code: 'invalid_token', message: 'Invalid' }, 401));
   });
@@ -442,7 +454,7 @@ it('does not sign out a replacement session while analytics cleanup is pending',
 
   await user.press(view.getByLabelText('Sign out'));
   await waitFor(() => expect(analyticsConsent.clear).toHaveBeenCalledTimes(1));
-  setAuthSession({ credential: 'mock.replacement_account' });
+  await act(() => setAuthSession({ credential: 'mock.replacement_account' }));
   await act(async () => resolveClear(true));
 
   await waitFor(() =>

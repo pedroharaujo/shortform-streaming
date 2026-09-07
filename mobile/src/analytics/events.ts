@@ -15,7 +15,7 @@ export const ANALYTICS_EVENT_NAMES = [
 export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
 
 export type AnalyticsPlatform = 'android';
-export type AccessMethod = 'free' | 'rewarded_ad';
+export type AccessMethod = 'free' | 'rewarded_ad' | 'coin';
 
 export interface CommonAnalyticsProperties {
   readonly session_id: string;
@@ -64,7 +64,7 @@ export interface AnalyticsEventProperties {
   };
   readonly locked_episode_viewed: CommonAnalyticsProperties &
     EpisodeProperties & {
-      readonly lock_reason: 'reward_required' | 'unavailable' | 'ineligible';
+      readonly lock_reason: 'unlock_required' | 'reward_required' | 'unavailable' | 'ineligible';
     };
   readonly rewarded_ad_started: CommonAnalyticsProperties & OfferProperties;
   readonly reward_granted: CommonAnalyticsProperties &
@@ -149,7 +149,7 @@ export const ANALYTICS_EVENT_SCHEMAS = {
     access_method: {
       kind: 'string',
       format: 'safe_token',
-      allowed: ['free', 'rewarded_ad'],
+      allowed: ['free', 'rewarded_ad', 'coin'],
     },
     start_position_seconds: { kind: 'number', min: 0, max: 86_400 },
   },
@@ -174,7 +174,7 @@ export const ANALYTICS_EVENT_SCHEMAS = {
     lock_reason: {
       kind: 'string',
       format: 'safe_token',
-      allowed: ['reward_required', 'unavailable', 'ineligible'],
+      allowed: ['unlock_required', 'reward_required', 'unavailable', 'ineligible'],
     },
   },
   rewarded_ad_started: { ...commonSchema, ...offerSchema },

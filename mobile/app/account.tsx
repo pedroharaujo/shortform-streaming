@@ -37,8 +37,11 @@ export default function AccountRoute(): JSX.Element {
       }
       onReturnToEpisode={
         returnEpisode
-          ? () => router.replace({ pathname: '/reward/[id]', params: { id: returnEpisode } })
+          ? () => router.dismissTo({ pathname: '/unlock/[id]', params: { id: returnEpisode } })
           : undefined
+      }
+      onWallet={() =>
+        router.push(returnEpisode ? { pathname: '/wallet', params: { returnEpisode } } : '/wallet')
       }
       onHome={() => router.replace('/')}
     />

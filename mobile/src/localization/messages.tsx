@@ -1,6 +1,40 @@
 import { createContext, useContext, type JSX, type PropsWithChildren } from 'react';
 
 export interface AppMessages {
+  readonly wallet: {
+    readonly title: string;
+    readonly balance: (coins: number) => string;
+    readonly loading: string;
+    readonly refresh: string;
+    readonly unavailable: string;
+    readonly signIn: string;
+    readonly sessionChanged: string;
+    readonly purchasesUnavailable: string;
+    readonly spendingUnavailable: string;
+    readonly backToEpisode: string;
+  };
+  readonly unlock: {
+    readonly title: string;
+    readonly loading: string;
+    readonly unavailable: string;
+    readonly noMethods: string;
+    readonly refresh: string;
+    readonly coins: (price: number) => string;
+    readonly confirm: (price: number) => string;
+    readonly terms: string;
+    readonly cancel: string;
+    readonly insufficient: string;
+    readonly watchAd: string;
+    readonly adsConsent: string;
+    readonly pending: string;
+    readonly checkPending: string;
+    readonly unresolved: (reference: string) => string;
+    readonly storageUnavailable: string;
+    readonly changed: string;
+    readonly verifying: string;
+    readonly playbackUnavailable: string;
+    readonly alreadyUnlocked: string;
+  };
   readonly account: {
     readonly adsConsent: string;
     readonly analyticsConsent: string;
@@ -91,6 +125,44 @@ export interface AppMessages {
 }
 
 export const englishMessages: AppMessages = {
+  wallet: {
+    title: 'Coin wallet',
+    balance: (coins) => `${coins} coins`,
+    loading: 'Loading balance…',
+    refresh: 'Refresh balance',
+    unavailable: 'Your balance could not be checked. Check your connection and try again.',
+    signIn: 'Sign in to see your balance and unlock episodes.',
+    sessionChanged: 'Your session changed. Reopen this screen from Account.',
+    purchasesUnavailable: 'Coin purchases are not available yet.',
+    spendingUnavailable: 'Coin unlocks are unavailable in this build.',
+    backToEpisode: 'Back to episode',
+  },
+  unlock: {
+    title: 'Unlock episode',
+    loading: 'Loading episode options…',
+    unavailable: 'Episode options could not be checked. Check your connection and try again.',
+    noMethods: 'No unlock option is available for this episode right now.',
+    refresh: 'Refresh episode options',
+    coins: (price) => `Use ${price} coins`,
+    confirm: (price) => `Confirm ${price} coins`,
+    terms: 'Unlock this episode with coins. Playback remains subject to title availability.',
+    cancel: 'Cancel',
+    insufficient: 'You do not have enough coins for this episode.',
+    watchAd: 'Watch an ad',
+    adsConsent: 'Turn on your ads preference in Account to watch a rewarded ad.',
+    pending:
+      'An unlock request needs to be checked. Retry it before starting another unlock for this episode.',
+    checkPending: 'Check coin unlock',
+    unresolved: (reference) =>
+      `This unlock needs a support review. Keep this unlock reference: ${reference}. No new coin request will be sent for this episode.`,
+    storageUnavailable:
+      'Secure unlock recovery is unavailable. No new unlock request can be sent. Try again later.',
+    changed:
+      'The unlock could not be completed. Refresh the options and confirm the current price to try again.',
+    verifying: 'Checking your balance and episode access…',
+    playbackUnavailable: 'Playback could not be confirmed. Check your connection and try again.',
+    alreadyUnlocked: 'This episode is unlocked. Continue to playback.',
+  },
   account: {
     adsConsent: 'Ads consent',
     analyticsConsent: 'Analytics consent',
@@ -164,8 +236,8 @@ export const englishMessages: AppMessages = {
     failed: 'Playback could not be started.',
     loading: 'Loading playback…',
     loadingLabel: 'Loading playback',
-    rewardRequired: 'Watch a rewarded ad to unlock this episode.',
-    viewReward: 'View episode reward',
+    rewardRequired: 'Unlock this episode to keep watching.',
+    viewReward: 'View episode options',
   },
   catalog: {
     empty: 'No titles are available.',

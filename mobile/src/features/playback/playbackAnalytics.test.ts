@@ -43,22 +43,26 @@ function setup(enabledInitially: boolean) {
   };
 }
 
-it('emits an ordered free playback trail only after consent becomes active', async () => {
-  const { analytics, events, setEnabled } = setup(false);
+it.each(['free', 'coin'] as const)(
+  'emits an ordered %s playback trail only after consent becomes active',
+  async (accessMethod) => {
+    const { analytics, events, setEnabled } = setup(false);
+    const episode = { ...EPISODE, accessMethod };
 
-  await analytics.recordStarted(EPISODE);
-  await analytics.recordProgress(EPISODE, 12, false);
-  await analytics.recordProgress(EPISODE, 90, true);
-  expect(events).toEqual([]);
+    await analytics.recordStarted(episode);
+    await analytics.recordProgress(episode, 12, false);
+    await analytics.recordProgress(episode, 90, true);
+    expect(events).toEqual([]);
 
-  setEnabled(true);
-  await analytics.recordStarted(EPISODE);
-  await analytics.recordProgress(EPISODE, 12, false);
-  await analytics.recordProgress(EPISODE, 90, true);
+    setEnabled(true);
+    await analytics.recordStarted(episode);
+    await analytics.recordProgress(episode, 12, false);
+    await analytics.recordProgress(episode, 90, true);
 
-  expect(events.map((event) => event.name)).toEqual(['episode_started', 'episode_completed']);
-  expect(events[0]?.properties).toMatchObject({ access_method: 'free' });
-});
+    expect(events.map((event) => event.name)).toEqual(['episode_started', 'episode_completed']);
+    expect(events[0]?.properties).toMatchObject({ access_method: accessMethod });
+  },
+);
 
 it('deduplicates remounted start, throttled progress, completion, lock, and error triggers', async () => {
   const { analytics, events } = setup(true);
@@ -69,8 +73,8 @@ it('deduplicates remounted start, throttled progress, completion, lock, and erro
   await analytics.recordProgress(EPISODE, 12, false);
   await analytics.recordProgress(EPISODE, 90, true);
   await analytics.recordProgress(EPISODE, 90, true);
-  await analytics.recordLocked(EPISODE, 'reward_required');
-  await analytics.recordLocked(EPISODE, 'reward_required');
+  await analytics.recordLocked(EPISODE, 'unlock_required');
+  await analytics.recordLocked(EPISODE, 'unlock_required');
   await analytics.recordError({
     episodeId: EPISODE.episodeId,
     code: 'video_playback_failed',
@@ -88,6 +92,7 @@ it('deduplicates remounted start, throttled progress, completion, lock, and erro
     'locked_episode_viewed',
     'playback_error',
   ]);
+  expect(events[2]?.properties).toMatchObject({ lock_reason: 'unlock_required' });
 });
 
 it('does not invent an access method for staff support playback or expose unsafe error IDs', async () => {

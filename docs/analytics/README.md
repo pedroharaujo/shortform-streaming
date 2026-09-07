@@ -2,8 +2,9 @@
 
 The completed P4-T01 foundation measures viewing and rewarded-ad behavior.
 D-016/D-032 (2026-09-07) extend MVP measurement to purchased coins and contribution
-LTV/CAC under P4-T01-F5/P4-T02/P4-T03/P4-T06; these additions are planned, not
-implemented by this documentation update. The
+LTV/CAC under P4-T01-F5/P4-T02/P4-T03/P4-T06; the full additions remain planned.
+P3-T08-F2 only extends existing playback diagnostics with server-returned coin
+access and a generic unlock-required reason. The
 mobile contract and consent lifecycle exist in `mobile/src/analytics/`;
 collection is disabled by default and can be enabled only from the current
 server-returned account preference. This document does not approve
@@ -49,7 +50,9 @@ is implemented with the provider adapter in P4-T01-F2.
 
 ## Current schema and historical viewing/reward dictionary
 
-Read-only schema check on 2026-09-07: `mobile/src/analytics/events.ts` currently allows only `app_open`, `sign_up`, `login`, `account_deleted`, `episode_started`, `episode_completed`, `playback_error`, `locked_episode_viewed`, `rewarded_ad_started`, `reward_granted` and `reward_failed`; access methods are `free`/`rewarded_ad`. The 2026-09-02 narrowing removed the broader discovery/progress/offer/ad-lifecycle events. The dictionary and completed F1–F4 notes below preserve historical definitions, **not current shipping triggers**. P4-T01-F5 restores required offer exposure/selection and adds coin/acquisition measurement; do not report removed events as verified today.
+Current schema on 2026-09-07: `mobile/src/analytics/events.ts` allows only `app_open`, `sign_up`, `login`, `account_deleted`, `episode_started`, `episode_completed`, `playback_error`, `locked_episode_viewed`, `rewarded_ad_started`, `reward_granted` and `reward_failed`. `episode_started` accepts `free`/`rewarded_ad`/`coin` only from the server's playback authorization response. The player emits `unlock_required` for a displayed lock because the available choice may involve coins or an ad; the schema retains `reward_required` for historical callers alongside `unavailable`/`ineligible`. These consent-gated diagnostics do not establish a purchase, coin debit, entitlement, or revenue fact.
+
+The 2026-09-02 narrowing removed the broader discovery/progress/offer/ad-lifecycle events. The dictionary and completed F1–F4 notes below preserve historical definitions, **not current shipping triggers**. P4-T01-F5 remains open to restore required offer exposure/selection and add full coin/acquisition measurement; do not report removed events as verified today.
 
 Every event except `account_deleted` also includes the shared context above.
 

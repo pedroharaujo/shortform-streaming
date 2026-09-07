@@ -181,6 +181,49 @@ Initial paid-test activation also requires one approved audience, approximately 
   Do not retain callback queries, bindings, tokens, signed URLs or provider payloads.
 - **Blocks:** P6-T03 completion and public/release production enablement.
 
+### P3-T08-F2 — Android wallet and configured unlock choices
+
+- **Source:** #142 / PR #145, implementation `08a8151`; #144 owns ambiguous-request
+  resolution. D-029 defers only native/provider evidence. Full P3-T08-F2 remains
+  open; automated financial and account-boundary checks run before merge.
+- **Disabled state:** coin controls require Android with the local API environment
+  and server `DEBUG` plus `COIN_SPENDING_MODE=test`. Production rejects spending;
+  the wallet has no purchase/checkout adapter or sample commercial packs.
+- **Automated reproduction:**
+
+  ```text
+  pnpm --filter @shortform/mobile test --runInBand EpisodeUnlockScreen WalletScreen pendingCoinUnlock interruptedAdRecovery rewardNavigation
+  pnpm mobile:check
+  pnpm mobile:bundle:check
+  ```
+
+  The bundle command verifies Android production JavaScript only. It does not
+  compile native Android, execute a store purchase or establish visual evidence.
+- **Native prerequisites:** private Android development client and test identity;
+  isolated backend with generated eligible free/ad/coin/both episodes and configured
+  synthetic prices; wallet funded through a verified test purchase once
+  P3-T03/T04/T06 exist. No manual/production funding route is introduced here.
+  Ad testing retains the preceding section's operator/privacy/SSV requirements.
+- **Required native actions (unchecked):** open Account → Coin wallet; background
+  and resume after changing test balance on a second device. Open
+  `shortform://play/<generated-episode-id>` → View episode options. Check each
+  configured method, exact coin confirmation and cancellation, insufficient funds,
+  disabled spending, large text/TalkBack and navigation through Wallet/Account/
+  sign-in. Interrupt before sending and after server commit, reopen the same
+  episode, and repeat the original request. Switch accounts while saving or
+  waiting for a response. Interrupt an ad and deliver its verified callback;
+  reopening must reconcile its status without another impression.
+- **Expected:** one debit/entitlement, refreshed server balance, fresh playback
+  authorization, and no cross-account display or request adoption. A lost response
+  followed by a replay rejection retains the request and shows a support reference;
+  #144 must provide safe resolution before real spending. A wallet outage must
+  not block already-granted free/ad playback. Purchases remain explicitly unavailable.
+- **Evidence:** device/OS/build and tested commit, redacted accessible-screen
+  observations, safe request reference and isolated backend counts. No private
+  accounts, provider callbacks, tokens, signed media URLs or licensed assets in Git.
+- **Blocks:** native/P6-T03 completion, full P3-T08-F2, live spending/purchases,
+  release distribution and public support readiness. None is marked passed here.
+
 ### P3-T07/P3-T08 — Genuine Google SSV to authorized playback
 
 - **Source:** D-028; P6-T05A; release blocker #98.

@@ -80,9 +80,22 @@ behavior. Production settings tests reject activation. OpenAPI and the generated
 TypeScript schema include wallet routes and coin method/source values together.
 These automated financial safeguards are immediate checks and are not deferred.
 
-Native Google tester purchase/refund, real provider events, mobile coin UI and
-production retention validation are not claimed here. Their existing P3/P6 gates
-remain prerequisites for real money and public release.
+P3-T08-F2 adds the local Android wallet and coin-choice UI under #142. It uses these
+APIs, persists only original request terms in account/episode-scoped SecureStore,
+and refreshes server balance/access before coin playback. Production spending
+and purchases remain disabled. Native Google tester purchase/refund, real
+provider events, visual/accessibility evidence and production retention validation
+are not claimed here. Their existing P3/P6 gates remain prerequisites for real
+money and public release.
+
+After a lost response, a replay 409 cannot establish whether the original debit
+committed. The app preserves the original attempt and shows its request UUID for
+support. Engineering can correlate that safe reference with the account's
+`CoinUnlock` receipt in the isolated test database; absence alone does not prove
+an in-flight original request cannot commit. Do not erase pending requests, edit
+ledger rows, mint replacement coins or ask the viewer to create a new request as
+a workaround. [Issue #144](https://github.com/pedroharaujo/shortform-streaming/issues/144)
+owns a serialized server resolution protocol and approved support completion.
 
 ## Deployment and rollback
 
