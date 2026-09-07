@@ -34,6 +34,7 @@ class RewardIntentCreateView(APIView):
             "Authenticated Android intent. Requires ads preference and current "
             "catalog eligibility. The request_id is an account-scoped idempotency UUID. "
             "Reuse it after a lost response; changing the episode returns 409. "
+            "An optional expected_policy_version must match the fresh server policy. "
             "No client field can grant access. expires_at is 15 minutes after creation."
         ),
         request=RewardIntentCreateSerializer,
@@ -54,6 +55,7 @@ class RewardIntentCreateView(APIView):
             request.user,
             serializer.validated_data["episode_id"],
             serializer.validated_data["request_id"],
+            expected_policy_version=serializer.validated_data.get("expected_policy_version"),
         )
         response = Response(RewardIntentSerializer(row).data, status=201 if created else 200)
         response["Cache-Control"] = "no-store"

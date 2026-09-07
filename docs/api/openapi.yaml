@@ -16,11 +16,11 @@ info:
     the same optional Firebase ID token and ineligible ids are 404; locked catalog-eligible
     episodes return HTTP 200 with methods and never a playback URL. GET/PUT /v1/progress/{episode_id}
     accepts the same optional Firebase ID token plus an anonymous X-Device-Id header;
-    lock is HTTP 403 and the response never includes a playback URL. The MVP catalog
-    is fixed to France, Android, and English; client-supplied market headers cannot
-    alter eligibility. GET /v1/me requires FirebaseIdToken; missing or invalid tokens
-    return 401 ErrorEnvelope. firebase_uid is never returned. Django never serves
-    video bytes.'
+    lock is HTTP 403 and the response never includes a playback URL. The server resolves
+    the active catalog launch context (initially France, Android, Google Play, and
+    English); client-supplied market headers, queries, or profile locale cannot widen
+    eligibility. GET /v1/me requires FirebaseIdToken; missing or invalid tokens return
+    401 ErrorEnvelope. firebase_uid is never returned. Django never serves video bytes.'
 paths:
   /health/live:
     get:
@@ -61,8 +61,8 @@ paths:
   /v1/catalog/home:
     get:
       operationId: v1_catalog_home_retrieve
-      description: Published self-owned or licensed English series eligible for the
-        fixed France/Android MVP market.
+      description: Published self-owned or licensed series eligible for the server-configured
+        launch market, storefront, language, and optional content segment.
       summary: Home catalog
       tags:
       - catalog
@@ -232,9 +232,10 @@ paths:
         unpublished, taken-down, or unknown ids return 404 ErrorEnvelope, never 403.
         Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and
         methods. Grant returns HTTP 200 decision=granted with methods. This response
-        never includes a playback URL and never calls the video provider. MVP method
-        types are entitlement, free, and rewarded_ad. Client-supplied free-window
-        or user identifiers are ignored.'
+        never includes a playback URL and never calls the video provider. Implemented
+        method types are entitlement, free, and rewarded_ad. policy_version and nullable
+        coin_price describe server configuration; coin spending is not yet available.
+        Client-supplied policy, price, free-window, or user identifiers are ignored.'
       summary: List episode access offers
       parameters:
       - in: path
@@ -577,8 +578,9 @@ paths:
       operationId: v1_rewards_intents_create
       description: Authenticated Android intent. Requires ads preference and current
         catalog eligibility. The request_id is an account-scoped idempotency UUID.
-        Reuse it after a lost response; changing the episode returns 409. No client
-        field can grant access. expires_at is 15 minutes after creation.
+        Reuse it after a lost response; changing the episode returns 409. An optional
+        expected_policy_version must match the fresh server policy. No client field
+        can grant access. expires_at is 15 minutes after creation.
       summary: Accept an episode reward offer
       tags:
       - rewards
@@ -894,6 +896,16 @@ components:
         episode_id:
           type: string
           description: Opaque episode public id.
+        policy_version:
+          type: string
+          description: Opaque server policy version for the current episode configuration.
+          pattern: ^[0-9a-f]{64}$
+        coin_price:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Configured server coin price, or null when coin access is not
+            configured.
         methods:
           type: array
           items:
@@ -901,9 +913,11 @@ components:
           description: Non-empty list of currently available methods. Never includes
             a playback URL.
       required:
+      - coin_price
       - decision
       - episode_id
       - methods
+      - policy_version
     EpisodeOffersLocked:
       type: object
       properties:
@@ -917,6 +931,16 @@ components:
         episode_id:
           type: string
           description: Opaque episode public id.
+        policy_version:
+          type: string
+          description: Opaque server policy version for the current episode configuration.
+          pattern: ^[0-9a-f]{64}$
+        coin_price:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Configured server coin price, or null when coin access is not
+            configured.
         lock_reasons:
           type: array
           items:
@@ -928,13 +952,16 @@ components:
           items:
             $ref: '#/components/schemas/OfferMethod'
           description: Currently available unlock methods. Empty for anonymous locks
-            and when rewarded ads are disabled. Never includes coin, subscription,
-            or a playback URL.
+            and when rewarded ads are unavailable. Coin price metadata does not make
+            coin spending available. Never includes coin, subscription, or a playback
+            URL.
       required:
+      - coin_price
       - decision
       - episode_id
       - lock_reasons
       - methods
+      - policy_version
     EpisodeOffersResponse:
       oneOf:
       - $ref: '#/components/schemas/EpisodeOffersGranted'
@@ -1202,6 +1229,12 @@ components:
           format: uuid
         accepted:
           type: boolean
+        expected_policy_version:
+          type: string
+          minLength: 1
+          description: Optional server offer version. A changed policy returns 409.
+          maxLength: 64
+          pattern: ^[0-9a-f]{64}$
       required:
       - accepted
       - episode_id

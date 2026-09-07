@@ -4,7 +4,7 @@ from typing import Any
 
 from django import forms
 from django.contrib import admin, messages
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import QuerySet
 from django.http import Http404, HttpRequest, HttpResponseRedirect
 from django.http.response import HttpResponseBase
@@ -167,6 +167,8 @@ class MediaAssetAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return custom + super().get_urls()
 
     def signed_upload_view(self, request: HttpRequest) -> HttpResponseBase:
+        if not self.has_add_permission(request):
+            raise PermissionDenied
         form = StaffSignedUploadForm(request.POST or None)
         signed_put_url: str | None = None
         expires_at = None
@@ -202,6 +204,8 @@ class MediaAssetAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         asset = self.get_object(request, object_id)
         if asset is None:
             raise Http404()
+        if not self.has_change_permission(request, asset):
+            raise PermissionDenied
         form = StaffCompleteUploadForm(request.POST or None, request.FILES or None)
         if request.method == "POST" and form.is_valid():
             captions = form.cleaned_data.get("captions_file")

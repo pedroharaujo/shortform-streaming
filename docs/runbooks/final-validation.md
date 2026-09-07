@@ -43,12 +43,30 @@ For each deferral, record:
 7. Re-run applicable automated reconciliation/security tests, compare persisted
    server state to expected outcomes, and review all redacted evidence independently.
 8. P6-T05A signs off the exact candidate/configuration. Do not promote traffic,
-   publish licensed media, enable real ads or distribute publicly while any
+   publish licensed media, enable real ads/coin purchases/paid acquisition or distribute publicly while any
    applicable item below is unchecked.
+
+## Added MVP requirements (2026-09-07; not deferrals or passes)
+
+P3/P4 follow-ups must supply exact commands, private prerequisites, expected states and owner/revision evidence when implemented. The following required matrix extends the final pass; **it does not authorize deferring financial, entitlement, private-data or production-activation checks** under D-029. Automated integrity checks run before each relevant merge.
+
+| Owning tasks | Test prerequisites and actions | Required outcome / gate |
+|---|---|---|
+| P2-T03-F3 / P3-T01-F1 | Generated titles with free/ad/coin/both policies; synthetic allowed/denied territory/language/segment grants; change policy, price, takedown and window across an unlock attempt | Server active scope cannot be widened by client values. Offers/grants/debits/playback intersect valid rights; unauthorized/expired/unsupported DRM never yields access. P6-T03/P6-T05A blockers |
+| P3-T03/T04/T06 | Approved isolated Google Play/RevenueCat tester setup, D-008-compatible synthetic products, generated account; fetch offerings, buy pack, wait for verified completion, repeat/reorder event delivery, interrupt network/callback then reconcile | Store price matches; exactly one verified credit, no pending/client-success credit, no cross-account/environment fulfillment. Record restricted evidence without raw payloads. Financial protections are immediate gates |
+| P3-T02 / P3-T08-F2 | Fund a generated wallet via verified test purchase; unlock coin-only/both episodes, duplicate taps/concurrent requests, stale-price changes and account replacement | One atomic debit/entitlement, safe rollback, correct ownership, no negative spendable balance or duplicate charge, fresh playback authorization |
+| P3-T04/T06/T09 | Same account reinstall/second Android device; provider refund/chargeback before and after coin spend; delayed/duplicate/unknown-user events, deletion then late callback | Persistent server balance without re-crediting consumables; approved compensating policy, quarantine/support for unresolved states; store/ledger/entitlements reconcile; no accidental financial cascade loss |
+| P4-T01-F5 / P4-T06 | Approved test attribution and consent state, Google Play tester link/install, bounded source/campaign/creative, private generated spend import; repeat install, withdraw consent, replace account | Deduplicated coherent cohort keys or explicit unmatched/consent-limited result; no raw personal referrer, unauthorized tracking or identity adoption. Live spend stays off pending D-017/P6 |
+| P4-T02/T03 | Generated cohort with known ad/IAP/refund/cost/spend facts, late/duplicate records, multiple original currencies, missing joins and immature dates; rerun model/import and stop a feed | Same reconciled metric totals; observed versus projected LTV, consent/maturity/unmatched coverage and allocation residual visible. Missing inputs unknown; failure/hold procedure works. Private output only for real data |
+| P0-T03 / P2-T02 / P6-T04 | Review new Google/RevenueCat, financial audit, attribution and warehouse processing; test deletion/opt-out and actual binary/network flows | D-020-approved region/retention/minimization, legally required finance retention and processor cleanup; declarations and notices cover the exact binary. No production enablement inferred |
+
+Initial paid-test activation also requires one approved audience, approximately 3–5 independently cleared titles and paid creatives, D-008 terms/prices, Google finance/EUR settlement, genuine AdMob #98 evidence and D-017 capped budget/business guardrails. Subscriptions, iOS, Looker, Remote Config, push and an automatic MMP remain outside this MVP gate. Conditional MMP need is D-018.
 
 ## Deferred validation register
 
 ### P4-T01 — Firebase Analytics consent, identity, account, and product trail
+
+**Historical action list caveat (2026-09-07):** The F1–F4 trail below includes discovery/offer/progress/ad-lifecycle names removed from the narrowed 2026-09-02 schema. Current implemented names are listed in the SDK inventory. Preserve the earlier deferral evidence, but update exact trails when P4-T01-F5 restores the required MVP measurement; do not report removed events as passing now. Production consent remains a no-op until release implementation/approval.
 
 - **Source:** P4-T01 F2a/F2b/F3a/F3b/F4 and account-funnel triggers; D-029;
   implementation revisions to be recorded after merge.

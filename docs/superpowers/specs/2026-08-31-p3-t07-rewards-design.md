@@ -1,5 +1,8 @@
 # P3-T07 verified rewarded ads
 
+> Historical implementation plan/spec. The 2026-09-07 founder strategy supersedes any exclusive-ad/P7-coin MVP scope here; retain this record as evidence of its original slice. Current requirements and follow-ups are D-007/D-008/D-015/D-016/D-034 and the main implementation plan. No previous test/approval is extended to new coin or acquisition behavior.
+
+
 **Acceptance update, 2026-08-31 (D-028):** The founder accepted the tested,
 disabled-by-default development implementation. Operator/privacy setup and the
 unobserved genuine provider/device journey moved from #96 to release blocker

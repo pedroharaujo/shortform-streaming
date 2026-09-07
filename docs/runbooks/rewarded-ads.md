@@ -1,5 +1,15 @@
 # Rewarded ads: P3-T07
 
+**Scope note, 2026-09-07:** This document describes the existing rewarded-ad/development slice, not the complete MVP business scope. D-007/D-008/D-015/D-016 now require Android coins and minimum acquisition/economics measurement. P0-T03/P6-T04 must review notices, processor/financial retention and exact-binary disclosures for that extension before activation; this historical/test evidence supplies no coin, paid-spend or release approval.
+
+**P3-T01-F1 update:** [Editorial episode policy](access-policy.md) now controls ad
+availability as well as the series/provider switches. New intents bind a server
+policy version; stale or historical unversioned pending intents require a fresh
+attempt. Shared catalog locks serialize operator revocation with verified grants.
+Existing granted callback replay remains idempotent; release obligations below
+are unchanged.
+
+
 This slice implements an Android **test-only** reward path. Under the founder's
 2026-08-31 decision D-028, P3-T07 development acceptance is complete; PR #97 and
 subsequent MVP coding do not wait for operator identity/privacy contact or the

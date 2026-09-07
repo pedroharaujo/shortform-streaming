@@ -1,5 +1,8 @@
 # P3-T08 locked-episode offer sheet implementation plan
 
+> Historical implementation plan/spec. The 2026-09-07 founder strategy supersedes any exclusive-ad/P7-coin MVP scope here; retain this record as evidence of its original slice. Current requirements and follow-ups are D-007/D-008/D-015/D-016/D-034 and the main implementation plan. No previous test/approval is extended to new coin or acquisition behavior.
+
+
 > Execute inline in the existing checkout with Superpowers testing, independent
 > code review and verification. No additional worktree; never merge automatically.
 

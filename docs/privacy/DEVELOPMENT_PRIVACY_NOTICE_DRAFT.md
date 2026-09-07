@@ -1,5 +1,8 @@
 # Shortform Streaming (Development): privacy notice
 
+**Scope note, 2026-09-07:** This document describes the existing rewarded-ad/development slice, not the complete MVP business scope. D-007/D-008/D-015/D-016 now require Android coins and minimum acquisition/economics measurement. P0-T03/P6-T04 must review notices, processor/financial retention and exact-binary disclosures for that extension before activation; this historical/test evidence supplies no coin, paid-spend or release approval.
+
+
 **DRAFT — NOT ACTIVE. Do not use this document as the AdMob policy URL yet.**
 Completion is deferred to release issue #98 under D-028; this draft does not
 block MVP coding or P3-T07 development acceptance.

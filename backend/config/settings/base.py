@@ -215,3 +215,13 @@ if (
     raise ImproperlyConfigured(
         "REWARDED_ADS_UNIT_ID must be a valid AdMob ad unit ID when rewarded ads are enabled."
     )
+
+# Trusted launch scope. No client headers or profile preferences select this context.
+CATALOG_LAUNCH_CONTEXT = {
+    "enabled": os.environ.get("CATALOG_LAUNCH_ENABLED", "true") == "true",
+    "country": os.environ.get("CATALOG_LAUNCH_COUNTRY", "FR"),
+    "platform": os.environ.get("CATALOG_LAUNCH_PLATFORM", "android"),
+    "storefront": os.environ.get("CATALOG_LAUNCH_STOREFRONT", "google_play"),
+    "language": os.environ.get("CATALOG_LAUNCH_LANGUAGE", "en"),
+    "audience_segment": os.environ.get("CATALOG_LAUNCH_AUDIENCE_SEGMENT") or None,
+}

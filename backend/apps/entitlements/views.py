@@ -63,9 +63,10 @@ class EpisodeOffersView(CatalogAnonymousView):
             "ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns "
             "HTTP 200 decision=locked with lock_reasons and methods. Grant returns "
             "HTTP 200 decision=granted with methods. This response never includes a "
-            "playback URL and never calls the video provider. MVP method types are "
-            "entitlement, free, and rewarded_ad. Client-supplied free-window or "
-            "user identifiers are ignored."
+            "playback URL and never calls the video provider. Implemented method types are "
+            "entitlement, free, and rewarded_ad. policy_version and nullable coin_price "
+            "describe server configuration; coin spending is not yet available. "
+            "Client-supplied policy, price, free-window, or user identifiers are ignored."
         ),
         parameters=[EPISODE_ID_PARAMETER],
         responses={
@@ -86,9 +87,11 @@ class EpisodeOffersView(CatalogAnonymousView):
         if isinstance(decision, Ineligible):
             raise NotFound(detail=_NOT_FOUND_MESSAGE)
         if isinstance(decision, OffersGranted):
-            payload = {
+            payload: dict[str, Any] = {
                 "decision": "granted",
                 "episode_id": episode.public_id,
+                "policy_version": decision.policy_version,
+                "coin_price": decision.coin_price,
                 "methods": [_method_payload(method) for method in decision.methods],
             }
             return Response(EpisodeOffersGrantedSerializer(payload).data)
@@ -97,6 +100,8 @@ class EpisodeOffersView(CatalogAnonymousView):
         payload = {
             "decision": "locked",
             "episode_id": episode.public_id,
+            "policy_version": decision.policy_version,
+            "coin_price": decision.coin_price,
             "lock_reasons": [reason.value for reason in decision.lock_reasons],
             "methods": [_method_payload(method) for method in decision.methods],
         }

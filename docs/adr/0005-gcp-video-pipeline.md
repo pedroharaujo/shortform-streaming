@@ -10,7 +10,7 @@ Vertical episodes need adaptive playback and private access. Django must not ser
 
 ## Decision
 
-**Default production path:** Bunny Stream. Staff upload an independently cleared vertical master through Django Admin; Bunny encodes ABR HLS (for example 360p, 540p, and 720p), stores, and delivers from its CDN. Django authorizes playback after the applicable self-owned provenance or licensed-rights, publication, takedown, and entitlement checks within the fixed France/Android/English MVP scope, then issues a short-lived Bunny token (or signed HLS URL). The mobile app plays that HLS URL in `expo-video`. The app never uses Bunny’s web player as a lock-in.
+**Default production path:** Bunny Stream. Staff upload an independently cleared vertical master through Django Admin; Bunny encodes ABR HLS (for example 360p, 540p, and 720p), stores, and delivers from its CDN. Django authorizes playback after the applicable self-owned provenance or licensed-rights, publication, takedown, and entitlement checks within the active France/Android/English launch configuration (D-034; generalized territory/language/segment rights remain domain capabilities), then issues a short-lived Bunny token (or signed HLS URL). The mobile app plays that HLS URL in `expo-video`. The app never uses Bunny’s web player as a lock-in.
 
 **Documented fallback:** private Cloud Storage source bucket → asynchronous Google Transcoder API → private HLS output bucket → Cloud CDN with short-lived signed prefix/cookie access. Activate this path only if Bunny fails P2-T05, a license/residency/support requirement forbids Bunny, measured reliability misses guardrails, or total cost is worse at measured volume.
 
