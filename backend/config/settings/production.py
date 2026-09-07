@@ -13,6 +13,9 @@ if missing:
 
 from .base import *  # noqa: E402,F403
 
+if COIN_PURCHASE_MODE != "disabled":  # noqa: F405
+    raise ImproperlyConfigured("Coin purchases cannot be enabled in production settings yet.")
+
 if COIN_SPENDING_MODE != "disabled":  # noqa: F405
     raise ImproperlyConfigured("Coin spending cannot be enabled in production settings yet.")
 

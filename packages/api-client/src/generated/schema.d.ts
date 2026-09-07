@@ -209,6 +209,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/purchases/identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtain the authenticated account's opaque purchase identity
+         * @description Synthetic local mode only. The server permanently binds the identity to an opaque wallet. No client identity or coin amount is accepted.
+         */
+        post: operations["v1_purchases_identity_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/rewards/{reward_id}": {
         parameters: {
             query?: never;
@@ -578,6 +598,10 @@ export interface components {
          * @example ser_1a2b3c4d5e6f
          */
         PublicId: string;
+        PurchaseIdentity: {
+            /** Format: uuid */
+            app_user_id: string;
+        };
         RewardIntent: {
             /** Format: uuid */
             id: string;
@@ -1129,6 +1153,52 @@ export interface operations {
             };
             /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_purchases_identity_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseIdentity"];
+                };
+            };
+            /** @description The operation accepts no request fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Coin purchases are disabled or unavailable. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
