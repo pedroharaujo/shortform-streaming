@@ -53,7 +53,7 @@ export interface paths {
         };
         /**
          * Home catalog
-         * @description Published self-owned or licensed English series eligible for the fixed France/Android MVP market.
+         * @description Published self-owned or licensed series eligible for the server-configured launch market, storefront, language, and optional content segment.
          */
         get: operations["v1_catalog_home_retrieve"];
         put?: never;

@@ -37,6 +37,7 @@ this runbook grants no legal, region, retention, provider-account or budget scop
 | GitHub OIDC/WIF and runtime ADC | Short-lived identity tokens; no static GCP key in GitHub, container or repository. | Platform owner. Revoke federation/IAM when compromised; tokens expire. Trust changes need P5-T03 verification. Deploy identity has no direct Secret Accessor grant but can deploy code as runtime: it remains privileged. |
 | `DJANGO_ALLOWED_HOSTS`, `DJANGO_SETTINGS_MODULE`, `VIDEO_PROVIDER`, `BUNNY_STREAM_LIBRARY_ID`, `BUNNY_STREAM_CDN_HOSTNAME` | Non-secret service/job config. Optional Bunny fields now pass through staging. | Engineering. Change with revision review and smoke; rollback the revision and saved job config. Production settings still reject missing/unsafe configuration. |
 | Public API URL / Expo environment selection | Non-secret build configuration. GCP video fallback remains inactive. | Engineering/release owner. Keep environment selection explicit; no private signing material in JS, analytics, or EAS updates. |
+| `CATALOG_LAUNCH_*` | Non-secret server launch configuration; see [catalog launch context](catalog-launch-context.md) for exact names and defaults. Never selected by client headers or profile preferences. | Engineering/release owner. Scope changes require rollout and per-title rights approval; invalid/disabled context denies new access and ingestion. Older binaries do not honor this switch, so keep affected titles unpublished/taken down before any rollback. |
 
 ## Version and access contract
 

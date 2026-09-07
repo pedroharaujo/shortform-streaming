@@ -93,6 +93,14 @@ def make_right(
         drm_required=drm_required,
         revenue_share_rule_reference="synthetic-revenue-share-rule",
         promotional_clip_permission=promotional_clip_permission,
+        free_access_permission=True,
+        rewarded_ad_permission=True,
+        coin_access_permission=True,
+        paid_promotion_permission=True,
+        storefronts=["google_play"],
+        original_languages=["en"],
+        subtitle_languages=["en"],
+        dub_languages=[],
     )
     right.full_clean()
     right.save()

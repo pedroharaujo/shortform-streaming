@@ -6,7 +6,16 @@ from django.contrib import admin
 from django.db.models import ForeignKey
 from django.http import HttpRequest
 
-from apps.catalog.models import ContentRight, Episode, Genre, Season, Series
+from apps.catalog.models import (
+    ContentRight,
+    ContentSegment,
+    Episode,
+    EpisodeTranslation,
+    Genre,
+    Season,
+    Series,
+    SeriesTranslation,
+)
 
 
 class SeasonInline(admin.TabularInline):  # type: ignore[type-arg]
@@ -58,6 +67,14 @@ class ContentRightInline(admin.TabularInline):  # type: ignore[type-arg]
         "territory_denylist",
         "platforms",
         "languages",
+        "storefronts",
+        "original_languages",
+        "subtitle_languages",
+        "dub_languages",
+        "free_access_permission",
+        "rewarded_ad_permission",
+        "coin_access_permission",
+        "paid_promotion_permission",
         "starts_at",
         "ends_at",
         "exclusive",
@@ -66,6 +83,21 @@ class ContentRightInline(admin.TabularInline):  # type: ignore[type-arg]
         "promotional_clip_permission",
         "revenue_share_rule_reference",
     )
+
+
+class SeriesTranslationInline(admin.TabularInline):  # type: ignore[type-arg]
+    model = SeriesTranslation
+    extra = 0
+
+
+class EpisodeTranslationInline(admin.TabularInline):  # type: ignore[type-arg]
+    model = EpisodeTranslation
+    extra = 0
+
+
+@admin.register(ContentSegment)
+class ContentSegmentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    search_fields = ("name", "slug")
 
 
 @admin.register(Genre)
@@ -93,8 +125,8 @@ class SeriesAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "rights__licensor",
         "rights__contract_reference",
     )
-    inlines = (SeasonInline, EpisodeInline, ContentRightInline)
-    filter_horizontal = ("genres",)
+    inlines = (SeasonInline, EpisodeInline, ContentRightInline, SeriesTranslationInline)
+    filter_horizontal = ("genres", "content_segments")
     readonly_fields = ("public_id", "created_at", "updated_at")
     fieldsets = (
         (
@@ -108,6 +140,19 @@ class SeriesAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     "editorial_rank",
                     "genres",
                     "artwork_url",
+                )
+            },
+        ),
+        (
+            "Distribution",
+            {
+                "fields": (
+                    "distribution_territories",
+                    "distribution_platforms",
+                    "distribution_storefronts",
+                    "distribution_languages",
+                    "original_language",
+                    "content_segments",
                 )
             },
         ),
@@ -159,6 +204,7 @@ class SeasonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 @admin.register(Episode)
 class EpisodeAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    inlines = (EpisodeTranslationInline,)
     list_display = (
         "public_id",
         "title",
