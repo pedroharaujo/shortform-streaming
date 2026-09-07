@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
+from apps.catalog.iso_codes import ISO_COUNTRIES, ISO_LANGUAGES
 from apps.catalog.public_ids import (
     EPISODE_PUBLIC_ID_PREFIX,
     SERIES_PUBLIC_ID_PREFIX,
@@ -18,8 +19,6 @@ from apps.catalog.public_ids import (
 MVP_CATALOG_LANGUAGE = "en"
 MVP_DISTRIBUTION_COUNTRY = "FR"
 MVP_PLATFORM = "android"
-ISO_3166_1_ALPHA_2 = re.compile(r"^[A-Za-z]{2}$")
-ISO_639_1 = re.compile(r"^[A-Za-z]{2}$")
 ALLOWED_PLATFORMS = frozenset({"ios", "android"})
 
 
@@ -29,8 +28,10 @@ class PublicationStatus(models.TextChoices):
 
 
 def _dedupe_codes(values: list[str] | None, transform: Callable[[str], str]) -> list[str]:
-    if not values:
+    if values is None:
         return []
+    if not isinstance(values, list) or any(not isinstance(value, str) for value in values):
+        raise ValidationError("Scope must be an array of string codes.")
     normalized: list[str] = []
     seen: set[str] = set()
     for raw in values:
@@ -55,12 +56,12 @@ def normalize_platforms(values: list[str] | None) -> list[str]:
 
 
 def _validate_territory_codes(values: list[str], field_name: str) -> None:
-    if any(not ISO_3166_1_ALPHA_2.fullmatch(code) for code in values):
+    if any(code not in ISO_COUNTRIES for code in values):
         raise ValidationError({field_name: "Territory codes must be ISO 3166-1 alpha-2."})
 
 
 def _validate_language_codes(values: list[str], field_name: str) -> None:
-    if any(not ISO_639_1.fullmatch(code) for code in values):
+    if any(code not in ISO_LANGUAGES for code in values):
         raise ValidationError({field_name: "Language codes must be ISO 639-1 (two letters)."})
 
 
@@ -75,8 +76,35 @@ class Genre(models.Model):
         return self.name
 
 
+def default_distribution_territories() -> list[str]:
+    return ["FR"]
+
+
+def default_distribution_platforms() -> list[str]:
+    return ["android"]
+
+
+def default_distribution_storefronts() -> list[str]:
+    return ["google_play"]
+
+
+def default_distribution_languages() -> list[str]:
+    return ["en"]
+
+
+class ContentSegment(models.Model):
+    name = models.CharField(max_length=80)
+    slug = models.SlugField(max_length=80, unique=True)
+
+    class Meta:
+        ordering = ("slug",)
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Series(models.Model):
-    """Self-owned or licensed English series for the France/Android MVP."""
+    """Stable catalog identity with explicit distribution and provenance scope."""
 
     public_id = models.CharField(max_length=40, unique=True, editable=False)
     title = models.CharField(max_length=200, blank=True, default="")
@@ -111,6 +139,19 @@ class Series(models.Model):
     content_warnings = models.TextField(blank=True, default="")
     attribution = models.TextField(blank=True, default="")
     genres = models.ManyToManyField(Genre, blank=True, related_name="series")
+    content_segments = models.ManyToManyField(ContentSegment, blank=True, related_name="series")
+    distribution_territories = ArrayField(
+        models.CharField(max_length=2), default=default_distribution_territories
+    )
+    distribution_platforms = ArrayField(
+        models.CharField(max_length=16), default=default_distribution_platforms
+    )
+    distribution_storefronts = ArrayField(
+        models.CharField(max_length=16), default=default_distribution_storefronts
+    )
+    distribution_languages = ArrayField(
+        models.CharField(max_length=2), default=default_distribution_languages
+    )
     self_owned = models.BooleanField(
         default=False,
         help_text="Select the provenance path; otherwise publication requires a licensed right.",
@@ -151,13 +192,37 @@ class Series(models.Model):
 
     def clean(self) -> None:
         super().clean()
+        from apps.catalog.context import LANGUAGE, PLATFORM, STOREFRONT, TERRITORY, valid_scope
+
+        for field, pattern in (
+            ("distribution_territories", TERRITORY),
+            ("distribution_platforms", PLATFORM),
+            ("distribution_storefronts", STOREFRONT),
+            ("distribution_languages", LANGUAGE),
+        ):
+            if not valid_scope(getattr(self, field), pattern):
+                raise ValidationError({field: "Distribution scope must contain valid codes."})
+        if not re.fullmatch(LANGUAGE, self.original_language):
+            raise ValidationError(
+                {"original_language": "Original language must be a two-letter code."}
+            )
         if self.publication_status != PublicationStatus.PUBLISHED:
             return
         errors: dict[str, str] = {}
-        if not self.title.strip():
-            errors["title"] = "Publishing requires an English title."
-        if not self.synopsis.strip():
-            errors["synopsis"] = "Publishing requires an English synopsis."
+        from apps.catalog.context import resolve_launch_context
+        from apps.catalog.eligibility import series_is_admitted
+        from apps.catalog.metadata import catalog_metadata
+
+        context = resolve_launch_context()
+        if context is not None and context.language == "en":
+            if not self.title.strip():
+                errors["title"] = "Publishing requires an English title."
+            if not self.synopsis.strip():
+                errors["synopsis"] = "Publishing requires an English synopsis."
+        if catalog_metadata(self) is None:
+            errors["publication_status"] = (
+                "Publishing requires complete metadata in the active catalog language."
+            )
         if self.takedown:
             errors["takedown"] = "A taken-down series cannot be published."
         if self.self_owned:
@@ -169,25 +234,24 @@ class Series(models.Model):
                 errors["promotional_use_approved"] = (
                     "Promotional use must be approved before publication."
                 )
-        elif not self.has_publishable_right():
+        if not series_is_admitted(self):
             errors["publication_status"] = (
-                "Publishing licensed content requires a structurally valid, non-takedown "
-                "ContentRight with promotional-use permission."
+                "Publishing requires current launch scope and approved provenance "
+                "or licensed rights."
             )
         if errors:
             raise ValidationError(errors)
 
     def is_publishable(self) -> bool:
-        if not self.title.strip() or not self.synopsis.strip() or self.takedown:
-            return False
-        if self.self_owned:
-            return bool(self.provenance_reference.strip()) and self.promotional_use_approved
-        return self.has_publishable_right()
+        from apps.catalog.eligibility import series_is_admitted
+        from apps.catalog.metadata import catalog_metadata
+
+        return catalog_metadata(self) is not None and series_is_admitted(self)
 
     def has_publishable_right(self) -> bool:
-        return bool(self.pk) and any(
-            right.is_structurally_publishable() for right in self.rights.all()
-        )
+        from apps.catalog.eligibility import series_is_admitted
+
+        return not self.self_owned and series_is_admitted(self)
 
 
 class Season(models.Model):
@@ -207,7 +271,7 @@ class Season(models.Model):
 
 
 class SeriesTranslation(models.Model):  # noqa: DJ008
-    """Dormant pre-MVP-simplification rows retained for safe cascaded deletion."""
+    """Supplemental metadata; direct fields remain authoritative for English."""
 
     series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name="translations")
     language = models.CharField(
@@ -293,16 +357,25 @@ class Episode(models.Model):
         errors: dict[str, str] = {}
         if self.duration_seconds < 1:
             errors["duration_seconds"] = "Publishing requires a positive duration."
-        if not self.title.strip():
-            errors["title"] = "Publishing requires an English episode title."
-        if not self.synopsis.strip():
-            errors["synopsis"] = "Publishing requires an English episode synopsis."
+        from apps.catalog.metadata import catalog_metadata
+
+        if catalog_metadata(self) is None:
+            errors["publication_status"] = (
+                "Publishing requires complete episode metadata in the active catalog language."
+            )
         if not self.series.is_publishable():
             errors["publication_status"] = (
                 "The parent series must pass its self-owned or licensed publication gate."
             )
-        if not self.has_ready_media_asset():
-            errors["publication_status"] = "Publishing requires a ready media asset."
+        from apps.catalog.eligibility import admitted_media_assets
+
+        if (
+            not self.pk
+            or not admitted_media_assets(self.series).filter(episode_id=self.pk).exists()
+        ):
+            errors["publication_status"] = (
+                "Publishing requires a ready media asset with admitted language rights."
+            )
         if errors:
             raise ValidationError(errors)
 
@@ -315,7 +388,7 @@ class Episode(models.Model):
 
 
 class EpisodeTranslation(models.Model):  # noqa: DJ008
-    """Dormant pre-MVP-simplification rows retained for safe cascaded deletion."""
+    """Supplemental metadata; direct fields remain authoritative for English."""
 
     episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name="translations")
     language = models.CharField(max_length=2)
@@ -362,6 +435,14 @@ class ContentRight(models.Model):  # noqa: DJ008
         models.CharField(max_length=2),
         help_text="Licensed original/subtitle/dub language codes (ISO 639-1).",
     )
+    storefronts = ArrayField(models.CharField(max_length=16), blank=True, default=list)
+    original_languages = ArrayField(models.CharField(max_length=2), blank=True, default=list)
+    subtitle_languages = ArrayField(models.CharField(max_length=2), blank=True, default=list)
+    dub_languages = ArrayField(models.CharField(max_length=2), blank=True, default=list)
+    free_access_permission = models.BooleanField(default=False)
+    rewarded_ad_permission = models.BooleanField(default=False)
+    coin_access_permission = models.BooleanField(default=False)
+    paid_promotion_permission = models.BooleanField(default=False)
     starts_at = models.DateTimeField(help_text="Rights window start (inclusive).")
     ends_at = models.DateTimeField(
         null=True,
@@ -417,6 +498,10 @@ class ContentRight(models.Model):  # noqa: DJ008
         self.territory_denylist = normalize_territory_codes(self.territory_denylist)
         self.platforms = normalize_platforms(self.platforms)
         self.languages = normalize_language_codes(self.languages)
+        self.storefronts = normalize_platforms(self.storefronts)
+        self.original_languages = normalize_language_codes(self.original_languages)
+        self.subtitle_languages = normalize_language_codes(self.subtitle_languages)
+        self.dub_languages = normalize_language_codes(self.dub_languages)
         super().save(*args, **kwargs)
 
     def clean(self) -> None:
@@ -425,8 +510,22 @@ class ContentRight(models.Model):  # noqa: DJ008
         self.territory_denylist = normalize_territory_codes(self.territory_denylist)
         self.platforms = normalize_platforms(self.platforms)
         self.languages = normalize_language_codes(self.languages)
+        self.storefronts = normalize_platforms(self.storefronts)
+        self.original_languages = normalize_language_codes(self.original_languages)
+        self.subtitle_languages = normalize_language_codes(self.subtitle_languages)
+        self.dub_languages = normalize_language_codes(self.dub_languages)
+
+        from apps.catalog.context import LANGUAGE, STOREFRONT, valid_scope
 
         errors: dict[str, str] = {}
+        for field, pattern in (
+            ("storefronts", STOREFRONT),
+            ("original_languages", LANGUAGE),
+            ("subtitle_languages", LANGUAGE),
+            ("dub_languages", LANGUAGE),
+        ):
+            if not valid_scope(getattr(self, field), pattern, empty=True):
+                errors[field] = "Rights scope must be an array of valid codes."
         if not self.licensor.strip():
             errors["licensor"] = "Licensor is required."
         if not self.contract_reference.strip():
@@ -464,18 +563,28 @@ class ContentRight(models.Model):  # noqa: DJ008
             raise ValidationError(errors)
 
     def is_structurally_publishable(self) -> bool:
+        """Retained compatibility check; effective publication uses shared admission."""
+        from apps.catalog.context import LANGUAGE, PLATFORM, STOREFRONT, TERRITORY, valid_scope
+
         return (
             not self.takedown
+            and not self.drm_required
             and self.promotional_clip_permission
+            and self.free_access_permission
+            and self.rewarded_ad_permission
+            and self.coin_access_permission
+            and self.paid_promotion_permission
             and bool(self.licensor.strip())
             and bool(self.contract_reference.strip())
-            and bool(self.territory_allowlist)
-            and all(ISO_3166_1_ALPHA_2.fullmatch(code) for code in self.territory_allowlist)
-            and all(ISO_3166_1_ALPHA_2.fullmatch(code) for code in self.territory_denylist)
-            and bool(self.platforms)
-            and not (set(self.platforms) - ALLOWED_PLATFORMS)
-            and bool(self.languages)
-            and all(ISO_639_1.fullmatch(code) for code in self.languages)
+            and bool(self.revenue_share_rule_reference.strip())
+            and valid_scope(self.territory_allowlist, TERRITORY)
+            and valid_scope(self.territory_denylist, TERRITORY, empty=True)
+            and valid_scope(self.platforms, PLATFORM)
+            and valid_scope(self.storefronts, STOREFRONT)
+            and valid_scope(self.languages, LANGUAGE)
+            and valid_scope(self.original_languages, LANGUAGE)
+            and valid_scope(self.subtitle_languages, LANGUAGE, empty=True)
+            and valid_scope(self.dub_languages, LANGUAGE, empty=True)
             and self.starts_at is not None
             and (self.ends_at is None or self.starts_at < self.ends_at)
         )

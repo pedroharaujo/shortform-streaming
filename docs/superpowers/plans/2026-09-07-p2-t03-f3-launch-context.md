@@ -44,15 +44,15 @@ orchestrator's integration/migration evidence files.
   in `apps.catalog.eligibility`, independent of publication/media readiness.
 - Preserve existing eligibility and serializer call signatures where practical.
 
-- [ ] Add focused failing context/rights tests before implementing behavior.
-- [ ] Add server settings/resolver, series scope and segment associations, license
+- [x] Add focused failing context/rights tests before implementing behavior.
+- [x] Add server settings/resolver, series scope and segment associations, license
   permission/storefront/language fields, and additive migrations.
-- [ ] Apply same-grant effective rights to admission/publication/eligibility and
+- [x] Apply same-grant effective rights to admission/publication/eligibility and
   activate supplemental metadata without reviving stale English translations.
-- [ ] Extend Admin and seed synthetic self-owned fixtures explicitly.
-- [ ] Run catalog tests, lint, format, types and migration drift checks; record
+- [x] Extend Admin and seed synthetic self-owned fixtures explicitly.
+- [x] Run catalog tests, lint, format, types and migration drift checks; record
   exact evidence and any necessary compatibility fixture changes.
-- [ ] Independent task review: specification compliance and code quality.
+- [x] Independent task review: specification compliance and code quality.
 
 Behavior anchors: missing any one required permission hides a licensed title;
 split partial grants cannot jointly approve it; disabled or invalid context hides
@@ -68,16 +68,16 @@ distribution, translated metadata, and matching language/media rights.
 **Consumes:** Task 1's `series_is_admitted` API. This task may write independent
 files in parallel after that signature is fixed; final tests wait for Task 1.
 
-- [ ] Add failing tests proving denied rights make no provider/object-store call.
-- [ ] Guard direct upload, signed-upload start, completion and provider retry with
+- [x] Add failing tests proving denied rights make no provider/object-store call.
+- [x] Guard direct upload, signed-upload start, completion and provider retry with
   fresh admission; apply the actual caption-language restriction to one grant.
-- [ ] Preserve cleanup/takedown and existing idempotent upload transitions.
-- [ ] Enforce MediaAsset add/change permissions on custom Admin upload routes.
-- [ ] Test rights revocation between start/completion, denied captions, and a
+- [x] Preserve cleanup/takedown and existing idempotent upload transitions.
+- [x] Enforce MediaAsset add/change permissions on custom Admin upload routes.
+- [x] Test rights revocation between start/completion, denied captions, and a
   staff user without the required model permission. Update old synthetic fixture
   provenance where the new admission boundary legitimately requires it.
-- [ ] Run ingestion/staff/Admin tests and applicable static checks.
-- [ ] Independent task review: specification compliance and code quality.
+- [x] Run ingestion/staff/Admin tests and applicable static checks.
+- [x] Independent task review: specification compliance and code quality.
 
 ## Task 3: Integration, migration evidence and contract
 
@@ -87,20 +87,20 @@ files in parallel after that signature is fixed; final tests wait for Task 1.
 test table, `backend/config/spectacular.py`, generated API files, task runbook,
 and main plan completion/evidence.
 
-- [ ] Verify client context spoofing and localized response IDs at the API layer.
-- [ ] Verify current entitlement/reward paths recheck revoked rights/context.
-- [ ] Rehearse additive migrations on a dedicated empty synthetic PostgreSQL DB;
+- [x] Verify client context spoofing and localized response IDs at the API layer.
+- [x] Verify current entitlement/reward paths recheck revoked rights/context.
+- [x] Rehearse additive migrations on a dedicated empty synthetic PostgreSQL DB;
   prove old IDs/text remain and new unknown approvals remain false/empty.
-- [ ] Update stale API descriptions and regenerate OpenAPI/client together.
-- [ ] Run backend area checks and repository foundation; inspect every result.
-- [ ] Record deployment/reapproval/rollback instructions and actual evidence.
+- [x] Update stale API descriptions and regenerate OpenAPI/client together.
+- [x] Run backend area checks and repository foundation; inspect every result.
+- [x] Record deployment/reapproval/rollback instructions and actual evidence.
 
 ## Task 4: Final review and handoff
 
-- [ ] Create a complete diff review package from the recorded base revision.
-- [ ] Fresh independent reviewer checks whole-branch requirements, rights,
+- [x] Create a complete diff review package from the recorded base revision.
+- [x] Fresh independent reviewer checks whole-branch requirements, rights,
   migrations, authorization, maintainability, and validation evidence.
-- [ ] Resolve material findings and rerun the affected checks.
+- [x] Resolve material findings and rerun the affected checks.
 - [ ] Open a reviewable PR with task reference and exact checks; preserve any
   external blocker as a blocker and do not merge automatically.
 
@@ -108,7 +108,22 @@ and main plan completion/evidence.
 
 - Planning: repository/current plan confirmed; PR #138 merged. Two independent
   read-only audits identified ingestion/publication and stale-translation risks.
-- Task 1: pending.
-- Task 2: pending.
-- Task 3: pending.
-- Task 4: pending.
+- Task 1: complete; catalog task review passed after shared assigned-ISO-code
+  validation and UTF-8 corrections. 83 catalog tests passed; no migration drift.
+- Task 2: complete; ingestion task review passed after using real licensed grants
+  to verify revocation and split-caption denial before external calls. 25 scoped
+  ingestion/staff/Admin tests passed.
+- Task 3: complete. `pnpm check` passed: repository safety, 50 repository tests,
+  AI governance, backend lint/format/mypy, migration drift, 323 backend tests,
+  contract regeneration/drift, mobile lint/format/types, 177 mobile tests, and
+  mobile configuration. The aggregate backend run reported only an unwritable
+  optional pytest cache; a separate no-cache 323-test run was clean. No device or
+  provider journey is claimed. Exact commands and safe deployment/rollback are in
+  `docs/runbooks/catalog-launch-context.md`.
+- Task 4: whole-branch review passed with no Critical/Important findings. Its
+  optional endpoint-description correction passed 5 focused API tests and contract
+  checks. The generated TypeScript comment activates mobile CI; Expo Doctor found
+  two pre-existing patch mismatches, so a minimal Expo/router compatibility update
+  passed Expo Doctor (21/21), `pnpm mobile:check` (177 tests), and Android production
+  JavaScript bundle export. A separate read-only addendum review found no material
+  issue or policy weakening. PR and CI evidence pending.

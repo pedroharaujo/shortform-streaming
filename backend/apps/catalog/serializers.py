@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
+from apps.catalog.metadata import catalog_metadata
 from apps.catalog.models import Episode, Season, Series
 
 
@@ -69,21 +70,23 @@ class CatalogEpisodeDetailSerializer(serializers.Serializer[Mapping[str, object]
 
 
 def serialize_series_card(series: Series) -> dict[str, object]:
+    title, synopsis = catalog_metadata(series) or ("", "")
     return {
         "id": series.public_id,
-        "title": series.title,
-        "synopsis": series.synopsis,
+        "title": title,
+        "synopsis": synopsis,
         "artwork_url": series_artwork_url(series),
     }
 
 
 def serialize_episode_summary(episode: Episode) -> dict[str, object]:
+    title, synopsis = catalog_metadata(episode) or ("", "")
     return {
         "id": episode.public_id,
         "order": episode.order,
         "duration_seconds": episode.duration_seconds,
-        "title": episode.title,
-        "synopsis": episode.synopsis,
+        "title": title,
+        "synopsis": synopsis,
     }
 
 

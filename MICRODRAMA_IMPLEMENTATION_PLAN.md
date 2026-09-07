@@ -46,6 +46,12 @@ D-032 changes the MVP business hypothesis to contribution LTV versus CAC. D-007/
 
 Dependency order for the next development phase: P2-T03-F3 → P3-T01-F1 → P3-T02 and P3-T03 → P3-T04 → P3-T06 → P3-T08-F2/P3-T09. Then P4-T01-F5 and P4-T06 feed P4-T02 → P4-T03 → P6-T03/T04/T05/T05A → capped launch. Independent foundational work may proceed in parallel; product prices, private license approvals, privacy and D-017 spend approval remain gates for their dependent production behavior. No extra worktrees are required.
 
+P2-T03-F3 implementation and automated acceptance are complete in its feature
+branch (2026-09-07); see the task evidence below. After that PR is approved and
+merged, the next task is P3-T01-F1: editorial choices for each episode's free,
+rewarded-ad, or coin access. Commercial prices and production activation remain
+separate approvals.
+
 ### Definition of Done for Every Task
 
 - Acceptance criteria are demonstrably satisfied.
@@ -726,15 +732,25 @@ Evidence (2026-09-02): P2-T03-F2 restored the surviving `ContentRight` model val
 
 **Acceptance criteria:**
 
-- [ ] Active market/storefront/language configuration is resolved by the server. Profile locale, request headers and client targeting cannot widen access.
-- [ ] Stable domain IDs and separate localized metadata/segment associations support future values without destructive redesign; generalized territory/license and store-currency dimensions survive.
-- [ ] Per-series rights include required free/ad/coin/paid-promotion grants; no grant means no permission. Admin ingestion/publication review and catalog/playback rechecks preserve window/takedown/DRM/age/authorization safeguards.
-- [ ] Migration plan is expand/migrate, with conservative backfill: unknown rights do not become approved. Destructive contraction is a separate release.
+- [x] Active market/storefront/language configuration is resolved by the server. Profile locale, request headers and client targeting cannot widen access.
+- [x] Stable domain IDs and separate localized metadata/segment associations support future values without destructive redesign; generalized territory/license and store-currency dimensions survive.
+- [x] Per-series rights include required free/ad/coin/paid-promotion grants; no grant means no permission. Admin ingestion/publication review and catalog/playback rechecks preserve window/takedown/DRM/age/authorization safeguards.
+- [x] Migration plan is expand/migrate, with conservative backfill: unknown rights do not become approved. Destructive contraction is a separate release.
 
 **Validation and integration tests:**
 
-- [ ] Backend decision-table tests use synthetic additional-market/language/segment grants and inactive configurations to prove dimensions work without enabling new public scope; spoofed client context fails to widen eligibility.
-- [ ] Existing France/self-owned/licensed regression and no-secret/private-media tests pass; OpenAPI/client updated together with `pnpm contract:check` for any API changes.
+- [x] Backend decision-table tests use synthetic additional-market/language/segment grants and inactive configurations to prove dimensions work without enabling new public scope; spoofed client context fails to widen eligibility.
+- [x] Existing France/self-owned/licensed regression and no-secret/private-media tests pass; OpenAPI/client updated together with `pnpm contract:check` for any API changes.
+
+Evidence (2026-09-07): 323 backend tests passed, including real upload-right
+revocation, same-grant captions, client spoofing, entitlement/reward rechecks,
+assigned ISO-code validation, and additive migration preservation. Backend static
+and migration checks, repository foundation, and generated contract checks passed.
+Task-scoped independent reviews passed after corrections. Configuration, private
+license reapproval, safe rollback, and exact verification are recorded in
+[`catalog-launch-context.md`](docs/runbooks/catalog-launch-context.md); final
+whole-branch review and CI results belong to the implementation PR. This evidence
+does not authorize a new market, production rollout, or an automatic merge.
 
 #### P2-T04 — Build home catalog and series-detail mobile screens
 

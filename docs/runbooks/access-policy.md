@@ -1,6 +1,6 @@
 # Access policy (P3-T01 and planned P3-T01-F1)
 
-**Updated 2026-09-07.** Current implementation uses `Series.free_episode_count` and `Series.rewarded_ads_enabled`; `AccessPolicy`/revision rows are dormant compatibility state after the 2026-09-02 change. The older operational instructions below are historical only. This documentation task changes no runtime or migration.
+**Updated 2026-09-07.** Current implementation uses `Series.free_episode_count` and `Series.rewarded_ads_enabled`; `AccessPolicy`/revision rows are dormant compatibility state after the 2026-09-02 change. P2-T03-F3 adds [server launch context and explicit rights admission](catalog-launch-context.md) before this policy. The older operational instructions below are historical only.
 
 ## Current operation
 

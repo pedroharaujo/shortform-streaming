@@ -199,6 +199,7 @@ def test_forgery_and_ambiguous_query_fail_closed(
         "free",
         "unit-config",
         "disabled",
+        "catalog-context-disabled",
     ],
 )
 def test_rechecks_eligibility_and_deletion_at_grant(
@@ -234,6 +235,11 @@ def test_rechecks_eligibility_and_deletion_at_grant(
         settings.REWARDED_ADS_UNIT_ID = "ca-app-pub-1111111111111111/5224354917"
     elif change == "disabled":
         settings.REWARDED_ADS_MODE = "disabled"
+    elif change == "catalog-context-disabled":
+        settings.CATALOG_LAUNCH_CONTEXT = {
+            **getattr(settings, "CATALOG_LAUNCH_CONTEXT", {}),
+            "enabled": False,
+        }
     else:
         request_account_deletion(
             VerifiedToken(uid=profile.firebase_uid, auth_time=int(timezone.now().timestamp()))

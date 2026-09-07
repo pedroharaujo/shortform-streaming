@@ -67,10 +67,11 @@ uv run python backend/manage.py createsuperuser
 uv run python backend/manage.py seed_catalog
 ```
 
-The current implementation enforces France, Android and English server-side.
-Clients cannot override eligibility. D-034/P2-T03-F3 plan to make these active
-launch configuration while preserving generalized market/language/rights models;
-this documentation change does not alter current runtime behavior.
+The server resolves active launch configuration, initially France, Android,
+Google Play and English. Clients cannot override eligibility. P2-T03-F3 preserves
+generalized distribution, metadata, segment and rights dimensions; see the
+[launch-context runbook](docs/runbooks/catalog-launch-context.md) for configuration
+and the conservative reapproval of existing licensed titles.
 
 ```shell
 curl -sS http://127.0.0.1:8000/v1/catalog/home
@@ -241,7 +242,7 @@ protections. Do not reuse the local example values or commit a populated `.env`.
 
 Founder strategy updated **2026-09-07** under P0-T01: Android coin purchases and the minimum attribution, cohort LTV/CAC and daily reporting path are now MVP requirements. Google Play Billing/RevenueCat verifies purchases; Django owns the immutable coin ledger and episode entitlements. These newly planned capabilities are not claimed as implemented. The [implementation plan](./MICRODRAMA_IMPLEMENTATION_PLAN.md) preserves earlier task IDs and distinguishes completed historical slices from follow-up work.
 
-Development uses generated/synthetic metadata, self-owned test media and local/emulated/provider-fake integrations. P2-T03-F2's 2026-09-02 rights implementation is historical evidence for the current fixed launch context; generalized launch configuration and license-specific ad/coin permissions remain P2-T03-F3/P3-T01-F1 work. All contracts, suppliers, rates, provider payloads, personal data and licensed media stay outside public Git. Unsupported DRM grants remain ineligible.
+Development uses generated/synthetic metadata, self-owned test media and local/emulated/provider-fake integrations. P2-T03-F3 provides generalized server launch configuration and explicit license admission through publication, catalog, playback and ingestion. Editorial per-episode ad/coin choices remain P3-T01-F1 work. All contracts, suppliers, rates, provider payloads, personal data and licensed media stay outside public Git. Unsupported DRM grants remain ineligible.
 
 Public Release Readiness remains open: per-title streaming/free/ad/coin/paid-promotional rights, France privacy/legal and rating review, entity/Google Play/AdMob setup, Google IAP settlement, verified purchase/refund/reconciliation and genuine ad evidence, plus measured attribution and economics. The founder must still approve one target audience, coin commercial values/terms, and D-017 budget/business guardrails before real spend. No production or monetization activation is authorized by this documentation update. Subscriptions and Apple/iOS commerce remain post-MVP.
 

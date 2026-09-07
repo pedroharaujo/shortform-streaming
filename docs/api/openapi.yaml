@@ -16,11 +16,11 @@ info:
     the same optional Firebase ID token and ineligible ids are 404; locked catalog-eligible
     episodes return HTTP 200 with methods and never a playback URL. GET/PUT /v1/progress/{episode_id}
     accepts the same optional Firebase ID token plus an anonymous X-Device-Id header;
-    lock is HTTP 403 and the response never includes a playback URL. The MVP catalog
-    is fixed to France, Android, and English; client-supplied market headers cannot
-    alter eligibility. GET /v1/me requires FirebaseIdToken; missing or invalid tokens
-    return 401 ErrorEnvelope. firebase_uid is never returned. Django never serves
-    video bytes.'
+    lock is HTTP 403 and the response never includes a playback URL. The server resolves
+    the active catalog launch context (initially France, Android, Google Play, and
+    English); client-supplied market headers, queries, or profile locale cannot widen
+    eligibility. GET /v1/me requires FirebaseIdToken; missing or invalid tokens return
+    401 ErrorEnvelope. firebase_uid is never returned. Django never serves video bytes.'
 paths:
   /health/live:
     get:
@@ -61,8 +61,8 @@ paths:
   /v1/catalog/home:
     get:
       operationId: v1_catalog_home_retrieve
-      description: Published self-owned or licensed English series eligible for the
-        fixed France/Android MVP market.
+      description: Published self-owned or licensed series eligible for the server-configured
+        launch market, storefront, language, and optional content segment.
       summary: Home catalog
       tags:
       - catalog
