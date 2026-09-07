@@ -4,6 +4,11 @@ Expo SDK 57 / React Native development client for the Android-only MVP. Expo Go
 is unsupported because Firebase Auth, App Check, Analytics, Google Sign-In, AdMob, and the
 native video player require native modules.
 
+The 2026-09-07 MVP strategy adds Google Play/RevenueCat coins and minimum
+acquisition/LTV:CAC measurement; implementation remains planned under P3/P4.
+Existing native module/configuration instructions below describe current code,
+not a completed coin client. Apple/iOS and subscriptions stay post-MVP.
+
 ## Public configuration
 
 `app.config.ts` requires these values in `mobile/.env`:
@@ -13,8 +18,9 @@ native video player require native modules.
 | `EXPO_PUBLIC_API_ENVIRONMENT` | `local`, `staging`, or `production`                                |
 | `EXPO_PUBLIC_API_BASE_URL`    | Absolute backend URL; Android emulator uses `http://10.0.2.2:8000` |
 
-The catalog is fixed server-side to France, Android, and English. There is no
-client market setting. Never place secrets in `EXPO_PUBLIC_*`; they are compiled
+Current code enforces France, Android and English server-side; no client market
+setting may override eligibility. D-034/P2-T03-F3 plan active launch configuration
+with generalized market/language/segment/rights dimensions and no extra MVP UX. Never place secrets in `EXPO_PUBLIC_*`; they are compiled
 into the public JavaScript bundle.
 
 The P6-T01 mobile-quality foundation keeps English interface copy in
@@ -32,14 +38,17 @@ Optional release switches:
 | `EXPO_PUBLIC_ADMOB_ANDROID_APP_ID`   | Required with a non-demo rewarded unit when production ads are enabled |
 | `EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID` | Must use the same AdMob publisher as the Android app ID                |
 
-Production ads and analytics activate only through explicit build configuration.
+Production ads require explicit build configuration and release approval.
+Analytics also requires the later release implementation: the current production
+consent adapter is a no-op even with a public build switch.
 Ad requests also require consent, and rewards are granted only after the backend
 verifies AdMob server-side verification callbacks.
 
 ## Identity
 
 The MVP offers email/password and Google Sign-In. Catalog and free playback work anonymously;
-an account is required to receive a persistent rewarded-ad unlock. Django trusts
+an account is required for persistent rewarded-ad unlocks; planned MVP coin
+purchases/unlocks use the same trusted-account boundary. Django trusts
 only verified Firebase ID tokens and never accepts client user IDs.
 
 For a local Android development build:

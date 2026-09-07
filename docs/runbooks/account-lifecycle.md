@@ -1,5 +1,8 @@
 # Account lifecycle — P2-T02
 
+**2026-09-07 scope extension:** This runbook remains evidence for implemented account cleanup. Planned MVP coins/RevenueCat, attribution and BigQuery require additional P2-T02/P3-T02/P3-T09/P4 integration before shipping: separate operational deletion from approved minimal financial retention, propagate processor cleanup, and reconcile delayed events without recreating/reassigning deleted accounts or destroying ledger audit. D-020/legal approval remains open. No new retention period or runtime behavior is approved here.
+
+
 Account preferences and deletion implement the approved development baseline.
 P0-T03 owner approvals, production support/privacy URLs, and D-020 residency and
 retention remain release gates. This runbook does not approve legal policy.

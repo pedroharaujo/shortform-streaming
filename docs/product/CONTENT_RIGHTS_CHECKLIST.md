@@ -3,9 +3,13 @@
 **Plan task:** P0-T02  
 **Status:** Required per-series publication gate for self-owned and licensed content
 
-The France-only Android MVP may publish one or more English-language series that are either self-owned or properly licensed (D-001, D-004, D-023, D-031, 2026-09-02). Before publication, the founder/content owner must privately record ownership and component provenance or complete the licensed-content rights package, and every media package must pass the delivery checks below.
+The France-only Android MVP may publish approximately 3–5 independently approved English-language series that are either self-owned or properly licensed (D-001, D-004, D-023, D-031, updated 2026-09-07). Before publication, the founder/content owner must privately record ownership and component provenance or complete the licensed-content rights package, and every media package must pass the delivery checks below.
 
-P2-T03-F2 enforces the fixed France/Android/English grant for licensed series in Admin publication validation, catalog eligibility, and playback authorization. Rights records in this public repository contain only synthetic fixtures or opaque references to private systems—never contracts, rates, production masters, confidential records, provider payloads, or personal data. Missing, expired, mismatched, DRM-required, or taken-down grants fail closed in catalog and playback authorization; the private package and media review remain human gates before licensed-master ingestion.
+Implementation evidence: P2-T03-F2 enforces the current France/Android/English context in Admin, catalog and playback. D-034 makes these active launch configuration; P2-T03-F3 must preserve generalized market/language/segment and per-license monetization dimensions without widening client authority. The new coin/promotion scope is planned under P2-T03-F3/P3-T01-F1, not implemented by this documentation update. Rights records in this public repository contain only synthetic fixtures or opaque references to private systems—never contracts, rates, production masters, confidential records, provider payloads, or personal data. Missing, expired, mismatched, DRM-required, or taken-down grants fail closed in catalog and playback authorization; the private package and media review remain human gates before licensed-master ingestion.
+
+## Commercial target (D-033, 2026-09-07)
+
+Prefer €0 upfront license cost, €0 minimum guarantee where possible, revenue share and non-exclusive licenses where possible. This is a negotiation target, not a publication shortcut or technical restriction; other licensing structures remain supported. Revenue share and localization/delivery still create content cost even with zero upfront/MG. Store all actual terms, percentages, rates, supplier information and signed agreements privately, referenced only by opaque IDs here.
 
 ## MVP self-owned provenance
 
@@ -33,20 +37,20 @@ Decision D-019 and every applicable licensor/territory/contract item below must 
 ### Grant
 
 - [ ] Title/season/episode identifiers and all alternate/localized titles are enumerated.
-- [ ] Rights include every intended client platform.
-- [ ] Rights explicitly cover the intended countries/territories.
-- [ ] Rights cover each required language, subtitle, dub, edit, and localization.
+- [ ] Rights explicitly include Android / Google Play for MVP; other platforms remain separately scoped.
+- [ ] Rights explicitly cover France for MVP; retain territory allow/deny scope for later markets.
+- [ ] Rights cover required English originals/subtitles/dubs and every intended edit/localization; retain separate language grants.
 - [ ] Start date, end date, renewal, notice, and post-termination obligations are recorded.
 - [ ] Exclusive/non-exclusive status and any platform, genre, audience, or competitor restriction are recorded.
 - [ ] Download/offline, web, TV, social, and promotional rights are separately identified; absence means not granted.
 
 ### Monetization and promotion
 
-- [ ] Advertising-supported and rewarded-ad access are permitted. **Mandatory** before ads-only publication.
-- [ ] Subscription access is permitted. **Required before P7 IAP**, not before ads-only publication.
-- [ ] Transactional/coin-based episode access is permitted. **Required before P7 IAP**, not before ads-only publication.
-- [ ] Free promotional episodes are permitted.
-- [ ] Clips, frames, posters, trailers, and talent likeness may be used in paid acquisition on named networks.
+- [ ] Advertising-supported and rewarded-ad access are permitted. **Mandatory for each MVP licensed title**.
+- [ ] Subscription access is separately recorded; permission is **required only before post-MVP subscription access**, not for MVP admission. Missing permission means no subscription rights.
+- [ ] Transactional/coin-based episode access is permitted. **Mandatory for each MVP licensed title**, including operator-configured coin-only episodes.
+- [ ] Free episodes are permitted. **Mandatory for MVP**.
+- [ ] Paid advertising/user acquisition is permitted, including clips, trailers, posters, stills/frames and relevant talent likenesses on the intended networks, with edit, duration, window and audience restrictions recorded. **Mandatory for MVP licensed titles and before any creative is used**; without this grant the CAC experiment cannot use that title.
 - [ ] Revenue definition, store-fee treatment, taxes, refunds, chargebacks, ad revenue, minimum guarantees, royalties, and reporting cadence are recorded in the private finance system.
 
 ### Editorial, compliance, and protection
@@ -65,6 +69,8 @@ Decision D-019 and every applicable licensor/territory/contract item below must 
 - [ ] Treatment of already purchased/unlocked episodes after expiry or termination is explicit.
 - [ ] Archive/deletion obligations for masters, renditions, subtitles, analytics, and backups are explicit.
 - [ ] Audit, usage reporting, and royalty statement requirements are implementable.
+
+Every MVP licensed title needs the full free/rewarded-ad/coin/paid-promotion rights package even when an individual episode uses only one access method. Runtime offers and grant/debit checks must intersect operator policy with applicable license permissions; absence is not permission. Private commercial approval and runtime eligibility are separate gates.
 
 ## Licensed catalog metadata
 

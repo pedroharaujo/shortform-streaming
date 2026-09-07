@@ -1,152 +1,104 @@
 # MVP Product Brief
 
 **Plan task:** P0-T01  
-**Status:** Development baseline approved; Public Release Readiness remains open
+**Status:** Founder strategy approved; implementation and Public Release Readiness remain open
 **Product codename:** Shortform Streaming  
-**Last updated:** 2026-09-02
+**Last updated:** 2026-09-07
 
-## Product statement
+## Product statement and business hypothesis
 
-Shortform Streaming is an Android-first platform for vertical microdrama series. Viewers discover self-owned or properly licensed series, watch short episodes, and continue through a hardcoded free window plus verified rewarded-ad unlocks.
+Shortform Streaming is an Android-first platform for vertical microdrama series. Viewers discover independently approved self-owned or licensed stories, watch free episodes, and continue using the rewarded-ad or purchased-coin options configured for each episode.
 
-The MVP is a product-loop validation release. The catalog may contain multiple independently approved series so a single title does not determine the product result. It must determine whether viewers watch through the free window and willingly use verified rewarded ads to continue. Paid-acquisition economics are the next phase, not a reason to add attribution infrastructure now.
+> Can we acquire users profitably? Can contribution LTV become greater than CAC for users acquired in our initial market and target audience?
 
-### MVP hypothesis (founder 2026-08-27)
+Contribution LTV is the projected lifetime contribution per acquired user before acquisition cost; CAC is the cost of acquiring one user. The MVP must measure engagement and retention alongside real ad revenue, coin purchases, content costs, infrastructure, and a small capped paid-acquisition test. The primary business metric is **contribution LTV / CAC**. No universal pass/fail ratio is approved.
 
-> Will viewers progress through an approved catalog of vertical series and use rewarded ads to unlock more episodes?
+The 2026-08-27 product-loop-only hypothesis and monetization/timing decisions are **Superseded** by the founder direction dated 2026-09-07. Their history remains in [DECISION_REGISTER.md](DECISION_REGISTER.md). This documentation approval does not claim the new capabilities are implemented or authorize spend.
 
-If the ads-only loop fails, that is evidence about this access model and series — **not** that microdrama is dead. P7 can test paid acquisition and IAP separately.
+## MVP launch configuration and platform capability
 
-## Development baseline and public-release direction
+**Build the platform so it can grow, but validate the business with the smallest possible market scope.**
 
-Founder-approved decisions are marked **Approved**. The release-ready product scope still includes ownership/provenance or licensed-rights evidence, GDPR/privacy-by-design, security, quality, age/content controls, consent, account deletion, Google Play policy, server-authoritative ad grants/entitlements, and launch checks. Multi-country rollout remains post-MVP.
+| Dimension | Active MVP launch configuration | Platform capability / later activation |
+|---|---|---|
+| Client/storefront | Android / Google Play only | iOS/Apple implementation and release remain post-MVP; consumer web also remains post-MVP |
+| Country | France only (D-001) | Market-specific availability, rights, storefront and policy configuration; every additional rollout needs explicit approval and review |
+| Language | English interface and catalog (D-002/D-023) | Language-independent content IDs, localized metadata and separately scoped original/subtitle/dub rights |
+| Audience | One defined target audience, exact segment still to be approved (D-035) | Multiple editorial audiences/content segments without redesigning catalog identity or eligibility |
+| Catalog | Approximately 3–5 independently approved series (D-004) | Reusable per-series publication and rights gates |
+| Acquisition | Small controlled paid test after D-017 approval | More spend and more complex attribution only when justified |
+| Currency | Store-provided Google Play localized prices; EUR reporting and desired settlement | Multiple currencies from store pricing, preserved original financial amounts and documented reporting conversion |
 
-Development and validation use local services, emulators/fakes, generated test data, and short self-owned videos. Licensed-series support is implemented with synthetic metadata only. Actual licensed ingestion requires the private rights package and media acceptance in D-031; contracts, rates, provider payloads, personal data, and licensed media never enter this public repository. Company, Google Play organization/account enrollment, AdMob production configuration, payout details, and the France-specific release review remain **Required before public release**, not before architecture or coding.
+France, Android and English are active server-controlled launch configuration, not permanent domain constants. Do not add a country/language picker or multi-country UX in MVP. Preserve generalized territory, platform, language, content-segment and monetization-permission dimensions in domain models and APIs. Client-supplied locale, country or storefront must never widen eligibility; trusted market resolution and rights checks remain server-owned. P2-T03-F3 plans the configuration/domain work; current fixed-context code is a known implementation gap, unchanged by this task.
 
-- **Product language:** English (`en`) for all MVP user-facing interface copy — **Approved 2026-08-23**.
-- **Distribution country/storefront:** **France only through Google Play** — **Founder scope narrowed 2026-09-01 (D-001)**. Additional countries are post-MVP and require a new explicit decision and market-specific review.
-- **Intended legal-entity country:** France — **Founder direction approved 2026-08-23**. Legal name/form, incorporation, registered address, D-U-N-S where required, organization-account enrollment, and legal/finance validation are deferred to Public Release Readiness.
-- **Customer billing currency:** MVP has no IAP. Store-provided price strings remain a P7 requirement; no monetary price is constructed from language or locale.
-- **Company reporting currency:** EUR — **Approved 2026-08-23**.
-- **Desired store-settlement currency:** EUR — **Approved business requirement 2026-08-23**. Production setup must confirm that the legal entity, Apple bank-account currency, Google payments profile, and eligible bank/SEPA account support EUR settlement. Store settlement is required before P7 IAP, not before ads-only MVP.
-- **Audience:** Adults who already consume romance, revenge, fantasy, and cliffhanger-driven short-form video.
-- **Content rating:** 16+ provisional — **Decision required after the launch catalog is known**.
-- **Catalog:** one or more English-language series, self-owned or properly licensed — **Founder approved 2026-09-02 (D-004/D-023/D-031)**. Every title independently requires private ownership/provenance or a complete licensed-rights package, media acceptance, age/content review, and a compatible protection decision before publication.
-- **Platforms:** **Android / Google Play only for MVP** — **Founder approved 2026-08-30 and clarified 2026-09-01 (D-026/D-027)**. iOS implementation, validation, Sign in with Apple, TestFlight, and storefront work are post-MVP. Django Admin is the only web interface in MVP.
-- **Acquisition:** Organic/direct test distribution only. Paid acquisition and campaign attribution are post-MVP and still require D-017 before spend.
-- **Guest boundary:** Anonymous discovery and free playback; authentication required before a monetized unlock (rewarded ad) or cross-device sync — **Founder approved 2026-08-27 (D-005)**.
-- **Default free window:** First five episodes, hardcoded / admin-configured, not Remote Config or experiment cohorts in MVP — **Founder approved 2026-08-27 (D-006)**; experimentable in P7.
-- **Rewarded ad:** One verified ad permanently unlocks one episode for that account. This is the **only MVP monetization path** — **Founder approved 2026-08-27 (D-007)**.
-- **Coins:** Deferred to P7 IAP. D-008 remains **Proposed**; not required for MVP launch.
-- **Subscription:** Deferred to P7 IAP. D-009 remains **Proposed**; not required for MVP launch.
+The existing broad audience idea—adults who consume romance, revenge, fantasy and cliffhanger-driven video—is a candidate pool, not a sufficiently specific approved acquisition segment. D-035 must define one audience and its content/creative fit before the test. The provisional 16+ rating remains unapproved and catalog-dependent (D-003).
 
-## Target users and jobs
+## Catalog and licensing strategy
 
-### Viewer
+Target approximately **3–5 independently approved series** so the result is not determined by a single title. Prefer **€0 upfront license cost, €0 minimum guarantee where possible, revenue share, and non-exclusive licensing where possible** (D-033). These are commercial targets, not schema restrictions or permission to accept particular terms. The platform must continue supporting other licensing structures.
 
-- Discover a compelling story within seconds.
-- Start watching without registration friction.
-- Continue after a cliffhanger by watching a verified rewarded ad.
-- Resume on another device after signing in.
-- Understand the reward before the ad starts, without unrequested interruption.
+Each title needs private ownership/component provenance or a complete licensed-rights package plus media acceptance, age/content review and compatible protection. Licensed MVP titles must permit France streaming, Android/Google Play, required English localization, free episodes, rewarded ads, coin-based transactional episode access, and paid acquisition using approved clips, trailers, posters, stills and relevant likenesses. Confirm revenue-share reporting, window, takedown, exclusivity restrictions and DRM/protection requirements. See [CONTENT_RIGHTS_CHECKLIST.md](CONTENT_RIGHTS_CHECKLIST.md).
 
-### Content operator
+Contracts, supplier information, commercial terms, percentages, rates, media, provider payloads and personal data stay in private systems. Public documentation/fixtures contain only opaque references and synthetic enforcement metadata. Missing, mismatched, expired, taken-down or unsupported DRM rights fail closed. An entitlement never overrides current content eligibility.
 
-- Record ownership/provenance or licensed-rights references and delivery metadata for each series.
-- Upload an approved master through Django Admin, monitor processing, publish/unpublish, and take down safely.
-- Configure the free-episode window and rewarded-ad availability without code changes.
+## Episode access and monetization
 
-### Growth/product operator
-
-- Measure progression, retention, and verified rewarded-ad outcomes with a minimal event set.
-- Add campaign attribution and paid-acquisition economics only after the MVP loop is validated.
-- Run Remote Config experiments and IAP tests in P7 after ads-only validation.
+- Anonymous discovery and free playback remain available. Firebase email/password and Google Sign-In remain validated Android identity paths (D-030). Authentication is required before purchases, monetized unlocks and cross-device synchronization.
+- The first-five-episodes free window remains an initial editorial default (D-006), with server/Admin configuration for **free, rewarded-ad, coin, or both rewarded-ad and coin options per episode**. Do not hardcode all locked episodes to one method. An operator may choose coin-only cliffhangers; automatic cliffhanger detection is out of scope.
+- Evaluate rights/publication/window/territory/platform/language/protection and takedown before access. Then honor a valid existing entitlement or the configured free policy; otherwise return only configured and legally permitted unlock methods. Revalidate eligibility, method and current server price at grant/debit time.
+- AdMob rewarded ads stay opt-in, disclose the reward, and occur between episodes without interrupting playback. One verified SSV reward can grant the configured persistent episode entitlement. No forced mid-episode ads or interstitial advertising in MVP.
+- Android consumable coin purchases use Google Play Billing and RevenueCat (ADR 0006). Django owns an immutable coin ledger, persistent balances, idempotent verified credits, atomic debit plus entitlement, refunds/chargebacks and reconciliation. Client purchase success, balance and analytics are never financial authority.
+- Coin pack sizes, prices, episode coin costs and final coin/refund terms remain open under D-008. No direct credit-card checkout. Store monetary strings come from the active storefront, never the English locale.
+- Subscriptions and all Apple/iOS commerce remain post-MVP (D-009/D-026). Restore/sync in MVP means recovering server balance/entitlements and reconciling verified consumable transactions; it must never re-credit consumed purchases on reinstall.
 
 ## MVP journeys
 
-1. App open → series detail → free episode → autoplay/resume.
-2. Locked episode → account creation/login → rewarded-ad unlock → playback.
-7. User → account deletion → authenticated deletion and data cleanup/anonymization.
-8. Operator → Django Admin upload → provider processing → provenance/rights-checked publication → immediate takedown when required.
+1. Campaign/creative → attributed Google Play install/first open → eligible series → free episode → progress/resume.
+2. Locked episode → account creation/login → configured rewarded-ad option → verified grant → fresh playback authorization.
+3. Locked episode → coin-pack view → Google Play purchase → verified server credit → atomic coin unlock → playback.
+4. Cancelled/pending/offline purchase → safe pending/failure state → reconciliation; replay creates no duplicate credit.
+5. Same account on reinstall/another Android device → persistent balance/entitlements; refund/chargeback → auditable correction and reconciled access under the approved policy.
+6. User → reauthenticated account deletion → operational/processor cleanup with only approved financial retention.
+7. Operator → private per-title clearance → Django Admin ingestion → rights-checked publication → immediate takedown.
+8. Growth/finance → join campaign spend, acquired cohorts, engagement, verified revenue and allocated costs → daily contribution review.
 
-Journeys 3–6 (coin pack, subscription, restore/sync of store purchases, push) are **deferred to P7** with unchanged plan task IDs. They are not MVP-required.
+## Scope and operating principles
 
-## MVP scope
+Keep Django/DRF modular monolith, Django Admin, React Native/Expo, PostgreSQL, Firebase Auth, Bunny Stream default video delivery, AdMob, RevenueCat and server-authoritative entitlements. Never serve video bytes through Django.
 
-The authoritative scope is Section 3 of `MICRODRAMA_IMPLEMENTATION_PLAN.md`. In summary, MVP includes an English catalog of independently approved self-owned or licensed series in France on Android, Firebase email/password and Google identity, protected HLS playback, progress, AdMob SSV and server entitlements for ad grants, thin Firebase Analytics events, Django Admin media ingestion, ownership/provenance or licensed-rights enforcement, staging/prod, CI, privacy, and deletion.
+MVP includes the minimum Firebase-to-BigQuery export, backend/store/provider facts, campaign-spend joins and reproducible SQL/reporting required for cohort economics (P4-T01-F5, P4-T02, P4-T03, P4-T06; ADR 0007). A full MMP is not a default dependency. Use the simplest reliable attribution method for the approved spend, with D-018 retained for MMP adoption when ambiguity or spend justifies it.
 
-Store IAP, coins, subscriptions, RevenueCat, campaign attribution/deferred deep linking, paid acquisition, push/lifecycle campaigns, BigQuery/Looker metric models, Remote Config experiments, and MMP are **deferred to P7**, not deleted.
+Post-MVP: subscriptions, iOS, consumer web, multi-country/language rollout UX, recommendation ML, automated royalty accounting, push, Remote Config A/B experimentation, Looker dashboards and advanced deferred deep linking unless required for the initial paid test. Manual private content-cost and ad-network-spend imports are acceptable with provenance, repeatability and reconciliation.
 
-It excludes iOS release work, additional countries/languages, public contract/rate storage, automated royalty accounting, consumer web streaming, user-generated content, offline downloads, live streaming, household profiles, TV apps, custom recommendation ML, and microservices.
+## Core metrics
 
-## Product principles
+Definitions, denominators and authority are in [the analytics measurement contract](../analytics/README.md) and [COST_MODEL.md](COST_MODEL.md).
 
-- Reach first play before asking for an account.
-- Never interrupt an episode with an unrequested ad.
-- State the reward before the user commits.
-- Treat every reward and entitlement as server-authoritative.
-- Publish only independently approved self-owned or licensed series, preserve opaque provenance/contract references, and fail closed for missing, mismatched, expired, DRM-required, or taken-down rights.
-- Treat a failed ads-only viewing/unlock loop as evidence about the test, not as a verdict on microdrama or on P7 IAP.
-- Prefer a reversible experiment (P7) to a permanent product assumption.
-- Optimize contribution margin, not gross revenue or watch time in isolation.
+| Category | MVP-required measures |
+|---|---|
+| Acquisition | Spend, installs and deduplicated acquired users, CAC, source/campaign/creative, unattributed share |
+| Engagement | First-play conversion, episode completion/continuation, lock reach, D1/D7/D30 retention |
+| Advertising | Rewarded-ad acceptance, verified impressions/rewards, net ad revenue/user |
+| Commerce | Payer conversion, coin-pack purchase conversion and sales, ARPPU, net IAP revenue/user, refunds/chargebacks |
+| Business | Blended net revenue/user, revenue-share and other content cost, contribution LTV, LTV:CAC, economics by series and campaign/creative where supportable |
+| Quality | Playback startup/rebuffer/error, crash-free use, API reliability, financial/entitlement mismatches |
 
-## Metrics
+Keep observed D1/D7/D30 contribution separate from projected lifetime contribution. Immature cohorts, missing joins and consent-limited coverage must be visible; do not claim full-cohort retention or precise creative LTV from a measured subset. Do not treat installs, accounts, MAU and acquired users as interchangeable denominators.
 
-### Primary business metric (MVP ads-only)
+## Launch, spend and stop/go gates
 
-`MVP variable contribution = verified ad revenue - variable infrastructure - applicable taxes`
+Development continues with local/emulated/provider-fake dependencies, generated data and self-owned test media. Public activation requires the exact binary, catalog, environment and configuration to pass P6-T05A / Public Release Readiness. D-029 never defers financial-integrity, entitlement, private-data, destructive-migration or production-activation protections.
 
-Content cost, CAC, and store revenue join the full contribution model in P7. Do not treat an ads-only miss as proof that IAP cannot work.
+- [x] Founder approves the narrow launch and business experiment, ads plus coins, minimum acquisition/economics measurement, and catalog/licensing direction (2026-09-07).
+- [ ] Founder defines one target audience (D-035), approves rating/content direction (D-003), and confirms candidate titles privately.
+- [ ] Founder approves D-017: total test budget/cap, period, campaign allocation, business guardrails, attribution sufficiency criteria, stop/go date and owners before any spend. No budget or universal LTV:CAC threshold is invented here.
+- [ ] Founder/legal approves D-008 pack sizes, prices, episode coin costs, consumer terms and refund/chargeback treatment before commercial product configuration; generic implementation may use synthetic configurable products.
+- [ ] French entity, legal name/form, incorporation, registered address, required registration/organization data, Google Play payments/bank EUR settlement and AdMob production setup are approved/verified (D-022/D-024/D-025). Apple banking remains an iOS gate.
+- [ ] Each title and each acquisition creative passes private rights/provenance, free/ad/coin/promotion, media, age/content and protection review (D-019/D-031).
+- [ ] France-specific legal/privacy/consumer/store review, public notices/contact, consent, D-020 residency/retention/deletion, Google Data safety and support are approved for the actual new data flows and binary.
+- [ ] Real Android purchase/refund/reconciliation and genuine AdMob SSV → entitlement → playback tests pass; #98 remains a release blocker for the ad path.
+- [ ] Attribution and finance joins reconcile a controlled cohort before paid acquisition; minimum reporting and cost controls operate. D-018 remains conditional on MMP need.
 
-### Product and quality metrics (MVP-required)
+Pause spend when attribution/revenue reconciliation cannot support the approved decision or a predeclared budget/business guardrail is crossed. Stop affected rollout for unauthorized media, financial or entitlement mismatch, material security/privacy failure or unsafe activation. Paid acquisition is part of MVP validation, but this strategy update itself authorizes no spend or production enablement.
 
-- App-open to first-play conversion.
-- Episode 1 start/completion and episode continuation curve.
-- Lock reach, rewarded-ad offer acceptance, and verified reward rate.
-- Verified ad revenue per active and engaged viewer.
-- D1, D7, and D30 retention and projected cohort LTV from ad yield.
-- Playback startup time, rebuffer ratio, completion, and error rate.
-- Crash-free sessions/users and API availability/latency.
-- Aggregate rewarded-ad yield and contribution by series and across the approved catalog in France on Android.
-
-Payer conversion, ARPDAU from IAP, renewal, churn, and refund rate are **P7 IAP metrics**, not MVP-required.
-
-## Launch and stop/go gates
-
-Final numerical gates require a launch budget and baseline. Until approved, use these rules:
-
-- Do not start paid acquisition until the post-MVP attribution phase is implemented and D-017 is approved.
-- Do not increase spend on a cohort that cannot be reconciled to verified ad outcomes.
-- Stop rollout for unauthorized media exposure, an unreconciled ad-grant mismatch, a severity-1/2 security defect, or a material entitlement failure.
-- Stop an experiment when a predeclared safety guardrail is crossed (experiments themselves are P7).
-- Add paid acquisition only after the P7 attribution and budget gates are approved. Use MVP viewing and reward evidence to design that test; do not conclude that microdrama is dead from one series.
-
-## Approval checklist
-
-### Required for architecture/coding
-
-- [x] Founder approves English as the MVP product language.
-- [x] Founder approves store-localized customer pricing and EUR as the company reporting/desired settlement currency.
-- [x] Founder selects France-only Google Play distribution and France as the intended legal-entity country (D-001, narrowed 2026-09-01).
-- [x] Engineering architecture baseline permits Phase 1 repository and backend bootstrap with local/emulated/fake dependencies and no real credentials.
-- [x] Founder approves guest boundary, a multi-series self-owned/licensed catalog, hardcoded free window, and rewarded-ad-only monetization defaults (D-004–D-007/D-031; catalog scope updated 2026-09-02).
-
-### Required before public release
-
-- [ ] Legal/finance confirms legal name/form, incorporation, registered address, D-U-N-S where required, and production organization/account configuration for the French entity.
-- [ ] Finance validates EUR settlement with the actual Apple banking configuration and Google payments profile/bank account (required before P7 IAP; ads-only MVP still needs entity/AdMob production configuration before real ads).
-- [ ] Founder approves provisional audience/content-rating direction.
-- [ ] Founder defines the capped acquisition budget and maximum validation period.
-- [ ] Founder/content owner records private ownership/component provenance or completes the private D-031 rights package for every candidate series.
-- [ ] Legal/content review confirms the English-language catalog, rating, promotional use, and consumer-law requirements for France.
-- [ ] Engineering confirms the video and ads proof-of-concepts before production configuration.
-
-Unchecked Public Release Readiness items do not block development or isolated production-candidate validation, but no public production activation, traffic promotion, Google Play distribution, real advertising, or P7 real purchase/subscription may be enabled until every applicable France/Android release item is approved and verified. Licensed media additionally remains unpublished until its per-series D-031 clearance passes. P0-T01 remains open for that release-readiness record. D-008 and D-009 are not required for ads-only public release.
-
-## Store pricing and settlement references
-
-- Apple generates comparable storefront prices from a base country or region: https://developer.apple.com/help/app-store-connect/manage-app-pricing/set-a-price/
-- Apple requires the bank account's primary currency and supports IBAN where applicable: https://developer.apple.com/help/app-store-connect/manage-banking-information/enter-banking-information/
-- Apple displays proceeds in the bank account currency: https://developer.apple.com/help/app-store-connect/getting-paid/view-payments-and-proceeds
-- Google charges customers in supported local currencies and pays in the payments-profile currency: https://support.google.com/googleplay/android-developer/answer/1169947?hl=en
-- Google merchant bank requirements, including the EEA SEPA nomination path: https://support.google.com/googleplay/android-developer/answer/7161440?hl=en
+P0-T01 remains open for Public Release Readiness. D-009 subscription terms do not block this Android coin MVP.
