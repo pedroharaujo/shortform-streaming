@@ -9,12 +9,14 @@ from apps.accounts.models import UserProfile
 from apps.accounts.views import ERROR_401
 from apps.catalog.views import ERROR_404
 from apps.wallet.capabilities import coin_spending_enabled
+from apps.wallet.models import CoinUnlock
 from apps.wallet.serializers import (
     CoinUnlockRequestSerializer,
+    CoinUnlockResolutionSerializer,
     CoinUnlockSerializer,
     WalletSerializer,
 )
-from apps.wallet.services import read_wallet, unlock_episode
+from apps.wallet.services import read_wallet, resolve_unlock, unlock_episode
 
 
 class WalletView(APIView):
@@ -78,6 +80,52 @@ class CoinUnlockView(APIView):
                     "episode_id": row.episode_public_id,
                     "request_id": row.request_id,
                     "charged_coins": row.charged_coins,
+                    "balance": balance,
+                }
+            ).data
+        )
+        response["Cache-Control"] = "no-store"
+        return response
+
+
+class CoinUnlockResolutionView(APIView):
+    authentication_classes = [FirebaseIdTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["wallet"],
+        summary="Resolve or cancel an interrupted coin unlock",
+        description=(
+            "Local synthetic mode only. Submit the original request unchanged. Atomically "
+            "returns its completed accounting receipt or permanently cancels that account's "
+            "request so a delayed original cannot charge. No credit, refund, entitlement or "
+            "playback URL is created. Completed history does not assert current rights or "
+            "access; refresh offers and authorize playback separately. A cancelled result "
+            "requires fresh terms and explicit confirmation before using a new request ID. "
+            "Mismatched key/terms and disabled mode return 409."
+        ),
+        request=CoinUnlockRequestSerializer,
+        responses={
+            200: CoinUnlockResolutionSerializer,
+            400: ERROR_404,
+            401: ERROR_401,
+            409: ERROR_404,
+        },
+    )
+    def post(self, request: Request) -> Response:
+        if not isinstance(request.user, UserProfile):
+            raise FirebaseAuthenticationFailed()
+        serializer = CoinUnlockRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        row, balance = resolve_unlock(request.user, **serializer.validated_data)
+        completed = isinstance(row, CoinUnlock)
+        response = Response(
+            CoinUnlockResolutionSerializer(
+                {
+                    "episode_id": row.episode_public_id,
+                    "request_id": row.request_id,
+                    "status": "completed" if completed else "cancelled",
+                    "charged_coins": row.charged_coins if isinstance(row, CoinUnlock) else 0,
                     "balance": balance,
                 }
             ).data

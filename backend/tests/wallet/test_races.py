@@ -17,7 +17,7 @@ from apps.accounts.verification import VerifiedToken
 from apps.catalog.locking import lock_series_for_access
 from apps.catalog.models import EpisodeAccessMode, PublicationStatus
 from apps.entitlements.models import EpisodeEntitlement
-from apps.wallet.models import CoinLedgerEntry, CoinUnlock, Wallet
+from apps.wallet.models import CoinLedgerEntry, CoinUnlock, CoinUnlockCancellation, Wallet
 from tests.catalog.builders import make_episode, make_right
 from tests.wallet.test_api import coin_setup, headers, unlock, unlock_payload
 
@@ -79,12 +79,24 @@ def wait_blocked(waiter: int, holder: int) -> None:
     raise AssertionError("Expected a real PostgreSQL lock wait")
 
 
-def tracked_unlock(payload: dict[str, Any], started: Event, pids: list[int]) -> int:
+def tracked_unlock(
+    payload: dict[str, Any], started: Event, pids: list[int], resolving: bool = False
+) -> int:
     close_old_connections()
     try:
         pids.append(backend_pid())
         started.set()
-        return int(unlock(Client(), payload).status_code)
+        response = (
+            Client().post(
+                "/v1/coins/unlock/resolve",
+                payload,
+                content_type="application/json",
+                **headers(),
+            )
+            if resolving
+            else unlock(Client(), payload)
+        )
+        return int(response.status_code)
     finally:
         connections.close_all()
 
@@ -163,7 +175,10 @@ def test_rights_expiring_during_wallet_wait_prevent_debit(
     assert not CoinUnlock.objects.exists()
 
 
-def test_deletion_wins_before_wallet_creation_or_unlock(coin_setup: Any) -> None:
+@pytest.mark.parametrize("resolving", [False, True])
+def test_deletion_wins_before_wallet_creation_unlock_or_resolution(
+    coin_setup: Any, resolving: bool
+) -> None:
     profile, wallet, episode = coin_setup
     started = Event()
     pids: list[int] = []
@@ -173,11 +188,12 @@ def test_deletion_wins_before_wallet_creation_or_unlock(coin_setup: Any) -> None
                 VerifiedToken(uid=profile.firebase_uid, auth_time=int(timezone.now().timestamp()))
             )
             holder = backend_pid()
-            future = pool.submit(tracked_unlock, unlock_payload(episode), started, pids)
+            future = pool.submit(tracked_unlock, unlock_payload(episode), started, pids, resolving)
             assert started.wait(10)
             wait_blocked(pids[0], holder)
         assert future.result(timeout=15) == 401
     wallet.refresh_from_db()
     assert wallet.user_profile_id is None
     assert not CoinUnlock.objects.exists()
+    assert not CoinUnlockCancellation.objects.exists()
     assert CoinLedgerEntry.objects.count() == 1

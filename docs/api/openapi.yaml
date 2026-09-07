@@ -138,6 +138,56 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Unknown or unavailable public id. Does not confirm whether
             the id exists.
+  /v1/coins/unlock/resolve:
+    post:
+      operationId: v1_coins_unlock_resolve_create
+      description: Local synthetic mode only. Submit the original request unchanged.
+        Atomically returns its completed accounting receipt or permanently cancels
+        that account's request so a delayed original cannot charge. No credit, refund,
+        entitlement or playback URL is created. Completed history does not assert
+        current rights or access; refresh offers and authorize playback separately.
+        A cancelled result requires fresh terms and explicit confirmation before using
+        a new request ID. Mismatched key/terms and disabled mode return 409.
+      summary: Resolve or cancel an interrupted coin unlock
+      tags:
+      - wallet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoinUnlockRequestRequest'
+        required: true
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoinUnlockResolution'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
   /v1/episodes/{public_id}:
     get:
       operationId: v1_episodes_retrieve
@@ -954,6 +1004,39 @@ components:
       - expected_coin_price
       - expected_policy_version
       - request_id
+    CoinUnlockResolution:
+      type: object
+      properties:
+        episode_id:
+          type: string
+        request_id:
+          type: string
+          format: uuid
+        charged_coins:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        balance:
+          type: integer
+          maximum: 9007199254740991
+          minimum: 0
+          format: int64
+        status:
+          $ref: '#/components/schemas/CoinUnlockResolutionStatusEnum'
+      required:
+      - balance
+      - charged_coins
+      - episode_id
+      - request_id
+      - status
+    CoinUnlockResolutionStatusEnum:
+      enum:
+      - completed
+      - cancelled
+      type: string
+      description: |-
+        * `completed` - completed
+        * `cancelled` - cancelled
     CurrentUserProfile:
       type: object
       properties:

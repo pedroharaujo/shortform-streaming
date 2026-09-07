@@ -22,3 +22,7 @@ class CoinUnlockSerializer(serializers.Serializer[Mapping[str, object]]):
     request_id = serializers.UUIDField()
     charged_coins = serializers.IntegerField(min_value=0, max_value=2147483647)
     balance = serializers.IntegerField(min_value=0, max_value=9007199254740991)
+
+
+class CoinUnlockResolutionSerializer(CoinUnlockSerializer):
+    status = serializers.ChoiceField(choices=["completed", "cancelled"])

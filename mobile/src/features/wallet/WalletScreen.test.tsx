@@ -23,6 +23,7 @@ const wallet = (balance: number, spending_available = true): WalletOutcome<Walle
 
 function clientDouble(): jest.Mocked<WalletClient> {
   return {
+    resolve: jest.fn(),
     getWallet: jest.fn<ReturnType<WalletClient['getWallet']>, []>(async () => wallet(25)),
     unlock: jest.fn<ReturnType<WalletClient['unlock']>, Parameters<WalletClient['unlock']>>(
       async () => ({ outcome: 'unreachable', reason: 'Purchases unavailable' }),
