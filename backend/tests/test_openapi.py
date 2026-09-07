@@ -179,8 +179,7 @@ def test_schema_documents_path_security_and_error_envelope() -> None:
     assert "playback_url" not in granted_offer_properties
     offer_method = schema["components"]["schemas"]["OfferMethod"]
     method_type = _enum_values(offer_method["properties"]["type"], schema["components"]["schemas"])
-    assert set(method_type) == {"entitlement", "free", "rewarded_ad"}
-    assert "coin" not in method_type
+    assert set(method_type) == {"entitlement", "free", "rewarded_ad", "coin"}
     assert "subscription" not in method_type
 
     callback = paths["/v1/rewards/admob/ssv"]["get"]

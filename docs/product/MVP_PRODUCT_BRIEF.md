@@ -54,8 +54,10 @@ Contracts, supplier information, commercial terms, percentages, rates, media, pr
 Implementation note: P3-T01-F1 provides the editorial configuration, versioned
 offers, Admin history, and current-policy reward checks described in the
 [access-policy runbook](../runbooks/access-policy.md). Coin prices are configurable
-metadata; coin methods and spending remain unavailable until P3-T02 supplies the
-wallet/debit implementation. This does not approve commercial values or activation.
+metadata. P3-T02 supplies the wallet/debit implementation for explicitly enabled
+local synthetic tests; production spending and store funding remain unavailable.
+This does not approve commercial values or activation. See the
+[coin-wallet runbook](../runbooks/coin-wallet.md).
 
 ## MVP journeys
 

@@ -81,6 +81,63 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - FirebaseAppCheck: []
+  /v1/coins/unlock:
+    post:
+      operationId: v1_coins_unlock_create
+      description: Local synthetic spending only; production is disabled. Reuse the
+        account-scoped request UUID and the same episode/policy/price after a lost
+        response. Debit and entitlement commit together. An existing valid entitlement
+        is never charged. Current eligibility is checked even on replay. No credit
+        or playback URL is returned; obtain fresh playback authorization after success.
+        Invalid or unavailable offers, insufficient balance and mismatched request
+        reuse return 409.
+      summary: Unlock an episode using the authenticated account's coins
+      tags:
+      - wallet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoinUnlockRequestRequest'
+        required: true
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoinUnlock'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
   /v1/episodes/{public_id}:
     get:
       operationId: v1_episodes_retrieve
@@ -233,9 +290,10 @@ paths:
         Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and
         methods. Grant returns HTTP 200 decision=granted with methods. This response
         never includes a playback URL and never calls the video provider. Implemented
-        method types are entitlement, free, and rewarded_ad. policy_version and nullable
-        coin_price describe server configuration; coin spending is not yet available.
-        Client-supplied policy, price, free-window, or user identifiers are ignored.'
+        method types are entitlement, free, rewarded_ad, and coin. policy_version
+        and nullable coin_price describe server configuration; coin spending requires
+        an enabled local test gate. Client-supplied policy, price, free-window, or
+        user identifiers are ignored.'
       summary: List episode access offers
       parameters:
       - in: path
@@ -662,6 +720,30 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
       - FirebaseAppCheck: []
+  /v1/wallet:
+    get:
+      operationId: v1_wallet_retrieve
+      description: Ledger-derived balance. No owner ID or financial history is exposed.
+      summary: Read the authenticated account's coin balance
+      tags:
+      - wallet
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
 components:
   schemas:
     AccessMethodEnum:
@@ -669,11 +751,13 @@ components:
       - free
       - rewarded_ad
       - staff
+      - coin
       type: string
       description: |-
         * `free` - free
         * `rewarded_ad` - rewarded_ad
         * `staff` - staff
+        * `coin` - coin
     AccountDeletion:
       type: object
       properties:
@@ -825,6 +909,51 @@ components:
       - seasons
       - synopsis
       - title
+    CoinUnlock:
+      type: object
+      properties:
+        episode_id:
+          type: string
+        request_id:
+          type: string
+          format: uuid
+        charged_coins:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        balance:
+          type: integer
+          maximum: 9007199254740991
+          minimum: 0
+          format: int64
+      required:
+      - balance
+      - charged_coins
+      - episode_id
+      - request_id
+    CoinUnlockRequestRequest:
+      type: object
+      properties:
+        episode_id:
+          type: string
+          minLength: 1
+          maxLength: 40
+        request_id:
+          type: string
+          format: uuid
+        expected_policy_version:
+          type: string
+          minLength: 1
+          pattern: ^[0-9a-f]{64}$
+        expected_coin_price:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+      required:
+      - episode_id
+      - expected_coin_price
+      - expected_policy_version
+      - request_id
     CurrentUserProfile:
       type: object
       properties:
@@ -953,8 +1082,8 @@ components:
             $ref: '#/components/schemas/OfferMethod'
           description: Currently available unlock methods. Empty for anonymous locks
             and when rewarded ads are unavailable. Coin price metadata does not make
-            coin spending available. Never includes coin, subscription, or a playback
-            URL.
+            coin spending available. Coin appears only in enabled local synthetic
+            tests. Never includes subscription or a playback URL.
       required:
       - coin_price
       - decision
@@ -1063,11 +1192,12 @@ components:
           allOf:
           - $ref: '#/components/schemas/TypeEnum'
           description: |-
-            MVP offer method: entitlement, free, or rewarded_ad. Coin and subscription are omitted.
+            MVP method: entitlement, free, rewarded_ad, or coin. Coin spending is available only in explicitly enabled local synthetic tests.
 
             * `entitlement` - entitlement
             * `free` - free
             * `rewarded_ad` - rewarded_ad
+            * `coin` - coin
         title:
           type: string
           description: English display title. Not legal or store copy.
@@ -1112,6 +1242,7 @@ components:
             * `free` - free
             * `rewarded_ad` - rewarded_ad
             * `staff` - staff
+            * `coin` - coin
         playback_url:
           type: string
           format: uri
@@ -1256,11 +1387,26 @@ components:
       - entitlement
       - free
       - rewarded_ad
+      - coin
       type: string
       description: |-
         * `entitlement` - entitlement
         * `free` - free
         * `rewarded_ad` - rewarded_ad
+        * `coin` - coin
+    Wallet:
+      type: object
+      properties:
+        balance:
+          type: integer
+          maximum: 9007199254740991
+          minimum: 0
+          format: int64
+        spending_available:
+          type: boolean
+      required:
+      - balance
+      - spending_available
     WatchProgress:
       type: object
       properties:

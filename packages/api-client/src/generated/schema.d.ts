@@ -64,6 +64,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/coins/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unlock an episode using the authenticated account's coins
+         * @description Local synthetic spending only; production is disabled. Reuse the account-scoped request UUID and the same episode/policy/price after a lost response. Debit and entitlement commit together. An existing valid entitlement is never charged. Current eligibility is checked even on replay. No credit or playback URL is returned; obtain fresh playback authorization after success. Invalid or unavailable offers, insufficient balance and mismatched request reuse return 409.
+         */
+        post: operations["v1_coins_unlock_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/episodes/{public_id}": {
         parameters: {
             query?: never;
@@ -134,7 +154,7 @@ export interface paths {
         };
         /**
          * List episode access offers
-         * @description Return currently available access methods for a catalog-eligible episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished, taken-down, or unknown ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and methods. Grant returns HTTP 200 decision=granted with methods. This response never includes a playback URL and never calls the video provider. Implemented method types are entitlement, free, and rewarded_ad. policy_version and nullable coin_price describe server configuration; coin spending is not yet available. Client-supplied policy, price, free-window, or user identifiers are ignored.
+         * @description Return currently available access methods for a catalog-eligible episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished, taken-down, or unknown ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and methods. Grant returns HTTP 200 decision=granted with methods. This response never includes a playback URL and never calls the video provider. Implemented method types are entitlement, free, rewarded_ad, and coin. policy_version and nullable coin_price describe server configuration; coin spending requires an enabled local test gate. Client-supplied policy, price, free-window, or user identifiers are ignored.
          */
         get: operations["v1_offers_retrieve"];
         put?: never;
@@ -263,6 +283,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the authenticated account's coin balance
+         * @description Ledger-derived balance. No owner ID or financial history is exposed.
+         */
+        get: operations["v1_wallet_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -271,9 +311,10 @@ export interface components {
          * @description * `free` - free
          *     * `rewarded_ad` - rewarded_ad
          *     * `staff` - staff
+         *     * `coin` - coin
          * @enum {string}
          */
-        AccessMethodEnum: "free" | "rewarded_ad" | "staff";
+        AccessMethodEnum: "free" | "rewarded_ad" | "staff" | "coin";
         AccountDeletion: {
             public_id: string;
             status: components["schemas"]["AccountDeletionStatusEnum"];
@@ -330,6 +371,21 @@ export interface components {
             artwork_url: string | null;
             genres: string[];
             seasons: components["schemas"]["CatalogSeason"][];
+        };
+        CoinUnlock: {
+            episode_id: string;
+            /** Format: uuid */
+            request_id: string;
+            charged_coins: number;
+            /** Format: int64 */
+            balance: number;
+        };
+        CoinUnlockRequestRequest: {
+            episode_id: string;
+            /** Format: uuid */
+            request_id: string;
+            expected_policy_version: string;
+            expected_coin_price: number;
         };
         CurrentUserProfile: {
             /** @description Opaque profile public id. Sequential database integers are never used. */
@@ -389,7 +445,7 @@ export interface components {
             coin_price: number | null;
             /** @description Non-empty machine-readable lock reasons. Closed set: login_required, entitlement_required. */
             lock_reasons: components["schemas"]["LockReasonsEnum"][];
-            /** @description Currently available unlock methods. Empty for anonymous locks and when rewarded ads are unavailable. Coin price metadata does not make coin spending available. Never includes coin, subscription, or a playback URL. */
+            /** @description Currently available unlock methods. Empty for anonymous locks and when rewarded ads are unavailable. Coin price metadata does not make coin spending available. Coin appears only in enabled local synthetic tests. Never includes subscription or a playback URL. */
             methods: components["schemas"]["OfferMethod"][];
         };
         EpisodeOffersResponse: components["schemas"]["EpisodeOffersGranted"] | components["schemas"]["EpisodeOffersLocked"];
@@ -448,11 +504,12 @@ export interface components {
         NullEnum: null;
         OfferMethod: {
             /**
-             * @description MVP offer method: entitlement, free, or rewarded_ad. Coin and subscription are omitted.
+             * @description MVP method: entitlement, free, rewarded_ad, or coin. Coin spending is available only in explicitly enabled local synthetic tests.
              *
              *     * `entitlement` - entitlement
              *     * `free` - free
              *     * `rewarded_ad` - rewarded_ad
+             *     * `coin` - coin
              */
             type: components["schemas"]["TypeEnum"];
             /** @description English display title. Not legal or store copy. */
@@ -480,6 +537,7 @@ export interface components {
              *     * `free` - free
              *     * `rewarded_ad` - rewarded_ad
              *     * `staff` - staff
+             *     * `coin` - coin
              */
             access_method: components["schemas"]["AccessMethodEnum"];
             /**
@@ -558,9 +616,15 @@ export interface components {
          * @description * `entitlement` - entitlement
          *     * `free` - free
          *     * `rewarded_ad` - rewarded_ad
+         *     * `coin` - coin
          * @enum {string}
          */
-        TypeEnum: "entitlement" | "free" | "rewarded_ad";
+        TypeEnum: "entitlement" | "free" | "rewarded_ad" | "coin";
+        Wallet: {
+            /** Format: int64 */
+            balance: number;
+            spending_available: boolean;
+        };
         WatchProgress: {
             /** @description Opaque episode public id. */
             episode_id: string;
@@ -653,6 +717,65 @@ export interface operations {
             };
             /** @description Missing or invalid app or user verification. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_coins_unlock_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoinUnlockRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoinUnlock"];
+                };
+            };
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1187,6 +1310,34 @@ export interface operations {
             };
             /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_wallet_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Wallet"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

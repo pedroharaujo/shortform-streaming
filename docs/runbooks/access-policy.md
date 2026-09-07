@@ -16,8 +16,8 @@ values. Existing Series Admin fields remain defaults and an ad kill switch:
 | `inherit` | Existing series free count applies to each season; later episodes can offer an enabled ad |
 | `free` | Eligible episode is free regardless of its order |
 | `rewarded_ad` | Episode is locked, including inside the series free window; authenticated viewers can use an enabled ad |
-| `coin` | Episode is locked with no available method until P3-T02 implements atomic coin spending |
-| `both` | Episode is locked; an enabled ad is available while coin spending remains unavailable |
+| `coin` | Episode is locked; coin unlock is available only in explicitly enabled P3-T02 local synthetic tests |
+| `both` | Episode is locked; enabled ad and local synthetic coin methods may be offered independently |
 
 `coin_price` is required for coin/both and must be absent otherwise. The initial
 series default remains five free episodes. The series ad kill switch and provider
@@ -39,7 +39,8 @@ Offers retain their existing decision, episode ID, methods, and lock reasons and
 add `policy_version` plus nullable `coin_price`. The version is an opaque server
 hash of the episode and policy inputs, including inherited defaults and order.
 The price describes configuration; it is not an available debit or permission.
-No coin method is emitted by this slice and a setting alone cannot enable it.
+P3-T02 adds coin methods for explicit local synthetic tests only. Production
+spending remains disabled; see [coin-wallet.md](coin-wallet.md).
 
 New reward intents bind the current version. An optional
 `expected_policy_version` on creation returns 409 when stale. Existing clients may
@@ -86,8 +87,9 @@ and disable rewards. Do not reverse schema as an availability shortcut; destruct
 contraction requires a separate release. Historical rollback instructions below
 are not current operational guidance.
 
-P3-T02 must implement the immutable wallet and atomic debit plus entitlement,
-requiring current expected version/price under these locks. P3-T08-F2 extends the
+P3-T02 implements the immutable wallet and atomic debit plus entitlement for
+local synthetic tests, requiring current expected version/price under these locks.
+P3-T03/T04/T06 still supply verified store funding, and P3-T08-F2 extends the
 offer sheet to coin/both. Commercial values/terms remain unapproved under D-008;
 production/provider/device release gates remain required. No subscription,
 automatic cliffhanger detection, Remote Config experiment, or production activation

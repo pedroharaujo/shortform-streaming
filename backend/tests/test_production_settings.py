@@ -22,6 +22,7 @@ PLAYBACK_ENVIRONMENT = (
     "STAFF_UPLOAD_URL_TTL_SECONDS",
 )
 CONFIGURATION_ENVIRONMENT = (
+    "COIN_SPENDING_MODE",
     "REWARDED_ADS_MODE",
     "REWARDED_ADS_UNIT_ID",
     "REWARDED_ADS_TEST_UNIT_ID",
@@ -42,6 +43,13 @@ IMPORT_VALID_ENVIRONMENT = {
     "DATABASE_URL": "postgresql://example@127.0.0.1:5432/example",
     "FIREBASE_PROJECT_ID": "demo-shortform-local",
 }
+
+
+@pytest.mark.parametrize("mode", ["test", "production", "enabled"])
+def test_coin_spending_cannot_be_enabled_in_production(mode: str) -> None:
+    result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "COIN_SPENDING_MODE": mode})
+    assert result.returncode != 0
+    assert "Coin spending" in result.stderr or "COIN_SPENDING_MODE" in result.stderr
 
 
 def run_settings_import(

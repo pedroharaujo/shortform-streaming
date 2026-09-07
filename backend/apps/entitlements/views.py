@@ -64,8 +64,8 @@ class EpisodeOffersView(CatalogAnonymousView):
             "HTTP 200 decision=locked with lock_reasons and methods. Grant returns "
             "HTTP 200 decision=granted with methods. This response never includes a "
             "playback URL and never calls the video provider. Implemented method types are "
-            "entitlement, free, and rewarded_ad. policy_version and nullable coin_price "
-            "describe server configuration; coin spending is not yet available. "
+            "entitlement, free, rewarded_ad, and coin. policy_version and nullable coin_price "
+            "describe server configuration; coin spending requires an enabled local test gate. "
             "Client-supplied policy, price, free-window, or user identifiers are ignored."
         ),
         parameters=[EPISODE_ID_PARAMETER],

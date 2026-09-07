@@ -13,6 +13,9 @@ if missing:
 
 from .base import *  # noqa: E402,F403
 
+if COIN_SPENDING_MODE != "disabled":  # noqa: F405
+    raise ImproperlyConfigured("Coin spending cannot be enabled in production settings yet.")
+
 if "REWARDED_ADS_TEST_UNIT_ID" in os.environ:
     raise ImproperlyConfigured("REWARDED_ADS_TEST_UNIT_ID is obsolete; use REWARDED_ADS_UNIT_ID.")
 if REWARDED_ADS_MODE == "test":  # noqa: F405

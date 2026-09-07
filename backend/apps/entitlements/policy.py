@@ -11,6 +11,7 @@ from apps.accounts.models import UserProfile
 from apps.catalog.eligibility import episode_is_eligible
 from apps.catalog.models import Episode, EpisodeAccessMode
 from apps.entitlements.models import EntitlementSource, EpisodeEntitlement
+from apps.wallet.capabilities import coin_spending_enabled
 
 DEFAULT_FREE_EPISODE_COUNT = 5
 
@@ -24,6 +25,7 @@ class GrantSource(StrEnum):
     FREE = "free"
     REWARDED_AD = "rewarded_ad"
     STAFF = "staff"
+    COIN = "coin"
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,6 +117,8 @@ def evaluate_authorize_access(
             return Grant(GrantSource.REWARDED_AD)
         if source == EntitlementSource.STAFF:
             return Grant(GrantSource.STAFF)
+        if source == EntitlementSource.COIN:
+            return Grant(GrantSource.COIN)
     if episode_is_free(episode):
         return Grant(GrantSource.FREE)
     if profile is None:
@@ -126,6 +130,7 @@ class OfferMethodType(StrEnum):
     ENTITLEMENT = "entitlement"
     FREE = "free"
     REWARDED_AD = "rewarded_ad"
+    COIN = "coin"
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,6 +156,7 @@ class OffersLocked:
 
 
 _OFFER_COPY: dict[OfferMethodType, tuple[str, str]] = {
+    OfferMethodType.COIN: ("Unlock with coins", "Use your coin balance to unlock this episode."),
     OfferMethodType.ENTITLEMENT: (
         "Unlocked",
         "This episode is already unlocked on your account.",
@@ -187,4 +193,11 @@ def evaluate_episode_offers(
     methods: tuple[OfferMethod, ...] = ()
     if profile is not None and policy.ad_available:
         methods = (_offer_method(OfferMethodType.REWARDED_AD),)
+    if (
+        profile is not None
+        and coin_spending_enabled()
+        and policy.effective_mode in {EpisodeAccessMode.COIN, EpisodeAccessMode.BOTH}
+        and policy.coin_price is not None
+    ):
+        methods += (_offer_method(OfferMethodType.COIN),)
     return OffersLocked(decision.lock_reasons, methods, policy.version, policy.coin_price)

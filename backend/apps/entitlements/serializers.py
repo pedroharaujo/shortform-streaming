@@ -13,8 +13,8 @@ class OfferMethodSerializer(serializers.Serializer[Mapping[str, object]]):
     type = serializers.ChoiceField(
         choices=[(kind.value, kind.value) for kind in OfferMethodType],
         help_text=(
-            "MVP offer method: entitlement, free, or rewarded_ad. "
-            "Coin and subscription are omitted."
+            "MVP method: entitlement, free, rewarded_ad, or coin. "
+            "Coin spending is available only in explicitly enabled local synthetic tests."
         ),
     )
     title = serializers.CharField(help_text="English display title. Not legal or store copy.")
@@ -78,7 +78,8 @@ class EpisodeOffersLockedSerializer(serializers.Serializer[Mapping[str, object]]
         help_text=(
             "Currently available unlock methods. Empty for anonymous locks and when "
             "rewarded ads are unavailable. Coin price metadata does not make coin spending "
-            "available. Never includes coin, subscription, or a playback URL."
+            "available. Coin appears only in enabled local synthetic tests. "
+            "Never includes subscription or a playback URL."
         ),
     )
 
