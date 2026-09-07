@@ -54,7 +54,8 @@ in gitignored `infra/environments/staging/staging.tfvars` as
 ## Secret versions before Cloud Run secret refs
 
 The composition creates Secret Manager **names** only. Cloud Run and the
-migrate/smoke jobs reference `django-secret-key` and `database-url`. P5-T04 adds
+migration job reference `django-secret-key` and `database-url`. The HTTP-only
+smoke job has no backend configuration or secret references. P5-T04 adds
 `secret_versions` selectors; omitted entries retain `latest` for compatibility.
 The selected **versions must exist** before a full apply that creates the secret
 refs. Pin numeric versions before rotation; follow
@@ -97,7 +98,15 @@ container image). Do not `tofu apply` to change the running image.
 10. `gcloud run services update-traffic --to-revisions=$CANDIDATE=100`.
 
 Ingress stays `INGRESS_TRAFFIC_INTERNAL_ONLY`. GitHub-hosted runners must
-**not** HTTP-smoke the Cloud Run URL. Smoke runs as a Job inside the project.
+**not** HTTP-smoke the Cloud Run URL. Smoke runs as a Job inside the project,
+using dedicated identity `shortform-smoke`. Its grants are Artifact Registry
+reader on this repository and invoker on this service only. It receives no
+Django, database, Firebase or provider configuration/secrets. The service and
+migration job retain the Django runtime identity. Before the first deploy after
+this change, apply and verify the smoke identity, scoped deploy actAs grant and
+empty job environment as described in [secrets-and-rotation.md](secrets-and-rotation.md).
+Drain any earlier smoke executions that used the Django identity before claiming
+live isolation.
 
 Cloud Run IAM ID tokens must use the **service URL** as `aud`, even when
 calling a tagged revision. Using the revision/tag URL as audience returns
@@ -159,7 +168,8 @@ Leave this box unchecked until founder evidence exists:
   scoped on the federating job only.
 - Deploy SA `shortform-deploy` has Artifact Registry writer, Cloud Run
   developer on the service and jobs, `serviceAccountUser` on the **runtime**
-  SA only, and `workloadIdentityUser` for this repository principalSet. It
+  and dedicated **smoke** SAs only, and `workloadIdentityUser` for this repository
+  principalSet. It
   does not get owner/editor/securityAdmin/secret admin/project-wide storage
   admin.
 

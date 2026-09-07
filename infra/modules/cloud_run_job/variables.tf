@@ -1,3 +1,10 @@
+variable "include_django_configuration" {
+  type        = bool
+  description = "Inject Django/database/Firebase and optional video-provider settings. Disable for HTTP-only jobs; disables all module environment and secret injection."
+  default     = true
+  nullable    = false
+}
+
 variable "secret_versions" {
   type        = map(string)
   description = "Secret version selectors by runtime env name, never values. Omitted entries use latest for compatibility; pin positive numeric versions before rotation."
@@ -82,12 +89,14 @@ variable "django_settings_module" {
 
 variable "django_allowed_hosts" {
   type        = string
-  description = "Comma-separated DJANGO_ALLOWED_HOSTS. Required with no default."
+  description = "Comma-separated DJANGO_ALLOWED_HOSTS. Required for Django jobs."
+  default     = null
 }
 
 variable "firebase_project_id" {
   type        = string
-  description = "FIREBASE_PROJECT_ID plain env. Required with no default."
+  description = "FIREBASE_PROJECT_ID plain env. Required for Django jobs."
+  default     = null
 }
 
 variable "video_provider" {

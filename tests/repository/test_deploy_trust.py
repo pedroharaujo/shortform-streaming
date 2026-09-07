@@ -342,6 +342,42 @@ class DeployTrustTests(unittest.TestCase):
             [("google_service_account_iam_member", "deploy_wif")],
         )
 
+    def test_http_smoke_identity_has_only_scoped_reader_and_invoker_grants(self) -> None:
+        iam = _read(STAGING_IAM)
+        resources = re.findall(
+            r'resource "([^"]+)" "([^"]+)" \{([\s\S]*?)\n\}', iam
+        )
+        smoke_grants = []
+        for resource_type, resource_name, body in resources:
+            if "google_service_account.smoke" not in body:
+                continue
+            if resource_type == "google_service_account_iam_member":
+                self.assertEqual(resource_name, "deploy_acts_as_smoke")
+                self.assertIn("google_service_account.smoke.name", body)
+                self.assertIn("google_service_account.deploy.email", body)
+                self.assertIn('"roles/iam.serviceAccountUser"', body)
+                continue
+            role = re.search(r'role\s*=\s*"([^"]+)"', body)
+            self.assertIsNotNone(role)
+            smoke_grants.append((resource_type, role.group(1)))
+            self.assertIn("google_service_account.smoke.email", body)
+            if resource_type == "google_artifact_registry_repository_iam_member":
+                self.assertIn("module.artifact_registry.repository_id", body)
+            if resource_type == "google_cloud_run_v2_service_iam_member":
+                self.assertIn("module.cloud_run.service_name", body)
+        self.assertCountEqual(smoke_grants, [
+            ("google_artifact_registry_repository_iam_member", "roles/artifactregistry.reader"),
+            ("google_cloud_run_v2_service_iam_member", "roles/run.invoker"),
+        ])
+        self.assertIn('resource "google_service_account" "smoke"', iam)
+        self.assertIn('resource "google_service_account_iam_member" "deploy_acts_as_smoke"', iam)
+        staging = _read(STAGING_MAIN)
+        smoke = re.search(r'module "smoke_job" \{([\s\S]*?)\n\}', staging).group(1)
+        self.assertIn("google_service_account.smoke.email", smoke)
+        self.assertRegex(smoke, r"include_django_configuration\s*=\s*false")
+        for backend_config in ("secret_versions", "django_allowed_hosts", "firebase_project_id", "video_provider", "bunny_stream", "runtime_accessor"):
+            self.assertNotIn(backend_config, smoke)
+
     def test_required_services_include_wif_apis(self) -> None:
         main = _read(STAGING_MAIN)
         self.assertIn("iamcredentials.googleapis.com", main)

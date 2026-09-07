@@ -13,7 +13,9 @@ consumed secret names. See `docs/runbooks/secrets-and-rotation.md` for the
 inventory, safe adoption/rollback procedure and required live follow-up. Pin
 numeric versions before rotation; omitted selectors retain `latest`. Creating
 an extra secret never grants runtime access on its own. Full version-level
-least privilege and per-consumer identity separation remain follow-up work.
+least privilege and service/migrate identity separation remain follow-up work.
+The HTTP-only smoke job now has its own identity and no backend configuration
+or secret injection; live effective-IAM and job checks remain open under #101.
 
 Public activation stays off. `europe-west9` (or any `region` value supplied at
 apply time) is **not** a D-020 residency/retention approval.
@@ -32,7 +34,7 @@ apply time) is **not** a D-020 residency/retention approval.
 - GitHub OIDC workload identity pool/provider with exact repository, ref, and
   Environment. Dedicated deploy SA `shortform-deploy` (Artifact Registry
   writer, Cloud Run developer on the service and jobs, `serviceAccountUser` on
-  the runtime SA only).
+  the runtime and dedicated smoke SAs only).
 - One Docker Artifact Registry repository in `var.region`.
 - Secret Manager **names** only (no versions or values), including
   `bunny-stream-api-key`, `django-secret-key`, and `database-url`. Optional
@@ -45,6 +47,9 @@ apply time) is **not** a D-020 residency/retention approval.
   objectAdmin on that bucket, `run.invoker` on this service). Optional
   `logging.logWriter` and `monitoring.metricWriter`. No owner/editor/securityAdmin,
   no project-wide secret or storage admin. Not a WIF SA.
+- Dedicated `shortform-smoke` service account with only Artifact Registry reader
+  on this repository and Cloud Run invoker on this service; no backend secret,
+  storage or project telemetry grants.
 - Billing budget with caller-supplied amount/currency (no D-022 default)
   and actual plus forecast threshold rules.
 - Labels: product, environment, owner, cost_center (placeholders allowed).
@@ -68,6 +73,8 @@ From the repository root, with OpenTofu >= 1.6.0:
 tofu fmt -check -recursive infra
 
 cd infra/environments/staging
+# Use a fresh temporary TF_DATA_DIR for init, validate and test; never reuse
+# .terraform from a live backend initialization.
 tofu init -backend=false -input=false -lockfile=readonly
 tofu validate
 tofu test -no-color # OpenTofu 1.11.14; mocked provider, synthetic plans only
