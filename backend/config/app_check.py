@@ -85,6 +85,8 @@ def get_app_check_verifier() -> AppCheckTokenVerifier:
 
 
 def _is_protected_consumer_request(request: HttpRequest) -> bool:
+    if request.path == "/v1/purchases/revenuecat" and request.method == "POST":
+        return False
     return request.path.startswith("/v1/") and request.path != _ADMOB_CALLBACK_PATH
 
 

@@ -11,7 +11,10 @@ from django.db.migrations.executor import MigrationExecutor
 def test_wallet_expansion_preserves_existing_accounts_and_entitlements() -> None:
     executor = MigrationExecutor(connection)
     current_targets = executor.loader.graph.leaf_nodes()
-    legacy_targets = [target for target in current_targets if target[0] != "wallet"]
+    # Commerce depends on wallet; legacy state must omit both additive apps.
+    legacy_targets = [
+        target for target in current_targets if target[0] not in {"wallet", "commerce"}
+    ]
     executor.migrate([("wallet", None)])
     try:
         legacy = executor.loader.project_state(legacy_targets).apps

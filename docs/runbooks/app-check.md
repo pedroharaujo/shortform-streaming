@@ -17,7 +17,12 @@ switch defaults to `disabled`, so incomplete private provider registration canno
 break networking while the server also remains disabled.
 
 Django protects every `/v1/` operation except the authentic
-`GET /v1/rewards/admob/ssv` provider callback. Health and Django Admin are outside
+`GET /v1/rewards/admob/ssv` provider callback and exact
+`POST /v1/purchases/revenuecat` purchase callback. The latter requires configured
+Authorization and HMAC over bounded raw bytes before JSON parsing, remains local
+synthetic-only, and is disabled in production. Other methods, suffix paths, and
+the authenticated purchase-identity operation retain App Check protection.
+Health and Django Admin are outside
 the consumer boundary. App Check runs after the bounded request-body check and
 before API view authentication or mutation. It is defense in depth: Firebase user
 authentication, endpoint authorization, rights checks, reward binding, and
@@ -52,8 +57,11 @@ by default.
 ## Staging validation and rollout
 
 1. Deploy the exact candidate with `FIREBASE_APP_CHECK_MODE=disabled` and the
-   exact public Android app ID configured. Confirm health, Admin, and the AdMob
-   callback remain reachable through their existing authenticated boundaries.
+   exact public Android app ID configured. Confirm health, Admin, and provider
+   callbacks remain reachable through their independent authenticated boundaries.
+   The purchase callback needs genuine provider signature/retry and native SDK
+   identity observations before activation; local synthetic checks do not satisfy
+   that gate. See [synthetic purchases](synthetic-purchases.md).
 2. Build a clean Android development client with
    `EXPO_PUBLIC_FIREBASE_APP_CHECK_MODE=enforce`; keep the server disabled. Exercise
    anonymous catalog/playback and authenticated profile/progress/reward requests. Observe that
