@@ -24,6 +24,9 @@ class RewardIntent(models.Model):
     platform = models.CharField(max_length=7, default="android", editable=False)
     language = models.CharField(max_length=2, default="en", editable=False)
     ad_unit_id = models.CharField(max_length=80)
+    policy_version = models.CharField(
+        max_length=64, blank=True, default="", db_default="", editable=False
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     granted_at = models.DateTimeField(null=True, blank=True)
@@ -35,7 +38,12 @@ class RewardIntent(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["user_profile", "request_id"], name="reward_request_unique"
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(policy_version="")
+                | models.Q(policy_version__regex=r"^[0-9a-f]{64}$"),
+                name="reward_policy_version_valid",
+            ),
         ]
 
     def __str__(self) -> str:

@@ -4,6 +4,10 @@ Public monorepo for a mobile-first vertical microdrama streaming platform.
 
 The MVP consists of a Django REST backend/Django Admin and one Android React Native/Expo application. iOS release work and a consumer web client are explicitly post-MVP.
 
+The MVP tests whether **contribution LTV can exceed CAC**—whether lifetime contribution per acquired user can exceed acquisition cost. Launch configuration is France, English, one defined audience, approximately 3–5 independently approved series, rewarded ads plus purchased coins, and a capped paid-acquisition test after founder budget approval. Prefer €0 upfront/MG revenue-share, non-exclusive licenses where possible; actual terms remain private. Subscriptions stay post-MVP.
+
+Build the platform so it can grow, but validate the business with the smallest possible market scope. Market, language, audience and licensed monetization permissions are configurable domain dimensions; additional rollout is separately approved.
+
 ## Local backend bootstrap
 
 P1-T02 provides a runnable Django 6.1 backend and local PostgreSQL. Install Git,
@@ -63,8 +67,11 @@ uv run python backend/manage.py createsuperuser
 uv run python backend/manage.py seed_catalog
 ```
 
-The catalog is fixed to France, Android, and English. Clients cannot override
-market or language eligibility.
+The server resolves active launch configuration, initially France, Android,
+Google Play and English. Clients cannot override eligibility. P2-T03-F3 preserves
+generalized distribution, metadata, segment and rights dimensions; see the
+[launch-context runbook](docs/runbooks/catalog-launch-context.md) for configuration
+and the conservative reapproval of existing licensed titles.
 
 ```shell
 curl -sS http://127.0.0.1:8000/v1/catalog/home
@@ -147,7 +154,7 @@ Run the current repository-wide aggregate gate with `pnpm check` (includes `cont
 
 P1-T03 provides a strict TypeScript Expo app with Expo Router and an Android
 development-build configuration (not Expo Go). Home is the launch route.
-Ads-only MVP is Google Play only (D-027). Details, including the emulator sequence,
+MVP is Google Play only (D-027). Details, including the emulator sequence,
 are in [mobile/README.md](./mobile/README.md).
 
 `EXPO_PUBLIC_*` values are compiled into the public JavaScript bundle. Never place a
@@ -169,7 +176,7 @@ pnpm mobile:config:check
 pnpm mobile:bundle:check
 ```
 
-`pnpm mobile:bundle:check` runs `expo export` for the Android JavaScript bundle using the same public `EXPO_PUBLIC_*` fixtures as the config check. It does not compile native apps or invoke EAS. Ads-only MVP is Google Play only (D-027).
+`pnpm mobile:bundle:check` runs `expo export` for the Android JavaScript bundle using the same public `EXPO_PUBLIC_*` fixtures as the config check. It does not compile native apps or invoke EAS. MVP is Google Play only (D-027).
 
 The first Android development client is `make emulate` (boots Pixel_9 if needed,
 then `expo run:android` with JDK 17+ so Gradle does not use Oracle Java 8 from
@@ -233,18 +240,18 @@ protections. Do not reuse the local example values or commit a populated `.env`.
 
 ## Project status
 
-Implementation targets a France-only Android launch through Google Play (D-001/D-027), with an English interface and one or more independently approved self-owned or licensed English-language series (D-004/D-023/D-031). The ads-only MVP has no IAP; one verified AdMob rewarded ad unlocks one episode. EUR remains the company reporting and desired future store-settlement currency for the later P7 IAP path.
+Founder strategy updated **2026-09-07** under P0-T01: Android coin purchases and the minimum attribution, cohort LTV/CAC and daily reporting path are now MVP requirements. Google Play Billing/RevenueCat verifies purchases; Django owns the immutable coin ledger and episode entitlements. These newly planned capabilities are not claimed as implemented. The [implementation plan](./MICRODRAMA_IMPLEMENTATION_PLAN.md) preserves earlier task IDs and distinguishes completed historical slices from follow-up work.
 
-Development and automated tests use only short self-owned or generated media, synthetic licensed-right metadata, and local/emulated/provider-fake integrations. P2-T03-F2 restored fixed France/Android/English licensed-right enforcement across Admin, catalog, and playback authorization. Actual contracts, rates, provider payloads, personal data, and licensed media stay outside this public repository; DRM-required grants remain ineligible until a compliant provider path is approved.
+Development uses generated/synthetic metadata, self-owned test media and local/emulated/provider-fake integrations. P2-T03-F3 provides generalized server launch configuration and explicit license admission through publication, catalog, playback and ingestion. P3-T01-F1 adds [editorial episode modes, policy versions, and audited Admin changes](docs/runbooks/access-policy.md); coin spending remains unavailable until P3-T02 implements the wallet and atomic unlock. All contracts, suppliers, rates, provider payloads, personal data and licensed media stay outside public Git. Unsupported DRM grants remain ineligible.
 
-The narrow scope is not final launch clearance. Ownership/provenance or the private licensed-rights package for every candidate series, France-specific GDPR/privacy and legal review, age/content controls, Google Play compliance, incorporation and registration details of the intended French entity, and AdMob production configuration remain mandatory **ads-only** release gates. Store IAP settlement configuration is required before P7 IAP, not before ads-only launch. No public distribution, licensed-media publication, or real advertising may be enabled before its applicable clearance. Real purchase or subscription flows wait for P7.
+Public Release Readiness remains open: per-title streaming/free/ad/coin/paid-promotional rights, France privacy/legal and rating review, entity/Google Play/AdMob setup, Google IAP settlement, verified purchase/refund/reconciliation and genuine ad evidence, plus measured attribution and economics. The founder must still approve one target audience, coin commercial values/terms, and D-017 budget/business guardrails before real spend. No production or monetization activation is authorized by this documentation update. Subscriptions and Apple/iOS commerce remain post-MVP.
 
 ## Source of truth
 
 - [Complete product and implementation plan](./MICRODRAMA_IMPLEMENTATION_PLAN.md)
 - [MVP product brief](./docs/product/MVP_PRODUCT_BRIEF.md)
 - [Decision register](./docs/product/DECISION_REGISTER.md)
-- [Self-owned content provenance and media checklist](./docs/product/CONTENT_RIGHTS_CHECKLIST.md)
+- [Content rights, licensing and media checklist](./docs/product/CONTENT_RIGHTS_CHECKLIST.md)
 - [Store and privacy compliance matrix](./docs/product/STORE_COMPLIANCE_MATRIX.md)
 - [Unit-cost model](./docs/product/COST_MODEL.md)
 - [Architecture decision records](./docs/adr/)

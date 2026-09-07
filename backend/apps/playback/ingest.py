@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 
+from apps.catalog.eligibility import series_is_admitted
 from apps.catalog.models import Episode
 from apps.playback.exceptions import VideoAssetNotFoundError, VideoProviderError
 from apps.playback.models import (
@@ -34,6 +35,27 @@ ACTIVE_EXISTS_MESSAGE = (
     "This episode already has in-flight or ready media. "
     "Takedown the current asset before uploading a new master."
 )
+ADMISSION_DENIED_MESSAGE = "This title is not available for media upload."
+
+
+def _fresh_admitted_episode(episode: Episode, *, captions_language: str | None = None) -> Episode:
+    fresh = Episode.objects.select_related("series").get(pk=episode.pk)
+    if not series_is_admitted(
+        fresh.series,
+        captions_language=captions_language,
+    ):
+        raise ValidationError(ADMISSION_DENIED_MESSAGE)
+    return fresh
+
+
+def _fresh_admitted_asset(asset: MediaAsset, *, has_captions: bool = False) -> MediaAsset:
+    fresh = MediaAsset.objects.select_related("episode__series").get(pk=asset.pk)
+    if not series_is_admitted(
+        fresh.episode.series,
+        captions_language=fresh.captions_language if has_captions else None,
+    ):
+        raise ValidationError(ADMISSION_DENIED_MESSAGE)
+    return fresh
 
 
 def sha256_hex(data: bytes) -> str:
@@ -105,6 +127,11 @@ def ingest_master(
     Bytes are hashed and sent to VideoProvider via a temporary file. Django does not
     persist or serve the master.
     """
+    language = captions_language.strip().lower() or "en"
+    episode = _fresh_admitted_episode(
+        episode,
+        captions_language=language if captions_bytes is not None else None,
+    )
     if len(video_bytes) < MIN_MASTER_BYTES:
         raise ValidationError({"master_file": "Upload is empty or corrupt."})
     checksum = sha256_hex(video_bytes)
@@ -134,7 +161,17 @@ def ingest_master(
     if failed_sibling is not None:
         expire_provider_asset(failed_sibling)
         failed_sibling.provider_asset_id = ""
-        failed_sibling.save(update_fields=["provider_asset_id", "updated_at"])
+        failed_sibling.captions_language = language
+        failed_sibling.has_captions = captions_bytes is not None
+        failed_sibling.full_clean()
+        failed_sibling.save(
+            update_fields=[
+                "provider_asset_id",
+                "captions_language",
+                "has_captions",
+                "updated_at",
+            ]
+        )
         return _submit_to_provider(
             failed_sibling,
             video_bytes=video_bytes,
@@ -147,7 +184,7 @@ def ingest_master(
         checksum=checksum,
         provider_name=current_provider_name(),
         state=MediaAssetState.PENDING_UPLOAD,
-        captions_language=captions_language.strip().lower() or "en",
+        captions_language=language,
         has_captions=captions_bytes is not None,
         diagnostic_message="",
     )
@@ -173,6 +210,7 @@ def begin_staff_upload(
     captions_language: str = "en",
 ) -> tuple[MediaAsset, str, datetime]:
     """Mint a short-lived staff PUT URL. The URL is returned once and never stored."""
+    episode = _fresh_admitted_episode(episode)
     checksum = expected_checksum.strip().lower()
     if not SHA256_HEX.fullmatch(checksum):
         raise ValidationError(
@@ -242,6 +280,7 @@ def complete_staff_upload(
     Claims ``pending_upload`` under ``select_for_update`` so concurrent completes
     cannot both call ``submit_master``. Provider I/O runs after the lock is released.
     """
+    asset = _fresh_admitted_asset(asset, has_captions=captions_bytes is not None)
     if captions_bytes is not None and not captions_are_valid(captions_bytes):
         raise ValidationError({"captions_file": "Captions must be a UTF-8 WebVTT file."})
     store = get_object_store()
@@ -284,6 +323,7 @@ def _submit_to_provider(
     captions_bytes: bytes | None,
     title: str,
 ) -> MediaAsset:
+    asset = _fresh_admitted_asset(asset, has_captions=captions_bytes is not None)
     provider = get_video_provider()
     if provider is None:
         asset.mark_failed("Video provider is unset or disabled.")
@@ -328,6 +368,7 @@ def reconcile(asset: MediaAsset) -> MediaAsset:
             MediaAssetState.BLOCKED,
         }:
             return locked
+        locked = _fresh_admitted_asset(locked, has_captions=locked.has_captions)
         if locked.state in {MediaAssetState.PENDING_UPLOAD, MediaAssetState.UPLOADED}:
             if locked.provider_asset_id.strip():
                 return _poll_and_apply_safe(locked)

@@ -1,5 +1,8 @@
 # Development privacy setup: P6-T04/P6-T05A / #98
 
+**Scope note, 2026-09-07:** This document describes the existing rewarded-ad/development slice, not the complete MVP business scope. D-007/D-008/D-015/D-016 now require Android coins and minimum acquisition/economics measurement. P0-T03/P6-T04 must review notices, processor/financial retention and exact-binary disclosures for that extension before activation; this historical/test evidence supplies no coin, paid-spend or release approval.
+
+
 This is the execution checklist for the founder-authorized notice/consent work,
 not production approval. D-028 (2026-08-31) defers this setup from P3-T07/PR #97
 to release issue #98, superseding #96. It does not block subsequent MVP coding.

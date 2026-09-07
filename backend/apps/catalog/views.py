@@ -51,8 +51,8 @@ class CatalogHomeView(CatalogAnonymousView):
         tags=["catalog"],
         summary="Home catalog",
         description=(
-            "Published self-owned or licensed English series eligible for the fixed "
-            "France/Android MVP market."
+            "Published self-owned or licensed series eligible for the server-configured "
+            "launch market, storefront, language, and optional content segment."
         ),
         responses={200: CatalogHomeSerializer},
     )
