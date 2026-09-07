@@ -47,8 +47,8 @@ D-032 changes the MVP business hypothesis to contribution LTV versus CAC. D-007/
 Dependency order for the next development phase: P2-T03-F3 → P3-T01-F1 → P3-T02 and P3-T03 → P3-T04 → P3-T06 → P3-T08-F2/P3-T09. Then P4-T01-F5 and P4-T06 feed P4-T02 → P4-T03 → P6-T03/T04/T05/T05A → capped launch. Independent foundational work may proceed in parallel; product prices, private license approvals, privacy and D-017 spend approval remain gates for their dependent production behavior. No extra worktrees are required.
 
 P2-T03-F3 merged in PR #139. P3-T01-F1 implementation, automated acceptance and
-independent review are complete in its feature branch (2026-09-07); see the task
-evidence below. After its PR is approved and merged, the next task is P3-T02:
+independent review are complete in [PR #140](https://github.com/pedroharaujo/shortform-streaming/pull/140)
+(2026-09-07); see the task evidence below. After its PR is approved and merged, the next task is P3-T02:
 an auditable coin wallet and an atomic episode unlock. P3-T03 product configuration
 can proceed separately in parallel. Commercial prices and production activation
 remain separate approvals.
@@ -923,7 +923,9 @@ Android production JavaScript bundle passed. Independent task reviews and the
 final whole-branch review passed after corrections. See
 [`docs/runbooks/access-policy.md`](docs/runbooks/access-policy.md) and the
 [execution evidence](docs/superpowers/plans/2026-09-07-p3-t01-f1-episode-access.md).
-Required GitHub checks and human merge approval remain pending.
+Final-head GitHub check evidence is recorded in
+[PR #140](https://github.com/pedroharaujo/shortform-streaming/pull/140).
+Human approval is required before merge.
 
 #### P3-T02 — Implement immutable coin wallet and atomic episode unlock
 

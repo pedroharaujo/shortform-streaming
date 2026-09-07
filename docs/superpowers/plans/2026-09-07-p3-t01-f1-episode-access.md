@@ -65,10 +65,12 @@ client, mechanical mobile typed fixture updates, documentation and evidence.
   mobile fixtures together, and test the contract without duplicate UI suites.
 - [x] Document configuration, approved-scope limits, lock protocol, pending-intent
   deployment behavior, safe rollback, and P3-T02/P3-T08-F2 remaining work.
-- [ ] Run `pnpm check`, mobile compatibility/bundle gates, repository/history safety.
+- [x] Run `pnpm check`, mobile compatibility/bundle gates, repository/history safety.
 - [x] Fresh final whole-branch independent review and any necessary fixes/rechecks.
-- [ ] Publish a reviewable PR with exact revision/check results, wait required CI,
-  and hand back for human approval without merging.
+- [x] Publish a reviewable PR with revision/check evidence and the human merge boundary.
+
+Before handoff, verify required CI on the final head and record its result in
+[PR #140](https://github.com/pedroharaujo/shortform-streaming/pull/140). No automatic merge.
 
 ## Progress ledger
 
@@ -111,7 +113,13 @@ client, mechanical mobile typed fixture updates, documentation and evidence.
   optional cache-write permission warning; all tests executed successfully.
   The earlier full aggregate used `PYTEST_ADDOPTS=-p no:cacheprovider`.
 - All database validation used generated data in dedicated PostgreSQL 17.6.
-  Current/history safety scan, PR publication and required final CI are pending.
+- Implementation revision: `5b0b37962c0bb913af90afa99cd32b1b10bcb422`.
+  `python scripts/check_repository_foundation.py` passed (442 current files,
+  50 repository tests and AI governance); `git diff --check` passed.
+  `python scripts/scan_secrets.py --history-range 283241f0f12027dce02eaa7320251cde05a8caa1..HEAD`
+  passed for that revision (442 current files, 35 introduced history blobs).
+  This final documentation update links PR #140; its final head and CI evidence
+  are maintained in the PR body so verification does not change its own revision.
 - Test safety: a task-only database credential accidentally appeared in one
   agent's tool output. Work paused, the verified container/tmpfs database was
   removed, fresh credentials were generated, and replacement authentication was
