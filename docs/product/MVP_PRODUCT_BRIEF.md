@@ -51,6 +51,12 @@ Contracts, supplier information, commercial terms, percentages, rates, media, pr
 - Coin pack sizes, prices, episode coin costs and final coin/refund terms remain open under D-008. No direct credit-card checkout. Store monetary strings come from the active storefront, never the English locale.
 - Subscriptions and all Apple/iOS commerce remain post-MVP (D-009/D-026). Restore/sync in MVP means recovering server balance/entitlements and reconciling verified consumable transactions; it must never re-credit consumed purchases on reinstall.
 
+Implementation note: P3-T01-F1 provides the editorial configuration, versioned
+offers, Admin history, and current-policy reward checks described in the
+[access-policy runbook](../runbooks/access-policy.md). Coin prices are configurable
+metadata; coin methods and spending remain unavailable until P3-T02 supplies the
+wallet/debit implementation. This does not approve commercial values or activation.
+
 ## MVP journeys
 
 1. Campaign/creative → attributed Google Play install/first open → eligible series → free episode → progress/resume.

@@ -15,7 +15,7 @@ These shared shapes are published even while only health operations exist:
 | `HealthStatus` | `{ "status": "ok" \| "unavailable" }` for `/health/live` and `/health/ready` |
 | `CurrentUserProfile` | `{ public_id, created_at, updated_at }` from `GET /v1/me`; never includes `firebase_uid` |
 | `WatchProgress` | `{ episode_id, position_seconds, completed, updated_at }` from `GET`/`PUT /v1/progress/{episode_id}`; never includes `playback_url` |
-| `EpisodeOffersGranted` / `EpisodeOffersLocked` | Polymorphic `GET /v1/offers/{episode_id}` on `decision`. Granted: `{ decision, episode_id, methods }`. Locked: `{ decision, episode_id, lock_reasons, methods }`. MVP `methods[].type` values are `entitlement`, `free`, and `rewarded_ad`. Never includes `playback_url` |
+| `EpisodeOffersGranted` / `EpisodeOffersLocked` | Polymorphic `GET /v1/offers/{episode_id}` on `decision`. Both include `episode_id`, `policy_version`, nullable `coin_price`, and `methods`; locked also includes `lock_reasons`. Available `methods[].type` values remain `entitlement`, `free`, and `rewarded_ad`. Coin price is server configuration; coin spending stays unavailable until P3-T02. Never includes `playback_url` |
 
 Every response includes `X-Request-ID`. A valid caller-supplied value is reused;
 otherwise the backend generates a UUID. Error envelopes carry the same value so

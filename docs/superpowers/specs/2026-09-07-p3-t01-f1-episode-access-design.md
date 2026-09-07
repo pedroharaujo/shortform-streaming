@@ -92,6 +92,12 @@ ContentRight is immutable in Admin; moving ownership needs a separate reviewed
 operation. Inlines acquire their owning series lock through their parent Admin.
 Acquire locks before final validation/save and hold through audit writes.
 
+Existing ContentSegment slugs are immutable in Admin, and segment deletion
+(including bulk deletion) is unavailable. Slug changes or removal would revoke
+active audience membership without a known Series parent; freezing these
+operations keeps the transaction boundary simple. Display-name changes and new
+segments remain available. Membership changes use the locked Series Admin.
+
 The parent lock serializes cooperating writers. Document the same requirement
 for future scripts, APIs, and P3-T02 debits; raw SQL writers are not protected by
 an application convention. Callback eligibility is evaluated after lock waits,

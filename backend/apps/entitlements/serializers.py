@@ -30,6 +30,15 @@ class EpisodeOffersGrantedSerializer(serializers.Serializer[Mapping[str, object]
         help_text="granted when the episode is playable via entitlement or the free window.",
     )
     episode_id = serializers.CharField(help_text="Opaque episode public id.")
+    policy_version = serializers.RegexField(
+        regex=r"^[0-9a-f]{64}$",
+        help_text="Opaque server policy version for the current episode configuration.",
+    )
+    coin_price = serializers.IntegerField(
+        allow_null=True,
+        min_value=1,
+        help_text="Configured server coin price, or null when coin access is not configured.",
+    )
     methods = OfferMethodSerializer(
         many=True,
         allow_empty=False,
@@ -44,6 +53,15 @@ class EpisodeOffersLockedSerializer(serializers.Serializer[Mapping[str, object]]
         help_text="locked when the episode is catalog-eligible but not playable.",
     )
     episode_id = serializers.CharField(help_text="Opaque episode public id.")
+    policy_version = serializers.RegexField(
+        regex=r"^[0-9a-f]{64}$",
+        help_text="Opaque server policy version for the current episode configuration.",
+    )
+    coin_price = serializers.IntegerField(
+        allow_null=True,
+        min_value=1,
+        help_text="Configured server coin price, or null when coin access is not configured.",
+    )
     lock_reasons = serializers.ListField(
         child=serializers.ChoiceField(
             choices=[(reason.value, reason.value) for reason in LockReason]
@@ -59,7 +77,8 @@ class EpisodeOffersLockedSerializer(serializers.Serializer[Mapping[str, object]]
         allow_empty=True,
         help_text=(
             "Currently available unlock methods. Empty for anonymous locks and when "
-            "rewarded ads are disabled. Never includes coin, subscription, or a playback URL."
+            "rewarded ads are unavailable. Coin price metadata does not make coin spending "
+            "available. Never includes coin, subscription, or a playback URL."
         ),
     )
 
