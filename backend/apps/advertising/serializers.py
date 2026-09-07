@@ -11,6 +11,12 @@ class RewardIntentCreateSerializer(StrictSerializer):
     episode_id = serializers.CharField(max_length=40)
     request_id = serializers.UUIDField()
     accepted = serializers.BooleanField()
+    expected_policy_version = serializers.RegexField(
+        regex=r"^[0-9a-f]{64}$",
+        max_length=64,
+        required=False,
+        help_text="Optional server offer version. A changed policy returns 409.",
+    )
 
     def validate_accepted(self, value: bool) -> bool:
         if not value:

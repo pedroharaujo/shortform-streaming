@@ -134,7 +134,7 @@ export interface paths {
         };
         /**
          * List episode access offers
-         * @description Return currently available access methods for a catalog-eligible episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished, taken-down, or unknown ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and methods. Grant returns HTTP 200 decision=granted with methods. This response never includes a playback URL and never calls the video provider. MVP method types are entitlement, free, and rewarded_ad. Client-supplied free-window or user identifiers are ignored.
+         * @description Return currently available access methods for a catalog-eligible episode. Optional Firebase ID token: a missing Authorization header is anonymous; a present invalid, expired, or revoked token is 401 ErrorEnvelope. Catalog-ineligible, unpublished, taken-down, or unknown ids return 404 ErrorEnvelope, never 403. Catalog-eligible lock returns HTTP 200 decision=locked with lock_reasons and methods. Grant returns HTTP 200 decision=granted with methods. This response never includes a playback URL and never calls the video provider. Implemented method types are entitlement, free, and rewarded_ad. policy_version and nullable coin_price describe server configuration; coin spending is not yet available. Client-supplied policy, price, free-window, or user identifiers are ignored.
          */
         get: operations["v1_offers_retrieve"];
         put?: never;
@@ -237,7 +237,7 @@ export interface paths {
         put?: never;
         /**
          * Accept an episode reward offer
-         * @description Authenticated Android intent. Requires ads preference and current catalog eligibility. The request_id is an account-scoped idempotency UUID. Reuse it after a lost response; changing the episode returns 409. No client field can grant access. expires_at is 15 minutes after creation.
+         * @description Authenticated Android intent. Requires ads preference and current catalog eligibility. The request_id is an account-scoped idempotency UUID. Reuse it after a lost response; changing the episode returns 409. An optional expected_policy_version must match the fresh server policy. No client field can grant access. expires_at is 15 minutes after creation.
          */
         post: operations["v1_rewards_intents_create"];
         delete?: never;
@@ -366,6 +366,10 @@ export interface components {
             decision: "granted";
             /** @description Opaque episode public id. */
             episode_id: string;
+            /** @description Opaque server policy version for the current episode configuration. */
+            policy_version: string;
+            /** @description Configured server coin price, or null when coin access is not configured. */
+            coin_price: number | null;
             /** @description Non-empty list of currently available methods. Never includes a playback URL. */
             methods: components["schemas"]["OfferMethod"][];
         };
@@ -379,9 +383,13 @@ export interface components {
             decision: "locked";
             /** @description Opaque episode public id. */
             episode_id: string;
+            /** @description Opaque server policy version for the current episode configuration. */
+            policy_version: string;
+            /** @description Configured server coin price, or null when coin access is not configured. */
+            coin_price: number | null;
             /** @description Non-empty machine-readable lock reasons. Closed set: login_required, entitlement_required. */
             lock_reasons: components["schemas"]["LockReasonsEnum"][];
-            /** @description Currently available unlock methods. Empty for anonymous locks and when rewarded ads are disabled. Never includes coin, subscription, or a playback URL. */
+            /** @description Currently available unlock methods. Empty for anonymous locks and when rewarded ads are unavailable. Coin price metadata does not make coin spending available. Never includes coin, subscription, or a playback URL. */
             methods: components["schemas"]["OfferMethod"][];
         };
         EpisodeOffersResponse: components["schemas"]["EpisodeOffersGranted"] | components["schemas"]["EpisodeOffersLocked"];
@@ -535,6 +543,8 @@ export interface components {
             /** Format: uuid */
             request_id: string;
             accepted: boolean;
+            /** @description Optional server offer version. A changed policy returns 409. */
+            expected_policy_version?: string;
         };
         /**
          * @description * `pending` - pending

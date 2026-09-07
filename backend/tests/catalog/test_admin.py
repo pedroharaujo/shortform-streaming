@@ -4,7 +4,25 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 
+from apps.catalog.models import ContentSegment
 from tests.catalog.builders import make_right, make_series
+
+
+@pytest.mark.django_db
+def test_segment_admin_allows_creation_and_display_name_edits(admin_client: Client) -> None:
+    response = admin_client.post(
+        reverse("admin:catalog_contentsegment_add"),
+        {"name": "Synthetic audience", "slug": "synthetic-audience", "_save": "Save"},
+    )
+    assert response.status_code == 302
+    segment = ContentSegment.objects.get(slug="synthetic-audience")
+    response = admin_client.post(
+        reverse("admin:catalog_contentsegment_change", args=[segment.pk]),
+        {"name": "Updated synthetic audience", "_save": "Save"},
+    )
+    assert response.status_code == 302
+    segment.refresh_from_db()
+    assert segment.name == "Updated synthetic audience"
 
 
 @pytest.mark.django_db
