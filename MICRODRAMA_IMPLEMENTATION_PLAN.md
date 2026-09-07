@@ -752,6 +752,8 @@ license reapproval, safe rollback, and exact verification are recorded in
 whole-branch review and CI results belong to the implementation PR. This evidence
 does not authorize a new market, production rollout, or an automatic merge.
 
+Implementation PR: [#139](https://github.com/pedroharaujo/shortform-streaming/pull/139).
+
 #### P2-T04 — Build home catalog and series-detail mobile screens
 
 **Description:** Implement editorial rails, loading/error/empty states, series cards, detail page, episode list, and locked/free indicators.

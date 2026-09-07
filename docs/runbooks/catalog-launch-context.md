@@ -3,6 +3,9 @@
 **Plan task:** P2-T03-F3. No additional market, real audience, spend, or production
 activation is approved by this implementation.
 
+Implementation and review evidence:
+[PR #139](https://github.com/pedroharaujo/shortform-streaming/pull/139).
+
 ## Server configuration
 
 The backend resolves one immutable active context from Django's
@@ -115,6 +118,7 @@ Doctor required two existing patch mismatches to be corrected: Expo 57.0.20 and
 expo-router ~57.0.19. After the update, Expo Doctor passed 21/21,
 `pnpm mobile:check` passed all 177 tests, and `pnpm mobile:bundle:check` produced
 the Android production JavaScript bundle. No native compilation is claimed.
+`pnpm install --frozen-lockfile` also passed with the existing supply-chain policy.
 
 Independent catalog and ingestion reviews passed after strict ISO membership and
 real-grant integration corrections. Fresh whole-branch review and its compatibility

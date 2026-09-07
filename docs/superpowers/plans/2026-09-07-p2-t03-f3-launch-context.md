@@ -101,7 +101,7 @@ and main plan completion/evidence.
 - [x] Fresh independent reviewer checks whole-branch requirements, rights,
   migrations, authorization, maintainability, and validation evidence.
 - [x] Resolve material findings and rerun the affected checks.
-- [ ] Open a reviewable PR with task reference and exact checks; preserve any
+- [x] Open a reviewable PR with task reference and exact checks; preserve any
   external blocker as a blocker and do not merge automatically.
 
 ## Progress ledger
@@ -126,4 +126,7 @@ and main plan completion/evidence.
   two pre-existing patch mismatches, so a minimal Expo/router compatibility update
   passed Expo Doctor (21/21), `pnpm mobile:check` (177 tests), and Android production
   JavaScript bundle export. A separate read-only addendum review found no material
-  issue or policy weakening. PR and CI evidence pending.
+  issue or policy weakening. `pnpm install --frozen-lockfile` passed with unchanged
+  supply-chain policy. Implementation revision: `04cecde99f18f9740d97c1e73d79869eecb97dda`.
+  [PR #139](https://github.com/pedroharaujo/shortform-streaming/pull/139) contains
+  the exact validation and final CI evidence; it requires human approval to merge.
