@@ -150,10 +150,44 @@ an explicit latest-20 notice when truncated. This is verified-credit visibility
 after reinstall or another-device login; it does not recover an unverified native
 checkout or resolve a refund. Native checkout remains the next task in #142.
 
+## Dormant checkout coordinator (P3-T03/T06 / #142)
+
+The mobile checkout boundary uses the existing generated identity, catalog and
+status contracts plus injected synthetic provider/storage implementations. Its
+shipped factory returns unavailable before constructing dependencies. Wallet
+checkout remains unavailable; no SDK, route or store configuration is added.
+
+The coordinator binds the server purchase identity before reading provider offers,
+matches application/product/store/environment and preserves the exact localized
+price string. A selected price or quantity change returns refreshed offers for
+another explicit confirmation. One process-wide operation excludes concurrent
+checkout across coordinators and accounts. Any session replacement invalidates
+the original controller, including replacement with the same credential.
+
+Before checkout, a serialized SecureStore write saves a strict versioned marker
+with server identity, synthetic application/product and random attempt UUID. A
+read/write/corruption error blocks checkout. An unresolved marker cannot be
+replaced; cleanup compares the entire attempt under the same queue. Only explicit
+matching cancellation or matching server credit can clear it. Pending, errors,
+ambiguous responses and refund/conflict review preserve it.
+
+A completed provider result only initiates an authenticated server status read.
+Raw transaction IDs stay in memory for that exact owner/attempt and in the POST
+body; public state, storage, logs and analytics contain none. Historical credited
+quantity and support reference come from the server; current wallet is refreshed
+separately. A wallet outage does not erase historical confirmation.
+
+After process loss, the remaining marker prevents another charge but cannot yet
+be automatically reconciled without its transaction ID. Recent purchase history
+does not provide exact attempt correlation and cannot prove cancellation. Genuine
+provider correlation, acknowledgement/consumption ownership and account-deletion
+integration must be validated before introducing real checkout. The synthetic
+provider contract is not evidence of RevenueCat or Google compatibility.
+
 ## Remaining release gates
 
-- Native RevenueCat configuration, server identity binding before checkout, store
-  localized offering/price display and interrupted-purchase recovery.
+- Native RevenueCat configuration and genuine adapter for the dormant identity,
+  store-localized offering/price and interruption boundary, plus complete recovery.
 - Genuine provider HMAC/authorization, retry, alias, sandbox purchase/cancellation,
   refund and reconciliation evidence with redacted references, and secret rotation.
 - Native SDK acknowledgement and consumption ownership; Django does neither.
