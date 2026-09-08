@@ -610,6 +610,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Coin purchases or the requested catalog are unavailable.
+  /v1/purchases/history:
+    get:
+      operationId: v1_purchases_history_retrieve
+      description: Local synthetic mode only. Returns at most 20 owned credited decisions,
+        newest recorded time then support-reference UUID first, with has_more for
+        older records. Accepts no query fields. No wallet or purchase identity is
+        created. Historical credit survives registry changes and is not the current
+        spendable balance, final refund settlement, entitlement or playback authorization.
+        Any quarantined delivery keeps a credit in review, including after a successful
+        retry. Empty history does not prove a purchase failed or make repurchasing
+        safe. Refresh wallet separately.
+      summary: Read the current account's latest verified purchase credits
+      tags:
+      - commerce
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseHistory'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Invalid or unexpected purchase lookup fields.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Coin purchases or the requested catalog are unavailable.
   /v1/purchases/identity:
     post:
       operationId: v1_purchases_identity_create
@@ -1551,6 +1594,47 @@ components:
           pattern: ^test\.synthetic\.[A-Za-z0-9_.:/-]*$
       required:
       - application_id
+    PurchaseHistory:
+      type: object
+      properties:
+        purchases:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseHistoryItem'
+          maxItems: 20
+        has_more:
+          type: boolean
+      required:
+      - has_more
+      - purchases
+    PurchaseHistoryItem:
+      type: object
+      properties:
+        recorded_at:
+          type: string
+          format: date-time
+        historical_credited_coins:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        support_reference:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/PurchaseHistoryItemStatusEnum'
+      required:
+      - historical_credited_coins
+      - recorded_at
+      - status
+      - support_reference
+    PurchaseHistoryItemStatusEnum:
+      enum:
+      - credited
+      - review_required
+      type: string
+      description: |-
+        * `credited` - credited
+        * `review_required` - review_required
     PurchaseIdentity:
       type: object
       properties:

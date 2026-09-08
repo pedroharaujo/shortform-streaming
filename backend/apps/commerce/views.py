@@ -9,10 +9,11 @@ from apps.accounts.authentication import FirebaseAuthenticationFailed, FirebaseI
 from apps.accounts.models import UserProfile
 from apps.accounts.views import ERROR_401
 from apps.commerce.configuration import purchases_enabled
-from apps.commerce.reads import purchase_catalog, purchase_status
+from apps.commerce.reads import purchase_catalog, purchase_history, purchase_status
 from apps.commerce.serializers import (
     PurchaseCatalogRequestSerializer,
     PurchaseCatalogSerializer,
+    PurchaseHistorySerializer,
     PurchaseIdentitySerializer,
     PurchaseReceiptSerializer,
     PurchaseStatusRequestSerializer,
@@ -32,6 +33,36 @@ PURCHASE_READ_ERRORS = {
         description="Coin purchases or the requested catalog are unavailable.",
     ),
 }
+
+
+class PurchaseHistoryView(APIView):
+    authentication_classes = [FirebaseIdTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["commerce"],
+        summary="Read the current account's latest verified purchase credits",
+        description=(
+            "Local synthetic mode only. Returns at most 20 owned credited decisions, newest "
+            "recorded time then support-reference UUID first, with has_more for older records. "
+            "Accepts no query fields. No wallet or purchase identity is created. Historical "
+            "credit survives registry changes and is not the current spendable balance, final "
+            "refund settlement, entitlement or playback authorization. Any quarantined delivery "
+            "keeps a credit in review, including after a successful retry. Empty history does "
+            "not prove a purchase failed or make repurchasing safe. Refresh wallet separately."
+        ),
+        request=None,
+        responses={200: PurchaseHistorySerializer, **PURCHASE_READ_ERRORS},
+    )
+    def get(self, request: Request) -> Response:
+        if not isinstance(request.user, UserProfile):
+            raise FirebaseAuthenticationFailed()
+        if request.query_params:
+            raise ParseError("This operation accepts no query fields.")
+        result = purchase_history(request.user)
+        response = Response(PurchaseHistorySerializer(result).data)
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 class PurchaseCatalogView(APIView):

@@ -51,6 +51,18 @@ class PurchaseStatusSerializer(serializers.Serializer[Mapping[str, object]]):
     support_reference = serializers.UUIDField(allow_null=True)
 
 
+class PurchaseHistoryItemSerializer(serializers.Serializer[Mapping[str, object]]):
+    recorded_at = serializers.DateTimeField()
+    historical_credited_coins = serializers.IntegerField(min_value=1, max_value=2147483647)
+    support_reference = serializers.UUIDField()
+    status = serializers.ChoiceField(choices=["credited", "review_required"])
+
+
+class PurchaseHistorySerializer(serializers.Serializer[Mapping[str, object]]):
+    purchases = serializers.ListField(child=PurchaseHistoryItemSerializer(), max_length=20)
+    has_more = serializers.BooleanField()
+
+
 class PurchaseIdentitySerializer(serializers.Serializer[Mapping[str, object]]):
     app_user_id = serializers.UUIDField()
 

@@ -249,6 +249,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/purchases/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the current account's latest verified purchase credits
+         * @description Local synthetic mode only. Returns at most 20 owned credited decisions, newest recorded time then support-reference UUID first, with has_more for older records. Accepts no query fields. No wallet or purchase identity is created. Historical credit survives registry changes and is not the current spendable balance, final refund settlement, entitlement or playback authorization. Any quarantined delivery keeps a credit in review, including after a successful retry. Empty history does not prove a purchase failed or make repurchasing safe. Refresh wallet separately.
+         */
+        get: operations["v1_purchases_history_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/purchases/identity": {
         parameters: {
             query?: never;
@@ -694,6 +714,24 @@ export interface components {
         PurchaseCatalogRequestRequest: {
             application_id: string;
         };
+        PurchaseHistory: {
+            purchases: components["schemas"]["PurchaseHistoryItem"][];
+            has_more: boolean;
+        };
+        PurchaseHistoryItem: {
+            /** Format: date-time */
+            recorded_at: string;
+            historical_credited_coins: number;
+            /** Format: uuid */
+            support_reference: string;
+            status: components["schemas"]["PurchaseHistoryItemStatusEnum"];
+        };
+        /**
+         * @description * `credited` - credited
+         *     * `review_required` - review_required
+         * @enum {string}
+         */
+        PurchaseHistoryItemStatusEnum: "credited" | "review_required";
         PurchaseIdentity: {
             /** Format: uuid */
             app_user_id: string;
@@ -1359,6 +1397,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PurchaseCatalog"];
+                };
+            };
+            /** @description Invalid or unexpected purchase lookup fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Coin purchases or the requested catalog are unavailable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_purchases_history_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseHistory"];
                 };
             };
             /** @description Invalid or unexpected purchase lookup fields. */

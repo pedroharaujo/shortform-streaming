@@ -11,6 +11,38 @@ from apps.commerce.services import PurchaseUnavailable
 from apps.commerce.verification import digest
 
 
+def purchase_history(profile: UserProfile) -> dict[str, object]:
+    if not purchases_enabled():
+        raise PurchaseUnavailable()
+    with transaction.atomic():
+        profile = lock_current_profile(profile)
+        # Historical credit survives registry changes; it is not today's balance.
+        decisions = list(
+            PurchaseDecision.objects.filter(
+                identity__wallet__user_profile=profile, status="credited"
+            )
+            .annotate(
+                needs_review=Exists(
+                    PurchaseEvent.objects.filter(decision_id=OuterRef("pk"), status="quarantined")
+                )
+            )
+            .order_by("-created_at", "-id")
+            .values("id", "coins", "created_at", "needs_review")[:21]
+        )
+        return {
+            "purchases": [
+                {
+                    "recorded_at": decision["created_at"],
+                    "historical_credited_coins": decision["coins"],
+                    "support_reference": decision["id"],
+                    "status": "review_required" if decision["needs_review"] else "credited",
+                }
+                for decision in decisions[:20]
+            ],
+            "has_more": len(decisions) > 20,
+        }
+
+
 def purchase_catalog(profile: UserProfile, *, application_id: str) -> list[dict[str, object]]:
     if not purchases_enabled():
         raise PurchaseUnavailable()
