@@ -5,9 +5,12 @@ This runbook is the WIF / deploy-workflow contract. It does **not** replace
 `docs/runbooks/staging-apply.md` (OpenTofu apply of the staging composition)
 or `docs/runbooks/django-container.md` (local image and migrate-vs-web).
 
-Live `tofu apply` of the WIF pool, deploy SA, migrate/smoke jobs, and GitHub
-Environment protection is **founder follow-up**. Do not mark live deploy,
-smoke-fail, or revision-rollback not-applicable.
+The founder authorized private staging bootstrap and verification on
+2026-09-08. The WIF pool, deploy SA, migrate/smoke jobs and GitHub Environment
+protection are now applied; see the [scoped evidence](../superpowers/reports/2026-09-08-p5-t04-live-verification.md).
+The actual GitHub failure/no-promotion and deployment checks remain pending
+the reviewed container prerequisite. Do not mark them or revision rollback
+not-applicable, and do not treat manual job success as workflow evidence.
 
 ## GitHub Environments
 
