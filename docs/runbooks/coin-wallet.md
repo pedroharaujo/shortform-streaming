@@ -12,13 +12,17 @@ No real coin purchase, financial processing or production spending is enabled.
 - `POST /v1/coins/unlock`: requires episode public ID, request UUID, and exact
   policy version/coin price from the current server offer. Returns request and
   episode IDs, charged coins and current balance. No media URL or store receipt.
-- Repeat the same request after a lost response. Its account, episode, version
-  and price must match. An existing valid grant or newly free episode never
-  charges again. Removed entitlements are not silently restored by replay.
+- `POST /v1/coins/unlock/resolve`: submit the saved original request after a
+  lost response. Its account, episode, version and price must match. Returns
+  `completed` with the historical receipt or `cancelled` with zero charged coins.
+  Cancellation atomically prevents a delayed original request from debiting.
+  Resolution never creates a debit, refund or replacement entitlement.
 - Eligibility precedes access, including on retries. Rights/takedown/expiry
   denial returns 404, while stale offer, insufficient funds, disabled spending
   or request reuse conflict returns 409. Authentication failure is 401. Responses
   containing a balance use `Cache-Control: no-store`.
+- Resolution is historical accounting and remains available after rights denial
+  or catalog removal. It does not establish present playback eligibility.
 
 The frontend must still request fresh playback authorization after success.
 Server coins, grants and verified purchases remain authoritative; client success
@@ -88,14 +92,28 @@ provider events, visual/accessibility evidence and production retention validati
 are not claimed here. Their existing P3/P6 gates remain prerequisites for real
 money and public release.
 
-After a lost response, a replay 409 cannot establish whether the original debit
-committed. The app preserves the original attempt and shows its request UUID for
-support. Engineering can correlate that safe reference with the account's
-`CoinUnlock` receipt in the isolated test database; absence alone does not prove
-an in-flight original request cannot commit. Do not erase pending requests, edit
-ledger rows, mint replacement coins or ask the viewer to create a new request as
-a workaround. [Issue #144](https://github.com/pedroharaujo/shortform-streaming/issues/144)
-owns a serialized server resolution protocol and approved support completion.
+After a lost response, **Check coin unlock** sends the saved original terms to
+resolution, never another spend request. The app reads pending recovery after
+authenticating the profile and before requiring today's catalog/offer, so a
+takedown cannot hide that action. Recovery also precedes already-granted Play
+and ad recovery. The recovery action remains visible even when the wallet is
+unavailable or the UI spending flag is off. The server still requires
+`DEBUG=True` and `COIN_SPENDING_MODE=test` to resolve; a disabled server returns
+409 and the app preserves the pending reference for support.
+
+A verified cancellation clears only the matching saved request, refreshes current
+choices and requires a new explicit price confirmation and UUID. A completed
+receipt clears only that request, then requires fresh wallet, offer and playback
+authorization checks before navigation. A receipt itself never unlocks playable
+media. Session/account changes, unknown status, malformed or mismatched responses
+and network failures preserve the original recovery record. Ambiguous rejections
+keep the safe request reference for support; absence of a receipt alone still
+does not justify erasing a pending request or replacing coins.
+
+[Issue #144](https://github.com/pedroharaujo/shortform-streaming/issues/144) remains
+open for an approved public support contact and actual native recovery evidence.
+Neither is claimed by automated engineering checks. Production coins remain
+disabled.
 
 ## Deployment and rollback
 

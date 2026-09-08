@@ -15,6 +15,7 @@ is the root module that selects providers.
 | `cloud_run` | Cloud Run v2 service, internal ingress only, dedicated runtime SA, port 8080, Secret Manager env, `/health/ready` + `/health/live` probes, CI-owned image digest. |
 | `cloud_run_job` | Cloud Run v2 job with the same env/secret shape, runtime SA, `max_retries` default 0, CI-owned image. |
 | `github_wif` | GitHub OIDC workload identity pool/provider. Exact repository, ref, and environment. No `startsWith`. |
+| `observability` | Disabled-by-default request log metrics, Cloud Run dashboard, and operator-configured API alerts over signals that already exist. |
 
 Apply of the staging composition is documented in
 `docs/runbooks/staging-apply.md` (P5-T01-B / #71). Deploy CI, WIF outputs, and
@@ -26,7 +27,14 @@ Modules stay reusable and do not embed project or billing identifiers.
 - GCS HLS origin, Cloud CDN, or Transcoder (D-014 GCP video fallback is inactive).
 - Cloud Tasks, Cloud Scheduler, DNS, Cloud SQL, or Compute.
 - Public activation (`INGRESS_TRAFFIC_ALL`, `allUsers`, domain mapping).
+- Log retention, notification-channel creation, uptime checks, tracing,
+  Crashlytics, or placeholder metrics for database/provider/mobile/commerce
+  sources that do not yet emit operational telemetry.
 
 D-020 (residency/retention) is **not** decided by these modules: `region` is
 always a required variable with no default, and buckets have no object
 age-delete lifecycle.
+
+The observability module decides no region, retention, owner, severity,
+notification target, or threshold. Its default creates no resources. Enabling
+alerts requires every operator-owned input; see `docs/runbooks/observability.md`.

@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 
+from apps.commerce.configuration import load_products, parse_registry
 from config import spectacular as spectacular_config
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -35,7 +36,22 @@ INSTALLED_APPS = [
     "apps.progress",
     "apps.advertising",
     "apps.wallet",
+    "apps.commerce",
 ]
+
+COIN_PURCHASE_MODE = os.environ.get("COIN_PURCHASE_MODE", "disabled").strip()
+if COIN_PURCHASE_MODE not in {"disabled", "test"}:
+    raise ImproperlyConfigured("COIN_PURCHASE_MODE must be disabled or test.")
+COIN_PURCHASE_AUTHORIZATION = os.environ.get("COIN_PURCHASE_AUTHORIZATION", "")
+COIN_PURCHASE_SIGNING_SECRET = os.environ.get("COIN_PURCHASE_SIGNING_SECRET", "")
+COIN_PURCHASE_PRODUCTS = parse_registry(os.environ.get("COIN_PURCHASE_PRODUCTS", "[]"))
+if COIN_PURCHASE_MODE == "test":
+    load_products(COIN_PURCHASE_PRODUCTS)
+    if not all(
+        32 <= len(value) <= 256 and value.isascii() and value.isprintable()
+        for value in (COIN_PURCHASE_AUTHORIZATION, COIN_PURCHASE_SIGNING_SECRET)
+    ):
+        raise ImproperlyConfigured("Synthetic purchase callback authentication must be configured.")
 
 MIDDLEWARE = [
     "config.observability.RequestCorrelationMiddleware",

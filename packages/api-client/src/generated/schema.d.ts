@@ -84,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/coins/unlock/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve or cancel an interrupted coin unlock
+         * @description Local synthetic mode only. Submit the original request unchanged. Atomically returns its completed accounting receipt or permanently cancels that account's request so a delayed original cannot charge. No credit, refund, entitlement or playback URL is created. Completed history does not assert current rights or access; refresh offers and authorize playback separately. A cancelled result requires fresh terms and explicit confirmation before using a new request ID. Mismatched key/terms and disabled mode return 409.
+         */
+        post: operations["v1_coins_unlock_resolve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/episodes/{public_id}": {
         parameters: {
             query?: never;
@@ -203,6 +223,26 @@ export interface paths {
          */
         put: operations["v1_progress_update"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/purchases/identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtain the authenticated account's opaque purchase identity
+         * @description Synthetic local mode only. The server permanently binds the identity to an opaque wallet. No client identity or coin amount is accepted.
+         */
+        post: operations["v1_purchases_identity_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -387,6 +427,21 @@ export interface components {
             expected_policy_version: string;
             expected_coin_price: number;
         };
+        CoinUnlockResolution: {
+            episode_id: string;
+            /** Format: uuid */
+            request_id: string;
+            charged_coins: number;
+            /** Format: int64 */
+            balance: number;
+            status: components["schemas"]["CoinUnlockResolutionStatusEnum"];
+        };
+        /**
+         * @description * `completed` - completed
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        CoinUnlockResolutionStatusEnum: "completed" | "cancelled";
         CurrentUserProfile: {
             /** @description Opaque profile public id. Sequential database integers are never used. */
             public_id: string;
@@ -578,6 +633,10 @@ export interface components {
          * @example ser_1a2b3c4d5e6f
          */
         PublicId: string;
+        PurchaseIdentity: {
+            /** Format: uuid */
+            app_user_id: string;
+        };
         RewardIntent: {
             /** Format: uuid */
             id: string;
@@ -767,6 +826,56 @@ export interface operations {
             };
             /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_coins_unlock_resolve_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoinUnlockRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoinUnlockResolution"];
+                };
+            };
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1129,6 +1238,52 @@ export interface operations {
             };
             /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_purchases_identity_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseIdentity"];
+                };
+            };
+            /** @description The operation accepts no request fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Coin purchases are disabled or unavailable. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

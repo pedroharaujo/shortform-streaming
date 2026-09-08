@@ -127,31 +127,44 @@ export function EpisodeUnlockScreen({
       setMessage(messages.wallet.signIn);
       return;
     }
-    const [episode, available, profile, balance] = await Promise.all([
-      catalog.getEpisode(episodeId),
-      rewards.offers(episodeId),
-      me.getMe(),
-      wallet.getWallet(),
-    ]);
+    const profile = await me.getMe();
     if (!isCurrent()) return;
-    if (profile.outcome === 'unauthenticated' || available.outcome === 'unauthenticated') {
+    if (profile.outcome !== 'ok') {
       setMessage(messages.wallet.signIn);
       return;
     }
+    if (!acceptProfile(profile.data.public_id)) return;
+    let attempt: PendingCoinUnlock | null;
+    try {
+      attempt = await readPendingCoinUnlock(profile.data.public_id, episodeId);
+      if (!isCurrent()) return;
+      setPending(attempt);
+      setRecoveryReady(true);
+      if (attempt !== null) setMessage(copy.pending);
+    } catch {
+      if (isCurrent()) setMessage(copy.storageUnavailable);
+      return;
+    }
+    // Historical accounting recovery must remain reachable after catalog removal
+    // or a rights denial, and must precede access obtained through another grant.
+    const [episode, available, balance] = await Promise.all([
+      catalog.getEpisode(episodeId),
+      rewards.offers(episodeId),
+      wallet.getWallet(),
+    ]);
+    if (!isCurrent()) return;
     if (
       episode.outcome !== 'ok' ||
       available.outcome !== 'ok' ||
-      profile.outcome !== 'ok' ||
       episode.data.id !== episodeId ||
       !validOffer(available.data, episodeId)
     ) {
-      setMessage(copy.unavailable);
+      setMessage(attempt !== null ? copy.pending : copy.unavailable);
       return;
     }
-    if (!acceptProfile(profile.data.public_id)) return;
     // A delayed ad grant still needs the existing intent reconciliation and
     // consented grant analytics. Entering this path never shows another ad.
-    if (available.data.decision === 'granted') {
+    if (attempt === null && available.data.decision === 'granted') {
       const pendingAd = await readPendingRewardAttempt(profile.data.public_id, episodeId);
       if (!isCurrent()) return;
       if (pendingAd !== null) {
@@ -167,23 +180,15 @@ export function EpisodeUnlockScreen({
       offer: available.data,
       wallet: balance.outcome === 'ok' ? balance.data : null,
     });
-    try {
-      const attempt = await readPendingCoinUnlock(profile.data.public_id, episodeId);
-      if (!isCurrent()) return;
-      setPending(attempt);
-      setRecoveryReady(true);
-      setMessage(
-        attempt !== null
-          ? copy.pending
-          : available.data.decision === 'granted'
-            ? copy.alreadyUnlocked
-            : balance.outcome !== 'ok'
-              ? messages.wallet.unavailable
-              : '',
-      );
-    } catch {
-      if (isCurrent()) setMessage(copy.storageUnavailable);
-    }
+    setMessage(
+      attempt !== null
+        ? copy.pending
+        : available.data.decision === 'granted'
+          ? copy.alreadyUnlocked
+          : balance.outcome !== 'ok'
+            ? messages.wallet.unavailable
+            : '',
+    );
   }, [
     acceptProfile,
     catalog,
@@ -254,11 +259,7 @@ export function EpisodeUnlockScreen({
     action();
   }
 
-  async function confirmPlayback(
-    source: Snapshot,
-    attempt: PendingCoinUnlock | null,
-    requireBalance = false,
-  ): Promise<void> {
+  async function confirmPlayback(source: Snapshot | null, requireBalance = false): Promise<void> {
     setSnapshot(null);
     setMessage(copy.verifying);
     // Never infer a balance or entitlement from the device or a previous receipt.
@@ -282,11 +283,12 @@ export function EpisodeUnlockScreen({
       setMessage(copy.playbackUnavailable);
       return;
     }
-    setSnapshot({
-      ...source,
-      wallet: balance.outcome === 'ok' ? balance.data : null,
-      offer: access.data,
-    });
+    if (source !== null)
+      setSnapshot({
+        ...source,
+        wallet: balance.outcome === 'ok' ? balance.data : null,
+        offer: access.data,
+      });
     if (access.data.decision !== 'granted') {
       setMessage(copy.playbackUnavailable);
       return;
@@ -297,29 +299,81 @@ export function EpisodeUnlockScreen({
       setMessage(copy.playbackUnavailable);
       return;
     }
-    if (attempt !== null) {
-      await clearPendingCoinUnlock(attempt);
-      if (!isCurrent()) return;
-      setPending(null);
-    }
     // The player authorizes again on entry; never put media URLs in navigation.
     leave(() => onPlay(episodeId));
+  }
+
+  async function clearTerminalAttempt(attempt: PendingCoinUnlock): Promise<boolean> {
+    // A profile can be deleted/recreated without replacing the local credential.
+    // Recheck its identity before touching the original account's recovery state.
+    const owner = await me.getMe();
+    if (!isCurrent()) return false;
+    if (owner.outcome !== 'ok') {
+      setMessage(messages.wallet.signIn);
+      return false;
+    }
+    if (!acceptProfile(owner.data.public_id)) return false;
+    await clearPendingCoinUnlock(attempt, isCurrent);
+    if (!isCurrent()) return false;
+    setPending(null);
+    return true;
+  }
+
+  async function resolvePending(): Promise<void> {
+    if (pending === null || !recoveryReady) return;
+    const attempt = pending;
+    const profile = await me.getMe();
+    if (!isCurrent()) return;
+    if (profile.outcome !== 'ok') {
+      setMessage(messages.wallet.signIn);
+      return;
+    }
+    if (!acceptProfile(profile.data.public_id)) return;
+    setMessage(copy.verifying);
+    const result = await wallet.resolve(attempt.request);
+    if (!isCurrent()) return;
+    if (result.outcome !== 'ok') {
+      if (result.outcome !== 'unreachable' && [400, 404, 409].includes(result.httpStatus)) {
+        setRejectedReplayId(attempt.request.request_id);
+        setMessage(copy.unresolved(attempt.request.request_id));
+      } else {
+        setMessage(copy.pending);
+      }
+      return;
+    }
+    if (
+      result.data.episode_id !== attempt.request.episode_id ||
+      result.data.request_id !== attempt.request.request_id ||
+      (result.data.status !== 'completed' && result.data.status !== 'cancelled') ||
+      (result.data.status === 'cancelled' && result.data.charged_coins !== 0) ||
+      (result.data.charged_coins !== 0 &&
+        result.data.charged_coins !== attempt.request.expected_coin_price)
+    ) {
+      setMessage(copy.pending);
+      return;
+    }
+    if (!(await clearTerminalAttempt(attempt))) return;
+    setRejectedReplayId(null);
+    if (result.data.status === 'cancelled') {
+      await load();
+      if (isCurrent()) setMessage(copy.cancelled);
+    } else {
+      await confirmPlayback(snapshot, true);
+    }
   }
 
   async function spend(): Promise<void> {
     if (
       snapshot === null ||
+      pending !== null ||
       !recoveryReady ||
       !coinsEnabled ||
       !snapshot.wallet?.spending_available
     )
       return;
     const price = coinPrice(snapshot.offer);
-    if (pending === null && (!confirming || price === null || snapshot.wallet.balance < price))
-      return;
+    if (!confirming || price === null || snapshot.wallet.balance < price) return;
     const source = snapshot;
-    const recovering = pending !== null;
-    let attempt = pending;
     const profile = await me.getMe();
     if (!isCurrent()) return;
     if (profile.outcome !== 'ok') {
@@ -328,52 +382,38 @@ export function EpisodeUnlockScreen({
       return;
     }
     if (!acceptProfile(profile.data.public_id)) return;
-    if (attempt === null) {
-      attempt = {
-        version: 1,
-        profileId: source.profileId,
-        request: {
-          episode_id: episodeId,
-          request_id: randomUUID(),
-          expected_policy_version: source.offer.policy_version,
-          expected_coin_price: price!,
-        },
-      };
-      try {
-        await writePendingCoinUnlock(attempt);
-      } catch {
-        if (isCurrent()) {
-          setRecoveryReady(false);
-          setMessage(copy.storageUnavailable);
-        }
-        return;
+    const attempt: PendingCoinUnlock = {
+      version: 1,
+      profileId: source.profileId,
+      request: {
+        episode_id: episodeId,
+        request_id: randomUUID(),
+        expected_policy_version: source.offer.policy_version,
+        expected_coin_price: price,
+      },
+    };
+    try {
+      await writePendingCoinUnlock(attempt);
+    } catch {
+      if (isCurrent()) {
+        setRecoveryReady(false);
+        setMessage(copy.storageUnavailable);
       }
-      if (!isCurrent()) return;
-      setPending(attempt);
+      return;
     }
+    if (!isCurrent()) return;
+    setPending(attempt);
     setConfirming(false);
     setMessage(copy.verifying);
     const result = await wallet.unlock(attempt.request);
     if (!isCurrent()) return;
     if (result.outcome !== 'ok') {
-      // A first-send rejection proves this request did not commit. After a lost
-      // response, a replay rejection may instead reflect changed eligibility.
-      if (
-        !recovering &&
-        result.outcome !== 'unreachable' &&
-        [400, 404, 409].includes(result.httpStatus)
-      ) {
-        await clearPendingCoinUnlock(attempt);
-        if (!isCurrent()) return;
+      // A first-send rejection proves this request did not commit. Lost responses
+      // use the separate resolution protocol instead of sending another debit.
+      if (result.outcome !== 'unreachable' && [400, 404, 409].includes(result.httpStatus)) {
+        if (!(await clearTerminalAttempt(attempt))) return;
         await load();
         if (isCurrent()) setMessage(copy.changed);
-      } else if (
-        recovering &&
-        result.outcome !== 'unreachable' &&
-        [400, 404, 409].includes(result.httpStatus)
-      ) {
-        setRejectedReplayId(attempt.request.request_id);
-        setMessage(copy.unresolved(attempt.request.request_id));
       } else {
         setMessage(copy.pending);
       }
@@ -388,10 +428,8 @@ export function EpisodeUnlockScreen({
       setMessage(copy.pending);
       return;
     }
-    await clearPendingCoinUnlock(attempt);
-    if (!isCurrent()) return;
-    setPending(null);
-    await confirmPlayback(source, null, true);
+    if (!(await clearTerminalAttempt(attempt))) return;
+    await confirmPlayback(source, true);
   }
 
   const visible = sessionChanged ? null : snapshot;
@@ -418,6 +456,15 @@ export function EpisodeUnlockScreen({
         <Text accessibilityLiveRegion="polite" style={styles.body}>
           {displayMessage}
         </Text>
+        {!sessionChanged && pending !== null ? (
+          <Action
+            label={copy.checkPending}
+            onPress={() => {
+              void run(resolvePending);
+            }}
+            disabled={busy || !recoveryReady || pending.request.request_id === rejectedReplayId}
+          />
+        ) : null}
         {visible !== null ? (
           <>
             <Text accessibilityRole="header" style={styles.title}>
@@ -426,72 +473,60 @@ export function EpisodeUnlockScreen({
             {visible.wallet !== null ? (
               <Text style={styles.balance}>{messages.wallet.balance(visible.wallet.balance)}</Text>
             ) : null}
-            {visible.offer.decision === 'granted' ? (
+            {pending !== null ? null : visible.offer.decision === 'granted' ? (
               <Action
                 label={messages.common.play}
                 onPress={() => {
-                  void run(() => confirmPlayback(visible, pending));
+                  void run(() => confirmPlayback(visible));
                 }}
                 disabled={busy}
               />
             ) : (
               <>
-                {pending !== null ? (
-                  <Action
-                    label={copy.checkPending}
-                    onPress={() => {
-                      void run(spend);
-                    }}
-                    disabled={busy || !canSpend || pending.request.request_id === rejectedReplayId}
-                  />
-                ) : (
+                {price !== null && canSpend ? (
                   <>
-                    {price !== null && canSpend ? (
+                    <Text style={styles.body}>{copy.terms}</Text>
+                    {visible.wallet!.balance < price ? (
+                      <Text style={styles.body}>{copy.insufficient}</Text>
+                    ) : confirming ? (
                       <>
-                        <Text style={styles.body}>{copy.terms}</Text>
-                        {visible.wallet!.balance < price ? (
-                          <Text style={styles.body}>{copy.insufficient}</Text>
-                        ) : confirming ? (
-                          <>
-                            <Action
-                              label={copy.confirm(price)}
-                              onPress={() => {
-                                void run(spend);
-                              }}
-                              disabled={busy || !recoveryReady}
-                            />
-                            <Action
-                              label={copy.cancel}
-                              onPress={() => setConfirming(false)}
-                              disabled={busy}
-                            />
-                          </>
-                        ) : (
-                          <Action
-                            label={copy.coins(price)}
-                            onPress={() => {
-                              if (isCurrent()) setConfirming(true);
-                            }}
-                            disabled={busy || !recoveryReady}
-                          />
-                        )}
+                        <Action
+                          label={copy.confirm(price)}
+                          onPress={() => {
+                            void run(spend);
+                          }}
+                          disabled={busy || !recoveryReady}
+                        />
+                        <Action
+                          label={copy.cancel}
+                          onPress={() => setConfirming(false)}
+                          disabled={busy}
+                        />
                       </>
-                    ) : null}
-                    {adAvailable ? (
+                    ) : (
                       <Action
-                        label={copy.watchAd}
+                        label={copy.coins(price)}
                         onPress={() => {
-                          if (!isCurrent()) return;
-                          leave(visible.adsConsent ? () => onAd(episodeId) : onAccount);
+                          if (isCurrent()) setConfirming(true);
                         }}
-                        disabled={busy || confirming}
+                        disabled={busy || !recoveryReady}
                       />
-                    ) : null}
-                    {!adAvailable && !(price !== null && canSpend) ? (
-                      <Text style={styles.body}>{copy.noMethods}</Text>
-                    ) : null}
+                    )}
                   </>
-                )}
+                ) : null}
+                {adAvailable ? (
+                  <Action
+                    label={copy.watchAd}
+                    onPress={() => {
+                      if (!isCurrent()) return;
+                      leave(visible.adsConsent ? () => onAd(episodeId) : onAccount);
+                    }}
+                    disabled={busy || confirming}
+                  />
+                ) : null}
+                {!adAvailable && !(price !== null && canSpend) ? (
+                  <Text style={styles.body}>{copy.noMethods}</Text>
+                ) : null}
                 {!canSpend && (price !== null || pending !== null) ? (
                   <Text style={styles.body}>{messages.wallet.spendingUnavailable}</Text>
                 ) : null}

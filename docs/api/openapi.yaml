@@ -8,15 +8,16 @@ info:
     envelope, cursor pagination, opaque public IDs, and Firebase ID-token bearer auth)
     are documented as components. Protected consumer /v1/ operations also require
     a Firebase App Check token when server enforcement is enabled; the authentic AdMob
-    callback is excluded. Health probes and anonymous catalog reads do not require
-    user authentication. POST /v1/playback/{episode_id}/authorize accepts an optional
-    Firebase ID token: a missing token is anonymous, and a present invalid token is
-    401 ErrorEnvelope. Catalog-eligible locked episodes return HTTP 200 with decision
-    locked and lock_reasons, never a playback URL. GET /v1/offers/{episode_id} accepts
-    the same optional Firebase ID token and ineligible ids are 404; locked catalog-eligible
-    episodes return HTTP 200 with methods and never a playback URL. GET/PUT /v1/progress/{episode_id}
-    accepts the same optional Firebase ID token plus an anonymous X-Device-Id header;
-    lock is HTTP 403 and the response never includes a playback URL. The server resolves
+    callback and exact provider-authenticated POST /v1/purchases/revenuecat are excluded.
+    Health probes and anonymous catalog reads do not require user authentication.
+    POST /v1/playback/{episode_id}/authorize accepts an optional Firebase ID token:
+    a missing token is anonymous, and a present invalid token is 401 ErrorEnvelope.
+    Catalog-eligible locked episodes return HTTP 200 with decision locked and lock_reasons,
+    never a playback URL. GET /v1/offers/{episode_id} accepts the same optional Firebase
+    ID token and ineligible ids are 404; locked catalog-eligible episodes return HTTP
+    200 with methods and never a playback URL. GET/PUT /v1/progress/{episode_id} accepts
+    the same optional Firebase ID token plus an anonymous X-Device-Id header; lock
+    is HTTP 403 and the response never includes a playback URL. The server resolves
     the active catalog launch context (initially France, Android, Google Play, and
     English); client-supplied market headers, queries, or profile locale cannot widen
     eligibility. GET /v1/me requires FirebaseIdToken; missing or invalid tokens return
@@ -131,6 +132,56 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Unknown or unavailable public id. Does not confirm whether
             the id exists.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
+  /v1/coins/unlock/resolve:
+    post:
+      operationId: v1_coins_unlock_resolve_create
+      description: Local synthetic mode only. Submit the original request unchanged.
+        Atomically returns its completed accounting receipt or permanently cancels
+        that account's request so a delayed original cannot charge. No credit, refund,
+        entitlement or playback URL is created. Completed history does not assert
+        current rights or access; refresh offers and authorize playback separately.
+        A cancelled result requires fresh terms and explicit confirmation before using
+        a new request ID. Mismatched key/terms and disabled mode return 409.
+      summary: Resolve or cancel an interrupted coin unlock
+      tags:
+      - wallet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoinUnlockRequestRequest'
+        required: true
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoinUnlockResolution'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
         '409':
           content:
             application/json:
@@ -515,6 +566,43 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Unknown or unavailable public id. Does not confirm whether
             the id exists.
+  /v1/purchases/identity:
+    post:
+      operationId: v1_purchases_identity_create
+      description: Synthetic local mode only. The server permanently binds the identity
+        to an opaque wallet. No client identity or coin amount is accepted.
+      summary: Obtain the authenticated account's opaque purchase identity
+      tags:
+      - commerce
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseIdentity'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: The operation accepts no request fields.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Coin purchases are disabled or unavailable.
   /v1/rewards/{reward_id}:
     get:
       operationId: v1_rewards_retrieve
@@ -954,6 +1042,39 @@ components:
       - expected_coin_price
       - expected_policy_version
       - request_id
+    CoinUnlockResolution:
+      type: object
+      properties:
+        episode_id:
+          type: string
+        request_id:
+          type: string
+          format: uuid
+        charged_coins:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        balance:
+          type: integer
+          maximum: 9007199254740991
+          minimum: 0
+          format: int64
+        status:
+          $ref: '#/components/schemas/CoinUnlockResolutionStatusEnum'
+      required:
+      - balance
+      - charged_coins
+      - episode_id
+      - request_id
+      - status
+    CoinUnlockResolutionStatusEnum:
+      enum:
+      - completed
+      - cancelled
+      type: string
+      description: |-
+        * `completed` - completed
+        * `cancelled` - cancelled
     CurrentUserProfile:
       type: object
       properties:
@@ -1304,6 +1425,14 @@ components:
       description: Opaque public identifier. Sequential database integers are never
         used as public IDs.
       example: ser_1a2b3c4d5e6f
+    PurchaseIdentity:
+      type: object
+      properties:
+        app_user_id:
+          type: string
+          format: uuid
+      required:
+      - app_user_id
     RewardIntent:
       type: object
       properties:

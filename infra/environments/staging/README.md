@@ -52,6 +52,11 @@ apply time) is **not** a D-020 residency/retention approval.
   storage or project telemetry grants.
 - Billing budget with caller-supplied amount/currency (no D-022 default)
   and actual plus forecast threshold rules.
+- Disabled-by-default request log metrics and Cloud Monitoring dashboard over
+  existing Cloud Run request, latency, probe and job-completion signals. Logging
+  and Monitoring APIs are enabled only with `observability_enabled = true`.
+  Alerts require a separate switch plus existing notification channels, a real
+  owner, explicit severity, HTTPS runbook and operator-selected thresholds.
 - Labels: product, environment, owner, cost_center (placeholders allowed).
 
 ## What this does not define
@@ -61,6 +66,9 @@ apply time) is **not** a D-020 residency/retention approval.
 - Cloud Tasks, Cloud Scheduler, DNS, Cloud SQL, or Compute.
 - Public activation (`INGRESS_TRAFFIC_ALL`, `allUsers`, domain mapping).
 - A D-020 region/retention decision. `region` has no default.
+- Log buckets/retention, notification channels, uptime checks, traces,
+  Crashlytics, or operational metrics for database saturation, Bunny/CDN,
+  transcoding, playback quality, purchases or reconciliation.
 - Real project, billing, or state-bucket identifiers in git.
 - Real GitHub repository name in committed `.tf` (example-org/example-repo
   only; real name is gitignored tfvars + `docs/runbooks/staging-deploy.md`).
@@ -94,3 +102,7 @@ Copy the example tfvars/backend files locally, supply the real empty staging
 project, and follow `docs/runbooks/staging-apply.md`. Public traffic stays off
 until a later activation task. After apply, map outputs to GitHub Environment
 variables as in `docs/runbooks/staging-deploy.md`.
+
+Do not enable the observability variables during the existing staging bootstrap
+by inference. Follow `docs/runbooks/observability.md`; the committed defaults
+create no monitoring resources and enable no additional APIs.

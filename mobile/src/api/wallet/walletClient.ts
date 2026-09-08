@@ -1,6 +1,12 @@
 import { bearerHeaders, createOpenApiClient } from '../context';
 import { DEFAULT_TIMEOUT_MS, mapJsonDomain, mapJsonRequest } from '../http';
-import type { CoinUnlock, Wallet, WalletClient, WalletOutcome } from './types';
+import type {
+  CoinUnlock,
+  CoinUnlockResolution,
+  Wallet,
+  WalletClient,
+  WalletOutcome,
+} from './types';
 
 const MAX_COIN_CHARGE = 2147483647;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -33,6 +39,14 @@ function isCoinUnlock(value: unknown): value is CoinUnlock {
   );
 }
 
+function isResolution(value: unknown): value is CoinUnlockResolution {
+  return (
+    isRecord(value) &&
+    (value.status === 'completed' || (value.status === 'cancelled' && value.charged_coins === 0)) &&
+    isCoinUnlock(value)
+  );
+}
+
 function validateSuccess<T>(
   result: WalletOutcome<T>,
   validate: (value: unknown) => value is T,
@@ -60,6 +74,19 @@ export function createWalletClient(options: {
   } as const;
   const message = 'The wallet request could not be completed.';
   return {
+    async resolve(request) {
+      const result = mapJsonDomain(
+        await mapJsonRequest<CoinUnlockResolution>(DEFAULT_TIMEOUT_MS, message, (signal) =>
+          api.POST('/v1/coins/unlock/resolve', {
+            body: request,
+            headers: bearerHeaders(options.getCredential),
+            signal,
+          }),
+        ),
+        errorMap,
+      );
+      return validateSuccess(result, isResolution);
+    },
     async getWallet() {
       const result = mapJsonDomain(
         await mapJsonRequest<Wallet>(DEFAULT_TIMEOUT_MS, message, (signal) =>

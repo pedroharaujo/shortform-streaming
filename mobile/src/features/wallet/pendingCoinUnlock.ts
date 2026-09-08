@@ -110,11 +110,14 @@ export function writePendingCoinUnlock(attempt: PendingCoinUnlock): Promise<void
   });
 }
 
-export function clearPendingCoinUnlock(attempt: PendingCoinUnlock): Promise<void> {
+export function clearPendingCoinUnlock(
+  attempt: PendingCoinUnlock,
+  isCurrent: () => boolean = () => true,
+): Promise<void> {
   return serialized(async () => {
     if (!isPendingCoinUnlock(attempt)) throw new Error('Invalid pending coin unlock');
     const existing = await readStoredAttempt(attempt.profileId, attempt.request.episode_id);
-    if (existing !== null && sameAttempt(existing, attempt)) {
+    if (existing !== null && sameAttempt(existing, attempt) && isCurrent()) {
       await SecureStore.deleteItemAsync(storageKey(attempt.profileId, attempt.request.episode_id));
     }
   });
