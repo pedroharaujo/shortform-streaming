@@ -27,7 +27,7 @@ services:
 
   migrate:
     profiles: ["container"]
-    image: shortform-backend:ci
+    image: ${SHORTFORM_BACKEND_IMAGE:-shortform-backend:ci}
     environment: *backend-container-environment
     depends_on:
       postgres:
@@ -36,7 +36,7 @@ services:
 
   api:
     profiles: ["container"]
-    image: shortform-backend:ci
+    image: ${SHORTFORM_BACKEND_IMAGE:-shortform-backend:ci}
     environment: *backend-container-environment
     depends_on:
       migrate:

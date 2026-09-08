@@ -8,6 +8,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$ROOT"
 
 IMAGE="${SHORTFORM_BACKEND_IMAGE:-shortform-backend:ci}"
+export SHORTFORM_BACKEND_IMAGE="$IMAGE"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-shortform-backend-ci}"
 export COMPOSE_PROJECT_NAME
 
