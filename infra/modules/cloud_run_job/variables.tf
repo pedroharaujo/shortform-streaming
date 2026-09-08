@@ -1,3 +1,22 @@
+variable "direct_vpc" {
+  type = object({
+    network    = string
+    subnetwork = string
+    egress     = string
+  })
+  description = "Optional Direct VPC egress. Supply full projects/... resource IDs in this project and job region, and explicit ALL_TRAFFIC or PRIVATE_RANGES_ONLY routing. Null preserves no VPC attachment."
+  default     = null
+
+  validation {
+    condition = var.direct_vpc == null ? true : try(
+      length(trimspace(var.direct_vpc.network)) > 0 &&
+      length(trimspace(var.direct_vpc.subnetwork)) > 0 &&
+      contains(["ALL_TRAFFIC", "PRIVATE_RANGES_ONLY"], var.direct_vpc.egress), false
+    )
+    error_message = "direct_vpc requires a nonempty network and subnetwork together and an explicit supported egress setting."
+  }
+}
+
 variable "include_django_configuration" {
   type        = bool
   description = "Inject Django/database/Firebase and optional video-provider settings. Disable for HTTP-only jobs; disables all module environment and secret injection."

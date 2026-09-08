@@ -21,7 +21,7 @@ locals {
 
   # Enable only APIs this composition uses. Enable iamcredentials and sts for
   # WIF. Do not enable transcoder, dns, sqladmin, cloudtasks, cloudscheduler,
-  # or compute.
+  # Compute is enabled only for the explicitly requested private smoke route.
   required_services = toset(concat([
     "run.googleapis.com",
     "artifactregistry.googleapis.com",
@@ -38,7 +38,7 @@ locals {
     ], var.observability_enabled ? [
     "logging.googleapis.com",
     "monitoring.googleapis.com",
-    ] : []
+    ] : [], var.smoke_private_network_enabled ? ["compute.googleapis.com"] : []
   ))
 
   # Stdlib-only in-project smoke. SMOKE_AUDIENCE (service URL) and
@@ -215,6 +215,11 @@ module "smoke_job" {
   args                          = ["-c", local.smoke_script]
   max_retries                   = 0
   include_django_configuration  = false
+  direct_vpc = var.smoke_private_network_enabled ? {
+    network    = "projects/${var.project_id}/global/networks/${google_compute_network.smoke[0].name}"
+    subnetwork = "projects/${var.project_id}/regions/${var.region}/subnetworks/${google_compute_subnetwork.smoke[0].name}"
+    egress     = "ALL_TRAFFIC"
+  } : null
 
   depends_on = [
     google_project_service.required,

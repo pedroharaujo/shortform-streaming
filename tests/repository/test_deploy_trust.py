@@ -388,7 +388,6 @@ class DeployTrustTests(unittest.TestCase):
             "sqladmin.googleapis.com",
             "cloudtasks.googleapis.com",
             "cloudscheduler.googleapis.com",
-            "compute.googleapis.com",
         ):
             self.assertNotIn(api, main)
 

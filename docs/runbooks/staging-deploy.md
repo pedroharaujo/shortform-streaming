@@ -78,8 +78,17 @@ Cloud Run does not inject Bunny env.
 
 `.github/workflows/deploy-staging.yml` runs on `push` to `main` and
 `workflow_dispatch`. It does **not** run on pull requests. CI never
-`tofu apply`. Image digest is CI-owned (`lifecycle.ignore_changes` on the
-container image). Do not `tofu apply` to change the running image.
+`tofu apply`. Image digest and service traffic are CI-owned
+(`lifecycle.ignore_changes` on the container image and `traffic`).
+Infrastructure updates preserve the existing traffic allocation; verify the
+exact before/after traffic in the saved plan before applying service changes.
+Do not `tofu apply` to promote an image or change service traffic.
+
+Existing revision maximum-instance and service-level scaling settings remain
+operator-owned until the capacity/cost configuration follow-up. Infrastructure
+preserves them while managing the template minimum. Verify their exact
+before/after values as well as traffic; this does not set a new capacity or
+spending limit, and it does not establish a maximum for newly created services.
 
 1. Fail closed if any required Environment var is empty.
 2. Authenticate with WIF (`vars.WIF_PROVIDER` / `vars.WIF_SERVICE_ACCOUNT`).
@@ -107,6 +116,33 @@ this change, apply and verify the smoke identity, scoped deploy actAs grant and
 empty job environment as described in [secrets-and-rotation.md](secrets-and-rotation.md).
 Drain any earlier smoke executions that used the Django identity before claiming
 live isolation.
+
+Same-project placement alone does not make a Cloud Run Job request internal.
+Before the first live HTTP smoke, set `smoke_private_network_enabled = true`
+in the private staging variables and review the exact saved plan. This opt-in
+enables Compute API and creates only a dedicated custom VPC and a same-region
+IPv4 subnet for smoke. The default `smoke_private_subnet_cidr = "10.254.0.0/26"`
+must not overlap existing routes; custom values must be canonical RFC1918
+networks with at least 64 addresses (/26 or larger). The subnet has Private
+Google Access and the smoke job uses Direct VPC `ALL_TRAFFIC`. Keep the VPC's
+default internet-gateway route for Google frontend reachability. There is no
+connector, NAT, VM, load balancer, private DNS zone or public ingress change.
+Service and migration networking remain unchanged; observability stays off.
+Defaults create no network resources and do not enable Compute API, so live
+internal HTTP smoke is unavailable until this opt-in is applied and verified.
+
+Verify the existing Cloud Run **service agent** has its normal
+`roles/run.serviceAgent` role; Google documents that this already supplies
+same-project Direct VPC permissions. The smoke runtime account receives no
+Compute IAM grants. Do not add a redundant project-wide network-user grant.
+If that service-agent role is missing or customized, stop and review its exact
+required network/subnet/address permissions before repair. Verify the job's
+network/subnet IDs, `ALL_TRAFFIC`, Private Google Access, empty configured
+environment and successful authenticated candidate requests in live evidence;
+mocked plans cannot prove routing or IAM in the deployed project.
+
+Sources: [Google private networking](https://docs.cloud.google.com/run/docs/securing/private-networking#receive-requests-from-other-cloud-run-resources-or-app-engine)
+and [Direct VPC job sizing and service-agent permissions](https://docs.cloud.google.com/run/docs/configuring/vpc-direct-vpc).
 
 Cloud Run IAM ID tokens must use the **service URL** as `aud`, even when
 calling a tagged revision. Using the revision/tag URL as audience returns

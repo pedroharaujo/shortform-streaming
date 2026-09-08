@@ -9,6 +9,17 @@ resource "google_cloud_run_v2_job" "this" {
       service_account = var.runtime_service_account_email
       max_retries     = var.max_retries
 
+      dynamic "vpc_access" {
+        for_each = var.direct_vpc == null ? [] : [var.direct_vpc]
+        content {
+          egress = vpc_access.value.egress
+          network_interfaces {
+            network    = vpc_access.value.network
+            subnetwork = vpc_access.value.subnetwork
+          }
+        }
+      }
+
       containers {
         image   = var.image
         command = length(var.command) > 0 ? var.command : null
@@ -96,6 +107,13 @@ resource "google_cloud_run_v2_job" "this" {
   }
 
   lifecycle {
+    precondition {
+      condition = var.direct_vpc == null ? true : (
+        can(regex("^projects/${var.project_id}/global/networks/[a-z][a-z0-9-]*$", var.direct_vpc.network)) &&
+        can(regex("^projects/${var.project_id}/regions/${var.region}/subnetworks/[a-z][a-z0-9-]*$", var.direct_vpc.subnetwork))
+      )
+      error_message = "Direct VPC resource IDs must belong to this project, and the subnetwork must be in the job region."
+    }
     precondition {
       condition = !var.include_django_configuration || (
         var.django_allowed_hosts != null && var.firebase_project_id != null

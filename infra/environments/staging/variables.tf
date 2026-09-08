@@ -1,3 +1,29 @@
+variable "smoke_private_network_enabled" {
+  type        = bool
+  description = "Opt in to the dedicated staging smoke Direct VPC route and Compute API. Required before HTTP smoke can reach internal-only Cloud Run."
+  default     = false
+  nullable    = false
+}
+
+variable "smoke_private_subnet_cidr" {
+  type        = string
+  description = "Dedicated smoke IPv4 RFC1918 subnet, /26 or larger. Verify no overlap before enabling; this subnet is not shared with other workloads."
+  default     = "10.254.0.0/26"
+  nullable    = false
+
+  validation {
+    condition = try(
+      cidrhost(var.smoke_private_subnet_cidr, 0) == split("/", var.smoke_private_subnet_cidr)[0] &&
+      tonumber(split("/", var.smoke_private_subnet_cidr)[1]) <= 26 && (
+        (can(regex("^10\\.", var.smoke_private_subnet_cidr)) && tonumber(split("/", var.smoke_private_subnet_cidr)[1]) >= 8) ||
+        (can(regex("^172\\.(1[6-9]|2[0-9]|3[01])\\.", var.smoke_private_subnet_cidr)) && tonumber(split("/", var.smoke_private_subnet_cidr)[1]) >= 12) ||
+        (can(regex("^192\\.168\\.", var.smoke_private_subnet_cidr)) && tonumber(split("/", var.smoke_private_subnet_cidr)[1]) >= 16)
+      ), false
+    )
+    error_message = "smoke_private_subnet_cidr must be a canonical RFC1918 IPv4 network CIDR with at least a /26 subnet (64 addresses)."
+  }
+}
+
 variable "secret_versions" {
   type        = map(string)
   description = "Secret version selectors by runtime env name, never values. Omitted entries use latest for compatibility; pin positive numeric versions before rotation."
