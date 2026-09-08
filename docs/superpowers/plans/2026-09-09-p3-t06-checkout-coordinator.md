@@ -36,17 +36,17 @@ Provider and storage contracts should be small and explicit; choose routine
 internal signatures to satisfy the spec. Default app factory always unavailable
 without constructing dependencies; tests explicitly inject synthetic mode.
 
-- [ ] Write failing integration tests for the spec's highest-risk behaviors.
-- [ ] Implement client/marker/coordinator and disabled factory.
-- [ ] Run focused tests then all mobile static/config/tests and Android JS bundle.
-- [ ] Write exact evidence to `.tmp/checkout-implementation-report.md`; freeze source.
+- [x] Write failing integration tests for the spec's highest-risk behaviors.
+- [x] Implement client/marker/coordinator and disabled factory.
+- [x] Run focused tests then all mobile static/config/tests and Android JS bundle.
+- [x] Write exact evidence to `.tmp/checkout-implementation-report.md`; freeze source.
 
 ### Task 2: Review and merge
 
-- [ ] Root updates delivery/runbook status with exact limitations and test evidence.
+- [x] Root updates delivery/runbook status with exact limitations and test evidence.
 - [ ] Independent reviewer assesses full diff and spec; validator reruns relevant
       privacy/financial/session/storage regressions and repository/contract gates.
 - [ ] Resolve findings and require passing current-head GitHub CI before merge.
-- [ ] Record the next genuine provider integration/reconciliation prerequisite in
+- [x] Record the next genuine provider integration/reconciliation prerequisite in
       the delivery plan, referencing #142 and keeping full P3-T03/T06 acceptance
       incomplete. Preserve the founder's closed issue state.

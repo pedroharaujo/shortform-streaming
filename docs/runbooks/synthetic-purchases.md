@@ -197,6 +197,33 @@ provider contract is not evidence of RevenueCat or Google compatibility.
 Production remains disabled throughout these gates. Local tests cannot substitute
 for provider observations or approve prices and business policy.
 
+## Dormant checkout verification, 2026-09-09
+
+Frozen implementation `71ea35ddaf165e4d3f24fb591496caf4ddca6b78`, based on
+`77f2812`, uses only generated synthetic transport/provider/storage fixtures.
+The following commands ran from `mobile/` against installed dependencies:
+
+- `node ../node_modules/jest/bin/jest.js --ci --runInBand src/features/purchases src/api/createAppClients.test.ts`
+  — **88 tests / 3 suites passed**.
+- `node ../node_modules/jest/bin/jest.js --ci --runInBand`
+  — **359 tests / 42 suites passed**.
+- `node ../node_modules/typescript/bin/tsc --noEmit` — passed.
+- `node ../node_modules/eslint/bin/eslint.js .` — passed.
+- `node ../node_modules/prettier/bin/prettier.cjs --check .` — passed.
+- `node scripts/check-expo-config.mjs` — passed.
+- `node scripts/check-expo-bundle.mjs` — Android production JavaScript bundle
+  passed; no native compile or EAS invocation.
+
+Lint's import resolver and the installed Hermes compiler required the same checks
+to run outside the filesystem sandbox; no source workaround was introduced.
+Tests first reproduced malformed UUID acceptance, queued marker mutation, thrown
+synchronization and a session replacement at the final promise continuation. The
+fixes retain uncertainty and suppress stale public results. Core coverage also
+includes price reconfirmation, global exclusion, persist-before-purchase, storage
+corruption/CAS, explicit cancellation, historical server credit, review, wallet
+outage and restart blocking. Independent review/validation and CI are recorded in
+the pull request. Native/provider acceptance remains pending, never inferred.
+
 ## Local verification evidence, 2026-09-08
 
 The disposable local PostgreSQL suite uses only generated data and
