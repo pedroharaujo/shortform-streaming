@@ -265,6 +265,32 @@ Initial paid-test activation also requires one approved audience, approximately 
 - **Blocks:** P5-T05/P6-T03 and production App Check enforcement. This deferral is
   permitted only while enforcement and public production activation remain off.
 
+### P3-T06 — Native checkout and verified funding synchronization
+
+- **Source:** issue #142; purchase-synchronization prerequisite; D-008/D-020/D-029.
+- **State:** deferred, never passed. This slice adds only local synthetic server
+  reads; no native checkout or genuine provider lifecycle is enabled.
+- **Prerequisites:** complete native checkout follow-up, approved isolated Google /
+  RevenueCat setup, product quantities/terms and processor-data review. Keep real
+  purchases and production activation off until their separate approvals.
+- **Actions:** sign in to a generated test account, obtain its server purchase
+  identity, load the application-scoped catalog, match native store offerings, and
+  verify exact localized monetary strings. Complete a license-tester checkout;
+  compare its status before and after the verified callback. Repeat after process
+  interruption, provider delay/outage, cancellation/pending payment, reinstall,
+  second device, account change, registry reprice and deletion/recreation. Deliver
+  duplicate, refund and conflicting events through the approved provider workflow.
+- **Expected:** only matching owned server credit confirms historical funding;
+  neither checkout success nor a balance difference credits coins. Unknown results
+  retain recovery without initiating a replacement charge. Refund/conflict stays
+  in review. Refresh wallet, unlock once, then obtain fresh playback authorization.
+  Foreign/deleted accounts see no old purchase data or entitlement.
+- **Evidence:** tested revision/device/build and redacted outcomes; keep provider
+  payloads, raw transaction IDs, account data, credentials and licensed media out
+  of public evidence. Automated identity/financial/privacy tests are immediate.
+- **Blocks:** complete P3-T03/P3-T06, provider reconciliation, #142 closure and all
+  real-purchase or production activation. The server-read tests do not satisfy it.
+
 ## Sign-off record
 
 For each release candidate, append a dated entry with the immutable revision,

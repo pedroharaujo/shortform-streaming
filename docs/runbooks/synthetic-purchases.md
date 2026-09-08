@@ -81,6 +81,52 @@ an unresolved quarantine event and leaves accounting unchanged. No refund-after-
 spend rule, compensation or negative balance is introduced. There is no support
 resolution/override API. Do not clear quarantine or edit rows to force fulfillment.
 
+## Purchase synchronization reads (P3-T06 prerequisite, #142)
+
+Both POST endpoints require Firebase authentication and retain App Check when
+enforced. They operate only in local DEBUG + synthetic purchase mode, accept exact
+bounded JSON fields, and return `Cache-Control: no-store`. They never create a
+wallet, purchase identity, credit, debit, entitlement or provider request.
+
+`POST /v1/purchases/catalog` accepts only `application_id`. The result contains
+`products`, each with `product_id`, `coins`, `product_type=consumable`,
+`store=PLAY_STORE`, `environment=SANDBOX` and `price_source=store`. The bounded
+registry supplies quantities; no monetary price or approval reference is returned.
+Unknown applications and conflicting persisted provider/application bindings
+return 409. The native follow-up must match these IDs to store offerings and show
+the exact store-localized price string. This API does not approve commercial packs.
+
+`POST /v1/purchases/status` accepts only `application_id`, `product_id` and
+`transaction_id`. Send the transaction in the JSON body, never a URL, logs or
+analytics. It is hashed transiently using the same permanent Google application /
+store / environment namespace as fulfillment; the raw identifier is not retained.
+The response has exactly `status`, `historical_credited_coins` and nullable
+`support_reference` (the immutable decision UUID, not a provider callback event UUID).
+
+- `awaiting_verification`: zero historical coins and null reference. Missing,
+  foreign, mismatched and unattributed quarantined transactions look identical.
+  This does not prove a charge failed, was cancelled, or can safely be repeated.
+- `credited`: this exact product/transaction has an immutable credit owned by the
+  current account. Quantity remains the original snapshot even after a registry
+  reprice/removal; current configuration cannot rewrite financial history.
+- `review_required`: an owned historical credit has at least one quarantined
+  delivery (including refund/conflict). The original credited quantity remains
+  visible; no compensation or refund resolution is implied. A later successful
+  retry cannot clear this state. Follow-up support tooling must resolve it under
+  approved policy, never by editing ledger or receipt history.
+
+All results are observations at read time. Historical credit is not current wallet
+balance, final settlement, episode access or playable media. Refresh the existing
+wallet endpoint and obtain fresh access/playback authorization separately. Retain
+unresolved checkout recovery account-scoped; client success and balance changes
+cannot manufacture a verified purchase. Recreated accounts cannot adopt a deleted
+account's history, even when the Firebase UID is reused.
+
+Rollback: remove the new routes/client usage or keep purchase mode disabled. No
+migration or data rewrite is needed. Old identity/callback/wallet contracts remain
+compatible. Native checkout/UI and genuine provider synchronization remain #142;
+these read APIs alone do not complete P3-T03/P3-T06.
+
 ## Remaining release gates
 
 - Native RevenueCat configuration, server identity binding before checkout, store
@@ -119,3 +165,34 @@ Primary provider references: [webhook signatures and retry behavior](https://www
 [event contract](https://www.revenuecat.com/docs/integrations/webhooks/event-types-and-fields),
 [identity behavior](https://www.revenuecat.com/docs/customers/identifying-customers),
 [native purchase ownership](https://www.revenuecat.com/docs/getting-started/making-purchases).
+
+## Purchase synchronization verification, 2026-09-08
+
+On `codex/p3-t06-purchase-sync`, based on main `ae95d8f`, tests used a disposable
+PostgreSQL 17.6 container bound only to loopback port 55436, with generated data.
+`DATABASE_URL=postgresql://shortform@127.0.0.1:55436/shortform` and
+`PYTEST_ADDOPTS=-p no:cacheprovider` selected it; no private environment file was loaded.
+
+- `uv run pytest backend/tests/commerce/test_purchase_sync.py -q`: initially
+  failed on the absent endpoints; final **30 passed**. Independent review found
+  a registry/request identifier mismatch; the added regression failed before the
+  fix and then passed. Reviewer confirmed no remaining findings.
+- `pnpm check`: **passed**. Includes repository safety scan, 50 repository tests,
+  governance, backend lint/format/types/migration drift, **521 backend tests**,
+  regenerated OpenAPI/TypeScript consistency, mobile lint/format/types,
+  **38 suites / 232 mobile tests**, and Expo configuration checks.
+- The aggregate mobile run recovered from a Windows `realpath` warning. Follow-up
+  `pnpm --filter @shortform/mobile test --runInBand src/features/catalog/EpisodeSelectedScreen.test.tsx src/features/rewards/RewardScreen.test.tsx`
+  passed **2 suites / 30 tests** without that warning.
+- `git diff --check` and `git diff --cached --check`: passed.
+
+No migration, new dependency, provider/native activation or mobile UI change.
+The deferred native/provider sequence is in `final-validation.md`; these checks
+establish the server-read slice only. The full P3-T06 and #142 remain open.
+
+GitHub subsequently rejected main's existing Expo patch versions. Separate PR
+#152 aligns Expo/Router and passes all 21 Expo doctor checks, 232 mobile tests and
+the Android JavaScript bundle check. The founder merged #152 as `c4a6e8d`.
+Purchase PR #151 now targets that updated main, with its server implementation
+unchanged. Agents perform code review and validation and prepare the PR for the
+founder's merge; agent review does not replace any required human GitHub approval.
