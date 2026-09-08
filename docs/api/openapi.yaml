@@ -566,6 +566,50 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Unknown or unavailable public id. Does not confirm whether
             the id exists.
+  /v1/purchases/catalog:
+    post:
+      operationId: v1_purchases_catalog_create
+      description: Local synthetic mode only. Quantities come from the server registry.
+        Native checkout must independently match store offerings and display the exact
+        store-localized monetary price. No price or purchase grant is supplied here.
+      summary: Read server-approved synthetic Android consumables
+      tags:
+      - commerce
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseCatalogRequestRequest'
+        required: true
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseCatalog'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Invalid or unexpected purchase lookup fields.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Coin purchases or the requested catalog are unavailable.
   /v1/purchases/identity:
     post:
       operationId: v1_purchases_identity_create
@@ -603,6 +647,54 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Coin purchases are disabled or unavailable.
+  /v1/purchases/status:
+    post:
+      operationId: v1_purchases_status_create
+      description: Local synthetic mode only. Read-only lookup; client success never
+        credits coins. Unknown, foreign, mismatched and unattributed transactions
+        all await verification. That result does not prove cancellation or make repurchasing
+        safe. Historical credit is not the current balance, final refund settlement,
+        entitlement or playback authorization. Any quarantined delivery on owned credit
+        requires review. Refresh wallet and current access separately. Send transaction
+        IDs only in the request body.
+      summary: Check the current account's historical verified purchase credit
+      tags:
+      - commerce
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseStatusRequestRequest'
+        required: true
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseStatus'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Invalid or unexpected purchase lookup fields.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Coin purchases or the requested catalog are unavailable.
   /v1/rewards/{reward_id}:
     get:
       operationId: v1_rewards_retrieve
@@ -1133,6 +1225,11 @@ components:
           items:
             type: object
             additionalProperties: true
+    EnvironmentEnum:
+      enum:
+      - SANDBOX
+      type: string
+      description: '* `SANDBOX` - SANDBOX'
     EpisodeOffersGranted:
       type: object
       properties:
@@ -1419,12 +1516,41 @@ components:
         mapping:
           granted: '#/components/schemas/PlaybackAuthorizeGranted'
           locked: '#/components/schemas/PlaybackAuthorizeLocked'
+    PriceSourceEnum:
+      enum:
+      - store
+      type: string
+      description: '* `store` - store'
+    ProductTypeEnum:
+      enum:
+      - consumable
+      type: string
+      description: '* `consumable` - consumable'
     PublicId:
       type: string
       minLength: 1
       description: Opaque public identifier. Sequential database integers are never
         used as public IDs.
       example: ser_1a2b3c4d5e6f
+    PurchaseCatalog:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseProduct'
+      required:
+      - products
+    PurchaseCatalogRequestRequest:
+      type: object
+      properties:
+        application_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^test\.synthetic\.[A-Za-z0-9_.:/-]*$
+      required:
+      - application_id
     PurchaseIdentity:
       type: object
       properties:
@@ -1433,6 +1559,82 @@ components:
           format: uuid
       required:
       - app_user_id
+    PurchaseProduct:
+      type: object
+      properties:
+        product_id:
+          type: string
+          maxLength: 128
+        coins:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        product_type:
+          $ref: '#/components/schemas/ProductTypeEnum'
+        store:
+          $ref: '#/components/schemas/StoreEnum'
+        environment:
+          $ref: '#/components/schemas/EnvironmentEnum'
+        price_source:
+          $ref: '#/components/schemas/PriceSourceEnum'
+      required:
+      - coins
+      - environment
+      - price_source
+      - product_id
+      - product_type
+      - store
+    PurchaseStatus:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/PurchaseStatusStatusEnum'
+        historical_credited_coins:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        support_reference:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - historical_credited_coins
+      - status
+      - support_reference
+    PurchaseStatusRequestRequest:
+      type: object
+      properties:
+        application_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^test\.synthetic\.[A-Za-z0-9_.:/-]*$
+        product_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^synthetic_[A-Za-z0-9_.:/-]*$
+        transaction_id:
+          type: string
+          minLength: 1
+          description: Store transaction identifier; owner-scoped lookup only, never
+            retained.
+          maxLength: 200
+          pattern: ^[A-Za-z0-9_.:$/-]+$
+      required:
+      - application_id
+      - product_id
+      - transaction_id
+    PurchaseStatusStatusEnum:
+      enum:
+      - awaiting_verification
+      - credited
+      - review_required
+      type: string
+      description: |-
+        * `awaiting_verification` - awaiting_verification
+        * `credited` - credited
+        * `review_required` - review_required
     RewardIntent:
       type: object
       properties:
@@ -1511,6 +1713,11 @@ components:
         * `granted` - granted
         * `expired` - expired
         * `unavailable` - unavailable
+    StoreEnum:
+      enum:
+      - PLAY_STORE
+      type: string
+      description: '* `PLAY_STORE` - PLAY_STORE'
     TypeEnum:
       enum:
       - entitlement
