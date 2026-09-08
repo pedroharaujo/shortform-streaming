@@ -35,16 +35,18 @@ function setup(client: WalletClient) {
   const onBack = jest.fn();
   const onAccount = jest.fn();
   const onReturnToEpisode = jest.fn();
+  const onPurchases = jest.fn();
   const rendered = renderWithSafeArea(
     <WalletScreen
       client={client}
       onBack={onBack}
       onAccount={onAccount}
       onReturnToEpisode={onReturnToEpisode}
+      onPurchases={onPurchases}
     />,
     { metrics: compactAndroidMetrics },
   );
-  return { rendered, onBack, onAccount, onReturnToEpisode };
+  return { rendered, onBack, onAccount, onReturnToEpisode, onPurchases };
 }
 
 beforeEach(() => setAuthSession({ credential: 'mock.synthetic-wallet-owner' }));
@@ -55,7 +57,7 @@ afterEach(() => {
 it('loads a server balance with accessible navigation and keeps purchases unavailable', async () => {
   const client = clientDouble();
   client.getWallet.mockResolvedValue(wallet(25, false));
-  const { rendered, onBack, onAccount, onReturnToEpisode } = setup(client);
+  const { rendered, onBack, onAccount, onReturnToEpisode, onPurchases } = setup(client);
   const view = await rendered;
   await waitFor(() =>
     expect(view.getByTestId('wallet-balance')).toHaveTextContent(
@@ -72,9 +74,11 @@ it('loads a server balance with accessible navigation and keeps purchases unavai
   await fireEvent.press(view.getByLabelText(englishMessages.common.account));
   await fireEvent.press(view.getByLabelText(englishMessages.wallet.backToEpisode));
   await fireEvent.press(view.getByLabelText(englishMessages.common.back));
+  await fireEvent.press(view.getByLabelText('Recent purchases'));
   expect(onAccount).toHaveBeenCalledTimes(1);
   expect(onReturnToEpisode).toHaveBeenCalledTimes(1);
   expect(onBack).toHaveBeenCalledTimes(1);
+  expect(onPurchases).toHaveBeenCalledTimes(1);
 });
 
 it('clears the old balance during manual refresh and permits retry after a failure', async () => {

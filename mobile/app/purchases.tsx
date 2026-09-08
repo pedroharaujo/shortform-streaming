@@ -2,15 +2,15 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 
-import { createAppWalletClient } from '../src/api/createAppClients';
+import { createAppPurchasesClient } from '../src/api/createAppClients';
 import { getSessionCredential } from '../src/auth/session';
 import { readRouteId } from '../src/features/catalog/readRouteId';
-import { WalletScreen } from '../src/features/wallet/WalletScreen';
+import { PurchaseHistoryScreen } from '../src/features/wallet/PurchaseHistoryScreen';
 
-export default function WalletRoute(): JSX.Element {
+export default function PurchasesRoute(): JSX.Element {
   const params = useLocalSearchParams<{ returnEpisode?: string | string[] }>();
   const returnEpisode = readRouteId(params.returnEpisode);
-  const client = useMemo(() => createAppWalletClient(), []);
+  const client = useMemo(() => createAppPurchasesClient(), []);
   const [visit, setVisit] = useState(0);
   useFocusEffect(
     useCallback(() => {
@@ -18,14 +18,15 @@ export default function WalletRoute(): JSX.Element {
     }, []),
   );
   return (
-    <WalletScreen
+    <PurchaseHistoryScreen
       key={visit}
       client={client}
-      onBack={() => (router.canGoBack() ? router.back() : router.replace('/account'))}
-      onPurchases={() =>
-        router.push(
-          returnEpisode ? { pathname: '/purchases', params: { returnEpisode } } : '/purchases',
-        )
+      onBack={() =>
+        router.canGoBack()
+          ? router.back()
+          : router.replace(
+              returnEpisode ? { pathname: '/wallet', params: { returnEpisode } } : '/wallet',
+            )
       }
       onAccount={() => {
         const pathname = getSessionCredential() === null ? '/sign-in' : '/account';

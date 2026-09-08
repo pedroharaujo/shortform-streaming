@@ -1015,6 +1015,12 @@ refund/conflict review and cannot mint coins or establish current playback acces
 See [purchase synchronization](docs/runbooks/synthetic-purchases.md). This slice
 does not complete the native/provider acceptance below or approve live purchases.
 
+**Recovery follow-up (#142, 2026-09-09):** A bounded owner-scoped recent-purchase
+history and Android screen are implemented so a fresh installation can
+retrieve verified historical credits and safe support references without saved
+store transaction IDs. This does not recover unverified purchases or complete
+native checkout. See the [implementation plan](docs/superpowers/plans/2026-09-09-p3-t06-purchase-history.md).
+
 **Acceptance criteria:**
 
 - [ ] At most one credit per verified transaction; client cannot choose quantity or owner. Persistent balance/entitlements reload after reinstall and second-device login without re-crediting consumables.

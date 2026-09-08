@@ -34,10 +34,10 @@ Use one annotated query for rows and their quarantine state, selecting at most 2
 to calculate `has_more`. Hold the current profile lock as existing purchase reads do.
 No filtering by current registry; no raw store or provider fields returned.
 
-- [ ] Write and run failing integration tests for required evidence in the spec.
-- [ ] Implement the read, strict output contract, route and OpenAPI documentation.
-- [ ] Generate the contract and run commerce tests and backend static gates.
-- [ ] Report exact tests and changes to `.tmp/purchase-history-backend-report.md`.
+- [x] Write and run failing integration tests for required evidence in the spec.
+- [x] Implement the read, strict output contract, route and OpenAPI documentation.
+- [x] Generate the contract and run commerce tests and backend static gates.
+- [x] Report exact tests and changes to `.tmp/purchase-history-backend-report.md`.
 
 ### Task 2: Android recent-purchases screen
 
@@ -55,10 +55,10 @@ integration tests; do not duplicate the same behavior at multiple test layers.
 The wallet link opens `/purchases`. The new screen retains normal account/back
 navigation, session guards and authoritative refresh patterns.
 
-- [ ] Add failing screen integration tests covering the specification.
-- [ ] Implement wrapper, screen, route, wallet link and English messages.
-- [ ] Run all mobile gates and Android JavaScript bundle check.
-- [ ] Report exact tests and changes to `.tmp/purchase-history-mobile-report.md`.
+- [x] Add failing screen integration tests covering the specification.
+- [x] Implement wrapper, screen, route, wallet link and English messages.
+- [x] Run all mobile gates and Android JavaScript bundle check.
+- [x] Report exact tests and changes to `.tmp/purchase-history-mobile-report.md`.
 
 ### Task 3: Review, validate and merge
 

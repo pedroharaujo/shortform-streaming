@@ -1,6 +1,22 @@
 import { createContext, useContext, type JSX, type PropsWithChildren } from 'react';
 
 export interface AppMessages {
+  readonly purchases: {
+    readonly title: string;
+    readonly loading: string;
+    readonly refresh: string;
+    readonly unavailable: string;
+    readonly signIn: string;
+    readonly sessionChanged: string;
+    readonly historyExplanation: string;
+    readonly empty: string;
+    readonly latestOnly: string;
+    readonly historicalCoins: (coins: number) => string;
+    readonly recordedAt: (date: string) => string;
+    readonly supportReference: (reference: string) => string;
+    readonly credited: string;
+    readonly reviewRequired: string;
+  };
   readonly wallet: {
     readonly title: string;
     readonly balance: (coins: number) => string;
@@ -126,6 +142,34 @@ export interface AppMessages {
 }
 
 export const englishMessages: AppMessages = {
+  purchases: {
+    title: 'Recent purchases',
+    loading: 'Loading purchase history…',
+    refresh: 'Refresh purchases',
+    unavailable: 'Your purchase history could not be checked. Check your connection and try again.',
+    signIn: 'Sign in to see your recent purchases.',
+    sessionChanged: 'Your session changed. Reopen this screen from Account.',
+    historyExplanation:
+      'These are historical coin credits, not your current spendable balance. Check your wallet for your current balance. Refunds and other unresolved changes may still need review.',
+    empty:
+      'No verified purchases are recorded here yet. This does not mean a purchase failed. Check again before buying again.',
+    latestOnly: 'Showing the latest 20 purchases. Older purchases are not shown.',
+    historicalCoins: (coins) => `${coins} coins credited originally`,
+    recordedAt: (date) =>
+      `Recorded ${new Date(date).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: 'UTC',
+        timeZoneName: 'short',
+      })}`,
+    supportReference: (reference) => `Support reference: ${reference}`,
+    credited: 'Credit recorded',
+    reviewRequired:
+      'Review required. Keep this support reference; this record does not confirm a refund or final settlement.',
+  },
   wallet: {
     title: 'Coin wallet',
     balance: (coins) => `${coins} coins`,

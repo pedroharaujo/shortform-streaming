@@ -127,6 +127,29 @@ migration or data rewrite is needed. Old identity/callback/wallet contracts rema
 compatible. Native checkout/UI and genuine provider synchronization remain #142;
 these read APIs alone do not complete P3-T03/P3-T06.
 
+## Recent verified purchase history (P3-T06 / #142)
+
+`GET /v1/purchases/history` needs no store transaction ID or caller-selected
+account. It returns the current account's newest 20 credited decisions in stable
+descending recorded-time/reference order and a `has_more` flag. Each row contains
+only the server recorded time, original credited coins, safe support reference
+and `credited` or `review_required` status. Quarantined-only and unattributed
+transactions are absent; absence does not prove that a charge failed. Any later
+quarantined event on an owned credit keeps that row in review after retries.
+
+The read retains Firebase authentication, App Check, current-profile locking and
+the local synthetic-mode gate. It does not create financial state or depend on
+the current product registry. Deleted/recreated accounts cannot inherit detached
+history. No response caching, raw provider fields, monetary prices, local purchase
+storage, restored consumables or financial writes are introduced. Current balance
+and access remain separate server reads.
+
+Android exposes this bounded list from Coin wallet → Recent purchases, with
+refresh and foreground reload, session invalidation, safe support references and
+an explicit latest-20 notice when truncated. This is verified-credit visibility
+after reinstall or another-device login; it does not recover an unverified native
+checkout or resolve a refund. Native checkout remains the next task in #142.
+
 ## Remaining release gates
 
 - Native RevenueCat configuration, server identity binding before checkout, store

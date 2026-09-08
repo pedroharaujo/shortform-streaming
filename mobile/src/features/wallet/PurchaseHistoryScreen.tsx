@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { Wallet, WalletClient } from '../../api/wallet/types';
+import type { PurchaseHistory, PurchasesClient } from '../../api/purchases/types';
 import {
   getAuthSessionRevision,
   getSessionCredential,
@@ -13,48 +13,43 @@ import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { useCatalogQuery } from '../catalog/useCatalog';
 
-type WalletState =
+type HistoryState =
   | { readonly phase: 'loading' | 'unavailable' | 'unauthenticated' }
-  | { readonly phase: 'ready'; readonly wallet: Wallet };
+  | { readonly phase: 'ready'; readonly history: PurchaseHistory };
 
-export interface WalletScreenProps {
-  readonly client: WalletClient;
+export interface PurchaseHistoryScreenProps {
+  readonly client: PurchasesClient;
   readonly onBack: () => void;
   readonly onAccount: () => void;
-  readonly onPurchases: () => void;
   readonly onReturnToEpisode?: (() => void) | undefined;
 }
 
-export function WalletScreen({
+export function PurchaseHistoryScreen({
   client,
   onBack,
   onAccount,
-  onPurchases,
   onReturnToEpisode,
-}: WalletScreenProps): JSX.Element {
+}: PurchaseHistoryScreenProps): JSX.Element {
   const messages = useMessages();
+  const copy = messages.purchases;
   const [owner] = useState(getAuthSessionRevision);
   const revision = useSyncExternalStore(subscribeAuthSession, getAuthSessionRevision);
   const sessionChanged = revision !== owner;
 
-  const load = useCallback(async (): Promise<WalletState> => {
+  const load = useCallback(async (): Promise<HistoryState> => {
     if (getAuthSessionRevision() !== owner || getSessionCredential() === null) {
       return { phase: 'unauthenticated' };
     }
     try {
-      const result = await client.getWallet();
+      const result = await client.getHistory();
       if (getAuthSessionRevision() !== owner) return { phase: 'unauthenticated' };
-      if (result.outcome === 'ok') {
-        return { phase: 'ready', wallet: result.data };
-      }
-      return {
-        phase: result.outcome === 'unauthenticated' ? 'unauthenticated' : 'unavailable',
-      };
+      if (result.outcome === 'ok') return { phase: 'ready', history: result.data };
+      return { phase: result.outcome === 'unauthenticated' ? 'unauthenticated' : 'unavailable' };
     } catch {
       return { phase: 'unavailable' };
     }
   }, [client, owner]);
-  // Clear the prior balance on refresh; the shared query ignores replaced and unmounted requests.
+  // The shared query clears rows on refresh and ignores replaced or unmounted requests.
   const { state, refresh: refreshQuery } = useCatalogQuery(load);
   const refresh = useCallback(() => {
     if (getAuthSessionRevision() === owner) refreshQuery();
@@ -70,41 +65,47 @@ export function WalletScreen({
   }, [refresh]);
 
   const requiresSignIn = sessionChanged || state.phase === 'unauthenticated';
-
   return (
-    <SafeAreaView style={styles.container} testID="wallet-screen">
-      <ScrollView contentContainerStyle={styles.content} testID="wallet-scroll">
+    <SafeAreaView style={styles.container} testID="purchase-history-screen">
+      <ScrollView contentContainerStyle={styles.content}>
         <Text accessibilityRole="header" style={styles.title}>
-          {messages.wallet.title}
+          {copy.title}
         </Text>
+        <Text style={styles.muted}>{copy.historyExplanation}</Text>
         <View accessibilityLiveRegion="polite" style={styles.summary}>
           {sessionChanged ? (
-            <Text style={styles.body}>{messages.wallet.sessionChanged}</Text>
+            <Text style={styles.body}>{copy.sessionChanged}</Text>
           ) : state.phase === 'ready' ? (
             <>
-              <Text style={styles.balance} testID="wallet-balance">
-                {messages.wallet.balance(state.wallet.balance)}
-              </Text>
-              {!state.wallet.spending_available ? (
-                <Text style={styles.body}>{messages.wallet.spendingUnavailable}</Text>
+              {state.history.has_more ? <Text style={styles.body}>{copy.latestOnly}</Text> : null}
+              {state.history.purchases.length === 0 ? (
+                <Text style={styles.body}>{copy.empty}</Text>
               ) : null}
+              {state.history.purchases.map((purchase) => (
+                <View key={purchase.support_reference} style={styles.record}>
+                  <Text style={styles.credit}>
+                    {copy.historicalCoins(purchase.historical_credited_coins)}
+                  </Text>
+                  <Text style={styles.body}>{copy.recordedAt(purchase.recorded_at)}</Text>
+                  <Text style={styles.body}>
+                    {purchase.status === 'credited' ? copy.credited : copy.reviewRequired}
+                  </Text>
+                  <Text selectable style={styles.muted}>
+                    {copy.supportReference(purchase.support_reference)}
+                  </Text>
+                </View>
+              ))}
             </>
           ) : state.phase === 'loading' ? (
-            <Text style={styles.body}>{messages.wallet.loading}</Text>
+            <Text style={styles.body}>{copy.loading}</Text>
           ) : state.phase === 'unavailable' ? (
-            <Text style={styles.body}>{messages.wallet.unavailable}</Text>
+            <Text style={styles.body}>{copy.unavailable}</Text>
           ) : (
-            <Text style={styles.body}>{messages.wallet.signIn}</Text>
+            <Text style={styles.body}>{copy.signIn}</Text>
           )}
         </View>
-        <Text style={styles.muted}>{messages.wallet.purchasesUnavailable}</Text>
-        <Action label={messages.purchases.title} onPress={onPurchases} />
         {!requiresSignIn ? (
-          <Action
-            label={messages.wallet.refresh}
-            disabled={state.phase === 'loading'}
-            onPress={refresh}
-          />
+          <Action label={copy.refresh} disabled={state.phase === 'loading'} onPress={refresh} />
         ) : null}
         <Action
           label={requiresSignIn ? messages.common.signIn : messages.common.account}
@@ -143,7 +144,6 @@ function Action({
 }
 
 const styles = StyleSheet.create({
-  balance: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
   body: { color: colors.foreground, fontSize: fontSizes.body },
   button: {
     alignItems: 'center',
@@ -157,8 +157,16 @@ const styles = StyleSheet.create({
   },
   container: { backgroundColor: colors.background, flex: 1 },
   content: { flexGrow: 1, gap: spacing.lg, padding: spacing.xxl },
+  credit: { color: colors.foreground, fontSize: fontSizes.body, fontWeight: '600' },
   disabled: { opacity: 0.5 },
   muted: { color: colors.muted, fontSize: fontSizes.label },
+  record: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
   summary: { gap: spacing.lg },
   title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
 });

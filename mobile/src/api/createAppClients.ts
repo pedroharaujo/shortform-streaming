@@ -18,6 +18,8 @@ import { createPlaybackClient } from './playback/playbackClient';
 import type { PlaybackClient } from './playback/types';
 import { createProgressClient } from './progress/progressClient';
 import type { ProgressClient } from './progress/types';
+import { createPurchasesClient } from './purchases/purchasesClient';
+import type { PurchasesClient } from './purchases/types';
 import { createRewardsClient } from './rewards/rewardsClient';
 import type { RewardsClient } from './rewards/types';
 import { createWalletClient } from './wallet/walletClient';
@@ -79,4 +81,8 @@ export function createAppRewardsClient(): RewardsClient {
 
 export function createAppWalletClient(): WalletClient {
   return createWalletClient({ ...appApiOptions(), getCredential: getSessionCredential });
+}
+
+export function createAppPurchasesClient(): PurchasesClient {
+  return createPurchasesClient({ ...appApiOptions(), getCredential: getSessionCredential });
 }
