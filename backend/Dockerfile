@@ -4,7 +4,7 @@
 # This file never imports production Django settings and never bakes
 # credentials into layers.
 
-FROM python:3.14-slim-bookworm AS builder
+FROM python:3.14-alpine3.24 AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /bin/uv
 
@@ -19,7 +19,13 @@ RUN uv sync --locked --no-dev --no-install-project
 
 COPY backend ./backend
 
-FROM python:3.14-slim-bookworm AS runtime
+FROM python:3.14-alpine3.24 AS runtime
+
+# Runtime uses the locked venv. Remove unused installers and their vendored
+# dependencies; apply the available libuuid security fix from this Alpine series.
+RUN apk upgrade --no-cache libuuid \
+    && python -m pip uninstall --yes pip \
+    && python -c "import shutil,sysconfig; shutil.rmtree(sysconfig.get_path('stdlib') + '/ensurepip')"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -35,8 +41,8 @@ WORKDIR /app/backend
 RUN DJANGO_SETTINGS_MODULE=config.settings.staticbuild \
     python manage.py collectstatic --noinput --skip-checks \
     && chmod +x /app/backend/docker-entrypoint.sh \
-    && groupadd --gid 1000 app \
-    && useradd --uid 1000 --gid 1000 --home-dir /app --no-create-home app \
+    && addgroup -g 1000 app \
+    && adduser -u 1000 -G app -h /app -D -H app \
     && chown -R app:app /app
 
 USER app
