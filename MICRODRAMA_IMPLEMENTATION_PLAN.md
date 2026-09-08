@@ -50,9 +50,12 @@ P2-T03-F3, P3-T01-F1 and P3-T02 merged in PRs #139, #140 and #143. PR #145 adds
 the local Android wallet/coin-choice slice of P3-T08-F2; PR #147 safely resolves
 ambiguous unlocks. PR #148 supplies once-only synthetic purchase funding. The
 P3-T06 purchase-synchronization prerequisite under #142 adds a synthetic product
-catalog and owner-scoped historical credit lookup. Full P3-T08-F2 remains open.
-Next, P3-T03/P3-T06 must connect native Google Play offerings and checkout to these
-contracts; genuine provider lifecycle/reconciliation remains P3-T04/P3-T09.
+catalog and owner-scoped historical credit lookup. PR #153 adds Android purchase
+history. A dormant checkout coordinator now exercises account binding, exact price
+confirmation and interruption safety with injected synthetic integrations. Its
+shipped factory is disabled. Full P3-T08-F2 remains open. Next, P3-T03/P3-T06 must
+connect genuine Google Play/RevenueCat offerings and checkout to these contracts;
+provider lifecycle/reconciliation remains P3-T04/P3-T09.
 Commercial prices, support/native evidence and production activation remain gates.
 
 ### Definition of Done for Every Task
@@ -1020,6 +1023,15 @@ history and Android screen are implemented so a fresh installation can
 retrieve verified historical credits and safe support references without saved
 store transaction IDs. This does not recover unverified purchases or complete
 native checkout. See the [implementation plan](docs/superpowers/plans/2026-09-09-p3-t06-purchase-history.md).
+
+**Dormant coordinator (#142, 2026-09-09):** Synthetic integration covers server
+identity binding, unchanged store price strings, repeat-charge prevention and
+server-only confirmation. An unresolved SecureStore marker survives process loss;
+raw transaction IDs remain only in memory. A restarted unknown attempt stays
+blocked until a future genuine reconciliation path can resolve it. This is not
+automatic purchase recovery. The app factory remains unavailable and no SDK,
+checkout route or real provider is activated. See the
+[coordinator plan](docs/superpowers/plans/2026-09-09-p3-t06-checkout-coordinator.md).
 
 **Acceptance criteria:**
 

@@ -318,6 +318,27 @@ Initial paid-test activation also requires one approved audience, approximately 
 - **Evidence:** tested revision/device/build and generated-data observations only.
   Real Google purchase/reinstall/refund evidence remains the preceding P3-T06 gate.
 
+### P3-T06 — Dormant checkout coordinator
+
+- **Source:** #142, `2026-09-09-p3-t06-checkout-coordinator` specification and plan.
+- **State:** synthetic controller only; default factory unavailable, no native SDK
+  or checkout screen activated. Automated financial/session/storage checks are
+  immediate gates. Genuine provider/device checks remain pending under D-029.
+- **Prerequisites:** approved isolated provider setup, genuine transaction-ID
+  correlation and SDK acknowledgement/consumption ownership, account deletion
+  and data handling review. Test Store results cannot be relabeled Google sandbox.
+- **Actions:** with the future genuine adapter, verify server identity binding,
+  exact localized prices and repeat confirmation after a price/quantity change.
+  Interrupt before/after marker persistence, during checkout and status/wallet
+  reads; replace the session and retry across coordinators/accounts. Restart with
+  an unresolved marker and prove reconciliation without a replacement charge.
+- **Expected:** only server confirmation establishes historical credit; pending,
+  thrown or ambiguous results retain the marker. Current synthetic restart behavior
+  is deliberately unresolved because the raw transaction ID is not persisted.
+  Neither empty history nor absence of a callback is proof of cancellation.
+- **Blocks:** complete native recovery and P3-T06 acceptance, real checkout and
+  production activation. Synthetic passes do not satisfy provider observations.
+
 ## Sign-off record
 
 For each release candidate, append a dated entry with the immutable revision,
