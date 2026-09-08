@@ -1,3 +1,13 @@
+output "vpc_access" {
+  description = "Rendered job VPC attachment, empty when Direct VPC is disabled."
+  value       = google_cloud_run_v2_job.this.template[0].template[0].vpc_access
+}
+
+output "environment_variable_names" {
+  description = "Names of environment variables rendered in the job template; never values."
+  value       = toset([for env in google_cloud_run_v2_job.this.template[0].template[0].containers[0].env : env.name])
+}
+
 output "secret_references" {
   description = "Configured runtime secret names and versions only; never secret values."
   value = {

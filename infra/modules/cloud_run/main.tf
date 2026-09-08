@@ -156,6 +156,14 @@ resource "google_cloud_run_v2_service" "this" {
   }
 
   lifecycle {
-    ignore_changes = [template[0].containers[0].image]
+    # CI owns image promotion and traffic; infrastructure updates preserve both.
+    # Existing capacity settings remain operator-owned until the cost/capacity
+    # configuration follow-up. Keep the template minimum managed above.
+    ignore_changes = [
+      template[0].containers[0].image,
+      traffic,
+      template[0].scaling[0].max_instance_count,
+      scaling,
+    ]
   }
 }
