@@ -127,6 +127,29 @@ migration or data rewrite is needed. Old identity/callback/wallet contracts rema
 compatible. Native checkout/UI and genuine provider synchronization remain #142;
 these read APIs alone do not complete P3-T03/P3-T06.
 
+## Recent verified purchase history (P3-T06 / #142)
+
+`GET /v1/purchases/history` needs no store transaction ID or caller-selected
+account. It returns the current account's newest 20 credited decisions in stable
+descending recorded-time/reference order and a `has_more` flag. Each row contains
+only the server recorded time, original credited coins, safe support reference
+and `credited` or `review_required` status. Quarantined-only and unattributed
+transactions are absent; absence does not prove that a charge failed. Any later
+quarantined event on an owned credit keeps that row in review after retries.
+
+The read retains Firebase authentication, App Check, current-profile locking and
+the local synthetic-mode gate. It does not create financial state or depend on
+the current product registry. Deleted/recreated accounts cannot inherit detached
+history. No response caching, raw provider fields, monetary prices, local purchase
+storage, restored consumables or financial writes are introduced. Current balance
+and access remain separate server reads.
+
+Android exposes this bounded list from Coin wallet → Recent purchases, with
+refresh and foreground reload, session invalidation, safe support references and
+an explicit latest-20 notice when truncated. This is verified-credit visibility
+after reinstall or another-device login; it does not recover an unverified native
+checkout or resolve a refund. Native checkout remains the next task in #142.
+
 ## Remaining release gates
 
 - Native RevenueCat configuration, server identity binding before checkout, store
@@ -193,6 +216,45 @@ establish the server-read slice only. The full P3-T06 and #142 remain open.
 GitHub subsequently rejected main's existing Expo patch versions. Separate PR
 #152 aligns Expo/Router and passes all 21 Expo doctor checks, 232 mobile tests and
 the Android JavaScript bundle check. The founder merged #152 as `c4a6e8d`.
-Purchase PR #151 now targets that updated main, with its server implementation
-unchanged. Agents perform code review and validation and prepare the PR for the
-founder's merge; agent review does not replace any required human GitHub approval.
+Purchase PR #151 subsequently merged as `dbad575` after independent review and
+validation, with its server implementation unchanged.
+
+## Recent purchase history verification, 2026-09-09
+
+P3-T06 / #142 adds the bounded read and Android history screen described above.
+The backend implementation is `fe6aeb1`; the mobile implementation is `85f1ef7`.
+Tests used generated data in disposable PostgreSQL 17.6 on loopback port 55436,
+with `DATABASE_URL=postgresql://shortform@127.0.0.1:55436/shortform` and
+`PYTEST_ADDOPTS=-p no:cacheprovider`.
+
+- `uv run pytest backend/tests/commerce/test_purchase_history.py -q` — **19 passed**,
+  after an initial failing run against the absent route. Covers no financial
+  writes, owner isolation, deletion, historical quantity after spending/registry
+  edits, persistent quarantine, ordering/limits, authentication and disabled modes.
+- `uv run pytest backend/tests/commerce -q` — **110 passed**.
+- `pnpm backend:check` — **540 passed**; lint, formatting (218 files), types
+  (214 source files) and migration drift passed.
+- `pnpm contract:check` — passed with generated OpenAPI and TypeScript committed.
+- `python scripts/check_repository_foundation.py` — **50 passed**, plus safety and
+  AI governance validation.
+
+Mobile checks used the installed entry points from `mobile/` to avoid a local
+pnpm automatic-reinstall conflict; no dependency or lockfile change was needed:
+
+- `node ../node_modules/jest/bin/jest.js --ci --runInBand` — **275 passed / 40 suites**.
+  The new screen integration covers strict responses, safe text, foreground/refresh,
+  session changes and stale results; separate tests cover app attestation and
+  episode-preserving navigation at their distinct boundaries.
+- `node ../node_modules/eslint/bin/eslint.js .` — passed.
+- `node ../node_modules/prettier/bin/prettier.cjs --check .` — passed.
+- `node ../node_modules/typescript/bin/tsc --noEmit` — passed.
+- `node scripts/check-expo-config.mjs` — passed.
+- `node scripts/check-expo-bundle.mjs` — passed, Android production JS/Hermes only.
+
+Initial sandbox denials for lint's parent-directory resolution and Hermes compiler
+execution were resolved by rerunning those checks with authorized local access.
+The native attempt did not obtain a screen result; the emulator issue and exact
+D-029 repeat sequence are recorded in `final-validation.md`. It is not a native
+compile, Google purchase, reinstall or provider-lifecycle pass. Full P3-T06 and
+#142 remain open. Final independent review, validator and CI outcomes are recorded
+in the pull request before merge.

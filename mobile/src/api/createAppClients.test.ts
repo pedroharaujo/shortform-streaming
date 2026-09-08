@@ -1,7 +1,11 @@
 import { getNativeAppCheckToken } from '../appCheck/nativeAppCheck';
 import { setAuthSession } from '../auth/session';
 import { getApiConfiguration, getAppCheckConfiguration } from '../config/appConfiguration';
-import { createAppCatalogClient, createAppWalletClient } from './createAppClients';
+import {
+  createAppCatalogClient,
+  createAppPurchasesClient,
+  createAppWalletClient,
+} from './createAppClients';
 import { jsonResponse, requestHeaders, requestUrl } from './fetchTestUtils';
 
 jest.mock('../appCheck/nativeAppCheck', () => ({
@@ -42,6 +46,31 @@ describe('app API clients', () => {
     expect(requestHeaders(input, init).get('X-Firebase-AppCheck')).toBe(
       'synthetic.app-check-token',
     );
+  });
+
+  it('wires purchase history to the current session and App Check without purchase identifiers', async () => {
+    jest.clearAllMocks();
+    setAuthSession({ credential: 'synthetic.purchase-owner' });
+    const performRequest = jest.fn<Promise<Response>, [RequestInfo | URL, RequestInit?]>(async () =>
+      jsonResponse({ purchases: [], has_more: false }, 200),
+    );
+    globalThis.fetch = performRequest as typeof fetch;
+    const client = createAppPurchasesClient();
+    await client.getHistory();
+    setAuthSession({ credential: 'synthetic.replacement-owner' });
+    await client.getHistory();
+    expect(getNativeAppCheckToken).toHaveBeenCalledTimes(2);
+    for (const [index, [input, init]] of performRequest.mock.calls.entries()) {
+      expect(requestUrl(input)).toBe('http://10.0.2.2:8000/v1/purchases/history');
+      expect(requestHeaders(input, init).get('Authorization')).toBe(
+        `Bearer synthetic.${index === 0 ? 'purchase-owner' : 'replacement-owner'}`,
+      );
+      expect(requestHeaders(input, init).get('X-Firebase-AppCheck')).toBe(
+        'synthetic.app-check-token',
+      );
+      expect(input instanceof Request ? input.method : init?.method).toBe('GET');
+      expect(input instanceof Request ? input.body : init?.body).toBeNull();
+    }
   });
 
   it('does not initialize the private provider while rollout is disabled', async () => {

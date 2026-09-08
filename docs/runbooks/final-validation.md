@@ -291,6 +291,33 @@ Initial paid-test activation also requires one approved audience, approximately 
 - **Blocks:** complete P3-T03/P3-T06, provider reconciliation, #142 closure and all
   real-purchase or production activation. The server-read tests do not satisfy it.
 
+### P3-T06 — Recent verified purchases on Android
+
+- **Source:** #142, `2026-09-09-p3-t06-purchase-history` implementation plan.
+- **State:** native observations pending; automated privacy/authorization and
+  financial invariants must pass before merge. The API retains the local synthetic
+  purchase gate; production purchase history and checkout are unavailable.
+- **Local attempt (2026-09-09):** an isolated PostgreSQL backend and Firebase Auth
+  emulator successfully seeded generated credited/disputed records. The installed
+  Pixel_9 Android 16 emulator encountered System UI hangs across saved-state and
+  cold/software-graphics launches, and the development app could not connect to
+  Metro. No history-screen device result was obtained. Services were stopped;
+  the native sequence below remains deferred under D-029, never passed.
+- **Actions:** on an isolated backend, create generated verified credits and a
+  later quarantined/refund event through the existing synthetic callback harness.
+  Open Coin wallet → Recent purchases. Confirm original credited quantity,
+  recorded time and safe support reference, with disputed history requiring review.
+  Refresh, background/resume, disconnect/reconnect, switch accounts while a request
+  is pending, and sign in after reinstall/on another Android device. Repeat with
+  no history and more than 20 credits. Check large text and TalkBack.
+- **Expected:** only the current owner's latest 20 verified credits are visible;
+  the list explicitly notes truncation. No old account rows survive a switch.
+  Empty history does not imply no charge. Refresh never credits coins, clears
+  review, restores a consumed purchase or grants playback. Wallet balance is
+  fetched separately. No raw transaction/provider/identity values appear.
+- **Evidence:** tested revision/device/build and generated-data observations only.
+  Real Google purchase/reinstall/refund evidence remains the preceding P3-T06 gate.
+
 ## Sign-off record
 
 For each release candidate, append a dated entry with the immutable revision,
