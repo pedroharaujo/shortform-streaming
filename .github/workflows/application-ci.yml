@@ -131,7 +131,8 @@ jobs:
       - name: Typecheck mobile
         run: pnpm mobile:typecheck
       - name: Test mobile
-        run: pnpm mobile:test
+        # Avoid concurrent cold React Native transforms starving first-render tests.
+        run: pnpm mobile:test --runInBand
       - name: Check Expo public config
         run: pnpm mobile:config:check
       - name: Export production JavaScript bundles
