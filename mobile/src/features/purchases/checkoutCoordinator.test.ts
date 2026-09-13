@@ -12,7 +12,12 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(),
   deleteItemAsync: jest.fn(),
 }));
-jest.mock('expo-crypto', () => ({ randomUUID: () => '33333333-3333-4333-8333-333333333333' }));
+jest.mock('expo-crypto', () => ({
+  randomUUID: () => '33333333-3333-4333-8333-333333333333',
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  digestStringAsync: async (_algorithm: string, value: string) =>
+    jest.requireActual('crypto').createHash('sha256').update(value).digest('hex'),
+}));
 const owner = '11111111-1111-4111-8111-111111111111';
 const reference = '22222222-2222-4222-8222-222222222222';
 const applicationId = 'test.synthetic.shortform';
@@ -94,6 +99,37 @@ function fixture() {
     controller: createCheckoutCoordinator(dependencies),
   };
 }
+function nativeFixture() {
+  const f = fixture();
+  const nativeScope = { ...scope, applicationId: 'com.example.shortform', productId: 'test_coins' };
+  f.responses['/v1/purchases/catalog'] = {
+    products: [{ ...product, product_id: nativeScope.productId }],
+  };
+  f.responses['/v1/purchases/sync'] = waiting;
+  f.responses['/v1/purchases/recover'] = waiting;
+  f.provider.prepare.mockResolvedValue({
+    ownerId: owner,
+    applicationId: nativeScope.applicationId,
+  });
+  f.provider.getOffers.mockResolvedValue([{ ...offer, ...nativeScope }]);
+  f.provider.purchase.mockResolvedValue({
+    ...nativeScope,
+    outcome: 'completed',
+    transactionId: 'GPA.synthetic-order-123',
+  });
+  const dependencies = {
+    ...f.dependencies,
+    mode: 'revenuecat_sandbox' as const,
+    applicationId: nativeScope.applicationId,
+    api: createPurchaseCheckoutClient({
+      baseUrl: 'http://localhost:8000',
+      getCredential: () => 'synthetic.credential',
+      fetchImplementation: f.fetcher as typeof fetch,
+      mode: 'revenuecat_sandbox',
+    }),
+  };
+  return { ...f, dependencies, controller: createCheckoutCoordinator(dependencies), nativeScope };
+}
 beforeEach(() => {
   records.clear();
   jest.resetAllMocks();
@@ -105,6 +141,100 @@ beforeEach(() => {
   jest.mocked(SecureStore.deleteItemAsync).mockImplementation(async (key) => {
     records.delete(key);
   });
+});
+
+test('native purchase stores only an exact fingerprint and recovers verified credit after restart', async () => {
+  const f = nativeFixture();
+  expect((await f.controller.load()).status).toBe('ready');
+  expect(await f.controller.purchase(f.nativeScope.productId)).toEqual({
+    status: 'awaiting_verification',
+  });
+  const saved = JSON.parse([...records.values()][0]!);
+  expect(saved).toEqual({
+    version: 2,
+    ownerId: owner,
+    applicationId: f.nativeScope.applicationId,
+    productId: f.nativeScope.productId,
+    attemptId: '33333333-3333-4333-8333-333333333333',
+    transactionFingerprint: 'ab66eaa1719cc777d9e5cc9951d0d757a8db7f268bb0b3d86d26e5cd0cecefd1',
+  });
+  expect(JSON.stringify(saved)).not.toContain('GPA.');
+  f.responses['/v1/purchases/recover'] = credited;
+  const restarted = createCheckoutCoordinator(f.dependencies);
+  expect(await restarted.load()).toEqual({ status: 'awaiting_verification' });
+  expect(await restarted.sync()).toEqual({
+    status: 'credited',
+    historicalCreditedCoins: 100,
+    supportReference: reference,
+    wallet: { status: 'available', data: { balance: 45, spending_available: true } },
+  });
+  expect(records.size).toBe(0);
+  expect(f.provider.purchase).toHaveBeenCalledTimes(1);
+  const paths = f.fetcher.mock.calls.map(([input]) => new URL(requestUrl(input)).pathname);
+  expect(paths).toContain('/v1/purchases/sync');
+  expect(paths).toContain('/v1/purchases/recover');
+  expect(paths).not.toContain('/v1/purchases/status');
+});
+
+test('native unknown result survives restart and never infers credit or retries a charge', async () => {
+  const f = nativeFixture();
+  f.provider.purchase.mockRejectedValue(new Error('synthetic provider timeout'));
+  await f.controller.load();
+  expect(await f.controller.purchase(f.nativeScope.productId)).toEqual({
+    status: 'awaiting_verification',
+  });
+  f.responses['/v1/purchases/recover'] = credited;
+  const restarted = createCheckoutCoordinator(f.dependencies);
+  expect(await restarted.sync()).toEqual({ status: 'awaiting_verification' });
+  expect(await restarted.purchase(f.nativeScope.productId)).toEqual({
+    status: 'awaiting_verification',
+  });
+  expect(f.provider.purchase).toHaveBeenCalledTimes(1);
+  expect(f.fetcher.mock.calls.some(([input]) => requestUrl(input).includes('/recover'))).toBe(
+    false,
+  );
+  expect(records.size).toBe(1);
+});
+
+test('native recovery response is discarded when the account changes during verification', async () => {
+  const f = nativeFixture();
+  await f.controller.load();
+  await f.controller.purchase(f.nativeScope.productId);
+  const response = deferred<Response>();
+  f.fetcher.mockImplementation(async (input) =>
+    new URL(requestUrl(input)).pathname.endsWith('/recover')
+      ? response.promise
+      : jsonResponse({ app_user_id: owner }, 200),
+  );
+  const restarted = createCheckoutCoordinator(f.dependencies);
+  const recovery = restarted.sync();
+  for (
+    let i = 0;
+    i < 30 && !f.fetcher.mock.calls.some(([input]) => requestUrl(input).includes('/recover'));
+    i++
+  )
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(f.fetcher.mock.calls.some(([input]) => requestUrl(input).includes('/recover'))).toBe(true);
+  setAuthSession({ credential: 'synthetic.other-owner' });
+  response.resolve(jsonResponse(credited, 200));
+  expect(await recovery).toEqual({ status: 'session_changed' });
+  expect(records.size).toBe(1);
+});
+
+test('native fingerprint persistence failure leaves a blocking marker before server synchronization', async () => {
+  const f = nativeFixture();
+  await f.controller.load();
+  jest
+    .mocked(SecureStore.setItemAsync)
+    .mockImplementationOnce(async (key, value) => {
+      records.set(key, value);
+    })
+    .mockRejectedValueOnce(new Error('storage unavailable'));
+  expect(await f.controller.purchase(f.nativeScope.productId)).toEqual({
+    status: 'storage_unavailable',
+  });
+  expect(f.fetcher.mock.calls.some(([input]) => requestUrl(input).includes('/sync'))).toBe(false);
+  expect(records.size).toBe(1);
 });
 
 test('loads exact store price and server quantity only after confirming server identity', async () => {

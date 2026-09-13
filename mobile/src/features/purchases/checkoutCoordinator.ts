@@ -1,7 +1,8 @@
-import { randomUUID } from 'expo-crypto';
+import { CryptoDigestAlgorithm, digestStringAsync, randomUUID } from 'expo-crypto';
 import { getAuthSessionRevision } from '../../auth/session';
 import {
   isRecord,
+  isAndroidApplication,
   isSyntheticApplication,
   isTransactionId,
 } from '../../api/purchases/checkoutValidation';
@@ -26,10 +27,10 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
   let offers: readonly CheckoutOffer[] | null = null;
   let completed: { attempt: PendingPurchaseAttempt; transactionId: string } | null = null;
   const enabled =
-    options.mode === 'synthetic' &&
     options.environment === 'local' &&
     options.development &&
-    isSyntheticApplication(options.applicationId);
+    ((options.mode === 'synthetic' && isSyntheticApplication(options.applicationId)) ||
+      (options.mode === 'revenuecat_sandbox' && isAndroidApplication(options.applicationId)));
   const isCurrent = () => {
     if (getAuthSessionRevision() !== revision) {
       invalidated = true;
@@ -100,7 +101,12 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
       prepared.applicationId !== scope.applicationId
     )
       return null;
-    const providerOffers = await boundary(() => options.provider.getOffers(scope));
+    const providerOffers = await boundary(() =>
+      options.provider.getOffers({
+        ...scope,
+        productIds: catalog.data.products.map((product) => product.product_id),
+      }),
+    );
     if (!Array.isArray(providerOffers) || providerOffers.length !== catalog.data.products.length)
       return null;
     const byId = new Map<string, string>();
@@ -130,16 +136,33 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
     return Object.freeze(result);
   }
   async function verify(attempt: PendingPurchaseAttempt): Promise<CheckoutState> {
-    if (!completed || !samePurchaseAttempt(completed.attempt, attempt)) return awaiting;
-    const transactionId = completed.transactionId;
+    if (
+      attempt.applicationId !== options.applicationId ||
+      attempt.version !== (options.mode === 'revenuecat_sandbox' ? 2 : 1)
+    )
+      return awaiting;
+    const transactionId =
+      completed && samePurchaseAttempt(completed.attempt, attempt) ? completed.transactionId : null;
+    if (!transactionId && !attempt.transactionFingerprint) return awaiting;
     let result;
     try {
+      const transactionRequest = transactionId
+        ? {
+            application_id: attempt.applicationId,
+            product_id: attempt.productId,
+            transaction_id: transactionId,
+          }
+        : null;
       result = await boundary(() =>
-        options.api.getStatus({
-          application_id: attempt.applicationId,
-          product_id: attempt.productId,
-          transaction_id: transactionId,
-        }),
+        transactionRequest
+          ? options.mode === 'revenuecat_sandbox'
+            ? options.api.sync(transactionRequest)
+            : options.api.getStatus(transactionRequest)
+          : options.api.recover({
+              application_id: attempt.applicationId,
+              product_id: attempt.productId,
+              transaction_fingerprint: attempt.transactionFingerprint!,
+            }),
       );
     } catch (error) {
       if (error instanceof SessionChanged) throw error;
@@ -202,8 +225,8 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
         const selected = fresh.find((offer) => offer.productId === productId);
         if (!selected || selected.price !== previous.price || selected.coins !== previous.coins)
           return { status: 'ready', offers };
-        const attempt: PendingPurchaseAttempt = Object.freeze({
-          version: 1,
+        let attempt: PendingPurchaseAttempt = Object.freeze({
+          version: options.mode === 'revenuecat_sandbox' ? 2 : 1,
           ownerId: owner,
           applicationId: options.applicationId,
           productId,
@@ -248,6 +271,25 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
         if (result.outcome !== 'completed' || !isTransactionId(result.transactionId))
           return awaiting;
         completed = { attempt, transactionId: result.transactionId };
+        if (attempt.version === 2) {
+          const transactionId = result.transactionId;
+          const fingerprint = await boundary(() =>
+            digestStringAsync(
+              CryptoDigestAlgorithm.SHA256,
+              JSON.stringify([
+                'shortform-purchase-v1',
+                attempt.ownerId,
+                attempt.applicationId,
+                attempt.productId,
+                transactionId,
+              ]),
+            ),
+          );
+          attempt = await storage(() =>
+            options.storage.recordFingerprint(attempt, fingerprint, isCurrent),
+          );
+          completed = { attempt, transactionId };
+        }
         return verify(attempt);
       }),
     sync: () =>

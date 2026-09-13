@@ -10,10 +10,13 @@ import type {
 } from './checkoutTypes';
 import {
   isCoins,
+  isAndroidApplication,
+  isAndroidProduct,
   isRecord,
   isSyntheticApplication,
   isSyntheticProduct,
   isTransactionId,
+  isTransactionFingerprint,
   isUuid,
 } from './checkoutValidation';
 const message = 'The checkout request could not be verified.';
@@ -23,7 +26,10 @@ function identity(value: unknown): PurchaseIdentity | null {
     ? { app_user_id: value.app_user_id.toLowerCase() }
     : null;
 }
-function catalog(value: unknown): PurchaseCatalog | null {
+function catalog(
+  value: unknown,
+  validProduct: (value: unknown) => value is string,
+): PurchaseCatalog | null {
   if (
     !isRecord(value) ||
     !Array.isArray(value.products) ||
@@ -36,7 +42,7 @@ function catalog(value: unknown): PurchaseCatalog | null {
   for (const row of value.products) {
     if (
       !isRecord(row) ||
-      !isSyntheticProduct(row.product_id) ||
+      !validProduct(row.product_id) ||
       !isCoins(row.coins) ||
       row.product_type !== 'consumable' ||
       row.store !== 'PLAY_STORE' ||
@@ -93,8 +99,38 @@ export function createPurchaseCheckoutClient(options: {
   readonly baseUrl: string;
   readonly getCredential: () => string | null;
   readonly fetchImplementation?: typeof fetch;
+  readonly mode?: 'synthetic' | 'revenuecat_sandbox';
 }): PurchaseCheckoutClient {
   const api = createOpenApiClient(options);
+  const native = options.mode === 'revenuecat_sandbox';
+  const validApplication = native ? isAndroidApplication : isSyntheticApplication;
+  const validProduct = native ? isAndroidProduct : isSyntheticProduct;
+  const transactionRequest = async (
+    path: '/v1/purchases/status' | '/v1/purchases/sync',
+    request: Parameters<PurchaseCheckoutClient['getStatus']>[0],
+  ) => {
+    if (
+      !isRecord(request) ||
+      !validApplication(request.application_id) ||
+      !validProduct(request.product_id) ||
+      !isTransactionId(request.transaction_id)
+    )
+      return unavailable;
+    return project(
+      await mapJsonRequest<PurchaseStatus>(DEFAULT_TIMEOUT_MS, message, (signal) =>
+        api.POST(path, {
+          body: {
+            application_id: request.application_id,
+            product_id: request.product_id,
+            transaction_id: request.transaction_id,
+          },
+          headers: bearerHeaders(options.getCredential),
+          signal,
+        }),
+      ),
+      status,
+    );
+  };
   return {
     async getIdentity() {
       return project(
@@ -108,7 +144,7 @@ export function createPurchaseCheckoutClient(options: {
       );
     },
     async getCatalog(applicationId) {
-      if (!isSyntheticApplication(applicationId)) return unavailable;
+      if (!validApplication(applicationId)) return unavailable;
       return project(
         await mapJsonRequest<PurchaseCatalog>(DEFAULT_TIMEOUT_MS, message, (signal) =>
           api.POST('/v1/purchases/catalog', {
@@ -117,26 +153,29 @@ export function createPurchaseCheckoutClient(options: {
             signal,
           }),
         ),
-        catalog,
+        (value) => catalog(value, validProduct),
       );
     },
-    async getStatus(request) {
+    getStatus: (request) => transactionRequest('/v1/purchases/status', request),
+    sync: (request) =>
+      native ? transactionRequest('/v1/purchases/sync', request) : Promise.resolve(unavailable),
+    async recover(request) {
       if (
+        !native ||
         !isRecord(request) ||
-        !isSyntheticApplication(request.application_id) ||
-        !isSyntheticProduct(request.product_id) ||
-        !isTransactionId(request.transaction_id)
+        !validApplication(request.application_id) ||
+        !validProduct(request.product_id) ||
+        !isTransactionFingerprint(request.transaction_fingerprint)
       )
         return unavailable;
-      const body = {
-        application_id: request.application_id,
-        product_id: request.product_id,
-        transaction_id: request.transaction_id,
-      };
       return project(
         await mapJsonRequest<PurchaseStatus>(DEFAULT_TIMEOUT_MS, message, (signal) =>
-          api.POST('/v1/purchases/status', {
-            body,
+          api.POST('/v1/purchases/recover', {
+            body: {
+              application_id: request.application_id,
+              product_id: request.product_id,
+              transaction_fingerprint: request.transaction_fingerprint,
+            },
             headers: bearerHeaders(options.getCredential),
             signal,
           }),

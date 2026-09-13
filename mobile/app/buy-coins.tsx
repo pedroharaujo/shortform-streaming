@@ -1,47 +1,46 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import type { JSX } from 'react';
-import { useCallback, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
+import { useCallback, useMemo, useRef, useState, type JSX } from 'react';
 
-import { createAppWalletClient } from '../src/api/createAppClients';
 import { getSessionCredential } from '../src/auth/session';
-import { getPurchaseConfiguration } from '../src/config/appConfiguration';
 import { readRouteId } from '../src/features/catalog/readRouteId';
-import { WalletScreen } from '../src/features/wallet/WalletScreen';
+import { CoinPacksScreen } from '../src/features/purchases/CoinPacksScreen';
+import { createAppCheckoutCoordinator } from '../src/features/purchases/createAppCheckoutCoordinator';
 
-export default function WalletRoute(): JSX.Element {
+export default function BuyCoinsRoute(): JSX.Element {
   const params = useLocalSearchParams<{ returnEpisode?: string | string[] }>();
   const returnEpisode = readRouteId(params.returnEpisode);
-  const client = useMemo(() => createAppWalletClient(), []);
-  const purchasesEnabled =
-    __DEV__ &&
-    Platform.OS === 'android' &&
-    getPurchaseConfiguration().mode === 'revenuecat_sandbox';
   const [visit, setVisit] = useState(0);
+  const firstFocus = useRef(true);
   useFocusEffect(
     useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
       setVisit((value) => value + 1);
     }, []),
   );
+  return <CheckoutVisit key={visit} returnEpisode={returnEpisode} />;
+}
+
+function CheckoutVisit({
+  returnEpisode,
+}: {
+  readonly returnEpisode: string | undefined;
+}): JSX.Element {
+  const coordinator = useMemo(() => createAppCheckoutCoordinator(), []);
+  const wallet = returnEpisode
+    ? { pathname: '/wallet' as const, params: { returnEpisode } }
+    : '/wallet';
   return (
-    <WalletScreen
-      key={visit}
-      client={client}
-      onBack={() => (router.canGoBack() ? router.back() : router.replace('/account'))}
+    <CoinPacksScreen
+      coordinator={coordinator}
+      onBack={() => (router.canGoBack() ? router.back() : router.replace(wallet))}
+      onWallet={() => router.dismissTo(wallet)}
       onPurchases={() =>
         router.push(
           returnEpisode ? { pathname: '/purchases', params: { returnEpisode } } : '/purchases',
         )
-      }
-      onBuyCoins={
-        purchasesEnabled
-          ? () =>
-              router.push(
-                returnEpisode
-                  ? { pathname: '/buy-coins', params: { returnEpisode } }
-                  : '/buy-coins',
-              )
-          : undefined
       }
       onAccount={() => {
         const pathname = getSessionCredential() === null ? '/sign-in' : '/account';

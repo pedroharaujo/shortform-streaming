@@ -11,7 +11,26 @@ This file is the single engineering source for later privacy labels (P6-T04), ac
 
 D-007/D-008/D-015 bring Google Play/RevenueCat coin purchases, ledger and refunds into MVP. D-016/D-032 bring minimum attribution, BigQuery financial/cohort/spend joins and daily LTV/CAC reporting into MVP. D-034 makes France/Android/English/one audience active launch configuration with generalized domain capability; D-004 targets approximately 3–5 titles with D-031 free/ad/coin/paid-promotion rights. No processor, region, retention period, license value or production activation is approved by this inventory update. The revised planned tables below supersede the older P7 timing; historical snapshot tables remain labeled as evidence only.
 
-### Dormant purchase coordinator (P3-T06, 2026-09-09)
+### Local Android purchase integration (P3-T06, 2026-09-13)
+
+The development binary now includes `react-native-purchases` 10.9.1. Its factory
+defaults to disabled and does not load the provider until local Android checkout
+is explicitly configured after Play license-test setup. The adapter configures
+only the backend purchase UUID, disables diagnostics/automatic device identifier
+collection and suppresses SDK logs. RevenueCat itself manages store transactions
+and its native cache; disabling application logging does not mean the native SDK
+has no provider-managed storage or network activity when enabled.
+
+Version-2 pending markers store owner/app/product/attempt and, after a known
+result, a SHA-256 order fingerprint. Raw order IDs are transient input to the
+authenticated server verifier, never application persistence or analytics. Known
+fingerprints permit bounded owner-scoped recovery; unknown attempts remain
+blocking. The marker is pseudonymous account data, not anonymous data. No real
+purchase processing is claimed tested. Provider deletion, device-cache cleanup,
+retention and refund policy remain P2-T02/D-020 release gates. Production stays
+disabled. See [sandbox setup and limits](../runbooks/revenuecat-sandbox.md).
+
+### Historical dormant purchase coordinator (P3-T06, 2026-09-09)
 
 The injected synthetic checkout coordinator can persist one unresolved marker per
 server purchase identity in Expo SecureStore. The strict versioned marker contains

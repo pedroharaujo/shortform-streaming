@@ -289,6 +289,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/purchases/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recover a known sandbox purchase using its exact fingerprint
+         * @description Explicit local RevenueCat sandbox mode only. Resolves an owner-bound SHA-256 fingerprint from at most 100 customer purchases, requiring a complete page and exactly one match before full provider verification and idempotent credit. Incomplete, ambiguous and missing evidence stays awaiting verification and cannot prove cancellation or make repurchasing safe. Cannot resolve unknown attempts. Shares the sync limit of six requests per minute per account. Returns historical credit, not current wallet balance or playback authorization.
+         */
+        post: operations["v1_purchases_recover_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/purchases/status": {
         parameters: {
             query?: never;
@@ -763,6 +783,12 @@ export interface components {
             store: components["schemas"]["StoreEnum"];
             environment: components["schemas"]["EnvironmentEnum"];
             price_source: components["schemas"]["PriceSourceEnum"];
+        };
+        PurchaseRecoveryRequestRequest: {
+            application_id: string;
+            product_id: string;
+            /** @description SHA-256 of UTF-8 compact JSON ["shortform-purchase-v1", owner purchase UUID, application_id, product_id, Google transaction ID]. Lowercase hex; ASCII identifiers. */
+            transaction_fingerprint: string;
         };
         PurchaseStatus: {
             status: components["schemas"]["PurchaseStatusStatusEnum"];
@@ -1531,6 +1557,65 @@ export interface operations {
             };
             /** @description Coin purchases are disabled or unavailable. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_purchases_recover_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseRecoveryRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseStatus"];
+                };
+            };
+            /** @description Invalid or unexpected purchase lookup fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Coin purchases or the requested catalog are unavailable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Purchase verification rate limit exceeded. */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

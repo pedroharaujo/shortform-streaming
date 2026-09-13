@@ -36,3 +36,23 @@ export function isTransactionId(value: unknown): value is string {
 export function isCoins(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0 && value <= 2147483647;
 }
+export function isAndroidApplication(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= 128 &&
+    /^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/.test(value) &&
+    !/[\r\n]/.test(value) &&
+    !value.startsWith('test.synthetic.')
+  );
+}
+export function isAndroidProduct(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= 128 &&
+    /^[a-z][a-z0-9_.]*$/.test(value) &&
+    !/[\r\n]/.test(value)
+  );
+}
+export function isTransactionFingerprint(value: unknown): value is string {
+  return typeof value === 'string' && value.length === 64 && /^[a-f0-9]+$/.test(value);
+}

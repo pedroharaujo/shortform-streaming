@@ -23,6 +23,10 @@ overrides:
   react-native-worklets: "0.10.1"
   react-native-reanimated: "4.5.1"
   react-native-gesture-handler: "2.32.0"
+  # GHSA-2883-xcg3-v3hh: keep YAML readers in Jest/Expo tooling on patched
+  # releases within each existing major; do not widen the native SDK matrix.
+  "js-yaml@>=3 <4": "3.15.2"
+  "js-yaml@>=4 <5": "4.3.2"
 
 # Install scripts are denied by default. Every entry below is an explicit,
 # justified exception and must stay minimal. `false` records an intentional deny

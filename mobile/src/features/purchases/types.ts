@@ -44,19 +44,21 @@ export interface ProviderPurchase extends ProviderIdentity {
   readonly store: 'PLAY_STORE';
   readonly environment: 'SANDBOX';
 }
-/** Synthetic adapter only. Runtime-validate outputs; no provider payload reaches public state. */
-export interface SyntheticPurchaseProvider {
+/** Runtime-validate outputs; no provider payload reaches public state. */
+export interface PurchaseProvider {
   prepare(identity: ProviderIdentity): Promise<unknown>;
-  getOffers(identity: ProviderIdentity): Promise<unknown>;
+  getOffers(
+    identity: ProviderIdentity & { readonly productIds: readonly string[] },
+  ): Promise<unknown>;
   purchase(request: ProviderPurchase): Promise<unknown>;
 }
 export interface CheckoutDependencies {
-  readonly mode: 'disabled' | 'synthetic';
+  readonly mode: 'disabled' | 'synthetic' | 'revenuecat_sandbox';
   readonly environment: string;
   readonly development: boolean;
   readonly applicationId: string;
   readonly api: PurchaseCheckoutClient;
   readonly wallet: Pick<WalletClient, 'getWallet'>;
-  readonly provider: SyntheticPurchaseProvider;
+  readonly provider: PurchaseProvider;
   readonly storage: PendingPurchaseStorage;
 }

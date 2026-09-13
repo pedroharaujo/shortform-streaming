@@ -1,6 +1,22 @@
 import { createContext, useContext, type JSX, type PropsWithChildren } from 'react';
 
 export interface AppMessages {
+  readonly coinPacks: {
+    readonly title: string;
+    readonly description: string;
+    readonly loading: string;
+    readonly unavailable: string;
+    readonly busy: string;
+    readonly pending: string;
+    readonly checkPurchase: string;
+    readonly cancelled: string;
+    readonly reload: string;
+    readonly storageUnavailable: string;
+    readonly credited: string;
+    readonly walletUnavailable: string;
+    readonly openWallet: string;
+    readonly coins: (coins: number) => string;
+  };
   readonly purchases: {
     readonly title: string;
     readonly loading: string;
@@ -142,6 +158,22 @@ export interface AppMessages {
 }
 
 export const englishMessages: AppMessages = {
+  coinPacks: {
+    title: 'Buy coins',
+    description: 'Pay through Google Play. Coins are added after your purchase is verified.',
+    loading: 'Checking coin packs and purchases…',
+    unavailable: 'Coin purchases are unavailable right now. Check your connection and try again.',
+    busy: 'Another purchase is being checked. Check again in a moment.',
+    pending: 'Your purchase still needs to be checked before buying again.',
+    checkPurchase: 'Check purchase',
+    cancelled: 'Purchase cancelled. You can choose a pack again.',
+    reload: 'Reload coin packs',
+    storageUnavailable: 'Your purchase could not be saved safely. Please try again before buying.',
+    credited: 'Your purchase has been verified and its coins credited.',
+    walletUnavailable: 'Your current balance could not be loaded. Open your wallet to check it.',
+    openWallet: 'Open wallet',
+    coins: (coins) => `${coins} coins`,
+  },
   purchases: {
     title: 'Recent purchases',
     loading: 'Loading purchase history…',

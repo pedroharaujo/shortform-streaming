@@ -29,15 +29,9 @@ class PurchaseCatalogRequestSerializer(StrictSerializer):
         return super().to_internal_value(data)
 
 
-class PurchaseStatusRequestSerializer(PurchaseCatalogRequestSerializer):
+class PurchaseProductRequestSerializer(PurchaseCatalogRequestSerializer):
     product_id = serializers.RegexField(
         r"\A[A-Za-z0-9_.:/-]+\Z", max_length=128, trim_whitespace=False
-    )
-    transaction_id = serializers.RegexField(
-        r"\A[A-Za-z0-9_.:$/-]+\Z",
-        max_length=200,
-        trim_whitespace=False,
-        help_text="Store transaction identifier; sent in the body, never persisted by the backend.",
     )
 
     def validate_product_id(self, value: str) -> str:
@@ -49,6 +43,28 @@ class PurchaseStatusRequestSerializer(PurchaseCatalogRequestSerializer):
         if not re.fullmatch(pattern, value):
             raise serializers.ValidationError("Invalid purchase product identifier.")
         return value
+
+
+class PurchaseStatusRequestSerializer(PurchaseProductRequestSerializer):
+    transaction_id = serializers.RegexField(
+        r"\A[A-Za-z0-9_.:$/-]+\Z",
+        max_length=200,
+        trim_whitespace=False,
+        help_text="Store transaction identifier; sent in the body, never persisted by the backend.",
+    )
+
+
+class PurchaseRecoveryRequestSerializer(PurchaseProductRequestSerializer):
+    transaction_fingerprint = serializers.RegexField(
+        r"\A[0-9a-f]{64}\Z",
+        min_length=64,
+        max_length=64,
+        trim_whitespace=False,
+        help_text=(
+            'SHA-256 of UTF-8 compact JSON ["shortform-purchase-v1", owner purchase UUID, '
+            "application_id, product_id, Google transaction ID]. Lowercase hex; ASCII identifiers."
+        ),
+    )
 
 
 class PurchaseProductSerializer(serializers.Serializer[Mapping[str, object]]):

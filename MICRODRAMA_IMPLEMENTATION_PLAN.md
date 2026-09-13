@@ -1053,6 +1053,16 @@ automatic purchase recovery. The app factory remains unavailable and no SDK,
 checkout route or real provider is activated. See the
 [coordinator plan](docs/superpowers/plans/2026-09-09-p3-t06-checkout-coordinator.md).
 
+**Local native implementation (#164, 2026-09-13):** Android now has a Buy coins
+screen and RevenueCat adapter, opt-in only after Google license-test setup.
+Server quantities, unchanged store prices, identity/session guards, once-only
+verification and a return to the selected episode are connected. Version-2
+secure markers allow exact known-result recovery through an authenticated
+fingerprint endpoint; unknown results and incomplete provider histories remain
+blocking. Production and the default mobile configuration remain disabled.
+Genuine purchase/refund/device evidence and unknown-attempt resolution remain
+open. See [sandbox runbook](docs/runbooks/revenuecat-sandbox.md).
+
 **Acceptance criteria:**
 
 - [ ] At most one credit per verified transaction; client cannot choose quantity or owner. Persistent balance/entitlements reload after reinstall and second-device login without re-crediting consumables.
