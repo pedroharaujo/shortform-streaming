@@ -185,7 +185,9 @@ class DeployTrustTests(unittest.TestCase):
                 self.assertIn("--no-traffic", no_traffic)
                 self.assertIn("--tag=candidate", no_traffic)
                 self.assertIn("SERVICE_URL", no_traffic)
-                self.assertIn("filter(tag:candidate)", no_traffic)
+                self.assertIn("--format=json", no_traffic)
+                self.assertIn("scripts/resolve_cloud_run_candidate.py", no_traffic)
+                self.assertNotIn("filter(tag:candidate)", no_traffic)
 
                 smoke = _step_body(workflow, "Update and execute smoke job")
                 self.assertIn("SMOKE_BASE_URL", smoke)
