@@ -40,10 +40,12 @@ class Product:
     product_type: str = "consumable"
 
 
-def load_products(value: Any) -> tuple[Product, ...]:
-    """Only explicit synthetic scope is accepted; never include live price data."""
+def load_products(value: Any, *, mode: str = "test") -> tuple[Product, ...]:
+    """Separate generated fixtures from D-036 tester scope; never include prices."""
+    if mode not in {"test", "revenuecat_sandbox"}:
+        raise ImproperlyConfigured("Coin product registry mode is invalid.")
     if not isinstance(value, list) or not 1 <= len(value) <= 32:
-        raise ImproperlyConfigured("A bounded synthetic coin product registry is required.")
+        raise ImproperlyConfigured("A bounded coin product registry is required.")
     products = []
     seen: set[tuple[str, str]] = set()
     app_bindings: dict[str, str] = {}
@@ -61,18 +63,35 @@ def load_products(value: Any) -> tuple[Product, ...]:
         "product_type",
     }
     for row in value:
-        if not isinstance(row, dict) or set(row) != expected or row["synthetic"] is not True:
+        if (
+            not isinstance(row, dict)
+            or set(row) != expected
+            or row["synthetic"] is not (mode == "test")
+        ):
             raise ImproperlyConfigured("Coin product registry fields are invalid.")
         for field in ("app_id", "product_id", "application_id", "approval_reference"):
             if not isinstance(row[field], str) or not re.fullmatch(
                 r"[A-Za-z0-9_.:/-]{1,128}", row[field]
             ):
                 raise ImproperlyConfigured("Coin product registry identifiers are invalid.")
+        if mode == "test":
+            approved_scope = (
+                row["app_id"].startswith("synthetic_")
+                and row["product_id"].startswith("synthetic_")
+                and row["application_id"].startswith("test.synthetic.")
+                and row["approval_reference"].startswith("synthetic:")
+            )
+        else:
+            approved_scope = bool(
+                re.fullmatch(r"app[A-Za-z0-9_-]+", row["app_id"])
+                and re.fullmatch(
+                    r"[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+", row["application_id"]
+                )
+                and re.fullmatch(r"[a-z][a-z0-9_.]*", row["product_id"])
+                and row["approval_reference"] == "D-036"
+            )
         if (
-            not row["app_id"].startswith("synthetic_")
-            or not row["product_id"].startswith("synthetic_")
-            or not row["application_id"].startswith("test.synthetic.")
-            or not row["approval_reference"].startswith("synthetic:")
+            not approved_scope
             or row["store"] != "PLAY_STORE"
             or row["environment"] != "SANDBOX"
             or row["price_source"] != "store"
@@ -81,7 +100,9 @@ def load_products(value: Any) -> tuple[Product, ...]:
             or type(row["coins"]) is not int
             or not 1 <= row["coins"] <= 2147483647
         ):
-            raise ImproperlyConfigured("Only synthetic Android consumable scope is supported.")
+            raise ImproperlyConfigured(
+                "Only approved Android sandbox consumable scope is supported."
+            )
         key = (row["app_id"], row["product_id"])
         if (
             key in seen
@@ -99,8 +120,20 @@ def load_products(value: Any) -> tuple[Product, ...]:
 
 
 def purchases_enabled() -> bool:
-    return bool(settings.DEBUG and getattr(settings, "COIN_PURCHASE_MODE", "disabled") == "test")
+    return bool(
+        settings.DEBUG
+        and getattr(settings, "COIN_PURCHASE_MODE", "disabled") in {"test", "revenuecat_sandbox"}
+    )
+
+
+def reconciliation_enabled() -> bool:
+    return bool(
+        settings.DEBUG
+        and getattr(settings, "COIN_PURCHASE_MODE", "disabled") == "revenuecat_sandbox"
+    )
 
 
 def products() -> tuple[Product, ...]:
-    return load_products(getattr(settings, "COIN_PURCHASE_PRODUCTS", []))
+    return load_products(
+        getattr(settings, "COIN_PURCHASE_PRODUCTS", []), mode=settings.COIN_PURCHASE_MODE
+    )

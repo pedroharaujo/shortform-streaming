@@ -1,5 +1,7 @@
+import re
 from collections.abc import Mapping
 
+from django.conf import settings
 from rest_framework import serializers
 
 from apps.accounts.serializers import StrictSerializer
@@ -7,8 +9,17 @@ from apps.accounts.serializers import StrictSerializer
 
 class PurchaseCatalogRequestSerializer(StrictSerializer):
     application_id = serializers.RegexField(
-        r"\Atest\.synthetic\.[A-Za-z0-9_.:/-]*\Z", max_length=128, trim_whitespace=False
+        r"\A[A-Za-z0-9_.:/-]+\Z", max_length=128, trim_whitespace=False
     )
+
+    def validate_application_id(self, value: str) -> str:
+        if settings.COIN_PURCHASE_MODE == "revenuecat_sandbox":
+            valid = re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+", value)
+        else:
+            valid = re.fullmatch(r"test\.synthetic\.[A-Za-z0-9_.:/-]*", value)
+        if not valid:
+            raise serializers.ValidationError("Invalid purchase application identifier.")
+        return value
 
     def to_internal_value(self, data: object) -> dict[str, object]:
         if isinstance(data, dict) and any(not isinstance(value, str) for value in data.values()):
@@ -20,14 +31,24 @@ class PurchaseCatalogRequestSerializer(StrictSerializer):
 
 class PurchaseStatusRequestSerializer(PurchaseCatalogRequestSerializer):
     product_id = serializers.RegexField(
-        r"\Asynthetic_[A-Za-z0-9_.:/-]*\Z", max_length=128, trim_whitespace=False
+        r"\A[A-Za-z0-9_.:/-]+\Z", max_length=128, trim_whitespace=False
     )
     transaction_id = serializers.RegexField(
         r"\A[A-Za-z0-9_.:$/-]+\Z",
         max_length=200,
         trim_whitespace=False,
-        help_text="Store transaction identifier; owner-scoped lookup only, never retained.",
+        help_text="Store transaction identifier; sent in the body, never persisted by the backend.",
     )
+
+    def validate_product_id(self, value: str) -> str:
+        pattern = (
+            r"[a-z][a-z0-9_.]*"
+            if settings.COIN_PURCHASE_MODE == "revenuecat_sandbox"
+            else r"synthetic_[A-Za-z0-9_.:/-]*"
+        )
+        if not re.fullmatch(pattern, value):
+            raise serializers.ValidationError("Invalid purchase product identifier.")
+        return value
 
 
 class PurchaseProductSerializer(serializers.Serializer[Mapping[str, object]]):

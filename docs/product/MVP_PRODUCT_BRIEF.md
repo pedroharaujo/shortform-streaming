@@ -3,7 +3,7 @@
 **Plan task:** P0-T01  
 **Status:** Founder strategy approved; implementation and Public Release Readiness remain open
 **Product codename:** Shortform Streaming  
-**Last updated:** 2026-09-07
+**Last updated:** 2026-09-13
 
 ## Product statement and business hypothesis
 
@@ -60,6 +60,15 @@ This does not approve commercial values or activation. See the
 [coin-wallet runbook](../runbooks/coin-wallet.md).
 
 ## MVP journeys
+
+**Next founder checkpoint (D-036, approved 2026-09-13):** deliver the usable
+Android journey before expanding the product: browse a series → watch a free
+episode → Google sign-in → Google Play test coin purchase → verified balance →
+coin unlock → continued playback. Reuse the existing app and services. Rewarded
+ads and advanced reporting follow this checkpoint; this sequencing does not
+remove their approved launch requirements or authorize production purchases.
+The [hands-on runbook](../runbooks/android-first-journey.md) records the current
+gaps and the evidence required to call the journey usable.
 
 1. Campaign/creative → attributed Google Play install/first open → eligible series → free episode → progress/resume.
 2. Locked episode → account creation/login → configured rewarded-ad option → verified grant → fresh playback authorization.

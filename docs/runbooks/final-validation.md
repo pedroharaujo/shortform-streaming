@@ -265,6 +265,23 @@ Initial paid-test activation also requires one approved audience, approximately 
 - **Blocks:** P5-T05/P6-T03 and production App Check enforcement. This deferral is
   permitted only while enforcement and public production activation remain off.
 
+### P3-T04/P3-T06 — Known transaction RevenueCat reconciliation
+
+- **State:** genuine provider/device evidence remains deferred under D-029; this
+  change supplies a local-only server implementation and generated-fixture tests.
+  Production purchases and the mobile checkout factory remain disabled.
+- **Setup:** follow [RevenueCat sandbox verification](revenuecat-sandbox.md) with
+  an approved isolated tester app, consumable SKU, license tester and server key.
+- **Unchecked:** obtain a server purchase UUID, bind the native account, complete
+  a genuine tester purchase, sync its exact order ID, and observe one credit.
+  Retry, interrupt connectivity, refund, and switch/delete the account; record
+  safe outcomes only. Verify native acknowledgement/consumption separately.
+- **Recovery:** once implemented, restart during checkout and resolve the exact
+  pending attempt without inferring success from balance or recent history.
+- **Blocks:** full P3-T04/P3-T06 acceptance and checkout activation. Automated
+  ownership, redaction, once-only credit, refund-review and deletion checks are
+  immediate merge gates and are not deferred.
+
 ### P3-T06 — Native checkout and verified funding synchronization
 
 - **Source:** issue #142; purchase-synchronization prerequisite; D-008/D-020/D-029.

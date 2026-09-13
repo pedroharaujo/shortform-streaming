@@ -2,7 +2,7 @@
 
 **Document status:** Founder strategy updated; new MVP work planned, release readiness open
 **Language:** English  
-**Last reviewed:** 2026-09-07
+**Last reviewed:** 2026-09-13
 **Repository:** `pedroharaujo/shortform-streaming` (public monorepo)  
 **MVP client:** Android / Google Play only; Django Admin is the only web interface. iOS is post-MVP (D-027).
 
@@ -57,6 +57,19 @@ shipped factory is disabled. Full P3-T08-F2 remains open. Next, P3-T03/P3-T06 mu
 connect genuine Google Play/RevenueCat offerings and checkout to these contracts;
 provider lifecycle/reconciliation remains P3-T04/P3-T09.
 Commercial prices, support/native evidence and production activation remain gates.
+
+### First hands-on milestone (D-036)
+
+**Immediate delivery priority — D-036 (2026-09-13):** the next founder checkpoint
+is a usable Android viewing and test-purchase journey, not completion of the
+remaining phase-wide backlog. First bring up the existing catalog/player and
+Google sign-in using generated or approved self-owned media (P2-T08). Then finish
+the genuine Google Play/RevenueCat test purchase, server verification and recovery
+path (P3-T03/P3-T04/P3-T06), ending with coin unlock and continued playback.
+Rewarded ads and advanced reporting follow this checkpoint; existing financial,
+authorization, rights and production gates continue to apply. See
+`docs/runbooks/android-first-journey.md` for runnable steps and unchecked device
+acceptance. Synthetic checkout tests never count as a genuine Play purchase.
 
 ### Definition of Done for Every Task
 
@@ -985,6 +998,13 @@ and [implementation plan](docs/superpowers/plans/2026-09-07-p3-t02-coin-wallet.m
 - [ ] Google Play license-tester Android device fetches offerings and matches the native purchase sheet. Apple/two-store device testing remains post-MVP.
 
 #### P3-T04 — Verify RevenueCat Android purchase and webhook lifecycle
+
+**Development slice (2026-09-13, #164):** Local-only RevenueCat v2 reconciliation
+now verifies a known tester transaction against its server purchase identity and
+registered app/package/product before using existing once-only ledger fulfillment.
+See [sandbox verification](docs/runbooks/revenuecat-sandbox.md). Genuine provider
+evidence, native exact-attempt recovery, callback activation and full acceptance
+remain open; production purchases and the mobile checkout factory stay disabled.
 
 **Timing:** Coin lifecycle moved from P7 into MVP 2026-09-07. Subscription state lives in P3-T04-P7.
 

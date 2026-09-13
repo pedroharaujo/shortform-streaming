@@ -243,6 +243,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       googleServicesFile: './google-services.json',
     },
     plugins: [
+      // Google Mobile Ads 25.4 uses Kotlin 2.3 metadata. Keep native rebuilds
+      // compatible through prebuild configuration instead of generated files.
+      ['expo-build-properties', { android: { kotlinVersion: '2.3.20' } }],
+      './plugins/withKotlinCompiler',
       'expo-router',
       'expo-video',
       'expo-secure-store',
