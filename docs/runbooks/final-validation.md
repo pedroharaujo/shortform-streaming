@@ -199,6 +199,7 @@ Initial paid-test activation also requires one approved audience, approximately 
 
   The bundle command verifies Android production JavaScript only. It does not
   compile native Android, execute a store purchase or establish visual evidence.
+
 - **Native prerequisites:** private Android development client and test identity;
   isolated backend with generated eligible free/ad/coin/both episodes and configured
   synthetic prices; wallet funded through a verified test purchase once
@@ -223,6 +224,42 @@ Initial paid-test activation also requires one approved audience, approximately 
   accounts, provider callbacks, tokens, signed media URLs or licensed assets in Git.
 - **Blocks:** native/P6-T03 completion, full P3-T08-F2, live spending/purchases,
   release distribution and public support readiness. None is marked passed here.
+
+**Issue #173 device evidence (2026-09-13):** Pixel 9 / Android 16, local API,
+Firebase Auth Emulator and generated video/accounts exercised Wallet discovery
+and the existing server resolver. A replayed synthetic funding callback credited
+13 once. Account A spent 4 once (balance 9, one debit, one receipt). Account B's
+simulated post-commit 503 retained one debit/receipt; after its known episode route
+imported the older per-episode marker, a development reload exposed **Check coin
+unlock** in Wallet while the episode was draft. Account C saw neither B's entry nor
+balance. Returning to B preserved B's entry; resolution cleared it without another
+debit, while the draft episode returned 404 offers and no Play action.
+
+Account C's simulated pre-debit 503 left the new account journal discoverable from
+Wallet after a development reload. Resolution cancelled with zero charge and
+cleared the entry. Replaying the exact cancelled request over local HTTP after the
+episode was published returned 409 and retained balance 13 with one credit and no
+debit. These are injected failure observations, not genuine network/provider
+failures. The run did not cover force-stop/OS process death, genuine Google Play,
+refunds or playable-media authorization. SecureStore cannot enumerate unseen
+legacy per-episode markers; their known episode route remains the migration and
+recovery entry.
+
+The updated development JavaScript also passed the new-journal path without a
+known-route import. Starting from C's cleared 13-coin/no-debit state, a distinct
+explicitly confirmed 4-coin attempt received a simulated post-commit 503 and
+produced balance 9, one debit and one receipt. The episode was changed to draft;
+after development reload, Home → Account → Coin wallet found **Check coin unlock**
+directly. Resolution returned `completed`, exposed no Play action because offers
+returned 404, cleared the Wallet entry, and left balance 9 plus the single
+debit/receipt unchanged. This does not establish a release-binary or force-stop/OS
+process-death result.
+
+The #173 automated gates passed 47 mobile suites / 418 tests plus lint, formatting,
+types and Expo configuration, Android bundle, API contract, and repository
+foundation (580 scanned files / 55 tests). Independent reviews reported no
+findings. #144 remains open for the public support contact and remaining genuine
+provider, release-device and refund gates.
 
 ### P3-T07/P3-T08 — Genuine Google SSV to authorized playback
 

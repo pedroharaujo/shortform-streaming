@@ -44,6 +44,8 @@ export interface AppMessages {
     readonly purchasesUnavailable: string;
     readonly spendingUnavailable: string;
     readonly backToEpisode: string;
+    readonly recoveryUnavailable: string;
+    readonly retryRecovery: string;
   };
   readonly unlock: {
     readonly title: string;
@@ -213,6 +215,8 @@ export const englishMessages: AppMessages = {
     purchasesUnavailable: 'Coin purchases are not available yet.',
     spendingUnavailable: 'Coin unlocks are unavailable in this build.',
     backToEpisode: 'Back to episode',
+    recoveryUnavailable: 'A saved coin unlock could not be checked. Try again.',
+    retryRecovery: 'Retry coin unlock check',
   },
   unlock: {
     title: 'Unlock episode',

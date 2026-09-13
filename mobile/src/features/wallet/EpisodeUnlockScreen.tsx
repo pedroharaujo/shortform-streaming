@@ -136,7 +136,7 @@ export function EpisodeUnlockScreen({
     if (!acceptProfile(profile.data.public_id)) return;
     let attempt: PendingCoinUnlock | null;
     try {
-      attempt = await readPendingCoinUnlock(profile.data.public_id, episodeId);
+      attempt = await readPendingCoinUnlock(profile.data.public_id, episodeId, isCurrent);
       if (!isCurrent()) return;
       setPending(attempt);
       setRecoveryReady(true);
@@ -393,7 +393,7 @@ export function EpisodeUnlockScreen({
       },
     };
     try {
-      await writePendingCoinUnlock(attempt);
+      await writePendingCoinUnlock(attempt, isCurrent);
     } catch {
       if (isCurrent()) {
         setRecoveryReady(false);

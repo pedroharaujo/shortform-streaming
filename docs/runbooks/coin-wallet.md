@@ -111,9 +111,52 @@ keep the safe request reference for support; absence of a receipt alone still
 does not justify erasing a pending request or replacing coins.
 
 [Issue #144](https://github.com/pedroharaujo/shortform-streaming/issues/144) remains
-open for an approved public support contact and actual native recovery evidence.
-Neither is claimed by automated engineering checks. Production coins remain
-disabled.
+open for an approved public support contact and its remaining genuine provider,
+refund and release-device gates. Production coins remain disabled.
+
+### Android Wallet recovery evidence (2026-09-13, issue #173)
+
+On a Pixel 9 Android 16 emulator using generated video, Firebase Auth Emulator
+accounts and the local test-only coin mode, a signed synthetic callback credited
+13 coins exactly once on replay. Account A confirmed a 4-coin unlock and the
+server recorded one debit and one receipt, leaving 9 coins.
+
+For account B, an injected post-commit HTTP 503 left an older JavaScript bundle's
+per-episode marker after the same one-debit result. The updated Wallet could not
+enumerate that legacy SecureStore key. Opening the known episode route imported
+the account journal; after a development reload, Home → Account → Coin wallet
+showed **Check coin unlock** while the episode was draft. Account C showed its own
+13-coin balance and no B recovery. Returning to B retained only B's recovery;
+resolution cleared it, retained balance 9 and the single debit/receipt, and the
+draft episode returned no offers or Play action.
+
+Account C then exercised the new journal-first path with an injected pre-debit 503. After a development reload, Wallet discovered the request. Resolution
+cancelled it with zero charge, balance 13 and no debit, then cleared the entry.
+Replaying that exact cancelled request over local HTTP after publishing the
+episode at 4 coins returned 409; the account still had one credit, 13 coins and
+no debit. These 503 results were deliberate simulations. The run did not use OS
+force-stop/process death and does not establish genuine Google Play checkout,
+refund or playable-media evidence.
+
+The updated development JavaScript was then checked without a known-route import.
+From C's cleared state (13 coins, no debits), a distinct explicitly confirmed
+4-coin attempt received an injected post-commit 503. The server showed balance 9,
+one debit and one receipt. After making the episode draft and using development
+reload, Home → Account → Coin wallet found **Check coin unlock** directly. Its
+route resolved `completed`, showed no Play action because offers returned 404,
+and cleared the Wallet entry. Server balance 9 and the single debit/receipt were
+unchanged. This confirms the updated development-JavaScript path; it is not a
+release-binary or OS process-death result.
+
+SecureStore cannot enumerate pre-#173 per-episode keys. Such legacy records remain
+recoverable when their known episode route is opened, but Wallet cannot discover
+an unseen legacy marker. New debit-eligible attempts write the bounded account
+journal before the episode marker and send no debit unless both writes succeed.
+
+Automated evidence for this slice passed `pnpm mobile:check` (47 suites, 418
+tests), the Android production bundle check, API contract check and repository
+foundation check (580 scanned files and 55 repository tests). Independent review
+reported no remaining findings.
 
 ## Deployment and rollback
 

@@ -274,7 +274,7 @@ it.each([
   expect(sent.url).toBe('https://api.example.test/v1/coins/unlock/resolve');
   expect(sent.headers.get('Authorization')).toBe('Bearer mock.synthetic_coin');
   expect(await sent.clone().json()).toEqual(savedRequest);
-  expect(mockSecureStore.size).toBe(1);
+  expect(mockSecureStore.size).toBe(2);
   expect(view.queryByText('Use 5 coins')).toBeNull();
   expect(props.onPlay).not.toHaveBeenCalled();
 });
@@ -305,7 +305,7 @@ it.each(['session', 'account'] as const)(
       }
       finish({ outcome: 'ok', data: resolution('cancelled') });
     });
-    expect(mockSecureStore.size).toBe(1);
+    expect(mockSecureStore.size).toBe(2);
     expect(view.queryByText('Use 5 coins')).toBeNull();
     expect(props.onPlay).not.toHaveBeenCalled();
   },
@@ -331,7 +331,7 @@ it('preserves the terminal request when the session changes while cleanup reads 
     setAuthSession({ credential: 'mock.synthetic_other' });
     finishRead();
   });
-  expect(mockSecureStore.size).toBe(1);
+  expect(mockSecureStore.size).toBe(2);
   expect(props.onPlay).not.toHaveBeenCalled();
 });
 
@@ -461,6 +461,23 @@ it.each(['read', 'write'] as const)(
     expect(props.onPlay).not.toHaveBeenCalled();
   },
 );
+
+it('does not debit when the episode marker fails after the journal is saved', async () => {
+  jest
+    .mocked(SecureStore.setItemAsync)
+    .mockImplementationOnce(async (key, value) => {
+      mockSecureStore.set(key, value);
+    })
+    .mockRejectedValueOnce(new Error('legacy unavailable'));
+  const { props, wallet } = setup();
+  const view = await render(<EpisodeUnlockScreen {...props} />);
+  await confirm(view);
+  await view.findByText(
+    'Secure unlock recovery is unavailable. No new unlock request can be sent. Try again later.',
+  );
+  expect(wallet.unlock).not.toHaveBeenCalled();
+  expect(mockSecureStore.size).toBe(1);
+});
 
 it('requires refreshed terms and a new confirmation after a definitive rejection', async () => {
   const { props, wallet, rewards, offers } = setup();
@@ -674,6 +691,6 @@ it('preserves an initial receipt when the server profile changes without changin
   await waitFor(() =>
     expect(view.queryByText('Checking your balance and episode access…')).toBeNull(),
   );
-  expect(mockSecureStore.size).toBe(1);
+  expect(mockSecureStore.size).toBe(2);
   expect(props.onPlay).not.toHaveBeenCalled();
 });
