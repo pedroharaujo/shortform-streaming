@@ -53,6 +53,20 @@ the emulator and confirm `adb devices` reports `device`. A physical USB phone
 needs explicit connection setup; it cannot use the emulator-only `10.0.2.2`
 addresses as-is. Do not open the local database or Auth emulator to the LAN.
 
+On Windows, if Metro starts but only listens on IPv6 `::1`, stop that Metro
+process and run this from `mobile/` to make the installed debug app's port 8081
+reachable by the Android emulator:
+
+```powershell
+$env:NODE_OPTIONS='--dns-result-order=ipv4first'
+node ../node_modules/expo/bin/cli start --dev-client --localhost --port 8081
+```
+
+Open Shortform normally in the emulator. The installed debug APK used in the
+2026-09-13 check used port 8081; passing a different port in a development-client
+deep link did not redirect it. Confirm `http://127.0.0.1:8081/status` responds
+before troubleshooting the app's backend connection.
+
 ## Finish genuine test checkout
 
 Engineering owns the native RevenueCat adapter, server verification and recovery
@@ -99,3 +113,9 @@ failed assets or change older titles' approval state to bypass this blocker.
 
 This is startup evidence only; the device and genuine-purchase checklist above
 remains unchecked.
+
+After correcting Metro's IPv4 binding, the installed app launched successfully,
+Metro bundled 1,700 modules and reported one connected native debugger target.
+The backend, Auth emulator and Metro were left running for the next check.
+No visual catalog inspection, Google sign-in or video-playback proof is claimed
+by this application-start observation.
