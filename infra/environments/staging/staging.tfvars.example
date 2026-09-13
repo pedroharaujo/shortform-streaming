@@ -32,6 +32,11 @@ video_provider       = ""
 github_repository  = "example-org/example-repo"
 github_environment = "staging"
 
+# Opt in before live internal HTTP smoke; defaults create no VPC or Compute API.
+# Verify that this dedicated /26 private range does not overlap existing routes.
+smoke_private_network_enabled = false
+smoke_private_subnet_cidr     = "10.254.0.0/26"
+
 secret_ids       = ["bunny-stream-api-key", "django-secret-key", "database-url"]
 extra_secret_ids = []
 
