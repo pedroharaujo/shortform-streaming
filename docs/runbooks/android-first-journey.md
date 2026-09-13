@@ -15,11 +15,12 @@ The Android catalog, native HLS player, progress/resume/autoplay, Google sign-in
 wallet and episode-unlock screens exist. Django Admin manages catalog and media.
 PostgreSQL owns account, wallet and access records; Bunny delivers the video.
 
-Store checkout is unfinished. The shipped checkout factory returns unavailable,
-and the current server purchase registry and callback accept synthetic tests
-only. Do not connect RevenueCat to that synthetic HMAC callback or present a
-synthetic credit as evidence of a Google Play payment. Genuine provider
-verification and interrupted-purchase recovery must accompany native checkout.
+Store checkout is unfinished. The shipped checkout factory returns unavailable.
+The server now implements [RevenueCat sandbox verification](revenuecat-sandbox.md)
+for a known tester transaction, with account/app/product checks and once-only
+credit. Its separate callback harness still accepts generated tests only; do not
+connect a genuine webhook to it. Native checkout and interrupted-purchase
+recovery remain unfinished, and genuine provider/device evidence is still needed.
 
 ## Bring up the existing viewing experience
 
