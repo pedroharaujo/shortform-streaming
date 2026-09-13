@@ -28,10 +28,54 @@ Set these **server-only** values privately, never in Expo public variables or Gi
   D-036 authorizes the isolated test journey; these are not approved commercial
   packs or prices under D-008.
 
-The existing signed callback route accepts only the separate `test` mode. It is
-disabled in `revenuecat_sandbox`; do not configure a genuine webhook to it yet.
-Production Django settings reject both modes. No infrastructure secrets or live
-provider configuration are created by this change.
+The signed callback route has a separate, default-disabled sandbox switch; see
+the notification setup below. Production Django settings reject both purchase
+modes. Provider setup and a protected reachable callback address are separate
+requirements; this implementation does not publish the local development server.
+
+## Sandbox notifications while the app is closed
+
+Issue #169 / P3-T04 adds an opt-in handler at `POST /v1/webhooks/revenuecat`.
+Use only the isolated test project and an approved callback route. Keep
+`REVENUECAT_SANDBOX_WEBHOOK_ENABLED=false` until those prerequisites exist.
+
+1. Complete the private server setup above and configure the RevenueCat dashboard
+   integration for the intended sandbox app. Store its configured Authorization
+   value in `COIN_PURCHASE_AUTHORIZATION` and its webhook HMAC signing secret in
+   `COIN_PURCHASE_SIGNING_SECRET`, privately. Both are required; use separate
+   test secrets, not the server API key or the mobile public SDK identifier.
+2. Set `REVENUECAT_SANDBOX_WEBHOOK_ENABLED=true` with local Django settings and
+   `COIN_PURCHASE_MODE=revenuecat_sandbox`, then restart the backend. Missing
+   secrets, malformed flags and an incompatible mode fail configuration checks.
+3. Send a dashboard TEST event and observe a generic HTTP 200 ignored result,
+   with no wallet mutation. A dashboard test alone is not purchase evidence.
+4. Close the app after a genuine license-tester purchase. Observe one verified
+   server credit, reopen the app and refresh the wallet. Retry the delivery and
+   race a client sync: the transaction must still have exactly one credit.
+5. Interrupt provider reads and retry a purchase notification: unresolved reads
+   return a generic HTTP 503 so delivery can retry, with no positive decision.
+   Restore access and verify the same transaction converges once.
+6. Send the genuine refund lifecycle before and after purchase delivery. Signed
+   cancellations immediately establish review barriers even if provider reads
+   lag or fail. Already credited transactions remain in review; no coin debit,
+   entitlement removal or unapproved refund policy is applied by this slice.
+
+The [provider authentication contract](https://www.revenuecat.com/docs/integrations/webhooks)
+uses a signature timestamp distinct from the event timestamp and signs exact raw
+bytes. Each retry receives a fresh signature; old event timestamps remain valid
+when freshly signed. The handler requires Authorization plus HMAC, bounds input,
+and uses the original event ID for duplicate/conflict handling. Positive events
+must match fresh v2 purchase facts, including purchase time and quantity one.
+Provider I/O occurs outside database locks. Unsupported events are ignored;
+transfers never reassign the wallet.
+
+All genuine steps above remain unchecked under D-029 until observed with the
+configured provider. Record only device/build, safe support references and
+normalized outcomes in restricted evidence. Never capture headers, raw bodies,
+subscriber attributes, account details or store transaction identifiers. Rollback
+is `REVENUECAT_SANDBOX_WEBHOOK_ENABLED=false`; retain immutable review/credit
+history. This does not resolve an unknown local checkout attempt or enable a
+second charge.
 
 ## Android test checkout
 
@@ -116,8 +160,9 @@ If the process dies before the native result's fingerprint is saved, the unknown
 attempt remains blocked. A history change, increased balance or elapsed time
 cannot identify it. RevenueCat's React Native CustomerInfo history identifiers
 are not Google order IDs. Do not erase the marker, retry charging, or guess a
-match. This remaining resolution path and genuine callback/refund lifecycle are
-follow-up engineering work; no production activation is implied.
+match. This remaining resolution path and full production refund lifecycle are
+follow-up engineering work. The sandbox notification implementation above still
+requires genuine provider validation; no production activation is implied.
 
 Genuine tester purchase, acknowledgement/consumption, provider refund, restart
 and reinstall evidence remain unchecked in [final validation](final-validation.md).

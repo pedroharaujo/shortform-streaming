@@ -18,10 +18,11 @@ PostgreSQL owns account, wallet and access records; Bunny delivers the video.
 The app now includes an opt-in Buy coins screen and RevenueCat Android adapter,
 with [server verification and known-result recovery](revenuecat-sandbox.md).
 Checkout defaults to disabled until the Play license-test setup is verified.
-Account/app/product checks protect once-only credit. Its separate callback
-harness accepts generated tests only; do not connect a genuine webhook to it.
-Unknown-result interruption recovery, genuine lifecycle and device evidence
-remain open.
+Account/app/product checks protect once-only credit. A separately enabled
+[sandbox notification handler](revenuecat-sandbox.md#sandbox-notifications-while-the-app-is-closed)
+can verify credits while the app is closed and preserve signed-refund review.
+Its genuine-provider setup and delivery remain unchecked. Unknown-result
+interruption recovery, full lifecycle and device evidence remain open.
 
 ## Bring up the existing viewing experience
 

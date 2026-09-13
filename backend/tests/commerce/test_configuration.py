@@ -48,6 +48,46 @@ def sandbox_environment() -> dict[str, str]:
     }
 
 
+def test_sandbox_notification_configuration_requires_explicit_flag_and_secrets() -> None:
+    environment = sandbox_environment()
+    default = run_settings_import(
+        environment,
+        code="from config.settings.local import REVENUECAT_SANDBOX_WEBHOOK_ENABLED; "
+        "assert REVENUECAT_SANDBOX_WEBHOOK_ENABLED is False",
+    )
+    assert default.returncode == 0, default.stderr
+    enabled = {
+        **environment,
+        "REVENUECAT_SANDBOX_WEBHOOK_ENABLED": "true",
+        "COIN_PURCHASE_AUTHORIZATION": uuid4().hex,
+        "COIN_PURCHASE_SIGNING_SECRET": uuid4().hex,
+    }
+    local = run_settings_import(enabled, code="import config.settings.local")
+    assert local.returncode == 0, local.stderr
+    assert run_settings_import(enabled).returncode != 0
+    for field in ("COIN_PURCHASE_AUTHORIZATION", "COIN_PURCHASE_SIGNING_SECRET"):
+        assert (
+            run_settings_import(
+                {**enabled, field: ""}, code="import config.settings.local"
+            ).returncode
+            != 0
+        )
+    for flag in ("1", "yes", "TRUE", ""):
+        assert (
+            run_settings_import(
+                {**enabled, "REVENUECAT_SANDBOX_WEBHOOK_ENABLED": flag},
+                code="import config.settings.local",
+            ).returncode
+            != 0
+        )
+    assert (
+        run_settings_import(
+            {**enabled, "COIN_PURCHASE_MODE": "disabled"}, code="import config.settings.local"
+        ).returncode
+        != 0
+    )
+
+
 def test_sandbox_settings_load_locally_but_cannot_activate_production() -> None:
     environment = sandbox_environment()
     local = run_settings_import(environment, code="import config.settings.local")

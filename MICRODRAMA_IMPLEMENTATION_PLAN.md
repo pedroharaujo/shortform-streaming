@@ -1002,9 +1002,12 @@ and [implementation plan](docs/superpowers/plans/2026-09-07-p3-t02-coin-wallet.m
 **Development slice (2026-09-13, #164):** Local-only RevenueCat v2 reconciliation
 now verifies a known tester transaction against its server purchase identity and
 registered app/package/product before using existing once-only ledger fulfillment.
-See [sandbox verification](docs/runbooks/revenuecat-sandbox.md). Genuine provider
-evidence, native exact-attempt recovery, callback activation and full acceptance
-remain open; production purchases and the mobile checkout factory stay disabled.
+See [sandbox verification](docs/runbooks/revenuecat-sandbox.md). The opt-in native
+checkout and exact known-result recovery are implemented in #164 / PR #168.
+Issue #169 adds separately enabled sandbox notifications with fresh purchase
+verification and immediate signed-refund quarantine barriers. Genuine provider
+evidence, unknown-attempt resolution, callback activation and full acceptance
+remain open; production purchases stay disabled and native checkout defaults off.
 
 **Timing:** Coin lifecycle moved from P7 into MVP 2026-09-07. Subscription state lives in P3-T04-P7.
 

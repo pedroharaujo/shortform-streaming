@@ -47,6 +47,12 @@ COIN_PURCHASE_SIGNING_SECRET = os.environ.get("COIN_PURCHASE_SIGNING_SECRET", ""
 COIN_PURCHASE_PRODUCTS = parse_registry(os.environ.get("COIN_PURCHASE_PRODUCTS", "[]"))
 REVENUECAT_PROJECT_ID = os.environ.get("REVENUECAT_PROJECT_ID", "")
 REVENUECAT_API_KEY = os.environ.get("REVENUECAT_API_KEY", "")
+_sandbox_webhook_flag = os.environ.get("REVENUECAT_SANDBOX_WEBHOOK_ENABLED", "false")
+if _sandbox_webhook_flag not in {"true", "false"}:
+    raise ImproperlyConfigured("REVENUECAT_SANDBOX_WEBHOOK_ENABLED must be true or false.")
+REVENUECAT_SANDBOX_WEBHOOK_ENABLED = _sandbox_webhook_flag == "true"
+if REVENUECAT_SANDBOX_WEBHOOK_ENABLED and COIN_PURCHASE_MODE != "revenuecat_sandbox":
+    raise ImproperlyConfigured("Sandbox purchase notifications require RevenueCat sandbox mode.")
 if COIN_PURCHASE_MODE == "revenuecat_sandbox":
     load_products(COIN_PURCHASE_PRODUCTS, mode=COIN_PURCHASE_MODE)
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", REVENUECAT_PROJECT_ID) or not re.fullmatch(
@@ -55,11 +61,12 @@ if COIN_PURCHASE_MODE == "revenuecat_sandbox":
         raise ImproperlyConfigured("RevenueCat server project and API key must be configured.")
 if COIN_PURCHASE_MODE == "test":
     load_products(COIN_PURCHASE_PRODUCTS)
+if COIN_PURCHASE_MODE == "test" or REVENUECAT_SANDBOX_WEBHOOK_ENABLED:
     if not all(
         32 <= len(value) <= 256 and value.isascii() and value.isprintable()
         for value in (COIN_PURCHASE_AUTHORIZATION, COIN_PURCHASE_SIGNING_SECRET)
     ):
-        raise ImproperlyConfigured("Synthetic purchase callback authentication must be configured.")
+        raise ImproperlyConfigured("Purchase callback authentication must be configured.")
 
 MIDDLEWARE = [
     "config.observability.RequestCorrelationMiddleware",
