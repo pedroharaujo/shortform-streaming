@@ -999,6 +999,13 @@ and [implementation plan](docs/superpowers/plans/2026-09-07-p3-t02-coin-wallet.m
 
 #### P3-T04 — Verify RevenueCat Android purchase and webhook lifecycle
 
+**Development slice (2026-09-13, #164):** Local-only RevenueCat v2 reconciliation
+now verifies a known tester transaction against its server purchase identity and
+registered app/package/product before using existing once-only ledger fulfillment.
+See [sandbox verification](docs/runbooks/revenuecat-sandbox.md). Genuine provider
+evidence, native exact-attempt recovery, callback activation and full acceptance
+remain open; production purchases and the mobile checkout factory stay disabled.
+
 **Timing:** Coin lifecycle moved from P7 into MVP 2026-09-07. Subscription state lives in P3-T04-P7.
 
 **Description/objective:** Authenticate/validate provider events, preserve restricted references, bind account/product/environment/transaction, quarantine unresolved identity and converge on verified coin-purchase/refund state.
