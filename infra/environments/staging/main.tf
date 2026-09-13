@@ -11,7 +11,7 @@ locals {
   )
 
   # P5-T04: creating a secret name must never implicitly grant runtime access.
-  # These are the union consumed by the service and the existing shared jobs.
+  # These are the union consumed by the service and the migration job.
   runtime_secret_ids = toset(concat(
     ["django-secret-key", "database-url"],
     var.video_provider == "bunny" ? [
@@ -21,7 +21,7 @@ locals {
 
   # Enable only APIs this composition uses. Enable iamcredentials and sts for
   # WIF. Do not enable transcoder, dns, sqladmin, cloudtasks, cloudscheduler,
-  # or compute.
+  # Compute is enabled only for the explicitly requested private smoke route.
   required_services = toset(concat([
     "run.googleapis.com",
     "artifactregistry.googleapis.com",
@@ -38,7 +38,7 @@ locals {
     ], var.observability_enabled ? [
     "logging.googleapis.com",
     "monitoring.googleapis.com",
-    ] : []
+    ] : [], var.smoke_private_network_enabled ? ["compute.googleapis.com"] : []
   ))
 
   # Stdlib-only in-project smoke. SMOKE_AUDIENCE (service URL) and
@@ -209,23 +209,21 @@ module "smoke_job" {
   region                        = var.region
   job_name                      = var.smoke_job_name
   image                         = var.cloud_run_image
-  runtime_service_account_email = google_service_account.runtime.email
+  runtime_service_account_email = google_service_account.smoke.email
   labels                        = local.labels
   command                       = ["python"]
   args                          = ["-c", local.smoke_script]
   max_retries                   = 0
-  django_allowed_hosts          = var.django_allowed_hosts
-  firebase_project_id           = var.firebase_project_id
-  video_provider                = var.video_provider
-  secret_versions               = var.secret_versions
-  bunny_stream_library_id       = var.bunny_stream_library_id
-  bunny_stream_cdn_hostname     = var.bunny_stream_cdn_hostname
-  bunny_stream_api_key_secret   = format("%s", var.bunny_stream_api_key_secret)
-  bunny_stream_token_key_secret = format("%s", var.bunny_stream_token_key_secret)
+  include_django_configuration  = false
+  direct_vpc = var.smoke_private_network_enabled ? {
+    network    = "projects/${var.project_id}/global/networks/${google_compute_network.smoke[0].name}"
+    subnetwork = "projects/${var.project_id}/regions/${var.region}/subnetworks/${google_compute_subnetwork.smoke[0].name}"
+    egress     = "ALL_TRAFFIC"
+  } : null
 
   depends_on = [
     google_project_service.required,
-    module.secret_names,
-    google_secret_manager_secret_iam_member.runtime_accessor,
+    google_artifact_registry_repository_iam_member.smoke_reader,
+    google_cloud_run_v2_service_iam_member.smoke_invoker,
   ]
 }

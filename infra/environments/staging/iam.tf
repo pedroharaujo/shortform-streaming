@@ -61,6 +61,39 @@ resource "google_cloud_run_v2_service_iam_member" "runtime_invoker" {
   member   = "serviceAccount:${google_service_account.runtime.email}"
 }
 
+# HTTP-only smoke never receives backend secrets or bucket permissions.
+resource "google_service_account" "smoke" {
+  project      = var.project_id
+  account_id   = "shortform-smoke"
+  display_name = "shortform staging HTTP smoke"
+  description  = "HTTP-only staging checks. Artifact reader and service-scoped invoker; no Secret Manager access."
+
+  lifecycle {
+    precondition {
+      condition     = var.runtime_service_account_id != "shortform-smoke"
+      error_message = "The Django runtime identity must be distinct from the HTTP-only shortform-smoke identity."
+    }
+  }
+
+  depends_on = [google_project_service.required]
+}
+
+resource "google_artifact_registry_repository_iam_member" "smoke_reader" {
+  project    = module.artifact_registry.project
+  location   = module.artifact_registry.location
+  repository = module.artifact_registry.repository_id
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${google_service_account.smoke.email}"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "smoke_invoker" {
+  project  = var.project_id
+  location = module.cloud_run.location
+  name     = module.cloud_run.service_name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.smoke.email}"
+}
+
 # Dedicated GitHub Actions deploy identity. account_id shortform-deploy.
 # Resource-scoped roles only. Do not grant owner, editor, iam.securityAdmin,
 # secretmanager.admin, or project-wide storage.admin.
@@ -107,6 +140,12 @@ resource "google_cloud_run_v2_job_iam_member" "deploy_smoke_developer" {
 
 resource "google_service_account_iam_member" "deploy_acts_as_runtime" {
   service_account_id = google_service_account.runtime.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.deploy.email}"
+}
+
+resource "google_service_account_iam_member" "deploy_acts_as_smoke" {
+  service_account_id = google_service_account.smoke.name
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.deploy.email}"
 }

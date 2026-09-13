@@ -33,12 +33,16 @@ run "defaults_exclude_unused_secrets" {
   }
   assert {
     condition = alltrue([
-      for refs in [module.cloud_run.secret_references, module.migrate_job.secret_references, module.smoke_job.secret_references] :
+      for refs in [module.cloud_run.secret_references, module.migrate_job.secret_references] :
       toset(keys(refs)) == toset(["DJANGO_SECRET_KEY", "DATABASE_URL"]) &&
       refs.DJANGO_SECRET_KEY.secret == "django-secret-key" && refs.DATABASE_URL.secret == "database-url" &&
       alltrue([for ref in values(refs) : ref.version == "latest"])
     ])
-    error_message = "All existing workloads must preserve default names and latest versions without Bunny injection."
+    error_message = "Django workloads must preserve default names and latest versions without Bunny injection."
+  }
+  assert {
+    condition     = length(module.smoke_job.secret_references) == 0 && length(module.smoke_job.environment_variable_names) == 0
+    error_message = "HTTP-only smoke must not receive Django, database, Firebase or provider configuration/secrets."
   }
 }
 
@@ -67,12 +71,16 @@ run "pin_versions_and_scope_optional_bunny_names" {
   }
   assert {
     condition = alltrue([
-      for refs in [module.cloud_run.secret_references, module.migrate_job.secret_references, module.smoke_job.secret_references] :
+      for refs in [module.cloud_run.secret_references, module.migrate_job.secret_references] :
       toset(keys(refs)) == toset(keys(var.secret_versions)) &&
       alltrue([for name, ref in refs : ref.version == var.secret_versions[name]]) &&
       refs.BUNNY_STREAM_API_KEY.secret == format("%s", "example-api") && refs.BUNNY_STREAM_TOKEN_KEY.secret == format("%s", "example-token")
     ])
-    error_message = "Service, migrate and smoke must consume the selected secret names and distinct pinned versions."
+    error_message = "Service and migrate must consume the selected secret names and distinct pinned versions."
+  }
+  assert {
+    condition     = length(module.smoke_job.secret_references) == 0 && length(module.smoke_job.environment_variable_names) == 0
+    error_message = "Enabling Bunny must not inject any configuration or secrets into HTTP-only smoke."
   }
 }
 
@@ -83,7 +91,7 @@ run "partial_pin_preserves_other_defaults" {
   }
   assert {
     condition = alltrue([
-      for refs in [module.cloud_run.secret_references, module.migrate_job.secret_references, module.smoke_job.secret_references] :
+      for refs in [module.cloud_run.secret_references, module.migrate_job.secret_references] :
       refs.DATABASE_URL.version == "2" && refs.DJANGO_SECRET_KEY.version == "latest"
     ])
     error_message = "A partial version override must not alter other references."
@@ -96,6 +104,14 @@ run "reject_unknown_selector" {
     secret_versions = { DATABASE_URl = "2" }
   }
   expect_failures = [var.secret_versions]
+}
+
+run "reject_shared_smoke_identity" {
+  command = plan
+  variables {
+    runtime_service_account_id = "shortform-smoke"
+  }
+  expect_failures = [google_service_account.smoke]
 }
 
 run "reject_mutable_alias" {

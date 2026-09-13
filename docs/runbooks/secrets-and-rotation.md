@@ -27,15 +27,15 @@ this runbook grants no legal, region, retention, provider-account or budget scop
 
 | Name / configuration | Purpose, storage and consumer | Owner; rotation / overlap / rollback |
 | --- | --- | --- |
-| `DJANGO_SECRET_KEY` → `django-secret-key` | Secret Manager; Django service and migration settings; currently also injected into smoke. Signs Django material and staff-upload HMAC. | Engineering. **Do not rotate through this foundation alone.** No overlap implementation is added. Assess Django sessions/signatures and `upload_views.py` / `objectstore.py` HMAC compatibility together; old/new revisions may reject each other's material. Rollback to the old revision/key only while safe and enabled. |
-| `DATABASE_URL` → `database-url` | Secret Manager; PostgreSQL connection for Django/migrate; currently also injected into smoke. Never put the password-bearing URL in tfvars or build args. | Database owner + engineering. Use independently valid old/new database identities only after privileges, pooling and migration ownership are reviewed. Verify both during overlap, adopt the new identity, drain old connections, then revoke old login. Resetting one user's password does **not** provide overlap. Rollback requires the old login to remain valid. |
-| `BUNNY_STREAM_API_KEY` → `bunny-stream-api-key` (configurable name) | Secret Manager; Bunny asset management/takedown through the backend; service/jobs receive it only with `video_provider = "bunny"`. Staff upload and encode masters directly in Bunny. | Provider owner + engineering. Confirm provider-supported independent credentials/overlap before regenerating anything. Validate playback authorization and takedown with generated media. If only immediate replacement is possible, stop the zero-downtime drill and prepare a separately approved procedure. Rollback needs an independently valid old credential. |
+| `DJANGO_SECRET_KEY` → `django-secret-key` | Secret Manager; Django service and migration settings; never injected into HTTP-only smoke. Signs Django material and staff-upload HMAC. | Engineering. **Do not rotate through this foundation alone.** No overlap implementation is added. Assess Django sessions/signatures and `upload_views.py` / `objectstore.py` HMAC compatibility together; old/new revisions may reject each other's material. Rollback to the old revision/key only while safe and enabled. |
+| `DATABASE_URL` → `database-url` | Secret Manager; PostgreSQL connection for Django/migrate; never injected into HTTP-only smoke. Never put the password-bearing URL in tfvars or build args. | Database owner + engineering. Use independently valid old/new database identities only after privileges, pooling and migration ownership are reviewed. Verify both during overlap, adopt the new identity, drain old connections, then revoke old login. Resetting one user's password does **not** provide overlap. Rollback requires the old login to remain valid. |
+| `BUNNY_STREAM_API_KEY` → `bunny-stream-api-key` (configurable name) | Secret Manager; Bunny asset management/takedown through the backend; service/migrate receive it only with `video_provider = "bunny"`. Staff upload and encode masters directly in Bunny. | Provider owner + engineering. Confirm provider-supported independent credentials/overlap before regenerating anything. Validate playback authorization and takedown with generated media. If only immediate replacement is possible, stop the zero-downtime drill and prepare a separately approved procedure. Rollback needs an independently valid old credential. |
 | `BUNNY_STREAM_TOKEN_KEY` → `bunny-stream-token-key` (configurable name) | Secret Manager; short-lived CDN authorization. Name is an explicit extra by default; no grant while Bunny is disabled. | Provider owner + engineering. Verify CDN acceptance of overlapping keys, cached manifests and outstanding URL expiry before rotation. Current backend config selects one signing key. No dual-key support is asserted. Reverting an app revision is insufficient if the provider invalidated its key. |
 | `FIREBASE_PROJECT_ID`, native Firebase app config; optional server credential | Project/app config is public environment-specific configuration. Backend verifies tokens with Firebase Admin/ADC. Prefer runtime workload identity; an exceptional server private key belongs in an approved vault, never EAS/mobile. | Identity/provider owner. Verify project isolation and credential consumers first. Firebase public verification-key rollover is provider-managed, not rotation of `DJANGO_SECRET_KEY`. If a private key is used, stage a second valid credential, verify, revoke old; assess user-session revocation separately. No server key is provisioned here. |
 | AdMob app/ad-unit identifiers and SSV public verification keys | Identifiers are public native config, **not shared secrets**. Google owns SSV signing keys; Django fetches public keys. Provider-account credentials stay in the provider vault and are not runtime env. | Ads/provider owner. Provider-managed SSV rollover must retain signature verification and bounded cache behavior. Rotate account access through its approved provider procedure; do not invent a webhook shared key. Production ads remain disabled; publisher testing/release prerequisites remain #98. |
 | RevenueCat / Google store private keys and webhook authentication (planned MVP coins) | Provider vault/Secret Manager required for the planned MVP integration; current foundation adds no consumer/name/grant. | Commerce/provider owner. P3-T03/T04 and P5-T04 must define actual env names, least-privilege owners, duplicate-event-safe rotation and revocation tests before MVP provider activation. Apple/subscription secrets remain later. No credential provisioning is authorized by this documentation update. |
 | GitHub OIDC/WIF and runtime ADC | Short-lived identity tokens; no static GCP key in GitHub, container or repository. | Platform owner. Revoke federation/IAM when compromised; tokens expire. Trust changes need P5-T03 verification. Deploy identity has no direct Secret Accessor grant but can deploy code as runtime: it remains privileged. |
-| `DJANGO_ALLOWED_HOSTS`, `DJANGO_SETTINGS_MODULE`, `VIDEO_PROVIDER`, `BUNNY_STREAM_LIBRARY_ID`, `BUNNY_STREAM_CDN_HOSTNAME` | Non-secret service/job config. Optional Bunny fields now pass through staging. | Engineering. Change with revision review and smoke; rollback the revision and saved job config. Production settings still reject missing/unsafe configuration. |
+| `DJANGO_ALLOWED_HOSTS`, `DJANGO_SETTINGS_MODULE`, `VIDEO_PROVIDER`, `BUNNY_STREAM_LIBRARY_ID`, `BUNNY_STREAM_CDN_HOSTNAME` | Non-secret service/migration-job config; absent from HTTP-only smoke. Optional Bunny fields now pass through staging. | Engineering. Change with revision review and smoke; rollback the revision and saved job config. Production settings still reject missing/unsafe configuration. |
 | Public API URL / Expo environment selection | Non-secret build configuration. GCP video fallback remains inactive. | Engineering/release owner. Keep environment selection explicit; no private signing material in JS, analytics, or EAS updates. |
 | `CATALOG_LAUNCH_*` | Non-secret server launch configuration; see [catalog launch context](catalog-launch-context.md) for exact names and defaults. Never selected by client headers or profile preferences. | Engineering/release owner. Scope changes require rollout and per-title rights approval; invalid/disabled context denies new access and ingestion. Older binaries do not honor this switch, so keep affected titles unpublished/taken down before any rollback. |
 
@@ -44,7 +44,8 @@ this runbook grants no legal, region, retention, provider-account or budget scop
 `secret_versions` maps the four supported runtime environment names to a positive
 integer version string or `latest`. Unknown names, null/empty version values and
 other aliases fail validation. Missing entries keep `latest` for compatibility.
-The map is passed identically to service, migrate and smoke. Module
+The map is passed identically to service and migrate. Smoke receives no Django,
+database, Firebase or video-provider configuration and no secret references. Module
 `secret_references` outputs contain **names and selectors only**.
 
 Use explicit numeric versions for every active secret before adding a new
@@ -63,12 +64,43 @@ tag and job execution that still needs it; old revisions can cold-start later.
 
 **Limit:** these are secret-level IAM grants. Numeric selection is not
 authorization to only that version; the runtime can access other enabled versions
-of a granted secret. The service/migrate/smoke still share one runtime identity,
-and smoke currently receives Django/database secrets despite using only HTTP.
-Per-consumer identities/injection and version conditions with an explicit
-old/new overlap allowlist are a separate P5-T04 follow-up. Google documents
+of a granted secret. Service and migrate still share the Django runtime identity
+and the same secret set. Migration imports production Django settings, so this
+slice preserves those dependencies; separating its identity and narrowing its
+provider/storage access requires its own consumer review. Version conditions
+with an explicit old/new overlap allowlist remain a P5-T04 follow-up. Google documents
 [version-aware IAM conditions](https://docs.cloud.google.com/secret-manager/docs/access-control);
 do not mark the full “only needed secret versions” criterion complete here.
+
+## HTTP-only smoke isolation (#101 engineering slice)
+
+`shortform-smoke` uses a dedicated service account. Its only grants in this
+composition are Artifact Registry reader on this repository and Cloud Run
+invoker on this service. It has no Secret Manager, storage, project logging,
+metrics, WIF or impersonation grants. The deploy identity can act as this
+specific account, as well as the Django runtime account; deploy remains
+privileged. The smoke job bypasses the image entrypoint with `python -c` and
+receives only CI execution overrides (`SMOKE_BASE_URL`, `SMOKE_AUDIENCE`,
+`FAIL_SMOKE`). The module's default Django configuration stays enabled for
+migrate; smoke explicitly disables it, including optional provider injection.
+
+Before declaring the live isolation complete, review and apply the exact
+staging IAM/job-template change under the existing P5-T03 procedure. Inspect
+metadata only to verify the deployed smoke identity, an empty configured env /
+secret list and no inherited broad grants. Run the authenticated candidate
+smoke and failure/no-promotion drill. Confirm the smoke identity cannot access
+the backend secrets or bucket using IAM policy analysis or permission testing
+that does not read secret values or objects. Stop on any unexpected effective
+grant. Account for previous smoke executions that still ran as the Django
+identity: updating a job does not revoke credentials from an in-flight
+execution. Wait for those executions to finish before claiming isolation;
+retain the Django identity's grants for the service/migrate consumers.
+
+These live access checks remain required and are not waived under D-029. No
+cloud state, credentials, secret values, live IAM verification or infrastructure
+apply is part of this local acceptance. The remaining #101 gates include
+service/migrate consumer isolation, version authorization, proven overlap,
+Django/upload-signing compatibility, staging rotation and old-value revocation.
 
 ## Staging drill: prepare first, approve external actions last
 
@@ -89,7 +121,8 @@ Django or a provider without proven overlap just to satisfy the test checkbox.
 3. Prepare numeric pins for all active secrets while their values are unchanged.
    If any rollback revision still uses `latest`, prepare and verify a replacement
    pinned baseline **before creating a new version**. Record the reference map
-   for service and both jobs. Do not claim an older `latest` revision is stable.
+   for service and migrate, plus the empty smoke secret-reference map. Do not
+   claim an older `latest` revision is stable.
 4. Review the exact infrastructure diff, IAM removals and deployment commands.
    Serialize with staging CI: block/hold queued automatic deploys under the
    approved maintenance procedure and wait for active deploy/jobs to finish.
@@ -105,7 +138,7 @@ After approval, the authorized operator performs these phases:
 | --- | --- | --- |
 | Prepare | Establish/verify the pinned baseline from step 3; create the new independently valid provider credential and add its Secret Manager version using secure input, outside OpenTofu. Record version number/status only. | Leave old valid value and traffic intact. Never print secrets or put values in CLI arguments/history. |
 | Stage service | Create a candidate with the same reviewed image and numeric secret selectors using the existing authenticated Cloud Run process and `--no-traffic --tag=candidate`. Keep the old revision at 100%. | If candidate startup or targeted functional checks fail, retain old traffic. Do not remove old access. |
-| Stage jobs | Snapshot metadata-only migrate/smoke settings; update secret references and image digest consistently, then test the jobs in the approved order. A Job update changes future executions; **jobs do not have traffic rollback**. Keep old in-flight executions accounted for. | Restore saved job references/digest explicitly. Never reverse schema migrations as a key-rotation rollback. |
+| Stage jobs | Snapshot metadata-only migrate/smoke settings; update migrate secret references and both image digests consistently, keeping smoke secret-free, then test the jobs in the approved order. A Job update changes future executions; **jobs do not have traffic rollback**. Keep old in-flight executions accounted for. | Restore saved job references/digest explicitly. Never reverse schema migrations as a key-rotation rollback. |
 | Verify / promote | Run in-project candidate smoke with service-URL audience and tagged candidate base URL as in P5-T03. Exercise affected secret functionality, fail-smoke/no-promotion, cold start and old-revision rollback before final promotion. | Return traffic to the pinned baseline and restore jobs while old credentials remain valid. Keep IAM for both generations during overlap. |
 | Reconcile | Record selected numeric versions in private tfvars; review a full OpenTofu plan for drift. Reconcile only when it preserves the reviewed image/traffic and approved job references. Resume serialized CI after settings are consistent. | Stop on an unexpected traffic, image, IAM, ingress or unrelated change. `ignore_changes` protects image only, not secret configuration. |
 | Retire / revoke | After the approved observation/rollback window and max token/request/job lifetime, remove old tags/traffic and consumers, disable the old Secret Manager version, and revoke the **old provider value**. Verify new cold starts/jobs still work and old authentication is rejected using a private, redacted probe. | Disabling a vault version does not revoke an already loaded provider credential. After provider revocation the old revision is no longer a rollback option; forward-fix using a new valid credential. Never re-enable a compromised value. |
@@ -139,6 +172,8 @@ Credential-free gates (OpenTofu 1.11.14 for mocked tests):
 
 ```text
 tofu fmt -check -recursive infra
+# Use a fresh temporary TF_DATA_DIR for init, validate and test; never reuse
+# .terraform from a live backend initialization.
 tofu -chdir=infra/environments/staging init -backend=false -input=false -lockfile=readonly
 tofu -chdir=infra/environments/staging validate -no-color
 tofu -chdir=infra/environments/staging test -no-color
@@ -148,6 +183,6 @@ python scripts/validate_ai_governance.py
 
 Mocked plans test configuration and grant membership, not effective live IAM,
 provider overlap, credential validity, runtime redaction or zero downtime.
-The explicit P5-T04 follow-up must cover those live checks, per-consumer identity
-and version-access tightening, and Django/upload signing compatibility. P5-T05
+The explicit P5-T04 follow-up must cover those live checks, remaining service/migrate
+identity and version-access tightening, and Django/upload signing compatibility. P5-T05
 general abuse controls and the planned MVP coin integration stay separate implementation slices; their final release dependencies now include purchase integrity and reconciliation.
