@@ -684,6 +684,13 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 **P2-T01-F2** (GitHub issue #85) adds Android Google Sign-In on the same native Auth path; Jest/CI remain mock; iOS Apple/Google observation is a later D-026 ship pass.
 
+**P2-T01 readiness follow-up** (issue #171) restores the native account before
+account-dependent routes render and refreshes authenticated API tokens for the
+same owner. Anonymous browsing stays available when initial auth is unavailable;
+token rotation does not change the purchase session revision. Stale requests and
+account changes during Firebase/App Check work fail before network dispatch.
+See the [first Android journey](docs/runbooks/android-first-journey.md).
+
 **P2-T01-F3** (GitHub issue #89) is **deferred under D-027** (MVP is Android / Google Play only). Apple Sign-In is still required before any iOS public storefront / TestFlight-quality pass; it is not N/A and is not an Android MVP blocker.
 
 #### P2-T02 — Implement account lifecycle, consent, and deletion

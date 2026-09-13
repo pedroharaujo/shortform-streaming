@@ -265,6 +265,23 @@ Initial paid-test activation also requires one approved audience, approximately 
 - **Blocks:** P5-T05/P6-T03 and production App Check enforcement. This deferral is
   permitted only while enforcement and public production activation remain off.
 
+### P2-T01 — Native session restoration and token refresh
+
+- **Setup:** Current Android client, local backend/Auth emulator, generated test
+  account and the configured native Google provider for its separate real test.
+- **Actions:** Sign in, open Account/wallet, close/reopen the app, then verify the
+  same account without another login. Sign out/reopen and verify anonymous
+  browsing plus protected-screen sign-in. Leave a real test account signed in
+  through token expiry and check that its next request refreshes successfully.
+- **Expected:** No new account or duplicate purchase; no stale account's request
+  uses another owner's token. Initial unavailable auth cannot hang startup.
+  Restoring a user does not grant analytics consent or emit a login event.
+- **Evidence:** Issue #171 records actual device outcomes. Synthetic tests cover
+  delayed restoration, logout/switch during token/App Check work, token failures
+  and old-header rejection, plus exact already-empty native cleanup versus real
+  sign-out failure. OS process termination, token expiry and actual Google-provider observations
+  remain unchecked until observed; never capture tokens or personal account data.
+
 ### P3-T04 — Sandbox purchase notifications while the app is closed
 
 - **Status:** Unchecked genuine-provider validation, D-029; issue #169. Automated
