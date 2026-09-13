@@ -74,17 +74,34 @@ machine-readable results are retained in the private local validation
 directory. Raw cloud state, credential values and provider payloads are not
 public evidence.
 
-## Remaining gate
+## Workflow gate completed on 2026-09-13
 
-PR #146 remains draft. PR #150 must first reach main so the main-only GitHub
-deployment workflow can pass its unchanged image security scan. Then run the
-actual deliberate-failure/no-promotion workflow and successful deployment
-checks. Do not infer that those passed from the manual job executions above.
+PR #150 reached main. PR #167 fixed the unsupported gcloud candidate lookup
+without changing smoke ordering, access boundaries or production triggers.
+The following actual main workflow runs complete the remaining gate:
+
+- [Successful staging deployment](https://github.com/pedroharaujo/shortform-streaming/actions/runs/34762964220)
+  at `823bab02ee2d20102617a9e67f74eb7c08706bd2`: image security scan,
+  migration, authenticated smoke and promotion all passed. The service then
+  served `shortform-api-00016-vib` at 100%.
+- [Deliberate smoke failure](https://github.com/pedroharaujo/shortform-streaming/actions/runs/34763173284)
+  on the same main revision with `fail_smoke=true`: the smoke step failed
+  and **Promote revision was skipped**. A fresh service read confirmed the
+  same serving revision and 100% allocation as before the run.
+- A fresh stored-job read found zero environment entries, secret references
+  and volumes. Runtime configuration and cloud payloads were not published.
+- After merging current main into this branch, tracked infrastructure passed
+  `tofu fmt -check -recursive`, `tofu init -backend=false -input=false
+  -lockfile=readonly`, `tofu validate` and `tofu test -no-color` (30 passed).
+  These ran in an ignored copy of tracked infrastructure files to exclude
+  developer-local variable files. `python scripts/check_repository_foundation.py`
+  passed 55 tests, the secret scan and governance.
+
 GitHub staging is configured for main only with eight non-secret resource
 identifiers; federation is restricted to the exact repository, main and
 staging. No GitHub credential secret was added.
 
 Issue #101 stays open for other consumer isolation, version-level access,
 signing compatibility, provider overlap and actual rotation/retirement proof.
-All eight existing issues remain open; this evidence does not close device,
-provider, privacy, commercial or production-release acceptance.
+This evidence does not close device, provider, privacy, commercial or
+production-release acceptance.
