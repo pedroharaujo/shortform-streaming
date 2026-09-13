@@ -142,11 +142,13 @@ The full checkpoint remains incomplete until the genuine test checkout works.
 
 - [x] Browse the prepared series and actually play a free episode (Pixel 9
       emulator, generated test series, 2026-09-13).
-- [ ] Resume mid-episode and continue to the next free episode.
+- [x] Resume mid-episode and continue to the next free episode (generated clips,
+      Pixel 9 emulator, 2026-09-13).
 - [ ] Sign in with Google and return to the selected locked episode.
 - [ ] Display a Google Play test product with the store-provided price.
 - [ ] Complete a license-tester purchase and observe verified server coin credit.
-- [ ] Spend coins once, authorize again, and play the unlocked episode.
+- [x] Spend generated test coins once and authorize the unlocked episode on
+      Android (2026-09-13); genuine Play-funded acceptance remains above.
 - [ ] Cancel or interrupt checkout without duplicate charges or coin credits;
       recover a completed purchase after restarting the app.
 - [ ] Keep an unlocked episode available to the same account after sign-in;
@@ -195,5 +197,27 @@ app data. The Pixel 9 emulator rendered `home-loaded`, opened the generated
 player's generated color/timecode pattern. Opening episode 1 continued to
 "Playback check 2" with decoded frames visible at the end of the 12-second clip.
 This establishes free playback and next-episode continuation; mid-episode resume,
-Google sign-in and actual test checkout are still unchecked. Purchase configuration
+Google sign-in and actual test checkout were still unchecked at this point. Purchase configuration
 was left disabled; no store purchase or provider lifecycle result is claimed.
+
+Issue #173 added account-owned Wallet recovery for an interrupted coin unlock.
+The founder confirmed the generated 4-coin unlock in the emulator; server records
+showed balance 13 → 9, one debit and one receipt, followed by successful fresh
+playback authorization. This was spending generated coins, not buying coins
+through Google Play.
+
+The updated development JavaScript passed direct Wallet recovery after a reload
+and catalog removal for both simulated pre-debit failure and lost post-debit
+response. Cancellation retained all 13 coins and blocked the delayed original
+request with HTTP 409 even after the episode was republished. Completed recovery
+retained one debit/receipt and balance 9; the unpublished episode offered no Play
+action. Switching accounts hid the other owner's recovery and returning restored
+it. Old per-episode records were recoverable through their known route, then
+discoverable from Wallet after import. Unseen old keys cannot be enumerated.
+
+After these checks, the generated episode's original free/published configuration
+and the normal local backend were restored. Coin spending and purchases are
+disabled again; immutable generated accounting was retained. The founder's test
+account still has 9 coins. See [coin-wallet evidence](coin-wallet.md) for exact
+observations. OS process death, genuine Google sign-in and store purchase/refund
+observations remain open; no production activation is approved by these checks.

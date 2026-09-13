@@ -20,13 +20,19 @@ jest.mock('expo-router', () => ({
   useFocusEffect: jest.fn(),
 }));
 jest.mock('../../api/createAppClients', () => ({
+  createAppMeClient: jest.fn(),
   createAppWalletClient: jest.fn(),
   createAppPurchasesClient: jest.fn(),
 }));
 jest.mock('./WalletScreen', () => ({
-  WalletScreen: ({ onPurchases }: WalletScreenProps) => {
+  WalletScreen: ({ onPurchases, onPendingUnlock }: WalletScreenProps) => {
     const { Button } = jest.requireActual('react-native');
-    return <Button title="Recent purchases" onPress={onPurchases} />;
+    return (
+      <>
+        <Button title="Recent purchases" onPress={onPurchases} />
+        <Button title="Check coin unlock" onPress={() => onPendingUnlock('ep_pending')} />
+      </>
+    );
   },
 }));
 jest.mock('./PurchaseHistoryScreen', () => ({
@@ -54,6 +60,11 @@ it('preserves episode context through purchase history, account, sign-in and ret
   const wallet = await render(<WalletRoute />);
   await fireEvent.press(wallet.getByText('Recent purchases'));
   expect(router.push).toHaveBeenLastCalledWith({ pathname: '/purchases', params: mockParams });
+  await fireEvent.press(wallet.getByText('Check coin unlock'));
+  expect(router.push).toHaveBeenLastCalledWith({
+    pathname: '/unlock/[id]',
+    params: { id: 'ep_pending' },
+  });
   await wallet.unmount();
   const history = await render(<PurchasesRoute />);
   await fireEvent.press(history.getByText('Account'));

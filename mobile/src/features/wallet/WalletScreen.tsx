@@ -4,6 +4,7 @@ import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Wallet, WalletClient } from '../../api/wallet/types';
+import type { MeClient } from '../../api/me/types';
 import {
   getAuthSessionRevision,
   getSessionCredential,
@@ -12,6 +13,7 @@ import {
 import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { useCatalogQuery } from '../catalog/useCatalog';
+import { readPendingCoinUnlockForProfile, type PendingCoinUnlock } from './pendingCoinUnlock';
 
 type WalletState =
   | { readonly phase: 'loading' | 'unavailable' | 'unauthenticated' }
@@ -19,18 +21,22 @@ type WalletState =
 
 export interface WalletScreenProps {
   readonly client: WalletClient;
+  readonly me: MeClient;
   readonly onBack: () => void;
   readonly onAccount: () => void;
   readonly onPurchases: () => void;
+  readonly onPendingUnlock: (episodeId: string) => void;
   readonly onBuyCoins?: (() => void) | undefined;
   readonly onReturnToEpisode?: (() => void) | undefined;
 }
 
 export function WalletScreen({
   client,
+  me,
   onBack,
   onAccount,
   onPurchases,
+  onPendingUnlock,
   onBuyCoins,
   onReturnToEpisode,
 }: WalletScreenProps): JSX.Element {
@@ -58,9 +64,31 @@ export function WalletScreen({
   }, [client, owner]);
   // Clear the prior balance on refresh; the shared query ignores replaced and unmounted requests.
   const { state, refresh: refreshQuery } = useCatalogQuery(load);
+  const loadRecovery = useCallback(async (): Promise<
+    | { readonly phase: 'ready'; readonly attempt: PendingCoinUnlock | null }
+    | { readonly phase: 'unavailable' | 'unauthenticated' }
+  > => {
+    if (getAuthSessionRevision() !== owner || getSessionCredential() === null)
+      return { phase: 'unauthenticated' };
+    try {
+      const profile = await me.getMe();
+      if (getAuthSessionRevision() !== owner) return { phase: 'unauthenticated' };
+      if (profile.outcome !== 'ok')
+        return { phase: profile.outcome === 'unauthenticated' ? 'unauthenticated' : 'unavailable' };
+      const attempt = await readPendingCoinUnlockForProfile(profile.data.public_id);
+      if (getAuthSessionRevision() !== owner) return { phase: 'unauthenticated' };
+      return { phase: 'ready', attempt };
+    } catch {
+      return { phase: 'unavailable' };
+    }
+  }, [me, owner]);
+  const { state: recovery, refresh: refreshRecovery } = useCatalogQuery(loadRecovery);
   const refresh = useCallback(() => {
-    if (getAuthSessionRevision() === owner) refreshQuery();
-  }, [owner, refreshQuery]);
+    if (getAuthSessionRevision() === owner) {
+      refreshQuery();
+      refreshRecovery();
+    }
+  }, [owner, refreshQuery, refreshRecovery]);
 
   useEffect(() => {
     let appState = AppState.currentState;
@@ -99,6 +127,20 @@ export function WalletScreen({
             <Text style={styles.body}>{messages.wallet.signIn}</Text>
           )}
         </View>
+        {!sessionChanged && recovery.phase === 'ready' && recovery.attempt !== null ? (
+          <Action
+            label={messages.unlock.checkPending}
+            onPress={() => {
+              if (getAuthSessionRevision() === owner && getSessionCredential() !== null)
+                onPendingUnlock(recovery.attempt!.request.episode_id);
+            }}
+          />
+        ) : !sessionChanged && recovery.phase === 'unavailable' ? (
+          <>
+            <Text style={styles.body}>{messages.wallet.recoveryUnavailable}</Text>
+            <Action label={messages.wallet.retryRecovery} onPress={refreshRecovery} />
+          </>
+        ) : null}
         {onBuyCoins && !requiresSignIn ? (
           <Action label={messages.coinPacks.title} onPress={onBuyCoins} />
         ) : !onBuyCoins ? (

@@ -3,7 +3,7 @@ import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { createAppWalletClient } from '../src/api/createAppClients';
+import { createAppMeClient, createAppWalletClient } from '../src/api/createAppClients';
 import { getSessionCredential } from '../src/auth/session';
 import { getPurchaseConfiguration } from '../src/config/appConfiguration';
 import { readRouteId } from '../src/features/catalog/readRouteId';
@@ -13,6 +13,7 @@ export default function WalletRoute(): JSX.Element {
   const params = useLocalSearchParams<{ returnEpisode?: string | string[] }>();
   const returnEpisode = readRouteId(params.returnEpisode);
   const client = useMemo(() => createAppWalletClient(), []);
+  const me = useMemo(() => createAppMeClient(), []);
   const purchasesEnabled =
     __DEV__ &&
     Platform.OS === 'android' &&
@@ -27,12 +28,14 @@ export default function WalletRoute(): JSX.Element {
     <WalletScreen
       key={visit}
       client={client}
+      me={me}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/account'))}
       onPurchases={() =>
         router.push(
           returnEpisode ? { pathname: '/purchases', params: { returnEpisode } } : '/purchases',
         )
       }
+      onPendingUnlock={(id) => router.push({ pathname: '/unlock/[id]', params: { id } })}
       onBuyCoins={
         purchasesEnabled
           ? () =>

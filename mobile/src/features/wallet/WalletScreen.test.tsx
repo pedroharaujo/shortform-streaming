@@ -1,12 +1,22 @@
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { AppState, type AppStateStatus } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
+import type { MeClient } from '../../api/me/types';
 import type { Wallet, WalletClient, WalletOutcome } from '../../api/wallet/types';
 import { setAuthSession } from '../../auth/session';
 import { englishMessages } from '../../localization/messages';
 import { compactAndroidMetrics, renderWithSafeArea } from '../../testUtils';
 import { minimumTouchTarget } from '../../ui/theme';
 import { WalletScreen } from './WalletScreen';
+import { writePendingCoinUnlock } from './pendingCoinUnlock';
+
+const mockSecureStore = new Map<string, string>();
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(async (key: string) => mockSecureStore.get(key) ?? null),
+  setItemAsync: jest.fn(async (key: string, value: string) => mockSecureStore.set(key, value)),
+  deleteItemAsync: jest.fn(async (key: string) => mockSecureStore.delete(key)),
+}));
 
 function pendingWallet() {
   let resolve!: (value: WalletOutcome<Wallet>) => void;
@@ -36,20 +46,41 @@ function setup(client: WalletClient) {
   const onAccount = jest.fn();
   const onReturnToEpisode = jest.fn();
   const onPurchases = jest.fn();
+  const onPendingUnlock = jest.fn();
+  const me: MeClient = {
+    getMe: jest.fn<ReturnType<MeClient['getMe']>, Parameters<MeClient['getMe']>>(async () => ({
+      outcome: 'ok',
+      data: {
+        public_id: 'usr_synthetic',
+        created_at: '2026-09-07T00:00:00Z',
+        updated_at: '2026-09-07T00:00:00Z',
+        locale: 'en',
+        country: 'FR',
+        ads_consent: false,
+        analytics_consent: false,
+        consent_updated_at: null,
+      },
+    })),
+  };
   const rendered = renderWithSafeArea(
     <WalletScreen
       client={client}
+      me={me}
       onBack={onBack}
       onAccount={onAccount}
       onReturnToEpisode={onReturnToEpisode}
       onPurchases={onPurchases}
+      onPendingUnlock={onPendingUnlock}
     />,
     { metrics: compactAndroidMetrics },
   );
-  return { rendered, onBack, onAccount, onReturnToEpisode, onPurchases };
+  return { rendered, onBack, onAccount, onReturnToEpisode, onPurchases, onPendingUnlock, me };
 }
 
-beforeEach(() => setAuthSession({ credential: 'mock.synthetic-wallet-owner' }));
+beforeEach(() => {
+  mockSecureStore.clear();
+  setAuthSession({ credential: 'mock.synthetic-wallet-owner' });
+});
 afterEach(() => {
   jest.restoreAllMocks();
 });
@@ -176,4 +207,36 @@ it('clears the previous balance and requires sign-in when the server rejects the
   await fireEvent.press(view.getByLabelText(englishMessages.wallet.refresh));
   await waitFor(() => expect(view.getByText(englishMessages.wallet.signIn)).toBeOnTheScreen());
   expect(view.queryByTestId('wallet-balance')).toBeNull();
+});
+
+it('opens a saved unlock even when balance loading fails', async () => {
+  await writePendingCoinUnlock({
+    version: 1,
+    profileId: 'usr_synthetic',
+    request: {
+      episode_id: 'ep_removed',
+      request_id: '11111111-1111-4111-8111-111111111111',
+      expected_policy_version: 'a'.repeat(64),
+      expected_coin_price: 5,
+    },
+  });
+  const client = clientDouble();
+  client.getWallet.mockResolvedValue({ outcome: 'unreachable', reason: 'offline' });
+  const { rendered, onPendingUnlock } = setup(client);
+  const view = await rendered;
+  const action = await view.findByLabelText(englishMessages.unlock.checkPending);
+  await fireEvent.press(action);
+  expect(onPendingUnlock).toHaveBeenCalledWith('ep_removed');
+  onPendingUnlock.mockClear();
+  await act(() => setAuthSession({ credential: 'mock.replacement-wallet-owner' }));
+  await fireEvent.press(action);
+  expect(onPendingUnlock).not.toHaveBeenCalled();
+});
+
+it('shows a separate retry when saved unlock storage cannot be checked', async () => {
+  jest.mocked(SecureStore.getItemAsync).mockRejectedValueOnce(new Error('unavailable'));
+  const client = clientDouble();
+  const view = await setup(client).rendered;
+  expect(await view.findByText(englishMessages.wallet.recoveryUnavailable)).toBeOnTheScreen();
+  expect(view.getByLabelText(englishMessages.wallet.retryRecovery)).toBeOnTheScreen();
 });
