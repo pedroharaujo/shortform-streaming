@@ -691,6 +691,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Coin purchases are disabled or unavailable.
+  /v1/purchases/recover:
+    post:
+      operationId: v1_purchases_recover_create
+      description: Explicit local RevenueCat sandbox mode only. Resolves an owner-bound
+        SHA-256 fingerprint from at most 100 customer purchases, requiring a complete
+        page and exactly one match before full provider verification and idempotent
+        credit. Incomplete, ambiguous and missing evidence stays awaiting verification
+        and cannot prove cancellation or make repurchasing safe. Cannot resolve unknown
+        attempts. Shares the sync limit of six requests per minute per account. Returns
+        historical credit, not current wallet balance or playback authorization.
+      summary: Recover a known sandbox purchase using its exact fingerprint
+      tags:
+      - commerce
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseRecoveryRequestRequest'
+        required: true
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseStatus'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Invalid or unexpected purchase lookup fields.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Coin purchases or the requested catalog are unavailable.
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Purchase verification rate limit exceeded.
   /v1/purchases/status:
     post:
       operationId: v1_purchases_status_create
@@ -1724,6 +1778,31 @@ components:
       - product_id
       - product_type
       - store
+    PurchaseRecoveryRequestRequest:
+      type: object
+      properties:
+        application_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_.:/-]+$
+        product_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_.:/-]+$
+        transaction_fingerprint:
+          type: string
+          minLength: 64
+          description: SHA-256 of UTF-8 compact JSON ["shortform-purchase-v1", owner
+            purchase UUID, application_id, product_id, Google transaction ID]. Lowercase
+            hex; ASCII identifiers.
+          maxLength: 64
+          pattern: ^[0-9a-f]{64}$
+      required:
+      - application_id
+      - product_id
+      - transaction_fingerprint
     PurchaseStatus:
       type: object
       properties:

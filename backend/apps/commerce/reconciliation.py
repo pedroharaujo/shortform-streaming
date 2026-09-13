@@ -7,8 +7,48 @@ from apps.accounts.profiles import lock_current_profile
 from apps.commerce.configuration import products, reconciliation_enabled
 from apps.commerce.models import PurchaseIdentity
 from apps.commerce.reads import purchase_catalog, purchase_status
-from apps.commerce.revenuecat import lookup_purchase
+from apps.commerce.revenuecat import lookup_purchase, recover_transaction_id
 from apps.commerce.services import PurchaseUnavailable, fulfill
+
+
+def recover_purchase(
+    profile: UserProfile, *, application_id: str, product_id: str, transaction_fingerprint: str
+) -> dict[str, object]:
+    if not reconciliation_enabled():
+        raise PurchaseUnavailable()
+    selected = next(
+        (
+            product
+            for product in products()
+            if product.application_id == application_id and product.product_id == product_id
+        ),
+        None,
+    )
+    if selected is None:
+        raise PurchaseUnavailable()
+    purchase_catalog(profile, application_id=application_id)
+    with transaction.atomic():
+        lock_current_profile(profile)
+        identity = PurchaseIdentity.objects.filter(wallet__user_profile=profile).first()
+    transaction_id = (
+        recover_transaction_id(selected, transaction_fingerprint, str(identity.pk))
+        if identity is not None
+        else None
+    )
+    if transaction_id is not None:
+        return synchronize_purchase(
+            profile,
+            application_id=application_id,
+            product_id=product_id,
+            transaction_id=transaction_id,
+        )
+    with transaction.atomic():
+        lock_current_profile(profile)
+    return {
+        "status": "awaiting_verification",
+        "historical_credited_coins": 0,
+        "support_reference": None,
+    }
 
 
 def synchronize_purchase(

@@ -89,6 +89,12 @@ export function createAppPurchasesClient(): PurchasesClient {
   return createPurchasesClient({ ...appApiOptions(), getCredential: getSessionCredential });
 }
 
-export function createAppPurchaseCheckoutClient(): PurchaseCheckoutClient {
-  return createPurchaseCheckoutClient({ ...appApiOptions(), getCredential: getSessionCredential });
+export function createAppPurchaseCheckoutClient(
+  mode: 'synthetic' | 'revenuecat_sandbox' = 'synthetic',
+): PurchaseCheckoutClient {
+  return createPurchaseCheckoutClient({
+    ...appApiOptions(),
+    getCredential: getSessionCredential,
+    mode,
+  });
 }

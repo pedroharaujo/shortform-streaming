@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from http.client import HTTPSConnection
@@ -195,3 +196,76 @@ def _lookup_purchase(product: Product, transaction_id: str, owner_id: str) -> Ev
             }
         ).encode()
     )
+
+
+def recover_transaction_id(product: Product, fingerprint: str, owner_id: str) -> str | None:
+    """Resolve only an exact known result from one complete bounded customer page.
+
+    RevenueCat customer purchases supports limit=100 and a nullable next_page.
+    Larger histories stay pending: never follow a provider-supplied URL. The
+    caller must still run the full transaction/product verifier before credit.
+    """
+    try:
+        project_id = getattr(settings, "REVENUECAT_PROJECT_ID", "")
+        api_key = getattr(settings, "REVENUECAT_API_KEY", "")
+        if (
+            not isinstance(project_id, str)
+            or _RESOURCE_ID.fullmatch(project_id) is None
+            or not isinstance(api_key, str)
+            or not 16 <= len(api_key) <= 512
+            or not api_key.isascii()
+            or not api_key.isprintable()
+            or any(character.isspace() for character in api_key)
+            or product.store != "PLAY_STORE"
+            or product.environment != "SANDBOX"
+            or product.product_type != "consumable"
+            or str(UUID(owner_id)) != owner_id
+            or re.fullmatch(r"[0-9a-f]{64}", fingerprint) is None
+        ):
+            return None
+        result = _get_json(
+            f"/v2/projects/{project_id}/customers/{owner_id}/purchases?environment=sandbox&limit=100",
+            api_key,
+        )
+        if (
+            result is None
+            or result.get("object") != "list"
+            or "next_page" not in result
+            or result["next_page"] is not None
+        ):
+            return None
+        items = result.get("items")
+        if not isinstance(items, list) or len(items) > 100:
+            return None
+        matches: list[str] = []
+        for item in items:
+            if not isinstance(item, dict):
+                return None
+            transaction_id = item.get("store_purchase_identifier")
+            if (
+                item.get("object") != "purchase"
+                or item.get("customer_id") != owner_id
+                or item.get("original_customer_id") != owner_id
+                or item.get("environment") != "sandbox"
+                or not isinstance(transaction_id, str)
+                or _TRANSACTION_ID.fullmatch(transaction_id) is None
+            ):
+                return None
+            candidate = hashlib.sha256(
+                json.dumps(
+                    [
+                        "shortform-purchase-v1",
+                        owner_id,
+                        product.application_id,
+                        product.product_id,
+                        transaction_id,
+                    ],
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+            if candidate == fingerprint:
+                matches.append(transaction_id)
+        return matches[0] if len(matches) == 1 else None
+    except Exception:
+        # Never disclose credentials, order identifiers, or raw provider errors.
+        return None

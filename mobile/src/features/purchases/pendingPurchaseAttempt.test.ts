@@ -57,6 +57,36 @@ test('captures an immutable marker before a caller can mutate queued input', asy
   await write;
   expect(JSON.parse(stored!)).toEqual(attempt);
 });
+
+test('fingerprint recording cannot replace a newer attempt, an existing fingerprint or an account session', async () => {
+  const native = {
+    ...attempt,
+    version: 2 as const,
+    applicationId: 'com.example.shortform',
+    productId: 'test_coins',
+  };
+  const fingerprint = 'a'.repeat(64);
+  await pendingPurchaseStorage.write(native, () => true);
+  await expect(
+    pendingPurchaseStorage.recordFingerprint(
+      { ...native, attemptId: replacement.attemptId },
+      fingerprint,
+      () => true,
+    ),
+  ).rejects.toThrow();
+  await expect(
+    pendingPurchaseStorage.recordFingerprint(native, fingerprint, () => false),
+  ).rejects.toThrow();
+  const recorded = await pendingPurchaseStorage.recordFingerprint(native, fingerprint, () => true);
+  expect(recorded.transactionFingerprint).toBe(fingerprint);
+  await expect(
+    pendingPurchaseStorage.recordFingerprint(recorded, 'b'.repeat(64), () => true),
+  ).rejects.toThrow();
+  await pendingPurchaseStorage.clear(native, () => true);
+  expect(JSON.parse(stored!)).toEqual(recorded);
+  await pendingPurchaseStorage.clear(recorded, () => true);
+  expect(stored).toBeNull();
+});
 test.each([
   { ...attempt, private: 'synthetic-private' },
   { ...attempt, version: 2 },

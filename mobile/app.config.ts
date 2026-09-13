@@ -42,6 +42,10 @@ export interface AppCheckConfiguration {
   readonly mode: AppCheckMode;
 }
 
+export type PurchaseConfiguration =
+  | { readonly mode: 'disabled' }
+  | { readonly mode: 'revenuecat_sandbox'; readonly androidSdk: string };
+
 export const API_ENVIRONMENT_VARIABLE = 'EXPO_PUBLIC_API_ENVIRONMENT';
 export const API_BASE_URL_VARIABLE = 'EXPO_PUBLIC_API_BASE_URL';
 
@@ -222,11 +226,42 @@ export function resolveAppCheckConfiguration(
   return { mode: mode as AppCheckMode };
 }
 
+/** A public Android SDK identifier enables local testing; it never authorizes coin credits. */
+export function resolvePurchaseConfiguration(
+  source: Readonly<Record<string, string | undefined>>,
+  environment: ApiEnvironment,
+): PurchaseConfiguration {
+  const mode = source.EXPO_PUBLIC_COIN_PURCHASE_MODE ?? 'disabled';
+  if (mode === 'disabled') return { mode };
+  if (mode !== 'revenuecat_sandbox') {
+    throw new EnvironmentConfigurationError(
+      'EXPO_PUBLIC_COIN_PURCHASE_MODE must be disabled or revenuecat_sandbox.',
+    );
+  }
+  if (environment !== 'local' || source.NODE_ENV === 'production') {
+    throw new EnvironmentConfigurationError(
+      'Coin checkout is available only in local development builds.',
+    );
+  }
+  const androidSdk = source.EXPO_PUBLIC_REVENUECAT_ANDROID_SDK;
+  if (
+    typeof androidSdk !== 'string' ||
+    androidSdk.trim() !== androidSdk ||
+    !/^goog_[A-Za-z0-9]{16,128}$/.test(androidSdk)
+  ) {
+    throw new EnvironmentConfigurationError(
+      'EXPO_PUBLIC_REVENUECAT_ANDROID_SDK must be a public Google Android SDK identifier.',
+    );
+  }
+  return { mode, androidSdk };
+}
+
 export default ({ config }: ConfigContext): ExpoConfig => {
   const api = resolveApiConfiguration(process.env);
   const ads = resolveAdsConfiguration(process.env, api.environment);
   const analytics = resolveAnalyticsConfiguration(process.env, api.environment);
   const appCheck = resolveAppCheckConfiguration(process.env);
+  const purchases = resolvePurchaseConfiguration(process.env, api.environment);
 
   return {
     ...config,
@@ -262,6 +297,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
     ],
     experiments: { typedRoutes: true },
-    extra: { api, ads, analytics, appCheck },
+    extra: { api, ads, analytics, appCheck, purchases },
   };
 };

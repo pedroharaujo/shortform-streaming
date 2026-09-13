@@ -127,6 +127,10 @@ function checkResolvedConfiguration() {
     fail('Firebase App Check must remain disabled until private provider validation passes.');
     return;
   }
+  if (resolved.extra?.purchases?.mode !== 'disabled') {
+    fail('coin checkout must remain disabled without explicit local test configuration.');
+    return;
+  }
   walk(resolved, '', (key, value, keyPath) => {
     if (SENSITIVE_NAME.test(key)) {
       offenders.push(`${keyPath} (sensitive key name)`);
@@ -268,6 +272,49 @@ if (enforcedAppCheckResult.status !== 0) {
   fail('explicit App Check enforcement must resolve');
 } else if (JSON.parse(enforcedAppCheckResult.stdout).extra?.appCheck?.mode !== 'enforce') {
   fail('App Check enforcement was not frozen into the public manifest');
+}
+
+const localPurchases = {
+  ...REQUIRED_ENVIRONMENT,
+  NODE_ENV: 'development',
+  EXPO_PUBLIC_COIN_PURCHASE_MODE: 'revenuecat_sandbox',
+  EXPO_PUBLIC_REVENUECAT_ANDROID_SDK: 'goog_SyntheticPublicAndroidSdk12345',
+};
+const purchaseResult = runExpoConfig(localPurchases);
+if (purchaseResult.status !== 0) {
+  fail('explicit local purchase configuration must resolve');
+} else {
+  const purchaseConfig = JSON.parse(purchaseResult.stdout);
+  if (
+    purchaseConfig.extra?.purchases?.mode !== 'revenuecat_sandbox' ||
+    purchaseConfig.extra?.purchases?.androidSdk !==
+      localPurchases.EXPO_PUBLIC_REVENUECAT_ANDROID_SDK
+  ) {
+    fail('local purchase configuration was not frozen into the manifest');
+  }
+  walk(purchaseConfig, '', (key, value) => {
+    if (
+      SENSITIVE_NAME.test(key) ||
+      (typeof value === 'string' && SENSITIVE_VALUE_PATTERNS.some((pattern) => pattern.test(value)))
+    ) {
+      fail('local purchase configuration contains sensitive material');
+    }
+  });
+}
+for (const overrides of [
+  { NODE_ENV: 'production' },
+  { EXPO_PUBLIC_API_ENVIRONMENT: 'staging' },
+  { EXPO_PUBLIC_API_ENVIRONMENT: 'production' },
+]) {
+  if (
+    runExpoConfig({
+      ...localPurchases,
+      EXPO_PUBLIC_API_BASE_URL: 'https://api.example.invalid',
+      ...overrides,
+    }).status === 0
+  ) {
+    fail('coin checkout must reject nonlocal and release builds');
+  }
 }
 
 const productionResult = runExpoConfig({

@@ -268,16 +268,26 @@ Initial paid-test activation also requires one approved audience, approximately 
 ### P3-T04/P3-T06 — Known transaction RevenueCat reconciliation
 
 - **State:** genuine provider/device evidence remains deferred under D-029; this
-  change supplies a local-only server implementation and generated-fixture tests.
-  Production purchases and the mobile checkout factory remain disabled.
+  change supplies local server verification, opt-in native checkout and
+  known-result fingerprint recovery with generated-fixture tests. Production
+  purchases and the default mobile checkout configuration remain disabled.
 - **Setup:** follow [RevenueCat sandbox verification](revenuecat-sandbox.md) with
   an approved isolated tester app, consumable SKU, license tester and server key.
 - **Unchecked:** obtain a server purchase UUID, bind the native account, complete
   a genuine tester purchase, sync its exact order ID, and observe one credit.
   Retry, interrupt connectivity, refund, and switch/delete the account; record
   safe outcomes only. Verify native acknowledgement/consumption separately.
-- **Recovery:** once implemented, restart during checkout and resolve the exact
-  pending attempt without inferring success from balance or recent history.
+- **Recovery:** after the known-result fingerprint has been saved, interrupt
+  verification, restart the app, open Buy coins → Check purchase and observe one
+  credit with an unchanged ledger on repeats. Repeat with more than 100 provider
+  purchases or an incomplete page: stay pending. Kill the app before a native
+  result is saved: it must block a new charge and make no claim of recovery.
+  Resolve this remaining unknown-attempt path before full P3-T06 acceptance.
+- **Native boundaries:** cancel the Google sheet; switch accounts during product
+  loading and before checkout; change connectivity; return from sign-in. Verify
+  displayed price equals the store sheet, no old-owner sheet can open after
+  logout, and no raw receipt/order/token or provider payload enters application
+  logs or support evidence. RevenueCat owns acknowledgement/consumption.
 - **Blocks:** full P3-T04/P3-T06 acceptance and checkout activation. Automated
   ownership, redaction, once-only credit, refund-review and deletion checks are
   immediate merge gates and are not deferred.

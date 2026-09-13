@@ -7,8 +7,10 @@
 import Constants from 'expo-constants';
 import {
   resolveAdsConfiguration,
+  resolvePurchaseConfiguration,
   type AdsConfiguration,
   type AppCheckConfiguration,
+  type PurchaseConfiguration,
 } from '../../app.config';
 
 import {
@@ -23,6 +25,7 @@ interface ExtraShape {
   readonly ads?: unknown;
   readonly analytics?: unknown;
   readonly appCheck?: unknown;
+  readonly purchases?: unknown;
 }
 
 function isApiEnvironment(value: unknown): value is ApiEnvironment {
@@ -115,4 +118,38 @@ export function readAppCheckConfiguration(
 
 export function getAppCheckConfiguration(): AppCheckConfiguration {
   return readAppCheckConfiguration(Constants.expoConfig?.extra as ExtraShape | undefined);
+}
+
+export function readPurchaseConfiguration(
+  extra: ExtraShape | null | undefined,
+  environment: ApiEnvironment,
+): PurchaseConfiguration {
+  const purchases = extra?.purchases;
+  if (typeof purchases !== 'object' || purchases === null || Array.isArray(purchases)) {
+    return { mode: 'disabled' };
+  }
+  const { mode, androidSdk } = purchases as { mode?: unknown; androidSdk?: unknown };
+  if (mode !== 'revenuecat_sandbox' || typeof androidSdk !== 'string') {
+    return { mode: 'disabled' };
+  }
+  try {
+    return resolvePurchaseConfiguration(
+      { EXPO_PUBLIC_COIN_PURCHASE_MODE: mode, EXPO_PUBLIC_REVENUECAT_ANDROID_SDK: androidSdk },
+      environment,
+    );
+  } catch {
+    // Older or malformed manifests disable checkout without breaking the app.
+    return { mode: 'disabled' };
+  }
+}
+
+export function getPurchaseConfiguration(): PurchaseConfiguration {
+  try {
+    return readPurchaseConfiguration(
+      Constants.expoConfig?.extra as ExtraShape | undefined,
+      getApiConfiguration().environment,
+    );
+  } catch {
+    return { mode: 'disabled' };
+  }
 }

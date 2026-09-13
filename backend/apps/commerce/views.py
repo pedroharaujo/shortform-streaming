@@ -12,13 +12,14 @@ from apps.accounts.models import UserProfile
 from apps.accounts.views import ERROR_401
 from apps.commerce.configuration import reconciliation_enabled
 from apps.commerce.reads import purchase_catalog, purchase_history, purchase_status
-from apps.commerce.reconciliation import synchronize_purchase
+from apps.commerce.reconciliation import recover_purchase, synchronize_purchase
 from apps.commerce.serializers import (
     PurchaseCatalogRequestSerializer,
     PurchaseCatalogSerializer,
     PurchaseHistorySerializer,
     PurchaseIdentitySerializer,
     PurchaseReceiptSerializer,
+    PurchaseRecoveryRequestSerializer,
     PurchaseStatusRequestSerializer,
     PurchaseStatusSerializer,
 )
@@ -202,6 +203,48 @@ class PurchaseSyncView(APIView):
         serializer = PurchaseStatusRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = synchronize_purchase(request.user, **serializer.validated_data)
+        response = Response(PurchaseStatusSerializer(result).data)
+        response["Cache-Control"] = "no-store"
+        return response
+
+
+class PurchaseRecoveryView(APIView):
+    authentication_classes = [FirebaseIdTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [PurchaseSyncThrottle]
+
+    @extend_schema(
+        tags=["commerce"],
+        summary="Recover a known sandbox purchase using its exact fingerprint",
+        description=(
+            "Explicit local RevenueCat sandbox mode only. Resolves an owner-bound SHA-256 "
+            "fingerprint from at most 100 customer purchases, requiring a complete page and "
+            "exactly one match before full provider verification and idempotent credit. "
+            "Incomplete, ambiguous and missing evidence stays awaiting verification and cannot "
+            "prove cancellation or make repurchasing safe. Cannot resolve unknown attempts. "
+            "Shares the sync limit of six requests per minute per account. Returns historical "
+            "credit, not current wallet balance or playback authorization."
+        ),
+        request=PurchaseRecoveryRequestSerializer,
+        responses={
+            200: PurchaseStatusSerializer,
+            **PURCHASE_READ_ERRORS,
+            429: OpenApiResponse(
+                response={"$ref": "#/components/schemas/ErrorEnvelope"},
+                description="Purchase verification rate limit exceeded.",
+            ),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        if not isinstance(request.user, UserProfile):
+            raise FirebaseAuthenticationFailed()
+        if not reconciliation_enabled():
+            raise PurchaseUnavailable()
+        if request.query_params:
+            raise ParseError("This operation accepts no query fields.")
+        serializer = PurchaseRecoveryRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = recover_purchase(request.user, **serializer.validated_data)
         response = Response(PurchaseStatusSerializer(result).data)
         response["Cache-Control"] = "no-store"
         return response
