@@ -4,6 +4,11 @@ Public monorepo for a mobile-first vertical microdrama streaming platform.
 
 The MVP consists of a Django REST backend/Django Admin and one Android React Native/Expo application. iOS release work and a consumer web client are explicitly post-MVP.
 
+**Next hands-on milestone:** browse → watch → Google sign-in → Google Play test
+coin purchase → unlock → keep watching. Reuse the existing app; ads and advanced
+reporting follow this checkpoint. Current gaps and startup instructions are in
+the [Android journey runbook](docs/runbooks/android-first-journey.md) (D-036).
+
 The MVP tests whether **contribution LTV can exceed CAC**—whether lifetime contribution per acquired user can exceed acquisition cost. Launch configuration is France, English, one defined audience, approximately 3–5 independently approved series, rewarded ads plus purchased coins, and a capped paid-acquisition test after founder budget approval. Prefer €0 upfront/MG revenue-share, non-exclusive licenses where possible; actual terms remain private. Subscriptions stay post-MVP.
 
 Build the platform so it can grow, but validate the business with the smallest possible market scope. Market, language, audience and licensed monetization permissions are configurable domain dimensions; additional rollout is separately approved.
