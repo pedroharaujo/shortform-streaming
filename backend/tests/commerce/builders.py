@@ -37,6 +37,19 @@ def configure(settings: Any) -> None:
     settings.COIN_PURCHASE_SIGNING_SECRET = uuid4().hex
 
 
+def sandbox_registry() -> list[dict[str, Any]]:
+    return [
+        {
+            **registry()[0],
+            "app_id": "appGenerated",
+            "application_id": "test.example.shortform",
+            "product_id": "generated_test_coins",
+            "synthetic": False,
+            "approval_reference": "D-036",
+        }
+    ]
+
+
 def payload(owner: str, **changes: Any) -> bytes:
     event = {
         "id": str(uuid4()),

@@ -229,6 +229,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/purchases/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read server-approved Android test consumables
+         * @description Local test or RevenueCat sandbox mode only. Quantities come from the server registry. Native checkout must independently match store offerings and display the exact store-localized monetary price. No price or purchase grant is supplied here.
+         */
+        post: operations["v1_purchases_catalog_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/purchases/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the current account's latest verified purchase credits
+         * @description Local test or RevenueCat sandbox mode only. Returns at most 20 owned credits, newest recorded time then support-reference UUID first, with has_more for older records. Accepts no query fields. No wallet or purchase identity is created. Historical credit survives registry changes and is not the current spendable balance, final refund settlement, entitlement or playback authorization. Any quarantined delivery keeps a credit in review, including after a successful retry. Empty history does not prove a purchase failed or make repurchasing safe. Refresh wallet separately.
+         */
+        get: operations["v1_purchases_history_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/purchases/identity": {
         parameters: {
             query?: never;
@@ -240,9 +280,49 @@ export interface paths {
         put?: never;
         /**
          * Obtain the authenticated account's opaque purchase identity
-         * @description Synthetic local mode only. The server permanently binds the identity to an opaque wallet. No client identity or coin amount is accepted.
+         * @description Local test or RevenueCat sandbox mode only. The server binds the identity to an opaque wallet. No client identity or coin amount is accepted.
          */
         post: operations["v1_purchases_identity_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/purchases/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check the current account's historical verified purchase credit
+         * @description Local test or RevenueCat sandbox mode only. Read-only lookup never credits coins. Unknown, foreign, mismatched and unattributed transactions all await verification. That result does not prove cancellation or make repurchasing safe. Historical credit is not the current balance, final refund settlement, entitlement or playback authorization. Any quarantined delivery on owned credit requires review. Refresh wallet and current access separately. Send transaction IDs only in the request body.
+         */
+        post: operations["v1_purchases_status_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/purchases/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify a known Google Play sandbox purchase with RevenueCat
+         * @description Explicit local RevenueCat sandbox mode only. Uses the current account's existing server purchase identity and trusted provider facts; client success never grants coins. May create one verified credit or retain refund review. Unknown, foreign and unverifiable purchases remain indistinguishable. Awaiting verification does not prove cancellation or make repurchasing safe. This cannot recover an unknown transaction after process loss. Returns historical credit, not current balance or playback access. Refresh those separately. Six requests per minute per account; send transaction identifiers only in the JSON body.
+         */
+        post: operations["v1_purchases_sync_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -467,6 +547,11 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /**
+         * @description * `SANDBOX` - SANDBOX
+         * @enum {string}
+         */
+        EnvironmentEnum: "SANDBOX";
         EpisodeOffersGranted: {
             /**
              * @description granted when the episode is playable via entitlement or the free window.
@@ -629,14 +714,75 @@ export interface components {
         PlaybackAuthorizeLockedDecisionEnum: "locked";
         PlaybackAuthorizeResponse: components["schemas"]["PlaybackAuthorizeGranted"] | components["schemas"]["PlaybackAuthorizeLocked"];
         /**
+         * @description * `store` - store
+         * @enum {string}
+         */
+        PriceSourceEnum: "store";
+        /**
+         * @description * `consumable` - consumable
+         * @enum {string}
+         */
+        ProductTypeEnum: "consumable";
+        /**
          * @description Opaque public identifier. Sequential database integers are never used as public IDs.
          * @example ser_1a2b3c4d5e6f
          */
         PublicId: string;
+        PurchaseCatalog: {
+            products: components["schemas"]["PurchaseProduct"][];
+        };
+        PurchaseCatalogRequestRequest: {
+            application_id: string;
+        };
+        PurchaseHistory: {
+            purchases: components["schemas"]["PurchaseHistoryItem"][];
+            has_more: boolean;
+        };
+        PurchaseHistoryItem: {
+            /** Format: date-time */
+            recorded_at: string;
+            historical_credited_coins: number;
+            /** Format: uuid */
+            support_reference: string;
+            status: components["schemas"]["PurchaseHistoryItemStatusEnum"];
+        };
+        /**
+         * @description * `credited` - credited
+         *     * `review_required` - review_required
+         * @enum {string}
+         */
+        PurchaseHistoryItemStatusEnum: "credited" | "review_required";
         PurchaseIdentity: {
             /** Format: uuid */
             app_user_id: string;
         };
+        PurchaseProduct: {
+            product_id: string;
+            coins: number;
+            product_type: components["schemas"]["ProductTypeEnum"];
+            store: components["schemas"]["StoreEnum"];
+            environment: components["schemas"]["EnvironmentEnum"];
+            price_source: components["schemas"]["PriceSourceEnum"];
+        };
+        PurchaseStatus: {
+            status: components["schemas"]["PurchaseStatusStatusEnum"];
+            historical_credited_coins: number;
+            /** Format: uuid */
+            support_reference: string | null;
+        };
+        PurchaseStatusRequestRequest: {
+            application_id: string;
+            product_id: string;
+            /** @description Store transaction identifier; sent in the body, never persisted by the backend. */
+            transaction_id: string;
+        };
+        /**
+         * @description * `awaiting_verification` - awaiting_verification
+         *     * `credited` - credited
+         *     * `review_required` - review_required
+         * @enum {string}
+         */
+        PurchaseStatusStatusEnum: "awaiting_verification" | "credited" | "review_required";
         RewardIntent: {
             /** Format: uuid */
             id: string;
@@ -671,6 +817,11 @@ export interface components {
          * @enum {string}
          */
         RewardIntentStatusEnum: "pending" | "granted" | "expired" | "unavailable";
+        /**
+         * @description * `PLAY_STORE` - PLAY_STORE
+         * @enum {string}
+         */
+        StoreEnum: "PLAY_STORE";
         /**
          * @description * `entitlement` - entitlement
          *     * `free` - free
@@ -1247,6 +1398,102 @@ export interface operations {
             };
         };
     };
+    v1_purchases_catalog_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseCatalogRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseCatalog"];
+                };
+            };
+            /** @description Invalid or unexpected purchase lookup fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Coin purchases or the requested catalog are unavailable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_purchases_history_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseHistory"];
+                };
+            };
+            /** @description Invalid or unexpected purchase lookup fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Coin purchases or the requested catalog are unavailable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     v1_purchases_identity_create: {
         parameters: {
             query?: never;
@@ -1284,6 +1531,115 @@ export interface operations {
             };
             /** @description Coin purchases are disabled or unavailable. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_purchases_status_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseStatusRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseStatus"];
+                };
+            };
+            /** @description Invalid or unexpected purchase lookup fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Coin purchases or the requested catalog are unavailable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_purchases_sync_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseStatusRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseStatus"];
+                };
+            };
+            /** @description Invalid or unexpected purchase lookup fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Coin purchases or the requested catalog are unavailable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Purchase verification rate limit exceeded. */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

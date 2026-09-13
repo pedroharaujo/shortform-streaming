@@ -22,6 +22,11 @@ export default function WalletRoute(): JSX.Element {
       key={visit}
       client={client}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/account'))}
+      onPurchases={() =>
+        router.push(
+          returnEpisode ? { pathname: '/purchases', params: { returnEpisode } } : '/purchases',
+        )
+      }
       onAccount={() => {
         const pathname = getSessionCredential() === null ? '/sign-in' : '/account';
         router.push(returnEpisode ? { pathname, params: { returnEpisode } } : pathname);

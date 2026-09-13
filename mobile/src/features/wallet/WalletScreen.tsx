@@ -21,6 +21,7 @@ export interface WalletScreenProps {
   readonly client: WalletClient;
   readonly onBack: () => void;
   readonly onAccount: () => void;
+  readonly onPurchases: () => void;
   readonly onReturnToEpisode?: (() => void) | undefined;
 }
 
@@ -28,6 +29,7 @@ export function WalletScreen({
   client,
   onBack,
   onAccount,
+  onPurchases,
   onReturnToEpisode,
 }: WalletScreenProps): JSX.Element {
   const messages = useMessages();
@@ -96,6 +98,7 @@ export function WalletScreen({
           )}
         </View>
         <Text style={styles.muted}>{messages.wallet.purchasesUnavailable}</Text>
+        <Action label={messages.purchases.title} onPress={onPurchases} />
         {!requiresSignIn ? (
           <Action
             label={messages.wallet.refresh}

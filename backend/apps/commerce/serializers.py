@@ -1,6 +1,87 @@
+import re
 from collections.abc import Mapping
 
+from django.conf import settings
 from rest_framework import serializers
+
+from apps.accounts.serializers import StrictSerializer
+
+
+class PurchaseCatalogRequestSerializer(StrictSerializer):
+    application_id = serializers.RegexField(
+        r"\A[A-Za-z0-9_.:/-]+\Z", max_length=128, trim_whitespace=False
+    )
+
+    def validate_application_id(self, value: str) -> str:
+        if settings.COIN_PURCHASE_MODE == "revenuecat_sandbox":
+            valid = re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+", value)
+        else:
+            valid = re.fullmatch(r"test\.synthetic\.[A-Za-z0-9_.:/-]*", value)
+        if not valid:
+            raise serializers.ValidationError("Invalid purchase application identifier.")
+        return value
+
+    def to_internal_value(self, data: object) -> dict[str, object]:
+        if isinstance(data, dict) and any(not isinstance(value, str) for value in data.values()):
+            raise serializers.ValidationError(
+                {"non_field_errors": ["Purchase identifiers must be strings."]}
+            )
+        return super().to_internal_value(data)
+
+
+class PurchaseStatusRequestSerializer(PurchaseCatalogRequestSerializer):
+    product_id = serializers.RegexField(
+        r"\A[A-Za-z0-9_.:/-]+\Z", max_length=128, trim_whitespace=False
+    )
+    transaction_id = serializers.RegexField(
+        r"\A[A-Za-z0-9_.:$/-]+\Z",
+        max_length=200,
+        trim_whitespace=False,
+        help_text="Store transaction identifier; sent in the body, never persisted by the backend.",
+    )
+
+    def validate_product_id(self, value: str) -> str:
+        pattern = (
+            r"[a-z][a-z0-9_.]*"
+            if settings.COIN_PURCHASE_MODE == "revenuecat_sandbox"
+            else r"synthetic_[A-Za-z0-9_.:/-]*"
+        )
+        if not re.fullmatch(pattern, value):
+            raise serializers.ValidationError("Invalid purchase product identifier.")
+        return value
+
+
+class PurchaseProductSerializer(serializers.Serializer[Mapping[str, object]]):
+    product_id = serializers.CharField(max_length=128)
+    coins = serializers.IntegerField(min_value=1, max_value=2147483647)
+    product_type = serializers.ChoiceField(choices=["consumable"])
+    store = serializers.ChoiceField(choices=["PLAY_STORE"])
+    environment = serializers.ChoiceField(choices=["SANDBOX"])
+    price_source = serializers.ChoiceField(choices=["store"])
+
+
+class PurchaseCatalogSerializer(serializers.Serializer[Mapping[str, object]]):
+    products = PurchaseProductSerializer(many=True)
+
+
+class PurchaseStatusSerializer(serializers.Serializer[Mapping[str, object]]):
+    status = serializers.ChoiceField(
+        choices=["awaiting_verification", "credited", "review_required"]
+    )
+    historical_credited_coins = serializers.IntegerField(min_value=0, max_value=2147483647)
+    support_reference = serializers.UUIDField(allow_null=True)
+
+
+class PurchaseHistoryItemSerializer(serializers.Serializer[Mapping[str, object]]):
+    recorded_at = serializers.DateTimeField()
+    historical_credited_coins = serializers.IntegerField(min_value=1, max_value=2147483647)
+    support_reference = serializers.UUIDField()
+    status = serializers.ChoiceField(choices=["credited", "review_required"])
+
+
+class PurchaseHistorySerializer(serializers.Serializer[Mapping[str, object]]):
+    purchases = serializers.ListField(child=PurchaseHistoryItemSerializer(), max_length=20)
+    has_more = serializers.BooleanField()
 
 
 class PurchaseIdentitySerializer(serializers.Serializer[Mapping[str, object]]):

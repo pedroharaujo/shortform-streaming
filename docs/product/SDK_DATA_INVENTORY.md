@@ -11,6 +11,24 @@ This file is the single engineering source for later privacy labels (P6-T04), ac
 
 D-007/D-008/D-015 bring Google Play/RevenueCat coin purchases, ledger and refunds into MVP. D-016/D-032 bring minimum attribution, BigQuery financial/cohort/spend joins and daily LTV/CAC reporting into MVP. D-034 makes France/Android/English/one audience active launch configuration with generalized domain capability; D-004 targets approximately 3–5 titles with D-031 free/ad/coin/paid-promotion rights. No processor, region, retention period, license value or production activation is approved by this inventory update. The revised planned tables below supersede the older P7 timing; historical snapshot tables remain labeled as evidence only.
 
+### Dormant purchase coordinator (P3-T06, 2026-09-09)
+
+The injected synthetic checkout coordinator can persist one unresolved marker per
+server purchase identity in Expo SecureStore. The strict versioned marker contains
+only that opaque identity, synthetic application/product IDs and a random attempt
+UUID. It contains no Firebase UID, credential, price, receipt, raw transaction ID
+or provider payload. Transaction IDs exist only in process memory for an owned
+attempt and in an authenticated status request body; they never enter public
+state, logs or analytics. Process loss therefore blocks an unknown attempt instead
+of claiming automatic reconciliation or initiating another checkout.
+
+The shipped coordinator factory remains disabled without constructing a provider
+or touching storage/network. No new SDK or processor is adopted. Account changes
+do not expose or erase another owner's unresolved marker. Corrupt or inaccessible
+storage fails closed. Before real checkout, extend and validate the account
+deletion/device cleanup and provider reconciliation lifecycle under P2-T02/D-020;
+this synthetic implementation does not approve financial retention or deletion.
+
 ### Current analytics implementation (2026-09-02; checked against schemas 2026-09-07)
 
 The Android runtime has one consent-gated typed event set: `app_open`, `sign_up`,

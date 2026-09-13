@@ -1,7 +1,12 @@
 import { getNativeAppCheckToken } from '../appCheck/nativeAppCheck';
 import { setAuthSession } from '../auth/session';
 import { getApiConfiguration, getAppCheckConfiguration } from '../config/appConfiguration';
-import { createAppCatalogClient, createAppWalletClient } from './createAppClients';
+import {
+  createAppCatalogClient,
+  createAppPurchaseCheckoutClient,
+  createAppPurchasesClient,
+  createAppWalletClient,
+} from './createAppClients';
 import { jsonResponse, requestHeaders, requestUrl } from './fetchTestUtils';
 
 jest.mock('../appCheck/nativeAppCheck', () => ({
@@ -42,6 +47,31 @@ describe('app API clients', () => {
     expect(requestHeaders(input, init).get('X-Firebase-AppCheck')).toBe(
       'synthetic.app-check-token',
     );
+  });
+
+  it('wires purchase history to the current session and App Check without purchase identifiers', async () => {
+    jest.clearAllMocks();
+    setAuthSession({ credential: 'synthetic.purchase-owner' });
+    const performRequest = jest.fn<Promise<Response>, [RequestInfo | URL, RequestInit?]>(async () =>
+      jsonResponse({ purchases: [], has_more: false }, 200),
+    );
+    globalThis.fetch = performRequest as typeof fetch;
+    const client = createAppPurchasesClient();
+    await client.getHistory();
+    setAuthSession({ credential: 'synthetic.replacement-owner' });
+    await client.getHistory();
+    expect(getNativeAppCheckToken).toHaveBeenCalledTimes(2);
+    for (const [index, [input, init]] of performRequest.mock.calls.entries()) {
+      expect(requestUrl(input)).toBe('http://10.0.2.2:8000/v1/purchases/history');
+      expect(requestHeaders(input, init).get('Authorization')).toBe(
+        `Bearer synthetic.${index === 0 ? 'purchase-owner' : 'replacement-owner'}`,
+      );
+      expect(requestHeaders(input, init).get('X-Firebase-AppCheck')).toBe(
+        'synthetic.app-check-token',
+      );
+      expect(input instanceof Request ? input.method : init?.method).toBe('GET');
+      expect(input instanceof Request ? input.body : init?.body).toBeNull();
+    }
   });
 
   it('does not initialize the private provider while rollout is disabled', async () => {
@@ -136,4 +166,47 @@ describe('app API clients', () => {
       }
     }
   });
+});
+
+test('checkout factory authenticates and attests identity/catalog/status with transaction confined to POST body', async () => {
+  const originalFetch = globalThis.fetch;
+  jest.clearAllMocks();
+  setAuthSession({ credential: 'synthetic.checkout-token' });
+  const fetcher = jest.fn<Promise<Response>, [RequestInfo | URL, RequestInit?]>(async () =>
+    jsonResponse({}, 503),
+  );
+  globalThis.fetch = fetcher as typeof fetch;
+  try {
+    const client = createAppPurchaseCheckoutClient();
+    await client.getIdentity();
+    await client.getCatalog('test.synthetic.shortform');
+    await client.getStatus({
+      application_id: 'test.synthetic.shortform',
+      product_id: 'synthetic_consumable',
+      transaction_id: 'synthetic-private-transaction',
+    });
+    expect(getNativeAppCheckToken).toHaveBeenCalledTimes(3);
+    for (const [input, init] of fetcher.mock.calls) {
+      expect(requestHeaders(input, init).get('Authorization')).toBe(
+        'Bearer synthetic.checkout-token',
+      );
+      expect(requestHeaders(input, init).get('X-Firebase-AppCheck')).toBe(
+        'synthetic.app-check-token',
+      );
+      expect(requestUrl(input)).not.toContain('synthetic-private-transaction');
+    }
+    const identityRequest = fetcher.mock.calls[0]![0] as Request;
+    expect(identityRequest.method).toBe('POST');
+    expect(identityRequest.body).toBeNull();
+    const request = fetcher.mock.calls[2]![0] as Request;
+    expect(request.method).toBe('POST');
+    expect(await request.clone().json()).toEqual({
+      application_id: 'test.synthetic.shortform',
+      product_id: 'synthetic_consumable',
+      transaction_id: 'synthetic-private-transaction',
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    setAuthSession(null);
+  }
 });

@@ -2,7 +2,7 @@
 
 **Document status:** Founder strategy updated; new MVP work planned, release readiness open
 **Language:** English  
-**Last reviewed:** 2026-09-07
+**Last reviewed:** 2026-09-13
 **Repository:** `pedroharaujo/shortform-streaming` (public monorepo)  
 **MVP client:** Android / Google Play only; Django Admin is the only web interface. iOS is post-MVP (D-027).
 
@@ -46,11 +46,30 @@ D-032 changes the MVP business hypothesis to contribution LTV versus CAC. D-007/
 
 Dependency order for the next development phase: P2-T03-F3 → P3-T01-F1 → P3-T02 and P3-T03 → P3-T04 → P3-T06 → P3-T08-F2/P3-T09. Then P4-T01-F5 and P4-T06 feed P4-T02 → P4-T03 → P6-T03/T04/T05/T05A → capped launch. Independent foundational work may proceed in parallel; product prices, private license approvals, privacy and D-017 spend approval remain gates for their dependent production behavior. No extra worktrees are required.
 
-P2-T03-F3, P3-T01-F1 and P3-T02 merged in PRs #139, #140 and #143. The local
-Android wallet/coin-choice slice of P3-T08-F2 is implemented under #142; full
-P3-T08-F2 remains open. Next, P3-T03/T04/T06 must connect known Google Play products
-to verified server credits, and #144 must safely resolve ambiguous unlocks.
-Commercial prices and production activation remain separate approvals.
+P2-T03-F3, P3-T01-F1 and P3-T02 merged in PRs #139, #140 and #143. PR #145 adds
+the local Android wallet/coin-choice slice of P3-T08-F2; PR #147 safely resolves
+ambiguous unlocks. PR #148 supplies once-only synthetic purchase funding. The
+P3-T06 purchase-synchronization prerequisite under #142 adds a synthetic product
+catalog and owner-scoped historical credit lookup. PR #153 adds Android purchase
+history. A dormant checkout coordinator now exercises account binding, exact price
+confirmation and interruption safety with injected synthetic integrations. Its
+shipped factory is disabled. Full P3-T08-F2 remains open. Next, P3-T03/P3-T06 must
+connect genuine Google Play/RevenueCat offerings and checkout to these contracts;
+provider lifecycle/reconciliation remains P3-T04/P3-T09.
+Commercial prices, support/native evidence and production activation remain gates.
+
+### First hands-on milestone (D-036)
+
+**Immediate delivery priority — D-036 (2026-09-13):** the next founder checkpoint
+is a usable Android viewing and test-purchase journey, not completion of the
+remaining phase-wide backlog. First bring up the existing catalog/player and
+Google sign-in using generated or approved self-owned media (P2-T08). Then finish
+the genuine Google Play/RevenueCat test purchase, server verification and recovery
+path (P3-T03/P3-T04/P3-T06), ending with coin unlock and continued playback.
+Rewarded ads and advanced reporting follow this checkpoint; existing financial,
+authorization, rights and production gates continue to apply. See
+`docs/runbooks/android-first-journey.md` for runnable steps and unchecked device
+acceptance. Synthetic checkout tests never count as a genuine Play purchase.
 
 ### Definition of Done for Every Task
 
@@ -980,6 +999,13 @@ and [implementation plan](docs/superpowers/plans/2026-09-07-p3-t02-coin-wallet.m
 
 #### P3-T04 — Verify RevenueCat Android purchase and webhook lifecycle
 
+**Development slice (2026-09-13, #164):** Local-only RevenueCat v2 reconciliation
+now verifies a known tester transaction against its server purchase identity and
+registered app/package/product before using existing once-only ledger fulfillment.
+See [sandbox verification](docs/runbooks/revenuecat-sandbox.md). Genuine provider
+evidence, native exact-attempt recovery, callback activation and full acceptance
+remain open; production purchases and the mobile checkout factory stay disabled.
+
 **Timing:** Coin lifecycle moved from P7 into MVP 2026-09-07. Subscription state lives in P3-T04-P7.
 
 **Description/objective:** Authenticate/validate provider events, preserve restricted references, bind account/product/environment/transaction, quarantine unresolved identity and converge on verified coin-purchase/refund state.
@@ -1004,6 +1030,28 @@ and [implementation plan](docs/superpowers/plans/2026-09-07-p3-t02-coin-wallet.m
 **Description/objective:** Present Google Play/RevenueCat coin packs, complete native checkout and credit coins only from a verified server purchase. Client success starts synchronization, never a grant.
 
 **Dependencies:** P3-T02, P3-T03, P3-T04.
+
+**Development prerequisite (#142, 2026-09-08):** The synthetic purchase catalog
+and owner-scoped transaction-status contract are implemented for the native
+checkout follow-up. Status reports immutable historical credits, preserves
+refund/conflict review and cannot mint coins or establish current playback access.
+See [purchase synchronization](docs/runbooks/synthetic-purchases.md). This slice
+does not complete the native/provider acceptance below or approve live purchases.
+
+**Recovery follow-up (#142, 2026-09-09):** A bounded owner-scoped recent-purchase
+history and Android screen are implemented so a fresh installation can
+retrieve verified historical credits and safe support references without saved
+store transaction IDs. This does not recover unverified purchases or complete
+native checkout. See the [implementation plan](docs/superpowers/plans/2026-09-09-p3-t06-purchase-history.md).
+
+**Dormant coordinator (#142, 2026-09-09):** Synthetic integration covers server
+identity binding, unchanged store price strings, repeat-charge prevention and
+server-only confirmation. An unresolved SecureStore marker survives process loss;
+raw transaction IDs remain only in memory. A restarted unknown attempt stays
+blocked until a future genuine reconciliation path can resolve it. This is not
+automatic purchase recovery. The app factory remains unavailable and no SDK,
+checkout route or real provider is activated. See the
+[coordinator plan](docs/superpowers/plans/2026-09-09-p3-t06-checkout-coordinator.md).
 
 **Acceptance criteria:**
 

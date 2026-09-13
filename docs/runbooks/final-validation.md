@@ -265,6 +265,97 @@ Initial paid-test activation also requires one approved audience, approximately 
 - **Blocks:** P5-T05/P6-T03 and production App Check enforcement. This deferral is
   permitted only while enforcement and public production activation remain off.
 
+### P3-T04/P3-T06 — Known transaction RevenueCat reconciliation
+
+- **State:** genuine provider/device evidence remains deferred under D-029; this
+  change supplies a local-only server implementation and generated-fixture tests.
+  Production purchases and the mobile checkout factory remain disabled.
+- **Setup:** follow [RevenueCat sandbox verification](revenuecat-sandbox.md) with
+  an approved isolated tester app, consumable SKU, license tester and server key.
+- **Unchecked:** obtain a server purchase UUID, bind the native account, complete
+  a genuine tester purchase, sync its exact order ID, and observe one credit.
+  Retry, interrupt connectivity, refund, and switch/delete the account; record
+  safe outcomes only. Verify native acknowledgement/consumption separately.
+- **Recovery:** once implemented, restart during checkout and resolve the exact
+  pending attempt without inferring success from balance or recent history.
+- **Blocks:** full P3-T04/P3-T06 acceptance and checkout activation. Automated
+  ownership, redaction, once-only credit, refund-review and deletion checks are
+  immediate merge gates and are not deferred.
+
+### P3-T06 — Native checkout and verified funding synchronization
+
+- **Source:** issue #142; purchase-synchronization prerequisite; D-008/D-020/D-029.
+- **State:** deferred, never passed. This slice adds only local synthetic server
+  reads; no native checkout or genuine provider lifecycle is enabled.
+- **Prerequisites:** complete native checkout follow-up, approved isolated Google /
+  RevenueCat setup, product quantities/terms and processor-data review. Keep real
+  purchases and production activation off until their separate approvals.
+- **Actions:** sign in to a generated test account, obtain its server purchase
+  identity, load the application-scoped catalog, match native store offerings, and
+  verify exact localized monetary strings. Complete a license-tester checkout;
+  compare its status before and after the verified callback. Repeat after process
+  interruption, provider delay/outage, cancellation/pending payment, reinstall,
+  second device, account change, registry reprice and deletion/recreation. Deliver
+  duplicate, refund and conflicting events through the approved provider workflow.
+- **Expected:** only matching owned server credit confirms historical funding;
+  neither checkout success nor a balance difference credits coins. Unknown results
+  retain recovery without initiating a replacement charge. Refund/conflict stays
+  in review. Refresh wallet, unlock once, then obtain fresh playback authorization.
+  Foreign/deleted accounts see no old purchase data or entitlement.
+- **Evidence:** tested revision/device/build and redacted outcomes; keep provider
+  payloads, raw transaction IDs, account data, credentials and licensed media out
+  of public evidence. Automated identity/financial/privacy tests are immediate.
+- **Blocks:** complete P3-T03/P3-T06, provider reconciliation, #142 closure and all
+  real-purchase or production activation. The server-read tests do not satisfy it.
+
+### P3-T06 — Recent verified purchases on Android
+
+- **Source:** #142, `2026-09-09-p3-t06-purchase-history` implementation plan.
+- **State:** native observations pending; automated privacy/authorization and
+  financial invariants must pass before merge. The API retains the local synthetic
+  purchase gate; production purchase history and checkout are unavailable.
+- **Local attempt (2026-09-09):** an isolated PostgreSQL backend and Firebase Auth
+  emulator successfully seeded generated credited/disputed records. The installed
+  Pixel_9 Android 16 emulator encountered System UI hangs across saved-state and
+  cold/software-graphics launches, and the development app could not connect to
+  Metro. No history-screen device result was obtained. Services were stopped;
+  the native sequence below remains deferred under D-029, never passed.
+- **Actions:** on an isolated backend, create generated verified credits and a
+  later quarantined/refund event through the existing synthetic callback harness.
+  Open Coin wallet → Recent purchases. Confirm original credited quantity,
+  recorded time and safe support reference, with disputed history requiring review.
+  Refresh, background/resume, disconnect/reconnect, switch accounts while a request
+  is pending, and sign in after reinstall/on another Android device. Repeat with
+  no history and more than 20 credits. Check large text and TalkBack.
+- **Expected:** only the current owner's latest 20 verified credits are visible;
+  the list explicitly notes truncation. No old account rows survive a switch.
+  Empty history does not imply no charge. Refresh never credits coins, clears
+  review, restores a consumed purchase or grants playback. Wallet balance is
+  fetched separately. No raw transaction/provider/identity values appear.
+- **Evidence:** tested revision/device/build and generated-data observations only.
+  Real Google purchase/reinstall/refund evidence remains the preceding P3-T06 gate.
+
+### P3-T06 — Dormant checkout coordinator
+
+- **Source:** #142, `2026-09-09-p3-t06-checkout-coordinator` specification and plan.
+- **State:** synthetic controller only; default factory unavailable, no native SDK
+  or checkout screen activated. Automated financial/session/storage checks are
+  immediate gates. Genuine provider/device checks remain pending under D-029.
+- **Prerequisites:** approved isolated provider setup, genuine transaction-ID
+  correlation and SDK acknowledgement/consumption ownership, account deletion
+  and data handling review. Test Store results cannot be relabeled Google sandbox.
+- **Actions:** with the future genuine adapter, verify server identity binding,
+  exact localized prices and repeat confirmation after a price/quantity change.
+  Interrupt before/after marker persistence, during checkout and status/wallet
+  reads; replace the session and retry across coordinators/accounts. Restart with
+  an unresolved marker and prove reconciliation without a replacement charge.
+- **Expected:** only server confirmation establishes historical credit; pending,
+  thrown or ambiguous results retain the marker. Current synthetic restart behavior
+  is deliberately unresolved because the raw transaction ID is not persisted.
+  Neither empty history nor absence of a callback is proof of cancellation.
+- **Blocks:** complete native recovery and P3-T06 acceptance, real checkout and
+  production activation. Synthetic passes do not satisfy provider observations.
+
 ## Sign-off record
 
 For each release candidate, append a dated entry with the immutable revision,

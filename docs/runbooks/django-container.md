@@ -10,7 +10,9 @@ From the repository root, with no production secrets in the environment or build
 docker build -f backend/Dockerfile -t shortform-backend:ci .
 ```
 
-The GitHub Application CI **Container** job runs that exact command string only. It does **not** run Compose or `scripts/verify_backend_container.sh`. The image is multi-stage (`python:3.14-slim-bookworm` + pinned uv `0.9.28`), non-root (`USER app`, uid/gid 1000), and does not `docker push`.
+The GitHub Application CI **Container** job runs that exact command string only. It does **not** run Compose or `scripts/verify_backend_container.sh`. The image is multi-stage (`python:3.14-alpine3.24` + pinned uv `0.9.28`), non-root (`USER app`, uid/gid 1000), and does not `docker push`. The runtime applies Alpine's available `libuuid` fix and removes unused pip/ensurepip installers; application dependencies still come from `uv.lock`. Alpine uses musl, so native dependency and PostgreSQL integration checks must accompany base-image changes. Google CRC32C currently uses its Python fallback in this image.
+
+The public [Supabase database CA](../../backend/certs/README.md) is bundled for staging connections that explicitly select it with `sslmode=verify-full`. No private key or database URL is included, and global TLS trust is unchanged.
 
 Confirm the image user and that secret names are not baked into `Env`:
 
@@ -84,7 +86,7 @@ docker compose --profile container up -d --wait
 scripts/verify_backend_container.sh
 ```
 
-The verify script is **local** (and optional operator) evidence. It checks live/ready JSON, Admin login HTML, Admin CSS, Postgres stop/start recovery (ready 503 / live 200, then ready 200), and `docker stop` on `api` within the gunicorn graceful window. It tears down Compose on success or failure. It requires `shortform-backend:ci` already built.
+The verify script is **local** (and optional operator) evidence. It checks live/ready JSON, Admin login HTML, Admin CSS, Postgres stop/start recovery (ready 503 / live 200, then ready 200), and `docker stop` on `api` within the gunicorn graceful window. It tears down Compose on success or failure. Build the image first. `SHORTFORM_BACKEND_IMAGE` selects the same image for inspection, migrate and web; the default is `shortform-backend:ci`.
 
 Do not claim the GitHub Container job ran Compose. Wiring `scripts/verify_backend_container.sh` into Application CI is deferred until that change does not ALWAYS_RUN the Mobile job (editing `.github/workflows/application-ci.yml` or `scripts/ci_path_filters.py` retriggers Mobile) or until expo pins are current (P2-T08 / P5-T03).
 

@@ -5,6 +5,7 @@ import uuid
 from typing import Any
 
 from django.core.management.base import BaseCommand
+from django.db import transaction
 
 from apps.catalog.models import Episode, PublicationStatus, Season, Series
 from apps.playback.models import MediaAsset, MediaAssetState
@@ -17,11 +18,12 @@ def _stable_id(prefix: str, name: str) -> str:
 
 
 class Command(BaseCommand):
-    help = "Create the one synthetic self-owned English MVP series. Idempotent."
+    help = "Create the synthetic self-owned English MVP series only when absent."
 
+    @transaction.atomic
     def handle(self, *args: Any, **options: Any) -> None:
         del args, options
-        series, _ = Series.objects.update_or_create(
+        series, created = Series.objects.get_or_create(
             public_id=_stable_id("ser", "harbor_lights"),
             defaults={
                 "title": "Harbor Lights",
@@ -45,36 +47,36 @@ class Command(BaseCommand):
                 "rewarded_ads_enabled": True,
             },
         )
-        season, _ = Season.objects.update_or_create(series=series, number=1, defaults={})
+        if not created:
+            self.stdout.write("Synthetic catalog already exists; preserved all existing content.")
+            return
+
+        season = Season.objects.create(series=series, number=1)
         episodes: list[Episode] = []
         for order in range(1, 7):
-            episode, _ = Episode.objects.update_or_create(
+            episode = Episode.objects.create(
                 public_id=_stable_id("ep", f"harbor_lights-e{order}"),
-                defaults={
-                    "series": series,
-                    "season": season,
-                    "order": order,
-                    "title": f"Harbor Lights · Episode {order}",
-                    "synopsis": "Synthetic episode synopsis.",
-                    "duration_seconds": 90,
-                    "publication_status": PublicationStatus.DRAFT,
-                },
+                series=series,
+                season=season,
+                order=order,
+                title=f"Harbor Lights · Episode {order}",
+                synopsis="Synthetic episode synopsis.",
+                duration_seconds=90,
+                publication_status=PublicationStatus.DRAFT,
             )
-            asset = MediaAsset.objects.filter(episode=episode, state=MediaAssetState.READY).first()
-            if asset is None:
-                asset = MediaAsset(
-                    episode=episode,
-                )
-            asset.checksum = hashlib.sha256(
-                f"synthetic-seed:harbor_lights-e{order}".encode()
-            ).hexdigest()
-            asset.provider_name = "fake"
-            asset.provider_asset_id = _stable_id("asset", f"harbor_lights-e{order}")
-            asset.state = MediaAssetState.READY
-            asset.has_captions = True
-            asset.thumbnail_count = 1
-            asset.duration_seconds = 90.0
-            asset.renditions = ["360p", "540p", "720p"]
+            asset = MediaAsset(
+                episode=episode,
+                checksum=hashlib.sha256(
+                    f"synthetic-seed:harbor_lights-e{order}".encode()
+                ).hexdigest(),
+                provider_name="fake",
+                provider_asset_id=_stable_id("asset", f"harbor_lights-e{order}"),
+                state=MediaAssetState.READY,
+                has_captions=True,
+                thumbnail_count=1,
+                duration_seconds=90.0,
+                renditions=["360p", "540p", "720p"],
+            )
             asset.full_clean()
             asset.save()
             episodes.append(episode)
