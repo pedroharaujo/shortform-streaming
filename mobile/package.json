@@ -18,7 +18,7 @@
     "@react-native-firebase/app": "26.3.3",
     "@react-native-firebase/app-check": "26.3.3",
     "@react-native-firebase/auth": "26.3.3",
-    "@react-native-google-signin/google-signin": "^16.1.4",
+    "@react-native-google-signin/google-signin": "^16.1.5",
     "@shortform/api-client": "workspace:*",
     "expo": "57.0.21",
     "expo-constants": "~57.0.17",
