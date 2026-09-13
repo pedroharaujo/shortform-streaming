@@ -4,6 +4,8 @@
  */
 
 import { getSessionCredential } from '../auth/session';
+import { createAuthenticatedFetch } from '../auth/authenticatedFetch';
+import type { NativeSessionUser } from '../auth/sessionLifecycle';
 import { createAppCheckFetch } from '../appCheck/appCheckFetch';
 import { getNativeAppCheckToken } from '../appCheck/nativeAppCheck';
 import { getApiConfiguration, getAppCheckConfiguration } from '../config/appConfiguration';
@@ -29,10 +31,34 @@ import type { WalletClient } from './wallet/types';
 
 function appApiOptions() {
   const appCheck = getAppCheckConfiguration();
+  const getAppCheckToken = appCheck.mode === 'enforce' ? getNativeAppCheckToken : undefined;
+  let fetchImplementation: typeof fetch;
+  // eslint-disable-next-line no-restricted-syntax -- native Firebase stays outside Jest's module graph
+  if (typeof process.env.JEST_WORKER_ID === 'string') {
+    fetchImplementation =
+      getAppCheckToken === undefined
+        ? globalThis.fetch
+        : createAppCheckFetch(getAppCheckToken, globalThis.fetch);
+  } else {
+    let getCurrentUser: () => NativeSessionUser | null;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- native Firebase runtime only
+      const native = require('../auth/nativeSessionLifecycle') as {
+        getCurrentNativeSessionUser: () => NativeSessionUser | null;
+      };
+      getCurrentUser = native.getCurrentNativeSessionUser;
+    } catch {
+      getCurrentUser = () => null;
+    }
+    fetchImplementation = createAuthenticatedFetch({
+      getCurrentUser,
+      getAppCheckToken,
+      fetchImplementation: globalThis.fetch,
+    });
+  }
   return {
     baseUrl: getApiConfiguration().baseUrl,
-    fetchImplementation:
-      appCheck.mode === 'enforce' ? createAppCheckFetch(getNativeAppCheckToken) : globalThis.fetch,
+    fetchImplementation,
   };
 }
 

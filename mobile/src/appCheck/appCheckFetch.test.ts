@@ -53,4 +53,26 @@ describe('createAppCheckFetch', () => {
     );
     expect(performRequest).not.toHaveBeenCalled();
   });
+
+  it('preserves RequestInit header replacement without restoring Request authorization', async () => {
+    const performRequest = jest.fn<Promise<Response>, [RequestInfo | URL, RequestInit?]>(
+      async () => new Response(null, { status: 204 }),
+    );
+    const fetchWithAppCheck = createAppCheckFetch(
+      async () => 'synthetic.app-check-token',
+      performRequest as unknown as typeof fetch,
+    );
+    await fetchWithAppCheck(
+      new Request('https://api.example.test/v1/catalog/home', {
+        headers: { Authorization: 'Bearer stale-token' },
+      }),
+      { headers: { 'X-Probe': 'replacement' } },
+    );
+    const request = performRequest.mock.calls[0]?.[0];
+    expect(request).toBeInstanceOf(Request);
+    if (!(request instanceof Request)) throw new Error('Expected Request.');
+    expect(request.headers.get('Authorization')).toBeNull();
+    expect(request.headers.get('X-Probe')).toBe('replacement');
+    expect(request.headers.get('X-Firebase-AppCheck')).toBe('synthetic.app-check-token');
+  });
 });

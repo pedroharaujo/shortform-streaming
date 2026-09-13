@@ -75,6 +75,54 @@ rebuild steps in [mobile/README.md](../../mobile/README.md#missing-expo-manifest
 
 ## Finish genuine test checkout
 
+### Google sign-in and account restart
+
+Use the existing non-production Firebase project and Android app. The app's
+private `google-services.json` must contain a web OAuth client (type 3), the
+matching Android OAuth client and the installed development certificate. Enable
+Google in Firebase Authentication, register that certificate, download the
+updated configuration and rebuild the APK. Keep configuration and account
+details out of Git and public screenshots. See [mobile identity setup](../../mobile/README.md#identity).
+
+The 2026-09-13 test-project setup now has Google enabled and the development
+certificate registered. The matching private configuration was downloaded,
+verified, rebuilt and installed without clearing app data. The emulator has no
+Google account yet. Its Google button now reaches the native Google account-entry
+screen, and cancelling returns to the app without an error. Completing sign-in
+still requires a test account. These test settings do not approve a public support contact or production
+identity configuration.
+
+Issue #171 adds restoration of the persisted native account at startup and
+refreshes expired tokens before authenticated API requests. Initial auth waits
+are bounded; failure allows anonymous browsing. Restoration does not enable
+analytics consent. Sign-out and account changes prevent an old request from
+using a new account's credentials, including while app verification is pending.
+Repeated device sign-out succeeds only after native cleanup or Firebase's exact
+already-empty result; real cleanup failures keep their retry path.
+
+To validate, sign in with a generated local account and open its wallet. Close and
+reopen the app, open Account and Coin wallet, and confirm the same account is
+available without another login. Sign out, reopen and confirm protected screens
+require sign-in while the catalog remains browsable. Do not treat an app reload
+alone as evidence of OS process termination, token expiry or genuine
+Google-provider behavior.
+
+On 2026-09-13, a generated local account signed in, opened Account and a zero-coin
+wallet, and regained those screens without another login after a development
+reload. Signing out cleared the protected wallet; anonymous Account after reload
+offered sign-in without the former false device-cleanup error. These observations
+use the Auth emulator. OS process termination and real-provider token expiry
+remain unchecked in [final validation](final-validation.md).
+
+Generated media also passed Android progress/resume: native controls paused the
+second 12-second test episode at seven seconds, Close persisted position 7, and
+reopening showed the baked-in timecode at 8.542 seconds only 4.47 seconds after
+pressing Play. This demonstrates resuming rather than starting at zero. Earlier
+account playback saved progress as well; the resume observation used the
+anonymous device session. No database checkpoint was manually overwritten.
+
+### Store checkout prerequisites
+
 Engineering has connected the native adapter, coin screen, server verification,
 known-result recovery and return to the locked episode. Server balances and fresh
 playback authorization remain authoritative. An interruption before the native

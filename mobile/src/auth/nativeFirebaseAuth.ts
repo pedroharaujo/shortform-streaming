@@ -60,7 +60,7 @@ function isAttachedToExpectedAuthEmulator(): boolean {
   return origin === localAuthEmulatorOrigin();
 }
 
-function attachLocalAuthEmulator(): void {
+export function attachLocalAuthEmulator(): void {
   if (emulatorAttached || isAttachedToExpectedAuthEmulator()) {
     emulatorAttached = true;
     return;
@@ -140,10 +140,13 @@ async function sessionFromCurrentUser(accountEvent?: AuthAccountEvent): Promise<
   if (user === null) {
     return { outcome: 'error', message: 'Sign-in did not produce a session.' };
   }
-  const credential = await user.getIdToken();
+  const token = await user.getIdTokenResult();
+  if (token.claims.sub !== user.uid || getAuth().currentUser?.uid !== user.uid) {
+    return { outcome: 'error', message: 'Sign-in did not produce a session.' };
+  }
   return {
     outcome: 'ok',
-    session: { credential },
+    session: { credential: token.token, nativeUid: user.uid },
     ...(accountEvent === undefined ? {} : { accountEvent }),
   };
 }
@@ -222,7 +225,15 @@ export function createNativeFirebaseAuth(): AppAuth {
     },
     async signOut(): Promise<void> {
       try {
-        await nativeSignOut(getAuth());
+        try {
+          await nativeSignOut(getAuth());
+        } catch (error) {
+          if (
+            nativeAuthErrorCode(error) !== 'auth/no-current-user' ||
+            getAuth().currentUser !== null
+          )
+            throw error;
+        }
       } finally {
         try {
           await GoogleSignin.signOut();
@@ -285,12 +296,12 @@ export function createNativeFirebaseAuth(): AppAuth {
         if (verified.user.uid !== user.uid || getAuth().currentUser?.uid !== user.uid) {
           return mismatch;
         }
-        const token = await verified.user.getIdToken(true);
-        if (getAuth().currentUser?.uid !== user.uid) {
+        const token = await verified.user.getIdTokenResult(true);
+        if (token.claims.sub !== user.uid || getAuth().currentUser?.uid !== user.uid) {
           return mismatch;
         }
-        currentCredential = token;
-        return { outcome: 'ok', session: { credential: token } };
+        currentCredential = token.token;
+        return { outcome: 'ok', session: { credential: token.token, nativeUid: user.uid } };
       } catch (error: unknown) {
         if (isErrorWithCode(error) && error.code === statusCodes.SIGN_IN_CANCELLED) {
           return { outcome: 'cancelled' };

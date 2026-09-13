@@ -12,6 +12,8 @@
 
 export interface AuthUserSession {
   readonly credential: string;
+  /** Ephemeral native Firebase owner binding. Local/Jest sessions may omit it. */
+  readonly nativeUid?: string;
 }
 
 export type AuthAccountEvent = 'sign_up' | 'login';

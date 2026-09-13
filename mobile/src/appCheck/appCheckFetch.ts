@@ -31,8 +31,7 @@ export function createAppCheckFetch(
 
     const inputRequest =
       typeof Request !== 'undefined' && input instanceof Request ? input : undefined;
-    const headers = new Headers(inputRequest?.headers);
-    new Headers(init?.headers).forEach((value, name) => headers.set(name, value));
+    const headers = new Headers(init?.headers ?? inputRequest?.headers);
     headers.set(APP_CHECK_HEADER, token);
 
     if (inputRequest !== undefined) {
