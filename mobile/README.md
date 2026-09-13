@@ -96,6 +96,29 @@ The seeded catalog contains one synthetic self-owned series. Staff upload master
 through Django Admin; the ingestion workflow submits them to the selected provider,
 tracks readiness, and performs provider takedown.
 
+### Missing Expo manifest settings on startup
+
+If startup reports `Expo manifest is missing extra.analytics.enabled` (or
+`extra.appCheck.mode`), the installed Android build predates those settings.
+Restarting Metro only refreshes JavaScript; this debug app reads its embedded
+Expo configuration. Stop the current Metro process, then regenerate and reinstall
+the native build from the repository root, with the emulator running and private
+local configuration in place:
+
+```shell
+pnpm --filter @shortform/mobile exec expo prebuild --platform android --no-install
+pnpm mobile:android
+```
+
+The Android command starts Metro. Rebuilding preserves app data; do not clear storage or
+replace missing configuration with permissive defaults. The committed
+`expo-build-properties` plugin selects Kotlin 2.3.20 because Google Mobile Ads
+25.4 includes Kotlin 2.3 metadata. `plugins/withKotlinCompiler.js` connects the
+generated root compiler dependency to that same version property; Expo 57's
+template otherwise inherits React Native's older compiler. Keep these settings
+in the Expo configuration, since prebuild regenerates the ignored native Android
+directory.
+
 ## Checks
 
 ```shell

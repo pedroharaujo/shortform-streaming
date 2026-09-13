@@ -59,13 +59,16 @@ reachable by the Android emulator:
 
 ```powershell
 $env:NODE_OPTIONS='--dns-result-order=ipv4first'
-node ../node_modules/expo/bin/cli start --dev-client --localhost --port 8081
+node ../node_modules/expo/bin/cli start --dev-client --localhost --port 8081 --max-workers 2
 ```
 
 Open Shortform normally in the emulator. The installed debug APK used in the
 2026-09-13 check used port 8081; passing a different port in a development-client
 deep link did not redirect it. Confirm `http://127.0.0.1:8081/status` responds
 before troubleshooting the app's backend connection.
+Two Metro workers also leave memory available for the emulator during native
+builds. If startup reports missing Expo manifest settings, follow the native
+rebuild steps in [mobile/README.md](../../mobile/README.md#missing-expo-manifest-settings-on-startup).
 
 ## Finish genuine test checkout
 
@@ -119,3 +122,14 @@ Metro bundled 1,700 modules and reported one connected native debugger target.
 The backend, Auth emulator and Metro were left running for the next check.
 No visual catalog inspection, Google sign-in or video-playback proof is claimed
 by this application-start observation.
+
+The founder then reported a render failure: the installed August 31 APK lacked
+`extra.analytics.enabled`; it also lacked `extra.appCheck.mode`. A native rebuild
+was necessary. The rebuild exposed a compiler mismatch with Google Mobile Ads
+25.4. The committed Expo configuration now selects Kotlin 2.3.20 and applies the
+same version to the root compiler dependency. The Android x86_64 debug build
+passed and was installed on the Pixel 9 emulator without clearing app data.
+The packaged configuration contains both settings. After restarting Metro with
+two workers, a cold launch rendered `home-screen`, `home-empty` and `home-sign-in`
+in the Android UI hierarchy, with neither missing-setting error present. This
+verifies home-screen rendering; the viewing and purchase checklist remains open.
