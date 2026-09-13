@@ -265,6 +265,25 @@ Initial paid-test activation also requires one approved audience, approximately 
 - **Blocks:** P5-T05/P6-T03 and production App Check enforcement. This deferral is
   permitted only while enforcement and public production activation remain off.
 
+### P3-T04 — Sandbox purchase notifications while the app is closed
+
+- **Status:** Unchecked genuine-provider validation, D-029; issue #169. Automated
+  financial, authentication and privacy checks are immediate merge requirements.
+- **Setup:** Follow [sandbox notification setup](revenuecat-sandbox.md#sandbox-notifications-while-the-app-is-closed).
+  Requires the isolated RevenueCat/Play app, license tester, approved callback
+  route, configured Authorization/HMAC and explicit local sandbox webhook flag.
+- **Actions:** Verify ignored TEST, genuine purchase with app closed, duplicate
+  delivery plus simultaneous client sync, provider-read outage/retry, signed
+  refund before/after purchase and later replay of the original purchase event.
+- **Expected:** Exactly one verified credit per transaction; no credit from
+  TEST/forgery/wrong scope/owner/client success. Positive provider failures retry
+  through HTTP 503. Signed refunds establish or preserve review immediately;
+  no unapproved debit or entitlement mutation. Refresh wallet independently.
+- **Evidence:** Engineering records build/device and normalized outcomes only.
+  Real provider payloads, credentials, personal data and order IDs stay private.
+- **Blocks:** Genuine lifecycle acceptance and callback enablement. Production
+  remains forbidden; this does not resolve an unknown local checkout marker.
+
 ### P3-T04/P3-T06 — Known transaction RevenueCat reconciliation
 
 - **State:** genuine provider/device evidence remains deferred under D-029; this

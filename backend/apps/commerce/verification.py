@@ -87,7 +87,10 @@ class Event:
         return digest([self.transaction_key, self.product_id, self.owner, self.purchased_at_ms])
 
 
-def normalize(raw: bytes) -> Event:
+def callback_fields(raw: bytes) -> dict[str, Any]:
+    """Parse transient bounded fields; callers must not persist or log this object."""
+    if len(raw) > MAX_BODY:
+        raise InvalidCallback
     try:
         body = json.loads(
             raw,
@@ -101,6 +104,11 @@ def normalize(raw: bytes) -> Event:
     event = body.get("event")
     if not isinstance(event, dict):
         raise InvalidCallback
+    return event
+
+
+def normalize(raw: bytes) -> Event:
+    event = callback_fields(raw)
     for field in (
         "id",
         "app_id",

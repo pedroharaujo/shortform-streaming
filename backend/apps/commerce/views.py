@@ -11,6 +11,7 @@ from apps.accounts.authentication import FirebaseAuthenticationFailed, FirebaseI
 from apps.accounts.models import UserProfile
 from apps.accounts.views import ERROR_401
 from apps.commerce.configuration import reconciliation_enabled
+from apps.commerce.notifications import process_notification
 from apps.commerce.reads import purchase_catalog, purchase_history, purchase_status
 from apps.commerce.reconciliation import recover_purchase, synchronize_purchase
 from apps.commerce.serializers import (
@@ -257,7 +258,11 @@ class PurchaseCallbackView(APIView):
 
     @extend_schema(exclude=True)
     def post(self, request: Request) -> Response:
-        if not settings.DEBUG or settings.COIN_PURCHASE_MODE != "test":
+        sandbox = (
+            reconciliation_enabled()
+            and getattr(settings, "REVENUECAT_SANDBOX_WEBHOOK_ENABLED", False) is True
+        )
+        if not settings.DEBUG or (settings.COIN_PURCHASE_MODE != "test" and not sandbox):
             raise PurchaseUnavailable()
         # Read bounded exact bytes; neither DRF JSON parsing nor user authentication applies.
         raw = request.read(MAX_BODY + 1)
@@ -267,10 +272,13 @@ class PurchaseCallbackView(APIView):
                 request.headers.get("Authorization", ""),
                 request.headers.get("X-RevenueCat-Webhook-Signature", ""),
             )
-            event = normalize(raw)
+            receipt = process_notification(raw) if sandbox else fulfill(normalize(raw))
         except InvalidCallback:
             raise AuthenticationFailed("Callback verification failed.") from None
-        receipt = fulfill(event)
+        if receipt is None:
+            response = Response({"status": "ignored"})
+            response["Cache-Control"] = "no-store"
+            return response
         response = Response(
             PurchaseReceiptSerializer(
                 {
