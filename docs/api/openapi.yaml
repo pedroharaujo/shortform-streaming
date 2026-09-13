@@ -569,10 +569,11 @@ paths:
   /v1/purchases/catalog:
     post:
       operationId: v1_purchases_catalog_create
-      description: Local synthetic mode only. Quantities come from the server registry.
-        Native checkout must independently match store offerings and display the exact
-        store-localized monetary price. No price or purchase grant is supplied here.
-      summary: Read server-approved synthetic Android consumables
+      description: Local test or RevenueCat sandbox mode only. Quantities come from
+        the server registry. Native checkout must independently match store offerings
+        and display the exact store-localized monetary price. No price or purchase
+        grant is supplied here.
+      summary: Read server-approved Android test consumables
       tags:
       - commerce
       requestBody:
@@ -613,14 +614,14 @@ paths:
   /v1/purchases/history:
     get:
       operationId: v1_purchases_history_retrieve
-      description: Local synthetic mode only. Returns at most 20 owned credited decisions,
-        newest recorded time then support-reference UUID first, with has_more for
-        older records. Accepts no query fields. No wallet or purchase identity is
-        created. Historical credit survives registry changes and is not the current
-        spendable balance, final refund settlement, entitlement or playback authorization.
-        Any quarantined delivery keeps a credit in review, including after a successful
-        retry. Empty history does not prove a purchase failed or make repurchasing
-        safe. Refresh wallet separately.
+      description: Local test or RevenueCat sandbox mode only. Returns at most 20
+        owned credits, newest recorded time then support-reference UUID first, with
+        has_more for older records. Accepts no query fields. No wallet or purchase
+        identity is created. Historical credit survives registry changes and is not
+        the current spendable balance, final refund settlement, entitlement or playback
+        authorization. Any quarantined delivery keeps a credit in review, including
+        after a successful retry. Empty history does not prove a purchase failed or
+        make repurchasing safe. Refresh wallet separately.
       summary: Read the current account's latest verified purchase credits
       tags:
       - commerce
@@ -656,8 +657,8 @@ paths:
   /v1/purchases/identity:
     post:
       operationId: v1_purchases_identity_create
-      description: Synthetic local mode only. The server permanently binds the identity
-        to an opaque wallet. No client identity or coin amount is accepted.
+      description: Local test or RevenueCat sandbox mode only. The server binds the
+        identity to an opaque wallet. No client identity or coin amount is accepted.
       summary: Obtain the authenticated account's opaque purchase identity
       tags:
       - commerce
@@ -693,7 +694,7 @@ paths:
   /v1/purchases/status:
     post:
       operationId: v1_purchases_status_create
-      description: Local synthetic mode only. Read-only lookup; client success never
+      description: Local test or RevenueCat sandbox mode only. Read-only lookup never
         credits coins. Unknown, foreign, mismatched and unattributed transactions
         all await verification. That result does not prove cancellation or make repurchasing
         safe. Historical credit is not the current balance, final refund settlement,
@@ -738,6 +739,61 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Coin purchases or the requested catalog are unavailable.
+  /v1/purchases/sync:
+    post:
+      operationId: v1_purchases_sync_create
+      description: Explicit local RevenueCat sandbox mode only. Uses the current account's
+        existing server purchase identity and trusted provider facts; client success
+        never grants coins. May create one verified credit or retain refund review.
+        Unknown, foreign and unverifiable purchases remain indistinguishable. Awaiting
+        verification does not prove cancellation or make repurchasing safe. This cannot
+        recover an unknown transaction after process loss. Returns historical credit,
+        not current balance or playback access. Refresh those separately. Six requests
+        per minute per account; send transaction identifiers only in the JSON body.
+      summary: Verify a known Google Play sandbox purchase with RevenueCat
+      tags:
+      - commerce
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseStatusRequestRequest'
+        required: true
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseStatus'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Invalid or unexpected purchase lookup fields.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Coin purchases or the requested catalog are unavailable.
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Purchase verification rate limit exceeded.
   /v1/rewards/{reward_id}:
     get:
       operationId: v1_rewards_retrieve
@@ -1591,7 +1647,7 @@ components:
           type: string
           minLength: 1
           maxLength: 128
-          pattern: ^test\.synthetic\.[A-Za-z0-9_.:/-]*$
+          pattern: ^[A-Za-z0-9_.:/-]+$
       required:
       - application_id
     PurchaseHistory:
@@ -1692,17 +1748,17 @@ components:
           type: string
           minLength: 1
           maxLength: 128
-          pattern: ^test\.synthetic\.[A-Za-z0-9_.:/-]*$
+          pattern: ^[A-Za-z0-9_.:/-]+$
         product_id:
           type: string
           minLength: 1
           maxLength: 128
-          pattern: ^synthetic_[A-Za-z0-9_.:/-]*$
+          pattern: ^[A-Za-z0-9_.:/-]+$
         transaction_id:
           type: string
           minLength: 1
-          description: Store transaction identifier; owner-scoped lookup only, never
-            retained.
+          description: Store transaction identifier; sent in the body, never persisted
+            by the backend.
           maxLength: 200
           pattern: ^[A-Za-z0-9_.:$/-]+$
       required:

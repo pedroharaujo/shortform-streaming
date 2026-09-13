@@ -40,11 +40,19 @@ INSTALLED_APPS = [
 ]
 
 COIN_PURCHASE_MODE = os.environ.get("COIN_PURCHASE_MODE", "disabled").strip()
-if COIN_PURCHASE_MODE not in {"disabled", "test"}:
-    raise ImproperlyConfigured("COIN_PURCHASE_MODE must be disabled or test.")
+if COIN_PURCHASE_MODE not in {"disabled", "test", "revenuecat_sandbox"}:
+    raise ImproperlyConfigured("COIN_PURCHASE_MODE must be disabled, test or revenuecat_sandbox.")
 COIN_PURCHASE_AUTHORIZATION = os.environ.get("COIN_PURCHASE_AUTHORIZATION", "")
 COIN_PURCHASE_SIGNING_SECRET = os.environ.get("COIN_PURCHASE_SIGNING_SECRET", "")
 COIN_PURCHASE_PRODUCTS = parse_registry(os.environ.get("COIN_PURCHASE_PRODUCTS", "[]"))
+REVENUECAT_PROJECT_ID = os.environ.get("REVENUECAT_PROJECT_ID", "")
+REVENUECAT_API_KEY = os.environ.get("REVENUECAT_API_KEY", "")
+if COIN_PURCHASE_MODE == "revenuecat_sandbox":
+    load_products(COIN_PURCHASE_PRODUCTS, mode=COIN_PURCHASE_MODE)
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", REVENUECAT_PROJECT_ID) or not re.fullmatch(
+        r"[A-Za-z0-9_-]{32,256}", REVENUECAT_API_KEY
+    ):
+        raise ImproperlyConfigured("RevenueCat server project and API key must be configured.")
 if COIN_PURCHASE_MODE == "test":
     load_products(COIN_PURCHASE_PRODUCTS)
     if not all(

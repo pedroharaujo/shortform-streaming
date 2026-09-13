@@ -50,6 +50,7 @@ AI agents start at the root `AGENTS.md`. Operating notes are in
 - `runbooks/access-policy.md` — per-episode editorial modes, inherited series defaults, policy versions, Admin history, shared grant locks, and the remaining wallet work.
 - `runbooks/coin-wallet.md` — persistent balances, atomic synthetic coin unlocks, immutable accounting, account deletion and disabled production boundary (P3-T02).
 - `runbooks/synthetic-purchases.md` — authenticated generated purchase events, once-only wallet funding, immutable app/transaction binding, quarantine and remaining native/provider gates (#142 / P3-T03/T04).
+- `runbooks/revenuecat-sandbox.md` — server verification of a known Google Play tester transaction, private configuration, once-only credit, and remaining native recovery gates (P3-T04/T06 / #164).
 - `runbooks/catalog-launch-context.md` — server launch settings, distribution and language scope, conservative licensed-right reapproval, publication/ingestion safeguards and migration evidence (P2-T03-F3).
 - `runbooks/account-lifecycle.md` — account preferences, recent-auth deletion, provider retries, and privacy-safe rollback (P2-T02).
 - `runbooks/rewarded-ads.md` — test-only reward intents, authentic SSV, consent, grant/deletion safety, production gates and validation evidence (P3-T07).
