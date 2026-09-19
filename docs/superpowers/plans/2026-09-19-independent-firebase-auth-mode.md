@@ -392,9 +392,9 @@ git diff --check
 
 The focused suites in prior steps give RED/GREEN evidence; the full mobile suite protects the existing session/auth behavior. Contract/repository checks remain required even though no API change is intended. Any generated contract diff is unexpected and must be investigated, not bundled casually. Apply formatting only to changed files. No unrelated backend test expansion is required for this mobile-only change.
 
-- [ ] **Step 8: Build the x86_64 development APK and prove the native boundary on Android.** The earlier baseline ARM64 registration AAB attempt produced no artifact and is stopped. Build the development APK from the updated code; the store-registration AAB follows separately with purchases, ads, analytics and App Check disabled. Use the existing local JDK/build wrapper and known private google-services configuration, with purchases/ads/analytics/App Check at their existing disabled settings while validating auth. Build with one Gradle worker and the known low-memory limits; do not run the emulator or Docker concurrently with resource-heavy compilation. The concrete native build target is `:app:assembleDebug -PreactNativeArchitectures=x86_64 --max-workers=1 --no-parallel`. Use `scripts/android_jdk.py` to select the existing JDK rather than overriding system configuration. Preserve the EXISTING debug signing certificate; verify the resulting certificate matches the installed development APK before installing it as an update without clearing application data. Do not use the private release Gradle home `C:/g` or its injected upload-signing properties for this debug build: the registration AAB intentionally has a different private upload certificate. The ignored `.tmp/build_checkout_android.py` helper and normal debug caches may be reused only after inspecting their current configuration for the existing debug signing/build behavior.
+- [x] **Step 8: Build the x86_64 development APK and prove the native boundary on Android.** Build the development APK from the updated code; the store-registration AAB is separate, with purchases, ads, analytics and App Check disabled. Use the existing local JDK/build wrapper and known private google-services configuration, with purchases/ads/analytics/App Check at their existing disabled settings while validating auth. Build with one Gradle worker and the known low-memory limits; do not run the emulator or Docker concurrently with resource-heavy compilation. The concrete native build target is `:app:assembleDebug -PreactNativeArchitectures=x86_64 --max-workers=1 --no-parallel`. Use `scripts/android_jdk.py` to select the existing JDK rather than overriding system configuration. Preserve the EXISTING debug signing certificate; verify the resulting certificate matches the installed development APK before installing it as an update without clearing application data. Do not use the private release Gradle home `C:/g` or its injected upload-signing properties for this debug build: the registration AAB intentionally has a different private upload certificate. The ignored `.tmp/build_checkout_android.py` helper and normal debug caches may be reused only after inspecting their current configuration for the existing debug signing/build behavior.
 
-Required device observations (all pending):
+Required device procedure (completed observations recorded below):
 
 1. Build and install the emulator-mode APK with the existing debug certificate and without clearing app data. In a fresh process, let the app claim its installed mode and verify account entry/generated-account behavior; repeated calls must not reconnect or reset the account. Record the process ID without account/provider data.
 2. In React Native DevTools, set a breakpoint on the first statement of `attachLocalAuthEmulator`. Perform a full JavaScript reload and confirm the OS process ID is unchanged. At the **first post-reload invocation**, before the application claims again, evaluate these native-only calls in order:
@@ -420,14 +420,14 @@ The native reload check does not prove process death, a changed installed manife
 
 No new debug UI, secret-bearing logs or screenshots are needed. If tools cannot perform a required native check, record the actual blocker; this auth boundary is not eligible for a fictional pass or silent deferral. Respect any existing approval-review rejection rather than retrying the denied OS action through another route.
 
-- [ ] **Step 9: Review, commit and PR.** Independently review auth safety and conformance after implementation: mode guard precedes SDK reads and all cached returns; missing/malformed manifests differ; both native transitions reject; no branch of sign-in or restore bypasses the boundary; no credential/purchase gate changes. Fix findings and rerun only affected checks. Commit only this task's code/tests/docs, reference `Closes #175` and D-036 in one PR, attach it to the task, and apply the founder's existing conditional review/merge authorization only when required checks and real native guard evidence pass. Preserve honest unchecked provider/device outcomes in #164.
+- [x] **Step 9: Review, commit and PR.** Independently review auth safety and conformance after implementation: mode guard precedes SDK reads and all cached returns; missing/malformed manifests differ; both native transitions reject; no branch of sign-in or restore bypasses the boundary; no credential/purchase gate changes. Fix findings and rerun only affected checks. Commit only this task's code/tests/docs, reference `Closes #175` and D-036 in one PR, attach it to the task, and apply the founder's existing conditional review/merge authorization only when required checks and real native guard evidence pass. Preserve honest unchecked provider/device outcomes in #164.
 
 ## Implementation verification (2026-09-19)
 
 - Configuration RED: all 19 new cases failed because the reader/resolver was absent. Malformed-manifest assertions require `EnvironmentConfigurationError`, avoiding false positives from a missing function. GREEN: all 33 configuration tests passed.
 - Native boundary RED: all 9 new cases failed because the mode guard was absent. GREEN: all 21 adapter tests passed, including both rejected modes before SDK access, old-APK rejection, cached-return ordering and attach-failure propagation.
 - `pnpm mobile:config:check` passed with local cloud Auth plus sandbox checkout and the nonlocal/malformed-mode rejection matrix.
-- Native compilation, native process lifetime, genuine Google login and authenticated wallet observations remain pending in Step 8. Mocked adapter tests are not native device evidence.
+- Native compilation and Step 8 observations were pending during the initial unit-test pass; their completed evidence is recorded below. Mocked adapter tests are not native device evidence.
 - P2 documentation correction: auth mode is embedded in `assets/app.config`; changing it requires rebuild/install. Step 8 now probes the retained native latch at the first post-reload breakpoint under the same OS process ID, then repeats with the opposite-mode APK. No device outcome is newly claimed.
 
 Exact local commands and final outcomes:
@@ -464,7 +464,49 @@ updated dependency tree, the following commands ran sequentially and passed:
 - `git diff --check`
 
 No source/dependency changes were made during this verification pass. Native
-compilation and all Step 8 device/provider observations remain pending.
+compilation and Step 8 observations followed separately below.
+
+### Native and genuine Google verification (2026-09-19)
+
+The tested application source and dependencies are revision `7d9eeed`; subsequent
+plan updates only record these results.
+
+- Both x86_64 debug APKs compiled using the normal debug Gradle home and one
+  worker. Archive inspection confirmed the expected embedded auth mode, native
+  guard, package and BILLING permission, disabled optional features, and the
+  same debug signing certificate as the preserved baseline. Each installed with
+  `adb install -r` without clearing app data. The founder opened each updated app.
+- The separately signed ARM64 registration AAB also compiled. Its release
+  signature, nondebuggable manifest, disabled optional features, archive secret
+  scan and at least 16 KiB ELF LOAD alignment passed. It is not an x86_64 device
+  artifact or evidence of a Play upload/purchase.
+- Emulator mode started cleanly. A fresh generated test account signed in,
+  loaded Account and the server's Coin wallet, survived a full JavaScript reload,
+  and signed out successfully.
+- In emulator mode, before the first application claim after a full JavaScript
+  reload, native `claimFirebaseAuthMode('cloud')` returned `false` and
+  `claimFirebaseAuthMode('emulator')` returned `true`. `adb shell pidof
+  com.shortformstreaming.app` confirmed the same Android process before/after.
+- In cloud mode, the corresponding first-call observation returned `false` for
+  emulator and `true` for cloud, also with an unchanged Android process.
+- Source-map breakpoint binding missed early startup on one attempt. A temporary
+  first-statement `debugger` line therefore supplied an unambiguous pause before
+  the application reclaimed its mode. It was removed after each check; a clean
+  `git diff --exit-code -- mobile/src/auth/nativeFirebaseAuth.ts` and a full reload
+  restored the exact committed source before normal account tests. No credential
+  exchange, account-data inspection or SDK reconfiguration ran in the debugger.
+- With the private backend using Firebase Admin verification and no Auth
+  emulator host, the founder completed genuine Google sign-in. Account and Coin
+  wallet loaded successfully. After another full JavaScript reload, both loaded
+  again without requesting sign-in. Purchases, rewarded ads and sandbox webhooks
+  remained disabled.
+- Independent implementation/dependency review found no remaining code blockers;
+  the embedded-configuration documentation finding was fixed before these builds.
+  PR #176 records the required CI results and final merge status.
+
+These results complete this auth-mode follow-up. Genuine Play purchase/credit,
+refunds, full reinstall, second-device behavior and OS process-death validation
+remain separate unchecked journey items in #164. No launch-readiness claim is made.
 
 ## Plan self-review
 
@@ -472,4 +514,4 @@ compilation and all Step 8 device/provider observations remain pending.
 - All code lives at existing configuration/auth/native-module boundaries; no new dependency or subsystem.
 - New SDK evidence corrects the earlier JS-only assumption. The native process latch requires a new development APK.
 - Test layers are config parsing/wiring, JS-to-native boundary and actual native process lifetime; no duplicate client/screen/smoke suite.
-- Implementation is scoped to issue #175. Native build/device checks and independent review remain explicit gates before commit/PR completion.
+- Implementation is scoped to issue #175. Native build/device checks and independent review passed; unrelated provider journey checks remain tracked in #164.
