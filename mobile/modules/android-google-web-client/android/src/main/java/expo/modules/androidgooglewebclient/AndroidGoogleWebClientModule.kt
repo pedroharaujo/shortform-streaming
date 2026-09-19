@@ -9,8 +9,26 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * Jest never loads this native module.
  */
 class AndroidGoogleWebClientModule : Module() {
+  companion object {
+    // A JS reload replaces Expo module instances, but cannot change this process-wide claim.
+    private var processAuthMode: String? = null
+
+    @Synchronized
+    private fun claimAuthMode(mode: String): Boolean {
+      if (mode != "emulator" && mode != "cloud") return false
+      val existing = processAuthMode
+      if (existing != null) return existing == mode
+      processAuthMode = mode
+      return true
+    }
+  }
+
   override fun definition() = ModuleDefinition {
     Name("AndroidGoogleWebClient")
+
+    Function("claimFirebaseAuthMode") { mode: String ->
+      claimAuthMode(mode)
+    }
 
     Function("getDefaultWebClientId") {
       val context = appContext.reactContext ?: return@Function null

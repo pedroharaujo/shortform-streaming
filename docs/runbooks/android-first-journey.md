@@ -84,6 +84,64 @@ Google in Firebase Authentication, register that certificate, download the
 updated configuration and rebuild the APK. Keep configuration and account
 details out of Git and public screenshots. See [mobile identity setup](../../mobile/README.md#identity).
 
+Issue #175 keeps Firebase Auth independent from the API location so genuine Google
+login can use the local backend alongside separately gated Play sandbox checkout.
+Engineering uses one of these setups, keeping all other feature flags unchanged.
+For generated local accounts, run the Auth emulator for the same test project:
+
+```dotenv
+# mobile/.env: generated local accounts, historical default
+EXPO_PUBLIC_API_ENVIRONMENT=local
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000
+EXPO_PUBLIC_FIREBASE_AUTH_MODE=emulator
+
+# Backend .env for the generated-account Auth emulator
+FIREBASE_AUTH_MODE=admin
+FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+```
+
+For genuine Firebase Google login:
+
+```dotenv
+# mobile/.env: genuine Google login against the same local API
+EXPO_PUBLIC_API_ENVIRONMENT=local
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000
+EXPO_PUBLIC_FIREBASE_AUTH_MODE=cloud
+
+# Backend .env: same non-production project as google-services.json
+FIREBASE_AUTH_MODE=admin
+FIREBASE_PROJECT_ID=replace-with-test-project-id
+GOOGLE_APPLICATION_CREDENTIALS=C:/private/shortform/firebase-auth-verifier.json
+# FIREBASE_AUTH_EMULATOR_HOST must be absent, including inherited process environment.
+```
+
+The example credential path is fictional. The actual file stays outside the public
+repository and is server-only, separate from the RevenueCat Play credential; never
+put it in `EXPO_PUBLIC_*`. Keep Firebase Admin `check_revoked=True`. A normal gcloud
+application-default login is not sufficient Firebase Auth setup; follow the
+[Firebase setup requirements](https://firebase.google.com/docs/admin/setup#testing_with_gcloud_end_user_credentials).
+A scoped verifier needs `firebaseauth.users.get` for the
+[account lookup](https://docs.cloud.google.com/identity-platform/docs/reference/rest/v1/projects.accounts/lookup).
+Its safe preflight is a generated nonexistent-UID lookup returning `UserNotFoundError`,
+recorded only as category-level evidence. This does not establish completed login,
+authenticated wallet access or genuine token verification.
+
+Rebuild the development APK once for the native process guard and install it with
+the existing debug certificate without clearing app data. Older APKs reject auth
+until rebuilt. When changing either mode, restart Metro to load the configuration
+and start a fresh app process. A full JavaScript reload leaves the native claim
+intact and must reject a conflicting mode before SDK/cache access. Failed auth
+does not clear that claim. Missing old-manifest auth settings retain historical
+defaults; present malformed settings fail. Emulator mode is allowed only with a
+local API; cloud with a local test API does not activate production.
+
+Before closing #175, verify both emulator-to-cloud and cloud-to-emulator reload
+attempts fail with the OS process still alive, then verify fresh-process emulator
+behavior and genuine Google login with Account and Coin wallet. Record sanitized
+outcomes only. Mocked tests do not prove this native process lifetime, and a reload
+does not count as process termination. These observations remain unchecked until
+performed; the acceptance list below remains authoritative.
+
 The 2026-09-13 test-project setup now has Google enabled and the development
 certificate registered. The matching private configuration was downloaded,
 verified, rebuilt and installed without clearing app data. The emulator has no

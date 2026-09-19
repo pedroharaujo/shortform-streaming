@@ -3,9 +3,15 @@ import {
   readAnalyticsEnabled,
   readAppCheckConfiguration,
   readApiConfiguration,
+  readFirebaseAuthConfiguration,
   readPurchaseConfiguration,
 } from './appConfiguration';
-import { resolveApiConfiguration, resolvePurchaseConfiguration } from '../../app.config';
+import {
+  EnvironmentConfigurationError,
+  resolveApiConfiguration,
+  resolveFirebaseAuthConfiguration,
+  resolvePurchaseConfiguration,
+} from '../../app.config';
 
 describe('readApiConfiguration', () => {
   it('reads the configuration frozen into the Expo manifest', () => {
@@ -15,6 +21,55 @@ describe('readApiConfiguration', () => {
       }),
     ).toEqual({ environment: 'local', baseUrl: 'http://10.0.2.2:8000' });
   });
+});
+
+describe('Firebase auth configuration', () => {
+  it.each([
+    ['local', 'emulator'],
+    ['staging', 'cloud'],
+    ['production', 'cloud'],
+  ] as const)('preserves the %s default', (environment, mode) => {
+    expect(resolveFirebaseAuthConfiguration({}, environment)).toEqual({ mode });
+    for (const extra of [undefined, null, {}]) {
+      expect(readFirebaseAuthConfiguration(extra, environment)).toEqual({ mode });
+    }
+  });
+
+  it('allows cloud Auth with the local API', () => {
+    expect(
+      resolveFirebaseAuthConfiguration({ EXPO_PUBLIC_FIREBASE_AUTH_MODE: 'cloud' }, 'local'),
+    ).toEqual({ mode: 'cloud' });
+    expect(readFirebaseAuthConfiguration({ auth: { mode: 'cloud' } }, 'local')).toEqual({
+      mode: 'cloud',
+    });
+  });
+
+  it.each(['staging', 'production'] as const)('rejects emulator Auth in %s', (environment) => {
+    expect(() =>
+      resolveFirebaseAuthConfiguration({ EXPO_PUBLIC_FIREBASE_AUTH_MODE: 'emulator' }, environment),
+    ).toThrow('local');
+    expect(() =>
+      readFirebaseAuthConfiguration({ auth: { mode: 'emulator' } }, environment),
+    ).toThrow('local');
+  });
+
+  it.each(['', 'invalid', 'Cloud', 'cloud ', ' emulator'])(
+    'rejects explicit invalid mode %j',
+    (mode) => {
+      expect(() =>
+        resolveFirebaseAuthConfiguration({ EXPO_PUBLIC_FIREBASE_AUTH_MODE: mode }, 'local'),
+      ).toThrow('EXPO_PUBLIC_FIREBASE_AUTH_MODE');
+    },
+  );
+
+  it.each([undefined, null, [], 'cloud', {}, { mode: null }, { mode: true }, { mode: 'invalid' }])(
+    'rejects a present malformed manifest auth field %j',
+    (auth) => {
+      expect(() => readFirebaseAuthConfiguration({ auth }, 'local')).toThrow(
+        EnvironmentConfigurationError,
+      );
+    },
+  );
 });
 
 it('reads the fail-closed ad and analytics switches frozen into the manifest', () => {
