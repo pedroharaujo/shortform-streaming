@@ -100,16 +100,22 @@ with a generated nonexistent-UID lookup returning `UserNotFoundError`; record on
 the result category, never account or provider data. That preflight does not prove
 genuine Google sign-in or token verification.
 
-Rebuild the Android development APK once to install the native mode guard,
-preserving its existing debug certificate and app data. An older APK rejects both
-modes until rebuilt. After changing the mode, restart Metro to load the changed
-configuration and start a fresh Android app process. A JavaScript reload cannot
-switch modes: the process retains its first claim, including after auth failures,
-and rejects the opposite mode before Firebase access. The guard is Android-only;
-this is not an iOS process-lifetime guarantee. Keep purchases, ads, analytics and
-App Check at their existing settings. Cloud Auth against a test project does not
-activate production. Follow the [Android journey](../docs/runbooks/android-first-journey.md#google-sign-in-and-account-restart)
-for the still-required real-device/provider observations.
+This app has no `expo-dev-client` or Expo Updates integration. Expo Constants reads
+the configuration embedded in the APK's `assets/app.config`; Metro reloads and app
+restarts alone cannot change that configuration. Rebuild and install the Android
+development APK for each auth mode change, preserving its existing debug
+certificate and app data, then start the updated app in a fresh process. Gradle
+regenerates the embedded `extra` settings during the build; changing only the auth
+mode does not itself require Expo prebuild. An older APK without the native guard
+rejects both modes until rebuilt.
+
+The process retains its first native mode claim across JavaScript reloads,
+including after auth failures, and rejects an opposite claim before Firebase
+access. The guard is Android-only; this is not an iOS process-lifetime guarantee.
+Keep purchases, ads, analytics and App Check at their existing settings. Cloud
+Auth against a test project does not activate production. Follow the
+[Android journey](../docs/runbooks/android-first-journey.md#google-sign-in-and-account-restart)
+for the separate native reload-guard and real-provider observations.
 
 Jest uses the email/password-and-Google local mock and never loads native Firebase modules.
 
@@ -151,6 +157,11 @@ local configuration in place:
 pnpm --filter @shortform/mobile exec expo prebuild --platform android --no-install
 pnpm mobile:android
 ```
+
+The prebuild step is needed when native plugins or generated project settings
+change. For an `extra`-only change such as Firebase auth mode, Gradle regenerates
+`assets/app.config` when building the APK; rebuild and reinstall without an
+otherwise unnecessary prebuild.
 
 The Android command starts Metro. Rebuilding preserves app data; do not clear storage or
 replace missing configuration with permissive defaults. The committed

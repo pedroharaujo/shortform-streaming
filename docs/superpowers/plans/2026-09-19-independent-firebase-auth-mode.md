@@ -4,7 +4,7 @@
 
 **Goal:** Resolve issue #175 / D-036 / P2-T08 so the Android development app can use genuine Firebase Google sign-in with its local API and separately gated Play sandbox checkout, without silently retaining a native Auth emulator across JavaScript reloads.
 
-**Architecture:** Add a public Firebase auth mode independent of the API environment. Resolve it through the existing Expo configuration/runtime boundary and enforce it at the existing shared native authentication entry point. A synchronized process-lived latch in the existing AndroidGoogleWebClient Expo module claims one mode for the process before authentication operations; a conflicting claim requires a fresh app process.
+**Architecture:** Add a public Firebase auth mode independent of the API environment. Resolve it through the existing Expo configuration/runtime boundary and enforce it at the existing shared native authentication entry point. A synchronized process-lived latch in the existing AndroidGoogleWebClient Expo module claims one mode for the process before authentication operations; a conflicting claim is rejected for the life of that process. This app reads embedded APK configuration, so selecting another configured mode also requires rebuilding and installing the APK.
 
 **Tech Stack:** Existing Expo/React Native TypeScript, React Native Firebase 26.4.0, existing Kotlin Expo module, existing Jest/config checks. No dependency additions.
 
@@ -26,6 +26,7 @@
 - `mobile/app.config.ts:230` deliberately restricts sandbox checkout to local development builds, so changing API environment to staging is not an acceptable auth workaround.
 - Installed `node_modules/@react-native-firebase/auth/lib/index.ts:198` initializes `_emulatorConfig = null`; its getter at line 279 returns only that JS field. A full JS reload loses this evidence.
 - Installed `node_modules/@react-native-firebase/auth/android/src/main/java/io/invertase/firebase/auth/NativeRNFBTurboAuth.java:108` keeps its own private static emulator map; `useEmulator` around line 2307 sets it once. Exported constants around line 2803 include only language and user, not emulator state. Do not access private SDK internals or patch node_modules.
+- This app has no `expo-dev-client` or Expo Updates integration. Expo Constants reads the APK asset `assets/app.config`; restarting Metro or the app cannot change its embedded auth mode. Gradle regenerates the `extra` settings when building the APK, so an auth-mode-only change does not itself require Expo prebuild.
 - Therefore a JS-only `getAuth().emulatorConfig` check cannot prove safety after reload. The new native process latch is necessary. It is a guard on this application's auth entry point, not a claim to introspect arbitrary external SDK mutations.
 - Root has separately provisioned a private backend credential with the custom permission `firebaseauth.users.get`, and a live lookup of a generated nonexistent UID returned `UserNotFoundError`. This proves that credential's lookup authorization without retrieving a real account. Local environment/runtime activation and genuine signed-token validation remain separate operational work.
 
@@ -40,7 +41,7 @@
 - Modify/test: `mobile/src/auth/nativeFirebaseAuth.test.ts` — native guard and attachment behavior in existing suite.
 - Modify: `mobile/modules/android-google-web-client/android/src/main/java/expo/modules/androidgooglewebclient/AndroidGoogleWebClientModule.kt` — synchronized process mode latch.
 - Modify: `mobile/scripts/check-expo-config.mjs` — public manifest wiring and local cloud plus sandbox coexistence.
-- Modify: `.env.example`, `mobile/README.md`, `docs/runbooks/android-first-journey.md` — exact local modes, rebuild/restart requirement and private backend setup.
+- Modify: `.env.example`, `mobile/README.md`, `docs/runbooks/android-first-journey.md` — exact local modes, rebuild/install requirement and private backend setup.
 - Inspect without changing unless genuinely needed: `mobile/src/auth/nativeSessionLifecycle.ts`; both callers must still use the shared boundary.
 - No new production files, packages, Gradle dependencies, screens, API endpoints or schema changes.
 
@@ -337,7 +338,8 @@ Run `pnpm mobile:config:check`. Expected PASS, with the new mode public and no c
 ```dotenv
 # Auth is independent of the API location. Omit for local=emulator, nonlocal=cloud.
 # Opt in to cloud for genuine Google sign-in only after private backend setup.
-# Rebuild this Android client once for the native guard; mode changes require a full app restart.
+# Auth mode is embedded in the APK: rebuild and install it for every mode change.
+# Metro reloads and app restarts alone cannot change the installed mode.
 # EXPO_PUBLIC_FIREBASE_AUTH_MODE=cloud
 ```
 
@@ -367,7 +369,7 @@ GOOGLE_APPLICATION_CREDENTIALS=C:/private/shortform/firebase-auth-verifier.json
 # FIREBASE_AUTH_EMULATOR_HOST must be absent, including inherited process environment.
 ```
 
-Explain in prose: this credential is a private server-only file outside the public repository and is separate from the RevenueCat Play credential; `EXPO_PUBLIC_*` never carries it. The example path is fictional. Keep `check_revoked=True`; a normal gcloud ADC login is not sufficient Firebase Auth setup. A scoped credential can be checked with a generated nonexistent-UID lookup returning `UserNotFoundError`, with only category-level evidence. Rebuild the Android development APK once for the guard, then restart Metro to load changed config and start a fresh app process when changing either mode. A JS reload is deliberately rejected for a mode change and cannot replace a process restart. No public production activation follows from selecting cloud against this test project.
+Explain in prose: this credential is a private server-only file outside the public repository and is separate from the RevenueCat Play credential; `EXPO_PUBLIC_*` never carries it. The example path is fictional. Keep `check_revoked=True`; a normal gcloud ADC login is not sufficient Firebase Auth setup. A scoped credential can be checked with a generated nonexistent-UID lookup returning `UserNotFoundError`, with only category-level evidence. The app reads `assets/app.config` embedded in the APK and has no `expo-dev-client` or Expo Updates integration. Rebuild and install the Android development APK for every auth mode change, preserving the existing debug certificate and app data, then start a fresh process. Metro reloads and process restarts alone cannot change this configuration. Gradle regenerates `extra` settings during the build; an auth-mode-only change does not itself require Expo prebuild. A full JS reload must retain the prior native claim; validate it directly before the application reclaims its installed mode, as described in Step 8. No public production activation follows from selecting cloud against this test project.
 
 Do not mark completed Google login, authenticated wallet, provider purchase or process death as passed until observed. Keep other feature flags unchanged. Link official setup and lookup docs if the private server credential explanation needs a source:
 
@@ -392,13 +394,29 @@ The focused suites in prior steps give RED/GREEN evidence; the full mobile suite
 
 - [ ] **Step 8: Build the x86_64 development APK and prove the native boundary on Android.** The earlier baseline ARM64 registration AAB attempt produced no artifact and is stopped. Build the development APK from the updated code; the store-registration AAB follows separately with purchases, ads, analytics and App Check disabled. Use the existing local JDK/build wrapper and known private google-services configuration, with purchases/ads/analytics/App Check at their existing disabled settings while validating auth. Build with one Gradle worker and the known low-memory limits; do not run the emulator or Docker concurrently with resource-heavy compilation. The concrete native build target is `:app:assembleDebug -PreactNativeArchitectures=x86_64 --max-workers=1 --no-parallel`. Use `scripts/android_jdk.py` to select the existing JDK rather than overriding system configuration. Preserve the EXISTING debug signing certificate; verify the resulting certificate matches the installed development APK before installing it as an update without clearing application data. Do not use the private release Gradle home `C:/g` or its injected upload-signing properties for this debug build: the registration AAB intentionally has a different private upload certificate. The ignored `.tmp/build_checkout_android.py` helper and normal debug caches may be reused only after inspecting their current configuration for the existing debug signing/build behavior.
 
-Required device observations:
+Required device observations (all pending):
 
-1. Fresh process, emulator mode: account entry and generated-account flow retain previous behavior; repeated calls do not reconnect/reset the account.
-2. Keep the OS process alive, change the Metro manifest to cloud and perform a full development JS reload. The guard rejects before any cloud/emulator credential exchange, even though RN Firebase's JS emulatorConfig has reset to null. Record a sanitized outcome, not account/provider data.
-3. Fresh process, cloud mode: the native guard permits mode selection. Complete Google sign-in using the authorized test account and the separately configured genuine-verification backend; Account and Coin wallet resolve successfully.
-4. Keep that OS process alive, change to emulator and reload JS. The opposite transition rejects too. Restore the intended cloud configuration only with a fresh process.
+1. Build and install the emulator-mode APK with the existing debug certificate and without clearing app data. In a fresh process, let the app claim its installed mode and verify account entry/generated-account behavior; repeated calls must not reconnect or reset the account. Record the process ID without account/provider data.
+2. In React Native DevTools, set a breakpoint on the first statement of `attachLocalAuthEmulator`. Perform a full JavaScript reload and confirm the OS process ID is unchanged. At the **first post-reload invocation**, before the application claims again, evaluate these native-only calls in order:
+
+   ```javascript
+   globalThis.expo.modules.AndroidGoogleWebClient.claimFirebaseAuthMode('cloud'); // must be false
+   globalThis.expo.modules.AndroidGoogleWebClient.claimFirebaseAuthMode('emulator'); // must be true
+   ```
+
+   Resume only if both results match. Otherwise stop and record the failed guard check. Do not inspect account data, invoke credential exchange or change Firebase SDK configuration in the debugger. This checks whether the native claim survived the reload before application code can repopulate it; it does not change or test a new Metro manifest.
+3. Rebuild and install a cloud-mode APK through the authorized install/start workflow, preserving the debug certificate and app data, and start a fresh process. Gradle regenerates the embedded `assets/app.config`; no Expo prebuild is needed solely for this `extra` setting. Let the app claim cloud mode. Complete Google sign-in using the authorized test account and genuine-verification backend; Account and Coin wallet must resolve successfully.
+4. With the cloud-mode process still alive, repeat the breakpoint/full-JS-reload procedure and verify the same OS process ID. Before the application's **first post-reload claim**, evaluate the reverse calls:
+
+   ```javascript
+   globalThis.expo.modules.AndroidGoogleWebClient.claimFirebaseAuthMode('emulator'); // must be false
+   globalThis.expo.modules.AndroidGoogleWebClient.claimFirebaseAuthMode('cloud'); // must be true
+   ```
+
+   Resume only on the expected results. Together these native observations prove claim persistence in both directions and complement the adapter tests that reject conflicts before SDK/cache access. Restore any intended configuration using rebuild/install/start, not a Metro reload or process restart alone.
 5. Guard claims remain sticky after an attach/login failure; a network/provider failure must not unlock the opposite mode in the same process. Do not create destructive faults or expose credentials just to simulate this; the synchronized claim code is reviewed and the adapter failure-path test supplies deterministic coverage.
+
+The native reload check does not prove process death, a changed installed manifest, or genuine provider login; record those outcomes separately. Do not bypass a prior approval-review denial of `adb` force-stop/start through another route. If an authorized install/start workflow cannot establish the required process state, record that blocker and leave this step unchecked.
 
 No new debug UI, secret-bearing logs or screenshots are needed. If tools cannot perform a required native check, record the actual blocker; this auth boundary is not eligible for a fictional pass or silent deferral. Respect any existing approval-review rejection rather than retrying the denied OS action through another route.
 
@@ -410,6 +428,7 @@ No new debug UI, secret-bearing logs or screenshots are needed. If tools cannot 
 - Native boundary RED: all 9 new cases failed because the mode guard was absent. GREEN: all 21 adapter tests passed, including both rejected modes before SDK access, old-APK rejection, cached-return ordering and attach-failure propagation.
 - `pnpm mobile:config:check` passed with local cloud Auth plus sandbox checkout and the nonlocal/malformed-mode rejection matrix.
 - Native compilation, native process lifetime, genuine Google login and authenticated wallet observations remain pending in Step 8. Mocked adapter tests are not native device evidence.
+- P2 documentation correction: auth mode is embedded in `assets/app.config`; changing it requires rebuild/install. Step 8 now probes the retained native latch at the first post-reload breakpoint under the same OS process ID, then repeats with the opposite-mode APK. No device outcome is newly claimed.
 
 Exact local commands and final outcomes:
 
@@ -426,6 +445,26 @@ Exact local commands and final outcomes:
 | `pnpm contract:check` | Passed; no generated OpenAPI/client diff. |
 | `python scripts/check_repository_foundation.py` | Passed: safety scan (581 files), 55 repository tests and AI governance. |
 | `git diff --check` | Passed. |
+
+### Verification after Expo SDK patch alignment (2026-09-19)
+
+Root aligned Expo to 57.0.24, expo-build-properties to 57.0.21, expo-constants to
+57.0.19 and expo-router to 57.0.22, then deduplicated expo-constants. With that
+updated dependency tree, the following commands ran sequentially and passed:
+
+- `pnpm mobile:lint`
+- `pnpm mobile:format:check`
+- `pnpm mobile:typecheck`
+- `pnpm mobile:test --runInBand` — 47 suites, 446 tests, 21.23 seconds.
+- `pnpm mobile:config:check` — public manifest and fail-closed configuration checks.
+- `pnpm mobile:bundle:check` — Android production JavaScript bundle; no native compile.
+- `pnpm contract:check` — no generated OpenAPI/client diff.
+- `python scripts/check_repository_foundation.py` — safety scan of 581 files,
+  55 repository tests, and AI governance passed.
+- `git diff --check`
+
+No source/dependency changes were made during this verification pass. Native
+compilation and all Step 8 device/provider observations remain pending.
 
 ## Plan self-review
 

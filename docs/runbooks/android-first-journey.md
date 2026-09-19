@@ -126,21 +126,49 @@ Its safe preflight is a generated nonexistent-UID lookup returning `UserNotFound
 recorded only as category-level evidence. This does not establish completed login,
 authenticated wallet access or genuine token verification.
 
-Rebuild the development APK once for the native process guard and install it with
-the existing debug certificate without clearing app data. Older APKs reject auth
-until rebuilt. When changing either mode, restart Metro to load the configuration
-and start a fresh app process. A full JavaScript reload leaves the native claim
-intact and must reject a conflicting mode before SDK/cache access. Failed auth
-does not clear that claim. Missing old-manifest auth settings retain historical
-defaults; present malformed settings fail. Emulator mode is allowed only with a
-local API; cloud with a local test API does not activate production.
+The app has no `expo-dev-client` or Expo Updates integration: Expo Constants reads
+the APK's embedded `assets/app.config`. Every auth mode change requires rebuilding
+and installing the APK, preserving the existing debug certificate and app data,
+then starting the updated app in a fresh process. Metro reloads and process
+restarts alone cannot change the installed mode. Gradle regenerates the embedded
+`extra` settings during the build, so this setting alone does not require Expo
+prebuild. Older APKs without the native guard reject auth until rebuilt. Missing
+old-manifest auth settings retain historical defaults; present malformed settings
+fail. Emulator mode is allowed only with a local API; cloud with a local test API
+does not activate production.
 
-Before closing #175, verify both emulator-to-cloud and cloud-to-emulator reload
-attempts fail with the OS process still alive, then verify fresh-process emulator
-behavior and genuine Google login with Account and Coin wallet. Record sanitized
-outcomes only. Mocked tests do not prove this native process lifetime, and a reload
-does not count as process termination. These observations remain unchecked until
-performed; the acceptance list below remains authoritative.
+Before closing #175, engineering must verify the native claim survives a full
+JavaScript reload. This is a native guard check, not a manifest-change procedure:
+
+1. Start an APK with a known embedded auth mode and let the application claim
+   that mode at startup. Record the OS process ID without account/provider data.
+2. In React Native DevTools, set a breakpoint on the first statement of
+   `attachLocalAuthEmulator`, then perform a full JavaScript reload. Confirm the OS
+   process ID is unchanged.
+3. At the **first post-reload invocation**, before the application claims again,
+   use these native-only calls for an installed emulator build:
+
+   ```javascript
+   globalThis.expo.modules.AndroidGoogleWebClient.claimFirebaseAuthMode('cloud'); // false
+   globalThis.expo.modules.AndroidGoogleWebClient.claimFirebaseAuthMode('emulator'); // true
+   ```
+
+   For an installed cloud build, call with `'emulator'` first (expect `false`),
+   then `'cloud'` (expect `true`). Do not read Firebase accounts or change SDK
+   configuration in the debugger. Resume only when both results match; otherwise
+   stop and record the failed guard check.
+4. Rebuild and install an APK with the opposite embedded mode through the
+   authorized install/start workflow, retaining the debug certificate and app
+   data. Start a fresh process and repeat steps 1–3. Restore the intended mode
+   through the same rebuild/install workflow.
+
+This proves native process lifetime in both directions and complements the
+adapter tests that reject a conflict before SDK/cache access. Failed auth must not
+clear the claim. Separately verify fresh-process emulator behavior and genuine
+Google login with Account and Coin wallet. Record sanitized outcomes only; a
+reload is not process termination. Do not bypass an approval-review denial of
+`adb` force-stop/start through another route. These observations remain unchecked
+until performed; the acceptance list below remains authoritative.
 
 The 2026-09-13 test-project setup now has Google enabled and the development
 certificate registered. The matching private configuration was downloaded,
