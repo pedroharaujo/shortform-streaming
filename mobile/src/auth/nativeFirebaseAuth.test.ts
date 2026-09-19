@@ -14,7 +14,18 @@ const mockUser = {
     claims: { sub: 'synthetic-uid' },
   })),
 };
-const mockAuth = { currentUser: mockUser, emulatorConfig: null };
+const mockAuth = {
+  currentUser: mockUser,
+  emulatorConfig: null as { protocol: string; host: string; port: number } | null,
+};
+const mockGetAuth = jest.fn(() => mockAuth);
+let mockAuthMode: 'emulator' | 'cloud' = 'cloud';
+const mockClaimFirebaseAuthMode = jest.fn((_mode: string) => true);
+const mockConnectAuthEmulator = jest.fn((_auth: unknown, _origin: string) => undefined);
+let mockNativeModule: {
+  getDefaultWebClientId: () => string;
+  claimFirebaseAuthMode?: (mode: string) => boolean;
+};
 const mockReauthenticate = jest.fn(async (_user: unknown, _credential: unknown) => ({
   user: mockUser,
 }));
@@ -25,7 +36,8 @@ let mockIsNewUser = false;
 
 jest.mock('@react-native-firebase/app', () => ({}));
 jest.mock('@react-native-firebase/auth', () => ({
-  getAuth: () => mockAuth,
+  getAuth: () => mockGetAuth(),
+  connectAuthEmulator: (auth: unknown, origin: string) => mockConnectAuthEmulator(auth, origin),
   EmailAuthProvider: {
     credential: (email: string, password: string) => ({ providerId: 'password', email, password }),
   },
@@ -47,15 +59,23 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
 }));
 jest.mock('expo-modules-core', () => ({
   ...jest.requireActual('expo-modules-core'),
-  requireOptionalNativeModule: () => ({ getDefaultWebClientId: () => 'synthetic-client-id' }),
+  requireOptionalNativeModule: () => mockNativeModule,
 }));
 jest.mock('../config/appConfiguration', () => ({
-  getApiConfiguration: () => ({ environment: 'staging' }),
+  getFirebaseAuthConfiguration: () => ({ mode: mockAuthMode }),
 }));
 
 beforeEach(() => {
   Platform.OS = 'android';
   mockAuth.currentUser = mockUser;
+  mockAuth.emulatorConfig = null;
+  mockAuthMode = 'cloud';
+  mockClaimFirebaseAuthMode.mockReset().mockReturnValue(true);
+  mockConnectAuthEmulator.mockReset();
+  mockNativeModule = {
+    getDefaultWebClientId: () => 'synthetic-client-id',
+    claimFirebaseAuthMode: mockClaimFirebaseAuthMode,
+  };
   mockReauthenticate.mockResolvedValue({ user: mockUser });
   mockSignInWithCredential.mockResolvedValue({ user: mockUser });
   mockIsNewUser = false;
@@ -63,6 +83,99 @@ beforeEach(() => {
     type: 'success',
     data: { idToken: 'replace-with-provider-value', user: { id: 'synthetic-google-id' } },
   });
+});
+
+function isolatedAttach(): () => void {
+  let attach!: () => void;
+  jest.isolateModules(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- isolate native adapter cache
+    attach = require('./nativeFirebaseAuth').attachLocalAuthEmulator as () => void;
+  });
+  return attach;
+}
+
+it('uses cloud Auth without attaching the local emulator', () => {
+  isolatedAttach()();
+  expect(mockClaimFirebaseAuthMode).toHaveBeenCalledWith('cloud');
+  expect(mockClaimFirebaseAuthMode.mock.invocationCallOrder[0]).toBeLessThan(
+    mockGetAuth.mock.invocationCallOrder[0]!,
+  );
+  expect(mockConnectAuthEmulator).not.toHaveBeenCalled();
+});
+
+it('claims emulator mode before attaching once', () => {
+  mockAuthMode = 'emulator';
+  const attach = isolatedAttach();
+  attach();
+  attach();
+  expect(mockClaimFirebaseAuthMode).toHaveBeenCalledTimes(2);
+  expect(mockClaimFirebaseAuthMode).toHaveBeenCalledWith('emulator');
+  expect(mockConnectAuthEmulator).toHaveBeenCalledTimes(1);
+  expect(mockConnectAuthEmulator).toHaveBeenCalledWith(mockAuth, 'http://10.0.2.2:9099');
+  expect(mockClaimFirebaseAuthMode.mock.invocationCallOrder[0]).toBeLessThan(
+    mockGetAuth.mock.invocationCallOrder[0]!,
+  );
+});
+
+it.each(['cloud', 'emulator'] as const)(
+  'rejects a native mode conflict for %s before any SDK access when the JS emulator cache is empty',
+  (mode) => {
+    mockAuthMode = mode;
+    mockClaimFirebaseAuthMode.mockReturnValue(false);
+    expect(isolatedAttach()).toThrow('Restart');
+    expect(mockClaimFirebaseAuthMode).toHaveBeenCalledWith(mode);
+    expect(mockGetAuth).not.toHaveBeenCalled();
+    expect(mockConnectAuthEmulator).not.toHaveBeenCalled();
+  },
+);
+
+it('checks the native guard before the already-attached JS cache can return', () => {
+  mockAuthMode = 'emulator';
+  const attach = isolatedAttach();
+  attach();
+  mockAuthMode = 'cloud';
+  mockClaimFirebaseAuthMode.mockReturnValue(false);
+  mockGetAuth.mockClear();
+  expect(attach).toThrow('Restart');
+  expect(mockClaimFirebaseAuthMode).toHaveBeenLastCalledWith('cloud');
+  expect(mockGetAuth).not.toHaveBeenCalled();
+  expect(mockConnectAuthEmulator).toHaveBeenCalledTimes(1);
+});
+
+it('rejects a visible stale emulator in cloud mode', () => {
+  mockAuth.emulatorConfig = { protocol: 'http', host: '10.0.2.2', port: 9099 };
+  expect(isolatedAttach()).toThrow('Restart');
+  expect(mockConnectAuthEmulator).not.toHaveBeenCalled();
+});
+
+it.each(['cloud', 'emulator'] as const)(
+  'requires a rebuilt Android client before SDK access in %s mode',
+  (mode) => {
+    mockAuthMode = mode;
+    mockNativeModule = { getDefaultWebClientId: () => 'synthetic-client-id' };
+    expect(isolatedAttach()).toThrow('Rebuild');
+    expect(mockGetAuth).not.toHaveBeenCalled();
+    expect(mockConnectAuthEmulator).not.toHaveBeenCalled();
+  },
+);
+
+it('preserves an attach failure and still respects a later native mode rejection', () => {
+  mockAuthMode = 'emulator';
+  const failure = new Error('Synthetic emulator connection failure');
+  mockConnectAuthEmulator.mockImplementationOnce(() => {
+    throw failure;
+  });
+  const attach = isolatedAttach();
+  expect(attach).toThrow(failure);
+  expect(mockClaimFirebaseAuthMode).toHaveBeenLastCalledWith('emulator');
+
+  mockAuthMode = 'cloud';
+  mockClaimFirebaseAuthMode.mockReturnValue(false);
+  mockGetAuth.mockClear();
+  expect(attach).toThrow('Restart');
+  expect(mockClaimFirebaseAuthMode).toHaveBeenLastCalledWith('cloud');
+  expect(mockGetAuth).not.toHaveBeenCalled();
+  expect(mockConnectAuthEmulator).toHaveBeenCalledTimes(1);
 });
 
 it('still invokes native sign-out when the JavaScript user cache is already empty', async () => {

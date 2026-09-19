@@ -84,6 +84,92 @@ Google in Firebase Authentication, register that certificate, download the
 updated configuration and rebuild the APK. Keep configuration and account
 details out of Git and public screenshots. See [mobile identity setup](../../mobile/README.md#identity).
 
+Issue #175 keeps Firebase Auth independent from the API location so genuine Google
+login can use the local backend alongside separately gated Play sandbox checkout.
+Engineering uses one of these setups, keeping all other feature flags unchanged.
+For generated local accounts, run the Auth emulator for the same test project:
+
+```dotenv
+# mobile/.env: generated local accounts, historical default
+EXPO_PUBLIC_API_ENVIRONMENT=local
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000
+EXPO_PUBLIC_FIREBASE_AUTH_MODE=emulator
+
+# Backend .env for the generated-account Auth emulator
+FIREBASE_AUTH_MODE=admin
+FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+```
+
+For genuine Firebase Google login:
+
+```dotenv
+# mobile/.env: genuine Google login against the same local API
+EXPO_PUBLIC_API_ENVIRONMENT=local
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000
+EXPO_PUBLIC_FIREBASE_AUTH_MODE=cloud
+
+# Backend .env: same non-production project as google-services.json
+FIREBASE_AUTH_MODE=admin
+FIREBASE_PROJECT_ID=replace-with-test-project-id
+GOOGLE_APPLICATION_CREDENTIALS=C:/private/shortform/firebase-auth-verifier.json
+# FIREBASE_AUTH_EMULATOR_HOST must be absent, including inherited process environment.
+```
+
+The example credential path is fictional. The actual file stays outside the public
+repository and is server-only, separate from the RevenueCat Play credential; never
+put it in `EXPO_PUBLIC_*`. Keep Firebase Admin `check_revoked=True`. A normal gcloud
+application-default login is not sufficient Firebase Auth setup; follow the
+[Firebase setup requirements](https://firebase.google.com/docs/admin/setup#testing_with_gcloud_end_user_credentials).
+A scoped verifier needs `firebaseauth.users.get` for the
+[account lookup](https://docs.cloud.google.com/identity-platform/docs/reference/rest/v1/projects.accounts/lookup).
+Its safe preflight is a generated nonexistent-UID lookup returning `UserNotFoundError`,
+recorded only as category-level evidence. This does not establish completed login,
+authenticated wallet access or genuine token verification.
+
+The app has no `expo-dev-client` or Expo Updates integration: Expo Constants reads
+the APK's embedded `assets/app.config`. Every auth mode change requires rebuilding
+and installing the APK, preserving the existing debug certificate and app data,
+then starting the updated app in a fresh process. Metro reloads and process
+restarts alone cannot change the installed mode. Gradle regenerates the embedded
+`extra` settings during the build, so this setting alone does not require Expo
+prebuild. Older APKs without the native guard reject auth until rebuilt. Missing
+old-manifest auth settings retain historical defaults; present malformed settings
+fail. Emulator mode is allowed only with a local API; cloud with a local test API
+does not activate production.
+
+Before closing #175, engineering must verify the native claim survives a full
+JavaScript reload. This is a native guard check, not a manifest-change procedure:
+
+1. Start an APK with a known embedded auth mode and let the application claim
+   that mode at startup. Record the OS process ID without account/provider data.
+2. In React Native DevTools, set a breakpoint on the first statement of
+   `attachLocalAuthEmulator`, then perform a full JavaScript reload. Confirm the OS
+   process ID is unchanged.
+3. At the **first post-reload invocation**, before the application claims again,
+   use these native-only calls for an installed emulator build:
+
+   ```javascript
+   globalThis.expo.modules.AndroidGoogleWebClient.claimFirebaseAuthMode('cloud'); // false
+   globalThis.expo.modules.AndroidGoogleWebClient.claimFirebaseAuthMode('emulator'); // true
+   ```
+
+   For an installed cloud build, call with `'emulator'` first (expect `false`),
+   then `'cloud'` (expect `true`). Do not read Firebase accounts or change SDK
+   configuration in the debugger. Resume only when both results match; otherwise
+   stop and record the failed guard check.
+4. Rebuild and install an APK with the opposite embedded mode through the
+   authorized install/start workflow, retaining the debug certificate and app
+   data. Start a fresh process and repeat steps 1–3. Restore the intended mode
+   through the same rebuild/install workflow.
+
+This proves native process lifetime in both directions and complements the
+adapter tests that reject a conflict before SDK/cache access. Failed auth must not
+clear the claim. Separately verify fresh-process emulator behavior and genuine
+Google login with Account and Coin wallet. Record sanitized outcomes only; a
+reload is not process termination. Do not bypass an approval-review denial of
+`adb` force-stop/start through another route. These observations remain unchecked
+until performed; the acceptance list below remains authoritative.
+
 The 2026-09-13 test-project setup now has Google enabled and the development
 certificate registered. The matching private configuration was downloaded,
 verified, rebuilt and installed without clearing app data. The emulator has no

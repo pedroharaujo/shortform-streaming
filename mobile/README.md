@@ -51,23 +51,71 @@ an account is required for persistent rewarded-ad unlocks; planned MVP coin
 purchases/unlocks use the same trusted-account boundary. Django trusts
 only verified Firebase ID tokens and never accepts client user IDs.
 
-For a local Android development build:
+Use a non-production Firebase project. For Google Sign-In, enable the Google
+provider, register the existing Android debug certificate's SHA-1, and place its
+downloaded `google-services.json` at `mobile/google-services.json` (gitignored).
+It must include the web OAuth client (type 3) and matching Android client.
 
-1. Use a non-production Firebase project and enable Google Sign-In.
-2. Add the Android debug SHA-1, download `google-services.json`, and place it at
-   `mobile/google-services.json` (gitignored).
-3. Start the Firebase Auth emulator:
+Issue #175 / D-036 separates Firebase authentication from the API location.
+`EXPO_PUBLIC_FIREBASE_AUTH_MODE` accepts only `emulator` or `cloud`. When omitted,
+local APIs keep emulator Auth and staging/production APIs keep cloud Auth. Emulator
+Auth is rejected with nonlocal APIs. Checkout settings never choose the auth mode.
 
-   ```shell
-   firebase emulators:start --only auth
-   ```
+For generated local accounts, start `firebase emulators:start --only auth --project
+<local-firebase-project>` with the same test project as the app and backend:
 
-4. Run Django with:
+```dotenv
+# mobile/.env: generated local accounts, historical default
+EXPO_PUBLIC_API_ENVIRONMENT=local
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000
+EXPO_PUBLIC_FIREBASE_AUTH_MODE=emulator
 
-   ```dotenv
-   FIREBASE_AUTH_MODE=admin
-   FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
-   ```
+# Backend .env for the generated-account Auth emulator
+FIREBASE_AUTH_MODE=admin
+FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+```
+
+For genuine Google sign-in against the same local API:
+
+```dotenv
+# mobile/.env
+EXPO_PUBLIC_API_ENVIRONMENT=local
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000
+EXPO_PUBLIC_FIREBASE_AUTH_MODE=cloud
+
+# Backend .env: same non-production project as google-services.json
+FIREBASE_AUTH_MODE=admin
+FIREBASE_PROJECT_ID=replace-with-test-project-id
+GOOGLE_APPLICATION_CREDENTIALS=C:/private/shortform/firebase-auth-verifier.json
+# FIREBASE_AUTH_EMULATOR_HOST must be absent, including inherited process environment.
+```
+
+The credential path above is fictional. Use a private server-only credential file
+outside this public repository; it is separate from the RevenueCat Play credential
+and must never enter `EXPO_PUBLIC_*`. Keep Firebase Admin `check_revoked=True`.
+A normal gcloud application-default login alone is not sufficient Firebase Auth
+setup; see [Firebase's setup requirements](https://firebase.google.com/docs/admin/setup#testing_with_gcloud_end_user_credentials).
+Engineering can preflight a scoped credential's `firebaseauth.users.get` permission
+with a generated nonexistent-UID lookup returning `UserNotFoundError`; record only
+the result category, never account or provider data. That preflight does not prove
+genuine Google sign-in or token verification.
+
+This app has no `expo-dev-client` or Expo Updates integration. Expo Constants reads
+the configuration embedded in the APK's `assets/app.config`; Metro reloads and app
+restarts alone cannot change that configuration. Rebuild and install the Android
+development APK for each auth mode change, preserving its existing debug
+certificate and app data, then start the updated app in a fresh process. Gradle
+regenerates the embedded `extra` settings during the build; changing only the auth
+mode does not itself require Expo prebuild. An older APK without the native guard
+rejects both modes until rebuilt.
+
+The process retains its first native mode claim across JavaScript reloads,
+including after auth failures, and rejects an opposite claim before Firebase
+access. The guard is Android-only; this is not an iOS process-lifetime guarantee.
+Keep purchases, ads, analytics and App Check at their existing settings. Cloud
+Auth against a test project does not activate production. Follow the
+[Android journey](../docs/runbooks/android-first-journey.md#google-sign-in-and-account-restart)
+for the separate native reload-guard and real-provider observations.
 
 Jest uses the email/password-and-Google local mock and never loads native Firebase modules.
 
@@ -109,6 +157,11 @@ local configuration in place:
 pnpm --filter @shortform/mobile exec expo prebuild --platform android --no-install
 pnpm mobile:android
 ```
+
+The prebuild step is needed when native plugins or generated project settings
+change. For an `extra`-only change such as Firebase auth mode, Gradle regenerates
+`assets/app.config` when building the APK; rebuild and reinstall without an
+otherwise unnecessary prebuild.
 
 The Android command starts Metro. Rebuilding preserves app data; do not clear storage or
 replace missing configuration with permissive defaults. The committed

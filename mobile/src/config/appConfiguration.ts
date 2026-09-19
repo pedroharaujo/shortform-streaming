@@ -7,9 +7,11 @@
 import Constants from 'expo-constants';
 import {
   resolveAdsConfiguration,
+  resolveFirebaseAuthConfiguration,
   resolvePurchaseConfiguration,
   type AdsConfiguration,
   type AppCheckConfiguration,
+  type FirebaseAuthConfiguration,
   type PurchaseConfiguration,
 } from '../../app.config';
 
@@ -22,6 +24,7 @@ import {
 
 interface ExtraShape {
   readonly api?: unknown;
+  readonly auth?: unknown;
   readonly ads?: unknown;
   readonly analytics?: unknown;
   readonly appCheck?: unknown;
@@ -60,6 +63,39 @@ export function readApiConfiguration(extra: ExtraShape | null | undefined): ApiC
 
 export function getApiConfiguration(): ApiConfiguration {
   return readApiConfiguration(Constants.expoConfig?.extra as ExtraShape | null | undefined);
+}
+
+export function readFirebaseAuthConfiguration(
+  extra: ExtraShape | null | undefined,
+  environment: ApiEnvironment,
+): FirebaseAuthConfiguration {
+  if (
+    extra === null ||
+    extra === undefined ||
+    !Object.prototype.hasOwnProperty.call(extra, 'auth')
+  ) {
+    return resolveFirebaseAuthConfiguration({}, environment);
+  }
+  const candidate = extra.auth;
+  if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
+    throw new EnvironmentConfigurationError(
+      'Expo manifest extra.auth must contain a valid Firebase auth mode.',
+    );
+  }
+  const mode = (candidate as { mode?: unknown }).mode;
+  if (typeof mode !== 'string') {
+    throw new EnvironmentConfigurationError(
+      'Expo manifest extra.auth.mode must be emulator or cloud.',
+    );
+  }
+  return resolveFirebaseAuthConfiguration({ EXPO_PUBLIC_FIREBASE_AUTH_MODE: mode }, environment);
+}
+
+export function getFirebaseAuthConfiguration(): FirebaseAuthConfiguration {
+  return readFirebaseAuthConfiguration(
+    Constants.expoConfig?.extra as ExtraShape | undefined,
+    getApiConfiguration().environment,
+  );
 }
 
 export function readAdsConfiguration(

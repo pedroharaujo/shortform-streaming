@@ -127,6 +127,10 @@ function checkResolvedConfiguration() {
     fail('Firebase App Check must remain disabled until private provider validation passes.');
     return;
   }
+  if (resolved.extra?.auth?.mode !== 'emulator') {
+    fail('local Firebase Auth must default to the emulator.');
+    return;
+  }
   if (resolved.extra?.purchases?.mode !== 'disabled') {
     fail('coin checkout must remain disabled without explicit local test configuration.');
     return;
@@ -212,6 +216,21 @@ checkAnalyticsDefaultsOff();
 checkMissingEnvironmentFails();
 checkInvalidEnvironmentFails();
 
+for (const environment of ['staging', 'production']) {
+  const result = runExpoConfig({
+    ...REQUIRED_ENVIRONMENT,
+    EXPO_PUBLIC_API_ENVIRONMENT: environment,
+    EXPO_PUBLIC_API_BASE_URL: 'https://api.example.invalid',
+    EXPO_PUBLIC_FIREBASE_AUTH_MODE: 'emulator',
+  });
+  if (result.status === 0) fail('Firebase Auth emulator must reject nonlocal API environments');
+}
+const invalidAuthResult = runExpoConfig({
+  ...REQUIRED_ENVIRONMENT,
+  EXPO_PUBLIC_FIREBASE_AUTH_MODE: 'invalid',
+});
+if (invalidAuthResult.status === 0) fail('an explicit malformed Firebase auth mode must fail');
+
 const publisher = {
   EXPO_PUBLIC_ADMOB_ANDROID_APP_ID: 'ca-app-pub-1111111111111111~3333333333',
   EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID: 'ca-app-pub-1111111111111111/2222222222',
@@ -277,6 +296,7 @@ if (enforcedAppCheckResult.status !== 0) {
 const localPurchases = {
   ...REQUIRED_ENVIRONMENT,
   NODE_ENV: 'development',
+  EXPO_PUBLIC_FIREBASE_AUTH_MODE: 'cloud',
   EXPO_PUBLIC_COIN_PURCHASE_MODE: 'revenuecat_sandbox',
   EXPO_PUBLIC_REVENUECAT_ANDROID_SDK: 'goog_SyntheticPublicAndroidSdk12345',
 };
@@ -286,11 +306,12 @@ if (purchaseResult.status !== 0) {
 } else {
   const purchaseConfig = JSON.parse(purchaseResult.stdout);
   if (
+    purchaseConfig.extra?.auth?.mode !== 'cloud' ||
     purchaseConfig.extra?.purchases?.mode !== 'revenuecat_sandbox' ||
     purchaseConfig.extra?.purchases?.androidSdk !==
       localPurchases.EXPO_PUBLIC_REVENUECAT_ANDROID_SDK
   ) {
-    fail('local purchase configuration was not frozen into the manifest');
+    fail('local cloud Auth and purchase configuration were not frozen into the manifest');
   }
   walk(purchaseConfig, '', (key, value) => {
     if (
@@ -330,6 +351,7 @@ if (productionResult.status !== 0) {
 } else {
   const productionConfig = JSON.parse(productionResult.stdout);
   if (
+    productionConfig.extra?.auth?.mode !== 'cloud' ||
     productionConfig.extra?.ads?.mode !== 'production' ||
     productionConfig.extra?.analytics?.enabled !== true
   )

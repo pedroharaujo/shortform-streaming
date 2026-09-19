@@ -28,7 +28,8 @@ import {
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
-import { getApiConfiguration } from '../config/appConfiguration';
+import type { FirebaseAuthMode } from '../../app.config';
+import { getFirebaseAuthConfiguration } from '../config/appConfiguration';
 import type { AppAuth, AuthAccountEvent, AuthOutcome } from './localMockFirebaseAuth';
 
 const ANDROID_EMULATOR_AUTH_ORIGIN = 'http://10.0.2.2:9099';
@@ -42,6 +43,7 @@ const MISSING_GOOGLE_SIGN_IN_MESSAGE =
 
 type AndroidGoogleWebClientNative = {
   readonly getDefaultWebClientId: () => string | null;
+  readonly claimFirebaseAuthMode?: (mode: FirebaseAuthMode) => boolean;
 };
 
 let emulatorAttached = false;
@@ -61,11 +63,32 @@ function isAttachedToExpectedAuthEmulator(): boolean {
 }
 
 export function attachLocalAuthEmulator(): void {
-  if (emulatorAttached || isAttachedToExpectedAuthEmulator()) {
-    emulatorAttached = true;
+  const { mode } = getFirebaseAuthConfiguration();
+  if (Platform.OS === 'android') {
+    const native =
+      requireOptionalNativeModule<AndroidGoogleWebClientNative>('AndroidGoogleWebClient');
+    if (typeof native?.claimFirebaseAuthMode !== 'function') {
+      throw new Error(
+        'Rebuild the Android development client to select Firebase authentication safely.',
+      );
+    }
+    // The native claim survives JS reloads and must precede SDK reads and cached returns.
+    if (native.claimFirebaseAuthMode(mode) !== true) {
+      throw new Error(
+        'Restart the Android app completely before changing Firebase authentication mode.',
+      );
+    }
+  }
+  if (mode === 'cloud') {
+    if (getAuth().emulatorConfig !== null) {
+      throw new Error(
+        'Restart the Android app completely before changing Firebase authentication mode.',
+      );
+    }
     return;
   }
-  if (getApiConfiguration().environment !== 'local') {
+  if (emulatorAttached || isAttachedToExpectedAuthEmulator()) {
+    emulatorAttached = true;
     return;
   }
   try {

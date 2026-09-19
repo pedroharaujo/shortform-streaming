@@ -26,6 +26,12 @@ export interface ApiConfiguration {
   readonly baseUrl: string;
 }
 
+export type FirebaseAuthMode = 'emulator' | 'cloud';
+
+export interface FirebaseAuthConfiguration {
+  readonly mode: FirebaseAuthMode;
+}
+
 export const REWARDED_ADS_MODES = ['disabled', 'test', 'production'] as const;
 export type RewardedAdsMode = (typeof REWARDED_ADS_MODES)[number];
 
@@ -149,6 +155,25 @@ export function resolveApiConfiguration(
   return { environment: rawEnvironment, baseUrl };
 }
 
+export function resolveFirebaseAuthConfiguration(
+  source: Readonly<Record<string, string | undefined>>,
+  environment: ApiEnvironment,
+): FirebaseAuthConfiguration {
+  const mode =
+    source.EXPO_PUBLIC_FIREBASE_AUTH_MODE ?? (environment === 'local' ? 'emulator' : 'cloud');
+  if (mode !== 'emulator' && mode !== 'cloud') {
+    throw new EnvironmentConfigurationError(
+      'EXPO_PUBLIC_FIREBASE_AUTH_MODE must be emulator or cloud.',
+    );
+  }
+  if (mode === 'emulator' && environment !== 'local') {
+    throw new EnvironmentConfigurationError(
+      'Firebase Auth emulator mode is allowed only with a local API.',
+    );
+  }
+  return { mode };
+}
+
 export const DEMO_REWARDED_UNIT_ID = 'ca-app-pub-3940256099942544/5224354917';
 const DEMO_ANDROID_APP_ID = 'ca-app-pub-3940256099942544~3347511713';
 
@@ -258,6 +283,7 @@ export function resolvePurchaseConfiguration(
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const api = resolveApiConfiguration(process.env);
+  const auth = resolveFirebaseAuthConfiguration(process.env, api.environment);
   const ads = resolveAdsConfiguration(process.env, api.environment);
   const analytics = resolveAnalyticsConfiguration(process.env, api.environment);
   const appCheck = resolveAppCheckConfiguration(process.env);
@@ -297,6 +323,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
     ],
     experiments: { typedRoutes: true },
-    extra: { api, ads, analytics, appCheck, purchases },
+    extra: { api, auth, ads, analytics, appCheck, purchases },
   };
 };
