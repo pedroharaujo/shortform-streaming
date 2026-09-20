@@ -45,4 +45,3 @@
 - No real checkout or email was submitted. Native email-app handoff and inbox receipt/reply remain deferred under D-029 to P6-T03 with the reproducible checks in the publication checklist. The privacy draft is not an effective/store policy.
 
 Independent implementation/privacy review: no blocking findings. Scope approval covers the support UI and review draft only.
-
