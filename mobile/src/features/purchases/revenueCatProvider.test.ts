@@ -9,7 +9,11 @@ import { createRevenueCatProvider } from './revenueCatProvider';
 jest.mock('react-native-purchases', () => ({
   __esModule: true,
   default: {
-    PURCHASES_ERROR_CODE: { PURCHASE_CANCELLED_ERROR: '1' },
+    PURCHASES_ERROR_CODE: {
+      PURCHASE_CANCELLED_ERROR: '1',
+      PURCHASE_NOT_ALLOWED_ERROR: '3',
+      PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR: '5',
+    },
     isConfigured: jest.fn(),
     setLogHandler: jest.fn(),
     configure: jest.fn(),
@@ -51,6 +55,8 @@ function product(overrides: Partial<PurchasesStoreProduct> = {}): PurchasesStore
     identifier: productId,
     productCategory: PRODUCT_CATEGORY.NON_SUBSCRIPTION,
     priceString: '€1.99',
+    price: 1.99,
+    currencyCode: 'EUR',
     ...overrides,
   } as PurchasesStoreProduct;
 }
@@ -150,6 +156,8 @@ test('projects exact store prices and only the completed transaction identifier'
       store: 'PLAY_STORE',
       environment: 'SANDBOX',
       price: '€1.99',
+      priceAmount: 1.99,
+      currencyCode: 'EUR',
     },
   ]);
   await expect(provider.purchase(purchaseRequest)).resolves.toEqual({
@@ -163,6 +171,33 @@ test('projects exact store prices and only the completed transaction identifier'
   );
   expect(method('purchaseStoreProduct')).toHaveBeenCalledWith(nativeProduct);
 });
+
+test.each([
+  product({ price: Number.NaN }),
+  product({ currencyCode: 'eur' }),
+  (() => {
+    const value = product();
+    delete (value as { currencyCode?: string }).currencyCode;
+    return value;
+  })(),
+])(
+  'keeps an offer purchasable while omitting invalid comparison metadata %#',
+  async (nativeProduct) => {
+    method('getProducts').mockResolvedValue([nativeProduct]);
+    const provider = await preparedProvider();
+
+    await expect(provider.getOffers({ ...identity, productIds: [productId] })).resolves.toEqual([
+      {
+        ...identity,
+        productId,
+        productType: 'consumable',
+        store: 'PLAY_STORE',
+        environment: 'SANDBOX',
+        price: '€1.99',
+      },
+    ]);
+  },
+);
 
 test('fails closed for a wrong owner, product, category, or post-purchase identity', async () => {
   const provider = await preparedProvider();
@@ -230,6 +265,83 @@ test('keeps cancellation pending when the SDK owner changes before cancellation 
     outcome: 'pending',
   });
 });
+
+test.each([
+  ['5', 'product_unavailable'],
+  ['3', 'purchase_not_allowed'],
+])('returns a scoped %s rejection only for the native purchase error', async (code, outcome) => {
+  const provider = await preparedProvider();
+  await provider.getOffers({ ...identity, productIds: [productId] });
+  method('purchaseStoreProduct').mockRejectedValueOnce({ code, message: 'private detail' });
+  expect(await provider.purchase(purchaseRequest)).toEqual({
+    ...purchaseRequest,
+    outcome,
+  });
+});
+
+test.each(['2', '4', '6', '10', '20', 'unrecognized'])(
+  'keeps uncertain native error %s pending',
+  async (code) => {
+    const provider = await preparedProvider();
+    await provider.getOffers({ ...identity, productIds: [productId] });
+    method('purchaseStoreProduct').mockRejectedValueOnce({ code });
+    expect(await provider.purchase(purchaseRequest)).toEqual({
+      ...purchaseRequest,
+      outcome: 'pending',
+    });
+  },
+);
+
+test.each(['before', 'after', 'changed-owner', 'changed-session'])(
+  'does not clear purchase-not-allowed across %s identity failure',
+  async (when) => {
+    let current = true;
+    const provider = createRevenueCatProvider({
+      androidSdk: 'replace-with-provider-value',
+      applicationId,
+      isCurrent: () => current,
+    });
+    await provider.prepare(identity);
+    await provider.getOffers({ ...identity, productIds: [productId] });
+    if (when === 'before') method('getCustomerInfo').mockRejectedValueOnce({ code: '3' });
+    else
+      method('purchaseStoreProduct').mockImplementationOnce(async () => {
+        if (when === 'changed-owner') method('getAppUserID').mockResolvedValue(otherOwner);
+        if (when === 'changed-session') current = false;
+        if (when === 'after') {
+          method('getAppUserID').mockRejectedValueOnce({ code: '3' });
+          return purchaseResult();
+        }
+        throw { code: '3' };
+      });
+    expect(await provider.purchase(purchaseRequest)).toEqual({
+      ...purchaseRequest,
+      outcome: 'pending',
+    });
+  },
+);
+
+test.each(['before', 'after', 'changed-owner'])(
+  'retains uncertainty for %s identity failure',
+  async (when) => {
+    const provider = await preparedProvider();
+    await provider.getOffers({ ...identity, productIds: [productId] });
+    if (when === 'before') method('getCustomerInfo').mockRejectedValueOnce({ code: '5' });
+    else
+      method('purchaseStoreProduct').mockImplementationOnce(async () => {
+        if (when === 'changed-owner') {
+          method('getAppUserID').mockResolvedValue(otherOwner);
+          throw { code: '5' };
+        }
+        method('getAppUserID').mockRejectedValueOnce({ code: '5' });
+        return purchaseResult();
+      });
+    expect(await provider.purchase(purchaseRequest)).toEqual({
+      ...purchaseRequest,
+      outcome: 'pending',
+    });
+  },
+);
 
 test('does not configure or log in after the captured app session changes', async () => {
   let current = true;

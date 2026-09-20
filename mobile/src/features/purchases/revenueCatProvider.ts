@@ -1,6 +1,7 @@
 import Purchases, {
   PRODUCT_CATEGORY,
   type CustomerInfo,
+  type MakePurchaseResult,
   type PurchasesStoreProduct,
 } from 'react-native-purchases';
 import type { ProviderIdentity, ProviderPurchase, PurchaseProvider } from './types';
@@ -28,17 +29,31 @@ function guardCurrent(isCurrent: () => boolean): void {
   if (!isCurrent()) throw unavailable();
 }
 
-function isCancellation(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === Purchases.PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR
-  );
+function definitePurchaseFailure(
+  error: unknown,
+): 'cancelled' | 'product_unavailable' | 'purchase_not_allowed' | null {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return null;
+  if (error.code === Purchases.PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) return 'cancelled';
+  // Android 10.20.0: receipt/consume/ack failures do not surface as this native rejection.
+  // Recheck that assumption on SDK upgrades; see the declined-payment diagnosis plan.
+  if (error.code === Purchases.PURCHASES_ERROR_CODE.PURCHASE_NOT_ALLOWED_ERROR)
+    return 'purchase_not_allowed';
+  if (error.code === Purchases.PURCHASES_ERROR_CODE.PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR)
+    return 'product_unavailable';
+  return null;
 }
 
 function sameApplication(identity: ProviderIdentity, applicationId: string): boolean {
   return identity.applicationId === applicationId;
+}
+
+function comparablePrice(product: PurchasesStoreProduct) {
+  return Number.isFinite(product.price) &&
+    product.price > 0 &&
+    typeof product.currencyCode === 'string' &&
+    /^[A-Z]{3}$/.test(product.currencyCode)
+    ? { priceAmount: product.price, currencyCode: product.currencyCode }
+    : {};
 }
 
 async function assertIdentity(
@@ -147,6 +162,7 @@ export function createRevenueCatProvider(options: RevenueCatProviderOptions): Pu
           store: 'PLAY_STORE',
           environment: 'SANDBOX',
           price: product.priceString,
+          ...comparablePrice(product),
         });
       });
       if (requested.size !== 0) throw unavailable();
@@ -177,7 +193,17 @@ export function createRevenueCatProvider(options: RevenueCatProviderOptions): Pu
       )
         return pending();
       await assertIdentity(request.ownerId, options.isCurrent);
-      const result = await boundary(() => Purchases.purchaseStoreProduct(offered.product));
+      let result: MakePurchaseResult;
+      try {
+        result = await boundary(() => Purchases.purchaseStoreProduct(offered.product));
+      } catch (error) {
+        // Only explicit native cancellation or purchase/product rejection can clear an attempt.
+        // Identity/network failures after a completed purchase must remain pending.
+        const outcome = definitePurchaseFailure(error);
+        if (!outcome) return pending();
+        await assertIdentity(request.ownerId, options.isCurrent);
+        return Object.freeze({ ...base, outcome });
+      }
       if (
         result.productIdentifier !== request.productId ||
         result.transaction.productIdentifier !== request.productId ||
@@ -195,15 +221,7 @@ export function createRevenueCatProvider(options: RevenueCatProviderOptions): Pu
         outcome: 'completed',
         transactionId: result.transaction.transactionIdentifier,
       });
-    } catch (error) {
-      if (isCancellation(error)) {
-        try {
-          await assertIdentity(request.ownerId, options.isCurrent);
-          return Object.freeze({ ...base, outcome: 'cancelled' });
-        } catch {
-          return pending();
-        }
-      }
+    } catch {
       return pending();
     }
   }

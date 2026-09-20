@@ -1,7 +1,6 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 
 import {
   getAuthSessionRevision,
@@ -9,25 +8,19 @@ import {
   subscribeAuthSession,
 } from '../../auth/session';
 import { useMessages } from '../../localization/messages';
-import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
+import { colors, fontSizes, spacing } from '../../ui/theme';
+import { ActionButton as Action, panelStyles } from '../../ui/ScreenElements';
+import { CoinPackPicker } from './CoinPackPicker';
 import type { CheckoutCoordinator, CheckoutState } from './types';
 
 export interface CoinPacksScreenProps {
   readonly coordinator: CheckoutCoordinator;
-  readonly onBack: () => void;
-  readonly onAccount: () => void;
-  readonly onWallet: () => void;
-  readonly onPurchases?: (() => void) | undefined;
-  readonly onReturnToEpisode?: (() => void) | undefined;
+  readonly onBalanceRefresh: () => void;
 }
 
 export function CoinPacksScreen({
   coordinator,
-  onBack,
-  onAccount,
-  onWallet,
-  onPurchases,
-  onReturnToEpisode,
+  onBalanceRefresh,
 }: CoinPacksScreenProps): JSX.Element {
   const messages = useMessages();
   const [owner] = useState(getAuthSessionRevision);
@@ -35,6 +28,12 @@ export function CoinPacksScreen({
   const mounted = useRef(false);
   const running = useRef(false);
   const [state, setState] = useState<CheckoutState | null>(null);
+  const [selection, setSelection] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  const refreshBalance = useRef(onBalanceRefresh);
+  useEffect(() => {
+    refreshBalance.current = onBalanceRefresh;
+  }, [onBalanceRefresh]);
   const sessionChanged = revision !== owner;
   const signedOut = getSessionCredential() === null;
   const requiresAccount = sessionChanged || signedOut || state?.status === 'session_changed';
@@ -48,7 +47,11 @@ export function CoinPacksScreen({
         .then(operation)
         .then(
           (result) => {
-            if (mounted.current && getAuthSessionRevision() === owner) setState(result);
+            if (mounted.current && getAuthSessionRevision() === owner) {
+              setState(result);
+              if (result.status === 'credited' || result.status === 'review_required')
+                refreshBalance.current();
+            }
           },
           () => {
             // An unexpected error is never evidence that a purchase was cancelled.
@@ -74,6 +77,7 @@ export function CoinPacksScreen({
   const begin = (operation: () => Promise<CheckoutState>) => {
     if (running.current || getAuthSessionRevision() !== owner || getSessionCredential() === null)
       return;
+    setSelection(null);
     setState(null);
     void run(operation);
   };
@@ -81,138 +85,102 @@ export function CoinPacksScreen({
     begin(() => coordinator.sync());
   };
   const reload = () => {
+    setPurchasing(false);
     begin(() => coordinator.load());
   };
   const retryable =
     state?.status === 'cancelled' ||
+    state?.status === 'product_unavailable' ||
+    state?.status === 'purchase_not_allowed' ||
     state?.status === 'unavailable' ||
     state?.status === 'busy' ||
     state?.status === 'storage_unavailable';
 
   return (
-    <SafeAreaView style={styles.container} testID="coin-packs-screen">
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text accessibilityRole="header" style={styles.title}>
-          {messages.coinPacks.title}
-        </Text>
-        <View accessibilityLiveRegion="polite" style={styles.summary}>
-          {requiresAccount ? (
-            <Text style={styles.body}>
-              {signedOut ? messages.wallet.signIn : messages.wallet.sessionChanged}
+    <View style={styles.content} testID="coin-packs-screen">
+      <View
+        accessibilityLiveRegion="polite"
+        style={[state?.status !== 'ready' && panelStyles.card, styles.summary]}
+      >
+        {requiresAccount ? (
+          <Text style={styles.body}>
+            {signedOut ? messages.wallet.signIn : messages.wallet.sessionChanged}
+          </Text>
+        ) : state === null ? (
+          <Text style={styles.body}>
+            {purchasing ? messages.coinStore.processing : messages.coinPacks.loading}
+          </Text>
+        ) : state.status === 'ready' ? (
+          <>
+            <CoinPackPicker
+              offers={state.offers}
+              selection={selection}
+              onSelect={setSelection}
+              onCheckout={() => {
+                const offer = state.offers.find((item) => item.productId === selection);
+                if (!offer) return;
+                setPurchasing(true);
+                begin(() => coordinator.purchase(offer.productId));
+              }}
+            />
+            {state.offers.length > 0 ? (
+              <Text style={styles.muted}>{messages.coinPacks.description}</Text>
+            ) : (
+              <Action label={messages.coinPacks.reload} onPress={reload} />
+            )}
+          </>
+        ) : state.status === 'credited' ? (
+          <>
+            <Text style={styles.body}>{messages.coinPacks.credited}</Text>
+            {state.wallet.status === 'unavailable' ? (
+              <Text style={styles.body}>{messages.coinPacks.walletUnavailable}</Text>
+            ) : null}
+            <Text style={styles.muted}>
+              {messages.purchases.supportReference(state.supportReference)}
             </Text>
-          ) : state === null ? (
-            <Text style={styles.body}>{messages.coinPacks.loading}</Text>
-          ) : state.status === 'ready' ? (
-            <>
-              <Text style={styles.body}>{messages.coinPacks.description}</Text>
-              {state.offers.map((offer) => (
-                <Pressable
-                  key={offer.productId}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${messages.coinPacks.coins(offer.coins)} · ${offer.price}`}
-                  onPress={() => {
-                    begin(() => coordinator.purchase(offer.productId));
-                  }}
-                  style={styles.button}
-                >
-                  <Text style={styles.body}>{messages.coinPacks.coins(offer.coins)}</Text>
-                  <Text style={styles.price}>{offer.price}</Text>
-                </Pressable>
-              ))}
-            </>
-          ) : state.status === 'credited' ? (
-            <>
-              <Text style={styles.body}>{messages.coinPacks.credited}</Text>
-              {state.wallet.status === 'available' ? (
-                <Text style={styles.price} testID="purchase-wallet-balance">
-                  {messages.wallet.balance(state.wallet.data.balance)}
-                </Text>
-              ) : (
-                <Text style={styles.body}>{messages.coinPacks.walletUnavailable}</Text>
-              )}
-              <Text style={styles.muted}>
-                {messages.purchases.supportReference(state.supportReference)}
-              </Text>
-            </>
-          ) : state.status === 'review_required' ? (
-            <>
-              <Text style={styles.body}>{messages.purchases.reviewRequired}</Text>
-              <Text style={styles.muted}>
-                {messages.purchases.supportReference(state.supportReference)}
-              </Text>
-            </>
-          ) : (
-            <Text style={styles.body}>
-              {state.status === 'cancelled'
-                ? messages.coinPacks.cancelled
-                : state.status === 'busy'
-                  ? messages.coinPacks.busy
-                  : state.status === 'storage_unavailable'
-                    ? messages.coinPacks.storageUnavailable
-                    : state.status === 'awaiting_verification'
-                      ? messages.coinPacks.pending
-                      : messages.coinPacks.unavailable}
+          </>
+        ) : state.status === 'review_required' ? (
+          <>
+            <Text style={styles.body}>{messages.purchases.reviewRequired}</Text>
+            <Text style={styles.muted}>
+              {messages.purchases.supportReference(state.supportReference)}
             </Text>
-          )}
-        </View>
-        {!requiresAccount &&
-        (state?.status === 'awaiting_verification' || state?.status === 'review_required') ? (
-          <Action label={messages.coinPacks.checkPurchase} onPress={checkPurchase} />
-        ) : null}
-        {!requiresAccount && retryable ? (
-          <Action label={messages.coinPacks.reload} onPress={reload} />
-        ) : null}
-        <Action label={messages.coinPacks.openWallet} onPress={onWallet} />
-        {onPurchases ? <Action label={messages.purchases.title} onPress={onPurchases} /> : null}
-        <Action
-          label={requiresAccount ? messages.common.signIn : messages.common.account}
-          onPress={onAccount}
-        />
-        {onReturnToEpisode ? (
-          <Action label={messages.wallet.backToEpisode} onPress={onReturnToEpisode} />
-        ) : null}
-        <Action label={messages.common.back} onPress={onBack} />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function Action({
-  label,
-  onPress,
-}: {
-  readonly label: string;
-  readonly onPress: () => void;
-}): JSX.Element {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={styles.button}
-    >
-      <Text style={styles.body}>{label}</Text>
-    </Pressable>
+          </>
+        ) : (
+          <Text style={styles.body}>
+            {state.status === 'purchase_not_allowed'
+              ? messages.coinPacks.purchaseNotAllowed
+              : state.status === 'product_unavailable'
+                ? messages.coinPacks.productUnavailable
+                : state.status === 'cancelled'
+                  ? messages.coinPacks.cancelled
+                  : state.status === 'busy'
+                    ? messages.coinPacks.busy
+                    : state.status === 'storage_unavailable'
+                      ? messages.coinPacks.storageUnavailable
+                      : state.status === 'awaiting_verification'
+                        ? messages.coinPacks.pending
+                        : messages.coinPacks.unavailable}
+          </Text>
+        )}
+      </View>
+      {!requiresAccount &&
+      (state?.status === 'awaiting_verification' || state?.status === 'review_required') ? (
+        <Action label={messages.coinPacks.checkPurchase} onPress={checkPurchase} />
+      ) : null}
+      {!requiresAccount && retryable ? (
+        <Action label={messages.coinPacks.reload} onPress={reload} />
+      ) : null}
+      {!requiresAccount && state?.status === 'credited' ? (
+        <Action label={messages.purchasePreview.again} onPress={reload} />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { color: colors.foreground, fontSize: fontSizes.body },
-  button: {
-    alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    gap: spacing.sm,
-    justifyContent: 'center',
-    minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  container: { backgroundColor: colors.background, flex: 1 },
-  content: { flexGrow: 1, gap: spacing.lg, padding: spacing.xxl },
-  muted: { color: colors.muted, fontSize: fontSizes.label },
-  price: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
+  body: { color: colors.foreground, fontSize: fontSizes.body, lineHeight: 24 },
+  content: { gap: spacing.lg },
+  muted: { color: colors.muted, fontSize: fontSizes.label, lineHeight: 22 },
   summary: { gap: spacing.lg },
-  title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
 });

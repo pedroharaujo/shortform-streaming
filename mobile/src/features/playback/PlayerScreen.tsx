@@ -1,6 +1,14 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  AppState,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type {
@@ -414,30 +422,40 @@ export function PlayerScreen({
           style={styles.centered}
           testID="player-loading"
         >
+          <ActivityIndicator color={colors.accent} size="large" />
           <Text style={styles.muted}>{messages.playback.loading}</Text>
         </View>
       ) : null}
 
       {errorText !== null ? (
-        <View
+        <ScrollView
           accessibilityLiveRegion="assertive"
-          style={styles.centered}
+          contentContainerStyle={styles.centered}
           testID={displayed.phase === 'locked' ? 'player-locked' : 'player-error'}
         >
-          <Text style={styles.body}>{errorText}</Text>
-          {displayed.phase === 'locked' && onReward ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={messages.playback.viewReward}
-              onPress={() =>
-                onReward(nextGate?.phase === 'locked' ? nextGate.episodeId : activeEpisodeId)
-              }
-              style={styles.rewardAction}
+          <View style={styles.statusCard}>
+            <View
+              style={styles.emblem}
+              accessible={false}
+              importantForAccessibility="no-hide-descendants"
             >
-              <Text style={styles.body}>{messages.playback.viewReward}</Text>
-            </Pressable>
-          ) : null}
-        </View>
+              <Text style={styles.symbol}>▶</Text>
+            </View>
+            <Text style={styles.body}>{errorText}</Text>
+            {displayed.phase === 'locked' && onReward ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={messages.playback.viewReward}
+                onPress={() =>
+                  onReward(nextGate?.phase === 'locked' ? nextGate.episodeId : activeEpisodeId)
+                }
+                style={styles.rewardAction}
+              >
+                <Text style={styles.rewardLabel}>{messages.playback.viewReward}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </ScrollView>
       ) : null}
 
       {displayed.phase === 'playing' ? (
@@ -480,8 +498,33 @@ export function PlayerScreen({
 }
 
 const styles = StyleSheet.create({
-  body: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
-  centered: { alignItems: 'center', flex: 1, gap: spacing.md, justifyContent: 'center' },
+  body: { color: colors.foreground, fontSize: fontSizes.body, lineHeight: 24, textAlign: 'center' },
+  centered: {
+    alignItems: 'center',
+    flexGrow: 1,
+    gap: spacing.lg,
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl,
+  },
+  statusCard: {
+    alignItems: 'center',
+    width: '100%',
+    gap: spacing.xxl,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing.xxl,
+  },
+  emblem: {
+    width: 72,
+    height: 72,
+    borderRadius: radii.lg,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  symbol: { color: colors.accent, fontSize: fontSizes.display },
   close: {
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -489,25 +532,47 @@ const styles = StyleSheet.create({
     minHeight: minimumTouchTarget,
     minWidth: minimumTouchTarget,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
-  closeLabel: { color: colors.muted, fontSize: fontSizes.body },
-  container: { backgroundColor: colors.background, flex: 1, padding: spacing.xxl },
-  muted: { color: colors.muted, fontSize: fontSizes.label },
+  closeLabel: { color: colors.foreground, fontSize: fontSizes.label, fontWeight: '600' },
+  container: { backgroundColor: colors.background, flex: 1, padding: spacing.lg },
+  muted: { color: colors.muted, fontSize: fontSizes.body, lineHeight: 24, textAlign: 'center' },
   nowPlaying: {
     color: colors.foreground,
-    fontSize: fontSizes.body,
-    fontWeight: '600',
+    fontSize: fontSizes.title,
+    fontWeight: '700',
     marginBottom: spacing.xs,
-    marginTop: spacing.sm,
+    marginTop: spacing.lg,
   },
-  playerWrap: { flex: 1, marginTop: spacing.md },
+  playerWrap: {
+    flex: 1,
+    marginTop: spacing.md,
+    overflow: 'hidden',
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   rewardAction: {
     alignItems: 'center',
-    borderColor: colors.border,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
     borderRadius: radii.md,
     borderWidth: 1,
     justifyContent: 'center',
     minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.md,
+    minWidth: minimumTouchTarget,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    alignSelf: 'stretch',
+  },
+  rewardLabel: {
+    color: colors.onAccent,
+    fontSize: fontSizes.body,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

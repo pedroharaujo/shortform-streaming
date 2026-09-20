@@ -8,6 +8,7 @@ import type { MeClient } from '../../api/me/types';
 import type { PlaybackClient } from '../../api/playback/types';
 import type { RewardIntent, RewardsClient } from '../../api/rewards/types';
 import { getAuthSessionRevision, getSessionCredential } from '../../auth/session';
+import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import {
   clearPendingRewardAttempt,
   newPendingRewardAttempt,
@@ -546,15 +547,25 @@ export function RewardScreen({
     <SafeAreaView style={styles.container} testID="reward-screen">
       <View style={styles.sheet}>
         <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.handle} accessible={false} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close reward"
             onPress={() => leave(onClose)}
-            style={styles.button}
+            style={styles.close}
           >
-            <Text style={styles.body}>Not now</Text>
+            <Text style={styles.closeText}>Not now</Text>
           </Pressable>
-          <Text style={styles.eyebrow}>EPISODE ACCESS</Text>
+          <View style={styles.identity}>
+            <View
+              style={styles.emblem}
+              accessible={false}
+              importantForAccessibility="no-hide-descendants"
+            >
+              <Text style={styles.symbol}>▶</Text>
+            </View>
+            <Text style={styles.eyebrow}>EPISODE ACCESS</Text>
+          </View>
           <Text accessibilityRole="header" style={styles.title}>
             {offer?.title ?? 'Unlock this episode'}
           </Text>
@@ -565,9 +576,9 @@ export function RewardScreen({
             </View>
           ) : null}
           {state.phase === 'loading' || !recoveryResolved || busy ? (
-            <ActivityIndicator accessibilityLabel="Checking episode access" color="#fafafa" />
+            <ActivityIndicator accessibilityLabel="Checking episode access" color={colors.accent} />
           ) : null}
-          <Text accessibilityLiveRegion="polite" style={styles.body} testID="reward-message">
+          <Text accessibilityLiveRegion="polite" style={styles.message} testID="reward-message">
             {displayMessage}
           </Text>
           {(offer || intent || attempt) && recoveryResolved && !invalidated && !terminal ? (
@@ -658,21 +669,91 @@ export function RewardScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: '#09090b', flex: 1, justifyContent: 'flex-end' },
+  container: { backgroundColor: colors.background, flex: 1, justifyContent: 'flex-end' },
   sheet: {
     maxHeight: '100%',
-    backgroundColor: '#18181b',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  content: { padding: 24, gap: 20 },
-  eyebrow: { color: '#a1a1aa', fontSize: 12, letterSpacing: 2 },
-  title: { color: '#fafafa', fontSize: 26, fontWeight: '600' },
-  offer: { padding: 20, borderRadius: 16, borderColor: '#52525b', borderWidth: 1, gap: 12 },
-  offerTitle: { color: '#fafafa', fontSize: 20, fontWeight: '600' },
-  body: { color: '#fafafa', fontSize: 16 },
-  button: { minHeight: 48, padding: 16, borderRadius: 12, backgroundColor: '#27272a' },
-  primary: { minHeight: 48, padding: 16, borderRadius: 12, backgroundColor: '#fafafa' },
-  primaryText: { color: '#18181b', fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  content: { padding: spacing.xxl, gap: spacing.xl },
+  handle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: radii.pill,
+    backgroundColor: colors.border,
+  },
+  close: {
+    alignSelf: 'flex-end',
+    justifyContent: 'center',
+    minHeight: minimumTouchTarget,
+    minWidth: minimumTouchTarget,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceRaised,
+  },
+  closeText: { color: colors.muted, fontSize: fontSizes.label, fontWeight: '600' },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  emblem: {
+    width: 56,
+    height: 56,
+    borderRadius: 19,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  symbol: { color: colors.accent, fontSize: fontSizes.artworkFallback },
+  eyebrow: {
+    color: colors.accent,
+    fontSize: fontSizes.caption,
+    letterSpacing: 1.5,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  title: {
+    color: colors.foreground,
+    fontSize: fontSizes.display,
+    fontWeight: '700',
+    letterSpacing: -0.7,
+  },
+  offer: {
+    padding: spacing.xl,
+    borderRadius: radii.lg,
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.border,
+    borderWidth: 1,
+    gap: spacing.md,
+  },
+  offerTitle: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
+  body: { color: colors.foreground, fontSize: fontSizes.body, lineHeight: 24 },
+  message: { color: colors.muted, fontSize: fontSizes.body, lineHeight: 24 },
+  button: {
+    minHeight: minimumTouchTarget,
+    minWidth: minimumTouchTarget,
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  primary: {
+    minHeight: minimumTouchTarget,
+    minWidth: minimumTouchTarget,
+    padding: spacing.lg,
+    justifyContent: 'center',
+    borderRadius: radii.md,
+    backgroundColor: colors.accent,
+  },
+  primaryText: {
+    color: colors.onAccent,
+    fontSize: fontSizes.body,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   disabled: { opacity: 0.5 },
 });

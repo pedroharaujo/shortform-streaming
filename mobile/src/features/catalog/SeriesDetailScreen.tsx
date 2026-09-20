@@ -29,13 +29,24 @@ function EpisodeRow({
       accessibilityLabel={messages.catalog.episodeLabel(episode.order, episode.title)}
       accessibilityRole="button"
       onPress={() => onSelect(episode.id)}
-      style={styles.episodeRow}
+      style={({ pressed }) => [styles.episodeRow, pressed && styles.pressed]}
       testID={`episode-row-${episode.id}`}
     >
-      <Text style={styles.episodeOrder}>{messages.catalog.episode(episode.order)}</Text>
-      <Text style={styles.episodeTitle}>{episode.title}</Text>
-      <Text numberOfLines={2} style={styles.muted}>
-        {episode.synopsis}
+      <View style={styles.episodeNumber}>
+        <Text style={styles.numberLabel}>{String(episode.order).padStart(2, '0')}</Text>
+      </View>
+      <View style={styles.episodeCopy}>
+        <Text style={styles.episodeOrder}>
+          {messages.catalog.episode(episode.order)} ·{' '}
+          {messages.catalog.duration(episode.duration_seconds)}
+        </Text>
+        <Text style={styles.episodeTitle}>{episode.title}</Text>
+        <Text numberOfLines={2} style={styles.muted}>
+          {episode.synopsis}
+        </Text>
+      </View>
+      <Text accessible={false} style={styles.chevron}>
+        ›
       </Text>
     </Pressable>
   );
@@ -59,7 +70,7 @@ export function SeriesDetailScreen({
         style={styles.back}
         testID="series-detail-back"
       >
-        <Text style={styles.backLabel}>{messages.common.back}</Text>
+        <Text style={styles.backLabel}>‹ {messages.common.back}</Text>
       </Pressable>
 
       <CatalogFetchStatus
@@ -88,6 +99,11 @@ export function SeriesDetailScreen({
             {state.series.title}
           </Text>
           <Text style={styles.synopsis}>{state.series.synopsis}</Text>
+          <Text style={styles.metadata}>
+            {messages.catalog.episodeCount(
+              state.series.seasons.reduce((count, season) => count + season.episodes.length, 0),
+            )}
+          </Text>
           {state.series.seasons.map((season) => (
             <View key={season.number} testID={`series-season-${season.number}`}>
               <Text accessibilityRole="header" style={styles.seasonTitle}>
@@ -111,18 +127,25 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     minHeight: minimumTouchTarget,
     minWidth: minimumTouchTarget,
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.lg,
   },
-  backLabel: { color: colors.muted, fontSize: fontSizes.body },
+  backLabel: { color: colors.foreground, fontSize: fontSizes.body },
   body: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
   centered: { alignItems: 'center', flex: 1, gap: spacing.md, justifyContent: 'center' },
   container: { backgroundColor: colors.background, flex: 1, padding: spacing.xxl },
   content: { paddingBottom: spacing.xxl },
   episodeOrder: {
-    color: colors.muted,
+    color: colors.accent,
     fontSize: fontSizes.caption,
     marginBottom: spacing.xxs,
   },
   episodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radii.md,
     borderWidth: 1,
@@ -130,8 +153,26 @@ const styles = StyleSheet.create({
     minHeight: minimumTouchTarget,
     padding: spacing.md,
   },
+  episodeCopy: { flex: 1, gap: spacing.xs },
+  episodeNumber: {
+    width: 42,
+    minHeight: 56,
+    borderRadius: radii.md,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numberLabel: { color: colors.accent, fontSize: fontSizes.section, fontWeight: '700' },
+  chevron: { color: colors.accent, fontSize: fontSizes.title },
+  metadata: {
+    color: colors.accent,
+    fontSize: fontSizes.caption,
+    marginTop: spacing.md,
+    fontWeight: '600',
+  },
+  pressed: { opacity: 0.75 },
   episodeTitle: { color: colors.foreground, fontSize: fontSizes.body, fontWeight: '600' },
-  muted: { color: colors.muted, fontSize: fontSizes.body },
+  muted: { color: colors.muted, fontSize: fontSizes.caption, lineHeight: 19 },
   seasonTitle: {
     color: colors.foreground,
     fontSize: fontSizes.section,
@@ -144,11 +185,12 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.body,
     marginBottom: spacing.sm,
     marginTop: spacing.sm,
+    lineHeight: 24,
   },
   title: {
     color: colors.foreground,
-    fontSize: fontSizes.title,
-    fontWeight: '600',
+    fontSize: fontSizes.display,
+    fontWeight: '700',
     marginTop: spacing.lg,
   },
 });

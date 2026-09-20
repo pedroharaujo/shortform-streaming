@@ -82,6 +82,7 @@ async function setup(
   };
   const analytics = accountAnalyticsDouble();
   const onWallet = jest.fn();
+  const onPurchases = jest.fn();
   const client = createAccountClient({
     baseUrl: 'https://api.example.test',
     getCredential: getSessionCredential,
@@ -96,12 +97,11 @@ async function setup(
       onSignIn={jest.fn()}
       onHome={jest.fn()}
       onWallet={onWallet}
+      onPurchases={onPurchases}
     />,
     renderOptions,
   );
-  const savePreferencesLabel =
-    renderOptions?.messages?.account.savePreferences ?? englishMessages.account.savePreferences;
-  await waitFor(() => expect(view.getByLabelText(savePreferencesLabel)).toBeEnabled());
+  await waitFor(() => expect(view.getByLabelText(englishMessages.design.privacy)).toBeEnabled());
   return {
     view,
     analytics,
@@ -110,19 +110,43 @@ async function setup(
     fetchImplementation,
     requests,
     onWallet,
+    onPurchases,
     user: userEvent.setup(),
   };
 }
 
 afterEach(() => setAuthSession(null));
 
+it('opens settings from the account menu and clears deletion confirmation when returning', async () => {
+  const { view, user, requests } = await setup();
+  await user.press(view.getByLabelText(englishMessages.design.privacy));
+  expect(view.getByLabelText('Analytics consent')).toBeTruthy();
+  expect(view.queryByLabelText('Delete account')).toBeNull();
+  await user.press(view.getByRole('button', { name: 'Account' }));
+  expect(view.queryByLabelText('Save preferences')).toBeNull();
+  await user.press(view.getByLabelText(englishMessages.design.security));
+  await user.press(view.getByLabelText('Delete account'));
+  await user.type(view.getByLabelText('Current password'), 'synthetic-verification');
+  await user.press(view.getByRole('button', { name: 'Account' }));
+  await user.press(view.getByLabelText(englishMessages.design.security));
+  expect(view.queryByLabelText('Current password')).toBeNull();
+  await user.press(view.getByLabelText('Delete account'));
+  expect(view.getByLabelText('Current password')).toHaveProp('value', '');
+  expect(requests).toHaveLength(1);
+});
+
 it('opens the authenticated wallet and hides that action as soon as the account changes', async () => {
-  const { view, onWallet, user } = await setup();
+  const { view, onWallet, onPurchases, user } = await setup();
+  expect(view.queryByLabelText(englishMessages.account.savePreferences)).toBeNull();
+  expect(view.queryByLabelText(englishMessages.account.deleteAccount)).toBeNull();
+  await user.press(view.getByLabelText(englishMessages.purchases.title));
+  expect(onPurchases).toHaveBeenCalledTimes(1);
   await user.press(view.getByLabelText(englishMessages.wallet.title));
   expect(onWallet).toHaveBeenCalledTimes(1);
 
   await act(() => setAuthSession({ credential: 'mock.replacement_account' }));
   expect(view.queryByLabelText(englishMessages.wallet.title)).toBeNull();
+  expect(view.queryByLabelText(englishMessages.purchases.title)).toBeNull();
 });
 
 it('loads consent as off and writes only explicit preferences with the authenticated session', async () => {
@@ -131,9 +155,11 @@ it('loads consent as off and writes only explicit preferences with the authentic
   expect(analyticsConsent.applyProfile).toHaveBeenCalledWith(
     expect.objectContaining({ profileId: 'usr_synthetic', analyticsConsent: false }),
   );
+  await user.press(view.getByLabelText(englishMessages.design.privacy));
   expect(view.getByLabelText('Analytics consent')).toHaveProp('value', false);
   expect(view.getByLabelText('Ads consent')).toHaveProp('value', false);
-  await user.type(view.getByLabelText('Country code'), 'fr');
+  expect(view.queryByLabelText('Country code')).toBeNull();
+  expect(view.queryByText('Language: English')).toBeNull();
   await fireEvent(view.getByLabelText('Analytics consent'), 'valueChange', true);
   await user.press(view.getByLabelText('Save preferences'));
   await waitFor(() =>
@@ -143,8 +169,6 @@ it('loads consent as off and writes only explicit preferences with the authentic
   expect(requests[1]?.method).toBe('PATCH');
   expect(requests[1]?.headers.get('Authorization')).toBe('Bearer mock.synthetic_account');
   expect(await requests[1]?.json()).toEqual({
-    locale: 'en',
-    country: 'FR',
     analytics_consent: true,
     ads_consent: false,
   });
@@ -157,6 +181,7 @@ it('keeps unsaved preferences after a failed save and permits retry', async () =
   const { view, user } = await setup(
     jsonResponse({ code: 'unavailable', message: 'Unavailable' }, 503),
   );
+  await user.press(view.getByLabelText(englishMessages.design.privacy));
   await fireEvent(view.getByLabelText('Ads consent'), 'valueChange', true);
   await user.press(view.getByLabelText('Save preferences'));
   await waitFor(() =>
@@ -174,6 +199,7 @@ it.each(['pending', 'completed'])(
       jsonResponse({ public_id: 'del_synthetic', status }, 202),
     );
     expect(view.queryByLabelText('Verify password and delete account')).toBeNull();
+    await user.press(view.getByLabelText(englishMessages.design.security));
     await user.press(view.getByLabelText('Delete account'));
     expect(requests).toHaveLength(1);
     await user.type(view.getByLabelText('Current password'), 'replace-with-provider-value');
@@ -211,6 +237,7 @@ it('records accepted deletion only inside the identity-detached consent cleanup 
     return true;
   });
 
+  await user.press(view.getByLabelText(englishMessages.design.security));
   await user.press(view.getByLabelText('Delete account'));
   await user.press(view.getByLabelText('Verify Google and delete account'));
   await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
@@ -227,6 +254,7 @@ it.each(['cancelled', 'error'] as const)(
     auth.reauthenticate.mockResolvedValue(
       outcome === 'cancelled' ? { outcome } : { outcome, message: 'private provider detail' },
     );
+    await user.press(view.getByLabelText(englishMessages.design.security));
     await user.press(view.getByLabelText('Delete account'));
     await user.press(view.getByLabelText('Verify Google and delete account'));
     await waitFor(() => expect(view.getByTestId('account-message')).toBeTruthy());
@@ -247,6 +275,7 @@ it('keeps the account signed in and asks for new verification after the server r
   const { view, user, auth } = await setup(
     jsonResponse({ code: 'reauthentication_required', message: 'Reauthenticate' }, 403),
   );
+  await user.press(view.getByLabelText(englishMessages.design.security));
   await user.press(view.getByLabelText('Delete account'));
   await user.press(view.getByLabelText('Verify Google and delete account'));
   await waitFor(() =>
@@ -260,6 +289,7 @@ it('keeps the account signed in and asks for new verification after the server r
 it('warns that deletion may have succeeded when its response is lost', async () => {
   const { view, analytics, user, auth, fetchImplementation } = await setup();
   fetchImplementation.mockRejectedValueOnce(new TypeError('Synthetic network failure'));
+  await user.press(view.getByLabelText(englishMessages.design.security));
   await user.press(view.getByLabelText('Delete account'));
   await user.press(view.getByLabelText('Verify Google and delete account'));
   await waitFor(() =>
@@ -282,6 +312,7 @@ it.each([202, 401])(
           resolveResponse = resolve;
         }),
     );
+    await user.press(view.getByLabelText(englishMessages.design.security));
     await user.press(view.getByLabelText('Delete account'));
     await user.press(view.getByLabelText('Verify Google and delete account'));
     await waitFor(() => expect(fetchImplementation).toHaveBeenCalledTimes(2));
@@ -311,6 +342,7 @@ it('does not apply late reauthentication to a replacement session or send deleti
         resolveVerification = resolve;
       }),
   );
+  await user.press(view.getByLabelText(englishMessages.design.security));
   await user.press(view.getByLabelText('Delete account'));
   await user.press(view.getByLabelText('Verify Google and delete account'));
   await view.unmount();
@@ -405,6 +437,7 @@ it('allows only one verification and deletion request during duplicate taps', as
         resolveVerification = resolve;
       }),
   );
+  await user.press(view.getByLabelText(englishMessages.design.security));
   await user.press(view.getByLabelText('Delete account'));
   const button = view.getByLabelText('Verify Google and delete account');
   await user.press(button);
@@ -422,6 +455,7 @@ it('clears stale credentials when an authenticated action returns 401', async ()
   const { view, user, auth } = await setup(
     jsonResponse({ code: 'invalid_token', message: 'Invalid' }, 401),
   );
+  await user.press(view.getByLabelText(englishMessages.design.privacy));
   await user.press(view.getByLabelText('Save preferences'));
   await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
   expect(getSessionCredential()).toBeNull();
@@ -471,8 +505,6 @@ it('keeps long localized account actions reachable on a compact Android screen',
     account: {
       ...englishMessages.account,
       backHome: 'Return to the catalog home screen without changing these preferences',
-      countryHint:
-        'Your two-letter country preference is stored on the account and does not change content availability in your current territory.',
       preferencesHint:
         'These optional preferences use deliberately long English interface copy so the compact-screen layout remains usable at larger text sizes.',
       savePreferences: 'Save all of these account and consent preferences',
@@ -483,12 +515,13 @@ it('keeps long localized account actions reachable on a compact Android screen',
     metrics: compactAndroidMetrics,
   });
 
+  await fireEvent.press(view.getByLabelText(englishMessages.design.privacy));
   expect(view.getByTestId('account-scroll')).toBeTruthy();
-  expect(view.getByRole('header', { name: longMessages.common.account })).toBeTruthy();
+  expect(view.getByRole('header', { name: longMessages.design.privacy })).toBeTruthy();
   expect(view.getByLabelText(longMessages.account.savePreferences)).toHaveStyle({
     minHeight: minimumTouchTarget,
   });
-  expect(view.getByLabelText(longMessages.account.backHome)).toHaveStyle({
+  expect(view.getByRole('button', { name: longMessages.common.account })).toHaveStyle({
     minHeight: minimumTouchTarget,
   });
   expect(view.getByLabelText(longMessages.account.analyticsConsent).parent).toHaveStyle({

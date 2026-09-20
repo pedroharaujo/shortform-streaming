@@ -19,6 +19,9 @@ sys.path.insert(0, str(SCRIPTS))
 
 from android_jdk import prepare_android_env  # noqa: E402
 from run_mobile_android import (  # noqa: E402
+    _adb_devices_output as _adb_output,
+)
+from run_mobile_android import (  # noqa: E402
     adb_has_emulator_serial,
     adb_has_ready_device,
     device_is_booted,
@@ -96,20 +99,6 @@ def choose_avd(available: Sequence[str], *, preferred: str | None = None) -> str
     return names[0]
 
 
-def _adb_output(env: dict[str, str]) -> str:
-    adb = shutil.which("adb", path=env.get("PATH"))
-    if adb is None:
-        return ""
-    result = subprocess.run(
-        [adb, "devices"],
-        check=False,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
-    return f"{result.stdout}\n{result.stderr}"
-
-
 def wait_for_ready_device(
     env: dict[str, str],
     *,
@@ -148,9 +137,7 @@ def _popen_detached(emulator: Path, avd: str, env: dict[str, str]) -> None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             startupinfo=startupinfo,
-            creationflags=(
-                CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB
-            ),
+            creationflags=(CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB),
             close_fds=True,
         )
         return

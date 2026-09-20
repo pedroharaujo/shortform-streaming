@@ -4,7 +4,7 @@ import RewardRoute from '../../../app/reward/[id]';
 import SignInRoute from '../../../app/sign-in';
 import AccountRoute from '../../../app/account';
 import UnlockRoute from '../../../app/unlock/[id]';
-import WalletRoute from '../../../app/wallet';
+import WalletRoute from '../../../app/coins';
 import { createAppWalletClient } from '../../api/createAppClients';
 import { setAuthSession } from '../../auth/session';
 import { createRewardedAdPresenter } from './rewardedAdPresenter';
@@ -206,7 +206,7 @@ it('retains the locked episode through login and preference navigation', async (
   });
   await fireEvent.press(account.getByText('Open wallet'));
   expect(router.push).toHaveBeenLastCalledWith({
-    pathname: '/wallet',
+    pathname: '/coins',
     params: { returnEpisode: 'ep_synthetic' },
   });
 });
@@ -217,7 +217,7 @@ it('retains the exact coin episode through wallet and account without creating a
   const unlock = await render(<UnlockRoute />);
   await fireEvent.press(unlock.getByText('Open wallet'));
   expect(router.push).toHaveBeenLastCalledWith({
-    pathname: '/wallet',
+    pathname: '/coins',
     params: { returnEpisode: 'ep_coin_synthetic' },
   });
   await unlock.unmount();
@@ -267,12 +267,12 @@ it('keeps the episode when signing in from wallet and uses ordinary back navigat
   expect(router.back).toHaveBeenCalledTimes(1);
 });
 
-it('provides a safe account fallback for a directly opened wallet without episode context', async () => {
+it('provides a safe home fallback for directly opened coins without episode context', async () => {
   mockParams = {};
   const wallet = await render(<WalletRoute />);
   expect(wallet.queryByText('Return to episode')).toBeNull();
   await fireEvent.press(wallet.getByText('Close'));
-  expect(router.replace).toHaveBeenLastCalledWith('/account');
+  expect(router.replace).toHaveBeenLastCalledWith('/');
 });
 
 it.each([

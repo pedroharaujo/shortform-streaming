@@ -59,8 +59,8 @@ function accountAnalyticsDouble(): jest.Mocked<AccountAnalytics> {
 }
 
 describe('SignInScreen', () => {
-  afterEach(() => {
-    setAuthSession(null);
+  afterEach(async () => {
+    await act(() => setAuthSession(null));
   });
 
   it('signs in with email/password and loads /v1/me without sending a backend user id', async () => {
@@ -132,7 +132,7 @@ describe('SignInScreen', () => {
     const auth = createLocalMockFirebaseAuth();
     const analyticsConsent = analyticsConsentDouble();
     await auth.signIn('user@example.com', 'correct-horse');
-    setAuthSession({ credential: 'mock.user_example_com' });
+    await act(() => setAuthSession({ credential: 'mock.user_example_com' }));
     const user = userEvent.setup();
     const view = await render(
       <SignInScreen
@@ -295,7 +295,7 @@ describe('SignInScreen', () => {
 
     await user.press(view.getByTestId('sign-in-google'));
     await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
-    setAuthSession({ credential: 'mock.replacement_account' });
+    await act(() => setAuthSession({ credential: 'mock.replacement_account' }));
     resolveMe({ outcome: 'ok', data: PROFILE });
 
     await waitFor(() => expect(view.getByTestId('sign-in-google')).toBeEnabled());
@@ -329,7 +329,7 @@ describe('SignInScreen', () => {
 
     await user.press(view.getByTestId('sign-in-google'));
     await waitFor(() => expect(analyticsConsent.clear).toHaveBeenCalledTimes(1));
-    setAuthSession({ credential: 'mock.replacement_account' });
+    await act(() => setAuthSession({ credential: 'mock.replacement_account' }));
     await act(async () => resolveClear(true));
 
     await waitFor(() => expect(view.getByTestId('sign-in-google')).toBeEnabled());
@@ -339,7 +339,7 @@ describe('SignInScreen', () => {
   });
 
   it('does not sign out a replacement session while analytics cleanup is pending', async () => {
-    setAuthSession({ credential: 'mock.original_account' });
+    await act(() => setAuthSession({ credential: 'mock.original_account' }));
     const auth = { ...createLocalMockFirebaseAuth(), signOut: jest.fn(async () => undefined) };
     const analyticsConsent = analyticsConsentDouble();
     let resolveClear!: (value: boolean) => void;
@@ -362,7 +362,7 @@ describe('SignInScreen', () => {
 
     await user.press(view.getByTestId('sign-in-sign-out'));
     await waitFor(() => expect(analyticsConsent.clear).toHaveBeenCalledTimes(1));
-    setAuthSession({ credential: 'mock.replacement_account' });
+    await act(() => setAuthSession({ credential: 'mock.replacement_account' }));
     await act(async () => resolveClear(true));
 
     await waitFor(() => expect(view.getByTestId('sign-in-sign-out')).toBeEnabled());
@@ -371,7 +371,7 @@ describe('SignInScreen', () => {
   });
 
   it('does not let a stale sign-in screen clear a replacement session', async () => {
-    setAuthSession({ credential: 'mock.original_account' });
+    await act(() => setAuthSession({ credential: 'mock.original_account' }));
     const auth = { ...createLocalMockFirebaseAuth(), signOut: jest.fn(async () => undefined) };
     const analyticsConsent = analyticsConsentDouble();
     const user = userEvent.setup();
@@ -384,7 +384,7 @@ describe('SignInScreen', () => {
         onFinished={jest.fn()}
       />,
     );
-    setAuthSession({ credential: 'mock.replacement_account' });
+    await act(() => setAuthSession({ credential: 'mock.replacement_account' }));
 
     await user.press(view.getByTestId('sign-in-sign-out'));
 

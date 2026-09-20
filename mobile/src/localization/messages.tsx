@@ -1,7 +1,50 @@
 import { createContext, useContext, type JSX, type PropsWithChildren } from 'react';
 
 export interface AppMessages {
+  readonly coinStore: {
+    readonly title: string;
+    readonly description: string;
+    readonly choosePack: string;
+    readonly selection: string;
+    readonly bestValue: string;
+    readonly valueExplanation: string;
+    readonly rate: (coins: number, currency: string) => string;
+    readonly selectPack: string;
+    readonly buy: (coins: number, price: string) => string;
+    readonly previewBuy: (coins: number, price: string) => string;
+    readonly empty: string;
+    readonly processing: string;
+    readonly done: string;
+    readonly coinUnit: string;
+    readonly balanceLabel: string;
+  };
+  readonly purchasePreview: {
+    readonly badge: string;
+    readonly notice: string;
+    readonly examplePack: string;
+    readonly packLabel: (coins: number, price: string) => string;
+    readonly checkout: string;
+    readonly confirmation: string;
+    readonly simulate: string;
+    readonly cancel: string;
+    readonly complete: string;
+    readonly completeDescription: string;
+    readonly again: string;
+  };
+  readonly design: {
+    readonly accountDescription: string;
+    readonly privacy: string;
+    readonly privacyDescription: string;
+    readonly securityDescription: string;
+    readonly security: string;
+    readonly walletDescription: string;
+    readonly balanceLabel: string;
+    readonly purchaseDescription: string;
+    readonly unlockDescription: string;
+  };
   readonly coinPacks: {
+    readonly purchaseNotAllowed: string;
+    readonly productUnavailable: string;
     readonly title: string;
     readonly description: string;
     readonly loading: string;
@@ -34,6 +77,11 @@ export interface AppMessages {
     readonly reviewRequired: string;
   };
   readonly wallet: {
+    readonly shortBalance: (coins: number) => string;
+    readonly shortcutBalance: (coins: number) => string;
+    readonly shortcutTitle: string;
+    readonly shortcutUnavailable: string;
+    readonly openWallet: string;
     readonly title: string;
     readonly balance: (coins: number) => string;
     readonly loading: string;
@@ -78,16 +126,12 @@ export interface AppMessages {
     readonly cancelDeletion: string;
     readonly cleanupFailed: string;
     readonly confirmDeletion: string;
-    readonly countryCode: string;
-    readonly countryHint: string;
-    readonly countryPlaceholder: string;
     readonly currentCredential: string;
     readonly deleteAccount: string;
     readonly deleted: string;
     readonly deletionPending: string;
     readonly deletionResponseLost: string;
     readonly deletionWarning: string;
-    readonly languageEnglish: string;
     readonly loading: string;
     readonly preferencesHint: string;
     readonly preferencesSaved: string;
@@ -140,6 +184,13 @@ export interface AppMessages {
     readonly viewReward: string;
   };
   readonly catalog: {
+    readonly brand: string;
+    readonly tagline: string;
+    readonly discover: string;
+    readonly viewSeries: string;
+    readonly emptyHint: string;
+    readonly episodeCount: (count: number) => string;
+    readonly duration: (seconds: number) => string;
     readonly empty: string;
     readonly episode: (order: number) => string;
     readonly episodeLabel: (order: number, title: string) => string;
@@ -160,7 +211,55 @@ export interface AppMessages {
 }
 
 export const englishMessages: AppMessages = {
+  coinStore: {
+    title: 'Coins',
+    description: 'Your balance and coin packs, together.',
+    choosePack: 'Choose your pack',
+    selection: 'Your selection',
+    bestValue: 'Best Value',
+    valueExplanation: 'Best Value gives you the most coins per unit of currency.',
+    rate: (coins, currency) =>
+      `\u2248 ${coins.toLocaleString('en-US', { maximumFractionDigits: 1 })} coins / ${currency} 1`,
+    selectPack: 'Select a pack',
+    buy: (coins, price) => `Buy ${coins.toLocaleString('en-US')} coins \u00b7 ${price}`,
+    previewBuy: (coins, price) => `Preview ${coins.toLocaleString('en-US')} coins \u00b7 ${price}`,
+    empty:
+      'No coin packs are available right now. You can still check your balance and recent purchases.',
+    processing: 'Checking your purchase\u2026',
+    done: 'Done',
+    coinUnit: 'coins',
+    balanceLabel: 'Your balance',
+  },
+  purchasePreview: {
+    badge: 'DESIGN PREVIEW - NO CHARGES',
+    notice: 'Example packs and prices. Nothing will be charged or added to your wallet.',
+    examplePack: 'Example pack',
+    packLabel: (coins, price) => `Example pack: ${coins} coins, ${price}`,
+    checkout: 'Preview checkout',
+    confirmation: 'Preview confirmation',
+    simulate: 'Simulate purchase',
+    cancel: 'Cancel preview',
+    complete: 'Preview complete',
+    completeDescription:
+      'This was a design preview. No payment was made and your coin balance is unchanged.',
+    again: 'Try another pack',
+  },
+  design: {
+    accountDescription: 'Your wallet, purchases and settings.',
+    privacy: 'Privacy & consent',
+    privacyDescription: 'Choose how the app uses your data.',
+    securityDescription: 'Manage your account and deletion options.',
+    security: 'Account management',
+    walletDescription: 'Keep your next episode within reach.',
+    balanceLabel: 'AVAILABLE BALANCE',
+    purchaseDescription: 'Your verified coin purchases, in one place.',
+    unlockDescription: 'Choose how to continue your story.',
+  },
   coinPacks: {
+    purchaseNotAllowed:
+      'Google Play did not allow this purchase. Check your payment method or Play account, then try again.',
+    productUnavailable:
+      'Google Play could not sell this pack. You were not charged. Reload coin packs to check availability.',
     title: 'Buy coins',
     description: 'Pay through Google Play. Coins are added after your purchase is verified.',
     loading: 'Checking coin packs and purchases…',
@@ -172,8 +271,9 @@ export const englishMessages: AppMessages = {
     reload: 'Reload coin packs',
     storageUnavailable: 'Your purchase could not be saved safely. Please try again before buying.',
     credited: 'Your purchase has been verified and its coins credited.',
-    walletUnavailable: 'Your current balance could not be loaded. Open your wallet to check it.',
-    openWallet: 'Open wallet',
+    walletUnavailable:
+      'Your current balance could not be loaded. Refresh your balance to check it.',
+    openWallet: 'View coins',
     coins: (coins) => `${coins} coins`,
   },
   purchases: {
@@ -205,7 +305,12 @@ export const englishMessages: AppMessages = {
       'Review required. Keep this support reference; this record does not confirm a refund or final settlement.',
   },
   wallet: {
-    title: 'Coin wallet',
+    shortBalance: (coins) => coins.toLocaleString('en-US'),
+    shortcutBalance: (coins) => `Coins, ${coins.toLocaleString('en-US')} coins`,
+    shortcutTitle: 'Coins',
+    shortcutUnavailable: 'Coins, balance unavailable',
+    openWallet: 'View your balance and buy coins',
+    title: 'Coins',
     balance: (coins) => `${coins} coins`,
     loading: 'Loading balance…',
     refresh: 'Refresh balance',
@@ -255,9 +360,6 @@ export const englishMessages: AppMessages = {
     cleanupFailed:
       'The app session is cleared, but native sign-out failed. Retry to finish signing out on this device.',
     confirmDeletion: 'Confirm account deletion',
-    countryCode: 'Country code',
-    countryHint: 'Country is an account preference. It does not change where content is available.',
-    countryPlaceholder: 'Country code (optional)',
     currentCredential: 'Current password',
     deleteAccount: 'Delete account',
     deleted: 'Your account has been deleted. You are signed out.',
@@ -267,7 +369,6 @@ export const englishMessages: AppMessages = {
       'The response was lost. Your deletion request may already have been accepted. Signing in cannot verify deletion. Contact support to verify completion.',
     deletionWarning:
       'This permanently removes your profile, watch progress, and access grants. This cannot be undone. Identity-provider cleanup may remain pending.',
-    languageEnglish: 'Language: English',
     loading: 'Loading account…',
     preferencesHint:
       'Optional preferences are off by default. Analytics activates only after the server saves consent. Turning it off, signing out, or deleting your account clears the analytics identity and local analytics data.',
@@ -293,8 +394,7 @@ export const englishMessages: AppMessages = {
   auth: {
     authenticationFailed: 'Sign-in could not be completed. Check your details and try again.',
     createAccount: 'Create account',
-    description:
-      'Use email and password or Google Sign-In. You can browse the catalog without an account.',
+    description: 'Continue with email or Google.',
     email: 'Email',
     credential: 'Password',
     profileFailed: 'Your account could not be loaded. Please try again.',
@@ -323,6 +423,13 @@ export const englishMessages: AppMessages = {
     viewReward: 'View episode options',
   },
   catalog: {
+    brand: 'SHORTFORM',
+    tagline: 'Small episodes. Big emotions.',
+    discover: 'Find your next story',
+    viewSeries: 'Explore series',
+    emptyHint: 'Your next story is on its way. Check back soon.',
+    episodeCount: (count) => `${count} ${count === 1 ? 'episode' : 'episodes'}`,
+    duration: (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`,
     empty: 'No titles are available.',
     episode: (order) => `Episode ${order}`,
     episodeLabel: (order, title) => `Episode ${order}. ${title}`,

@@ -1,5 +1,7 @@
 # Rewarded ads: P3-T07
 
+**Post-MVP — D-037, founder approved 2026-09-20:** the initial launch uses coins only. Keep client/backend rewarded ads disabled. The implementation and evidence below are retained for future ad activation; AdMob setup, #98 provider checks and ad-specific measurement do not block the coin-only launch. Actual-binary privacy and all coin/rights/authorization protections still apply.
+
 **Scope note, 2026-09-07:** This document describes the existing rewarded-ad/development slice, not the complete MVP business scope. D-007/D-008/D-015/D-016 now require Android coins and minimum acquisition/economics measurement. P0-T03/P6-T04 must review notices, processor/financial retention and exact-binary disclosures for that extension before activation; this historical/test evidence supplies no coin, paid-spend or release approval.
 
 **P3-T01-F1 update:** [Editorial episode policy](access-policy.md) now controls ad

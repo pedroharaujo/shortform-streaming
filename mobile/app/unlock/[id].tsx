@@ -49,7 +49,7 @@ export default function UnlockRoute(): JSX.Element {
           params: { returnEpisode: episodeId },
         })
       }
-      onWallet={() => router.push({ pathname: '/wallet', params: { returnEpisode: episodeId } })}
+      onWallet={() => router.push({ pathname: '/coins', params: { returnEpisode: episodeId } })}
       onAd={(id) => router.replace({ pathname: '/reward/[id]', params: { id } })}
       onPlay={(id) => router.replace({ pathname: '/play/[id]', params: { id } })}
     />
