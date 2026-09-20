@@ -10,6 +10,7 @@ import { getSessionCredential, setAuthSession } from '../../auth/session';
 import { englishMessages } from '../../localization/messages';
 import { compactAndroidMetrics, renderWithSafeArea } from '../../testUtils';
 import { minimumTouchTarget } from '../../ui/theme';
+import { operatorName, supportEmail } from '../support/contactDetails';
 import { AccountScreen } from './AccountScreen';
 
 const mockDeleteSecureItem = jest.fn(async (_key: string) => {});
@@ -116,6 +117,18 @@ async function setup(
 }
 
 afterEach(() => setAuthSession(null));
+
+it('keeps public support and the privacy draft reachable after sign-out without another server request', async () => {
+  const { view, requests } = await setup();
+  await act(() => setAuthSession(null));
+  const requestCount = requests.length;
+  await fireEvent.press(view.getByRole('button', { name: englishMessages.support.title }));
+  expect(view.getByText(englishMessages.support.operator(operatorName))).toBeOnTheScreen();
+  expect(view.getByText(supportEmail)).toHaveProp('selectable', true);
+  expect(view.getByRole('button', { name: englishMessages.support.emailSupport })).toBeEnabled();
+  expect(view.getByRole('button', { name: englishMessages.support.privacyDraft })).toBeEnabled();
+  expect(requests).toHaveLength(requestCount);
+});
 
 it('opens settings from the account menu and clears deletion confirmation when returning', async () => {
   const { view, user, requests } = await setup();

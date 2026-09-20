@@ -24,6 +24,8 @@ import {
 } from '../../ui/ScreenElements';
 import { useKeyboardScroll } from '../../ui/useKeyboardScroll';
 import { clearPendingRewardAttempt } from '../rewards/pendingRewardAttempt';
+import { PrivacyNoticeLink, SupportContact } from '../support/SupportContact';
+import { operatorName } from '../support/contactDetails';
 
 export interface AccountScreenProps {
   readonly auth: AppAuth;
@@ -66,7 +68,7 @@ export function AccountScreen({
 }: AccountScreenProps): JSX.Element {
   const messages = useMessages();
   const { scrollRef, revealField, onFieldFocus, onFieldBlur } = useKeyboardScroll();
-  const [panel, setPanel] = useState<'overview' | 'privacy' | 'security'>('overview');
+  const [panel, setPanel] = useState<'overview' | 'privacy' | 'security' | 'help'>('overview');
   const [preferences, setPreferences] = useState<Pick<
     AccountPreferences,
     'analytics_consent' | 'ads_consent'
@@ -277,18 +279,22 @@ export function AccountScreen({
         />
         <ScreenIntro
           title={
-            panel === 'privacy'
-              ? messages.design.privacy
-              : panel === 'security'
-                ? messages.design.security
-                : messages.common.account
+            panel === 'help'
+              ? messages.support.title
+              : panel === 'privacy'
+                ? messages.design.privacy
+                : panel === 'security'
+                  ? messages.design.security
+                  : messages.common.account
           }
           subtitle={
-            panel === 'privacy'
-              ? messages.design.privacyDescription
-              : panel === 'security'
-                ? messages.design.securityDescription
-                : messages.design.accountDescription
+            panel === 'help'
+              ? messages.support.operator(operatorName)
+              : panel === 'privacy'
+                ? messages.design.privacyDescription
+                : panel === 'security'
+                  ? messages.design.securityDescription
+                  : messages.design.accountDescription
           }
         />
         {loading ? <Text style={styles.body}>{messages.account.loading}</Text> : null}
@@ -315,7 +321,11 @@ export function AccountScreen({
             />
           </>
         ) : null}
-        {preferences !== null && !ended ? (
+        {panel === 'help' ? (
+          <View style={panelStyles.card}>
+            <SupportContact />
+          </View>
+        ) : preferences !== null && !ended ? (
           <>
             {panel === 'overview' ? (
               <View style={styles.menu}>
@@ -471,6 +481,10 @@ export function AccountScreen({
             ) : null}
           </>
         ) : null}
+        {panel !== 'help' ? (
+          <SettingsRow label={messages.support.title} onPress={() => setPanel('help')} />
+        ) : null}
+        <PrivacyNoticeLink />
         {onReturnToEpisode ? (
           <Action
             label={messages.account.backToEpisode}

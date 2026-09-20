@@ -1,4 +1,5 @@
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 
 import { setAuthSession } from '../../auth/session';
 import { englishMessages } from '../../localization/messages';
@@ -30,6 +31,30 @@ function coordinator(load: CheckoutState): jest.Mocked<CheckoutCoordinator> {
 }
 
 afterEach(() => setAuthSession(null));
+
+it('offers support for an unresolved purchase without retrying checkout and hides it on account replacement', async () => {
+  setAuthSession({ credential: 'mock.synthetic-coin-screen' });
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  const checkout = coordinator({
+    status: 'review_required',
+    historicalCreditedCoins: 100,
+    supportReference: reference,
+  });
+  const view = await renderWithSafeArea(
+    <CoinPacksScreen coordinator={checkout} onBalanceRefresh={jest.fn()} />,
+  );
+  await fireEvent.press(
+    await view.findByRole('button', { name: englishMessages.support.emailSupport }),
+  );
+  await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+  expect(new URL(open.mock.calls[0]![0]).searchParams.get('body')).toContain(reference);
+  expect(checkout.purchase).not.toHaveBeenCalled();
+  expect(checkout.sync).not.toHaveBeenCalled();
+  await act(() => setAuthSession({ credential: 'mock.replacement' }));
+  expect(view.queryByRole('button', { name: englishMessages.support.emailSupport })).toBeNull();
+  expect(view.queryByText(englishMessages.purchases.supportReference(reference))).toBeNull();
+  open.mockRestore();
+});
 
 it('requires explicit selection, shows the non-largest best value, and refreshes after verification', async () => {
   setAuthSession({ credential: 'mock.synthetic-coin-screen' });

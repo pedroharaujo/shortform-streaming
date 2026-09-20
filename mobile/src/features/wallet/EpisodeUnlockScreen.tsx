@@ -13,6 +13,7 @@ import {
   subscribeAuthSession,
 } from '../../auth/session';
 import { useMessages } from '../../localization/messages';
+import { SupportContact } from '../support/SupportContact';
 import { colors, fontSizes, radii, spacing } from '../../ui/theme';
 import { ActionButton as Action, ScreenIntro, panelStyles } from '../../ui/ScreenElements';
 import { readPendingRewardAttempt } from '../rewards/pendingRewardAttempt';
@@ -458,13 +459,18 @@ export function EpisodeUnlockScreen({
           {displayMessage}
         </Text>
         {!sessionChanged && pending !== null ? (
-          <Action
-            label={copy.checkPending}
-            onPress={() => {
-              void run(resolvePending);
-            }}
-            disabled={busy || !recoveryReady || pending.request.request_id === rejectedReplayId}
-          />
+          <>
+            <Action
+              label={copy.checkPending}
+              onPress={() => {
+                void run(resolvePending);
+              }}
+              disabled={busy || !recoveryReady || pending.request.request_id === rejectedReplayId}
+            />
+            {!busy ? (
+              <SupportContact topic="unlock" reference={pending.request.request_id} />
+            ) : null}
+          </>
         ) : null}
         {visible !== null ? (
           <View style={panelStyles.card}>

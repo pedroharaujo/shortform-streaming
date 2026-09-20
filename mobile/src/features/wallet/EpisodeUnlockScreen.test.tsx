@@ -1,6 +1,6 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import * as SecureStore from 'expo-secure-store';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, Linking, type AppStateStatus } from 'react-native';
 import type { CatalogClient } from '../../api/catalog/types';
 import type { MeClient } from '../../api/me/types';
 import type { PlaybackClient } from '../../api/playback/types';
@@ -647,9 +647,16 @@ it('keeps an ambiguously rejected replay for support instead of starting another
   expect(wallet.resolve).toHaveBeenCalledWith(original);
   expect([...mockSecureStore.values()].some((raw) => raw.includes(original.request_id))).toBe(true);
   expect(resumed.queryByText('Use 5 coins')).toBeNull();
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  await fireEvent.press(resumed.getByRole('button', { name: 'Email support' }));
+  await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+  expect(new URL(open.mock.calls[0]![0]).searchParams.get('body')).toContain(original.request_id);
   await fireEvent.press(resumed.getByText('Check coin unlock'));
   expect(wallet.unlock).toHaveBeenCalledTimes(1);
   expect(props.onPlay).not.toHaveBeenCalled();
+  await act(() => setAuthSession({ credential: 'mock.replacement' }));
+  expect(resumed.queryByRole('button', { name: 'Email support' })).toBeNull();
+  open.mockRestore();
 });
 
 it('cannot post with replacement credentials while the original request is being saved', async () => {

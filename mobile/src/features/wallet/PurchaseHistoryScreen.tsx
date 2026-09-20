@@ -13,6 +13,7 @@ import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, radii, spacing } from '../../ui/theme';
 import { ActionButton as Action, ScreenIntro, panelStyles } from '../../ui/ScreenElements';
 import { useCatalogQuery } from '../catalog/useCatalog';
+import { SupportContact } from '../support/SupportContact';
 
 type HistoryState =
   | { readonly phase: 'loading' | 'unavailable' | 'unauthenticated' }
@@ -89,9 +90,13 @@ export function PurchaseHistoryScreen({
                   <Text style={styles.body}>
                     {purchase.status === 'credited' ? copy.credited : copy.reviewRequired}
                   </Text>
-                  <Text selectable style={styles.muted}>
-                    {copy.supportReference(purchase.support_reference)}
-                  </Text>
+                  {purchase.status === 'review_required' ? (
+                    <SupportContact topic="purchase" reference={purchase.support_reference} />
+                  ) : (
+                    <Text selectable style={styles.muted}>
+                      {copy.supportReference(purchase.support_reference)}
+                    </Text>
+                  )}
                 </View>
               ))}
             </>

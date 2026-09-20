@@ -1,6 +1,23 @@
 import { createContext, useContext, type JSX, type PropsWithChildren } from 'react';
 
 export interface AppMessages {
+  readonly support: {
+    readonly title: string;
+    readonly description: string;
+    readonly withReference: string;
+    readonly emailSupport: string;
+    readonly emailBody: string;
+    readonly subjects: {
+      readonly general: string;
+      readonly purchase: string;
+      readonly unlock: string;
+    };
+    readonly opening: string;
+    readonly openFailed: string;
+    readonly operator: (name: string) => string;
+    readonly privacyDraft: string;
+    readonly privacyDraftDescription: string;
+  };
   readonly coinStore: {
     readonly title: string;
     readonly description: string;
@@ -211,6 +228,28 @@ export interface AppMessages {
 }
 
 export const englishMessages: AppMessages = {
+  support: {
+    title: 'Help & Support',
+    description:
+      'For help with your account, purchases or privacy, email us. You can also select and copy the address.',
+    withReference:
+      'Your email app will open a draft with this reference. Review it before sending. You can also select and copy the address and reference.',
+    emailSupport: 'Email support',
+    emailBody:
+      'Please describe what happened. Do not include passwords, verification codes or payment card details.',
+    subjects: {
+      general: 'Shortform Streaming — Support and privacy',
+      purchase: 'Shortform Streaming — Coin purchase support',
+      unlock: 'Shortform Streaming — Episode unlock support',
+    },
+    opening: 'Opening…',
+    openFailed:
+      'Could not open an app for this link. You can email the support address from another device or email service.',
+    operator: (name) => `Operated by ${name}`,
+    privacyDraft: 'Privacy notice (draft)',
+    privacyDraftDescription:
+      'The launch notice is under review. Opens on GitHub in your browser. Contact us by email with any privacy questions.',
+  },
   coinStore: {
     title: 'Coins',
     description: 'Your balance and coin packs, together.',

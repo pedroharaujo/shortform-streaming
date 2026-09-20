@@ -11,6 +11,7 @@ import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, spacing } from '../../ui/theme';
 import { ActionButton as Action, panelStyles } from '../../ui/ScreenElements';
 import { CoinPackPicker } from './CoinPackPicker';
+import { SupportContact } from '../support/SupportContact';
 import type { CheckoutCoordinator, CheckoutState } from './types';
 
 export interface CoinPacksScreenProps {
@@ -135,16 +136,13 @@ export function CoinPacksScreen({
             {state.wallet.status === 'unavailable' ? (
               <Text style={styles.body}>{messages.coinPacks.walletUnavailable}</Text>
             ) : null}
-            <Text style={styles.muted}>
+            <Text selectable style={styles.muted}>
               {messages.purchases.supportReference(state.supportReference)}
             </Text>
           </>
         ) : state.status === 'review_required' ? (
           <>
             <Text style={styles.body}>{messages.purchases.reviewRequired}</Text>
-            <Text style={styles.muted}>
-              {messages.purchases.supportReference(state.supportReference)}
-            </Text>
           </>
         ) : (
           <Text style={styles.body}>
@@ -166,7 +164,13 @@ export function CoinPacksScreen({
       </View>
       {!requiresAccount &&
       (state?.status === 'awaiting_verification' || state?.status === 'review_required') ? (
-        <Action label={messages.coinPacks.checkPurchase} onPress={checkPurchase} />
+        <>
+          <Action label={messages.coinPacks.checkPurchase} onPress={checkPurchase} />
+          <SupportContact
+            topic="purchase"
+            reference={state.status === 'review_required' ? state.supportReference : undefined}
+          />
+        </>
       ) : null}
       {!requiresAccount && retryable ? (
         <Action label={messages.coinPacks.reload} onPress={reload} />
