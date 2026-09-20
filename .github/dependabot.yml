@@ -49,6 +49,8 @@ updates:
         versions: [">19.2.3"]
       - dependency-name: expo
         versions: [">=58.0.0"]
+      - dependency-name: expo-build-properties
+        versions: [">=58.0.0"]
       - dependency-name: expo-router
         versions: [">=58.0.0"]
       - dependency-name: expo-constants
