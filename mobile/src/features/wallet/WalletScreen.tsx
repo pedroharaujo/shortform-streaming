@@ -1,6 +1,6 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Wallet, WalletClient } from '../../api/wallet/types';
@@ -11,7 +11,9 @@ import {
   subscribeAuthSession,
 } from '../../auth/session';
 import { useMessages } from '../../localization/messages';
-import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
+import { colors, fontSizes, spacing } from '../../ui/theme';
+import { ActionButton as Action, BackButton, panelStyles } from '../../ui/ScreenElements';
+import { CoinIcon } from '../../ui/CoinIcon';
 import { useCatalogQuery } from '../catalog/useCatalog';
 import { readPendingCoinUnlockForProfile, type PendingCoinUnlock } from './pendingCoinUnlock';
 
@@ -26,7 +28,7 @@ export interface WalletScreenProps {
   readonly onAccount: () => void;
   readonly onPurchases: () => void;
   readonly onPendingUnlock: (episodeId: string) => void;
-  readonly onBuyCoins?: (() => void) | undefined;
+  readonly renderPacks?: ((refreshBalance: () => void) => ReactNode) | undefined;
   readonly onReturnToEpisode?: (() => void) | undefined;
 }
 
@@ -37,7 +39,7 @@ export function WalletScreen({
   onAccount,
   onPurchases,
   onPendingUnlock,
-  onBuyCoins,
+  renderPacks,
   onReturnToEpisode,
 }: WalletScreenProps): JSX.Element {
   const messages = useMessages();
@@ -99,22 +101,40 @@ export function WalletScreen({
     return () => subscription.remove();
   }, [refresh]);
 
-  const requiresSignIn = sessionChanged || state.phase === 'unauthenticated';
+  const requiresSignIn =
+    sessionChanged || getSessionCredential() === null || state.phase === 'unauthenticated';
 
   return (
     <SafeAreaView style={styles.container} testID="wallet-screen">
       <ScrollView contentContainerStyle={styles.content} testID="wallet-scroll">
-        <Text accessibilityRole="header" style={styles.title}>
-          {messages.wallet.title}
-        </Text>
-        <View accessibilityLiveRegion="polite" style={styles.summary}>
+        <View style={styles.navigation}>
+          <BackButton label={messages.common.back} onPress={onBack} />
+          <Text accessibilityRole="header" style={styles.title}>
+            {messages.coinStore.title}
+          </Text>
+        </View>
+        <View accessibilityLiveRegion="polite" style={[panelStyles.card, styles.summary]}>
+          <View style={styles.balanceHeader}>
+            <Text style={styles.body}>{messages.coinStore.balanceLabel}</Text>
+            {!requiresSignIn ? (
+              <Action
+                tone="quiet"
+                label={messages.wallet.refresh}
+                disabled={state.phase === 'loading'}
+                onPress={refresh}
+              />
+            ) : null}
+          </View>
           {sessionChanged ? (
             <Text style={styles.body}>{messages.wallet.sessionChanged}</Text>
           ) : state.phase === 'ready' ? (
             <>
-              <Text style={styles.balance} testID="wallet-balance">
-                {messages.wallet.balance(state.wallet.balance)}
-              </Text>
+              <View style={styles.balanceRow}>
+                <CoinIcon size={36} />
+                <Text style={styles.balance} testID="wallet-balance">
+                  {messages.wallet.balance(state.wallet.balance)}
+                </Text>
+              </View>
               {!state.wallet.spending_available ? (
                 <Text style={styles.body}>{messages.wallet.spendingUnavailable}</Text>
               ) : null}
@@ -127,6 +147,11 @@ export function WalletScreen({
             <Text style={styles.body}>{messages.wallet.signIn}</Text>
           )}
         </View>
+        {!requiresSignIn && renderPacks ? (
+          renderPacks(refresh)
+        ) : !renderPacks ? (
+          <Text style={styles.muted}>{messages.wallet.purchasesUnavailable}</Text>
+        ) : null}
         {!sessionChanged && recovery.phase === 'ready' && recovery.attempt !== null ? (
           <Action
             label={messages.unlock.checkPending}
@@ -141,19 +166,7 @@ export function WalletScreen({
             <Action label={messages.wallet.retryRecovery} onPress={refreshRecovery} />
           </>
         ) : null}
-        {onBuyCoins && !requiresSignIn ? (
-          <Action label={messages.coinPacks.title} onPress={onBuyCoins} />
-        ) : !onBuyCoins ? (
-          <Text style={styles.muted}>{messages.wallet.purchasesUnavailable}</Text>
-        ) : null}
         <Action label={messages.purchases.title} onPress={onPurchases} />
-        {!requiresSignIn ? (
-          <Action
-            label={messages.wallet.refresh}
-            disabled={state.phase === 'loading'}
-            onPress={refresh}
-          />
-        ) : null}
         <Action
           label={requiresSignIn ? messages.common.signIn : messages.common.account}
           onPress={onAccount}
@@ -161,52 +174,32 @@ export function WalletScreen({
         {onReturnToEpisode ? (
           <Action label={messages.wallet.backToEpisode} onPress={onReturnToEpisode} />
         ) : null}
-        <Action label={messages.common.back} onPress={onBack} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function Action({
-  label,
-  disabled = false,
-  onPress,
-}: {
-  readonly label: string;
-  readonly disabled?: boolean;
-  readonly onPress: () => void;
-}): JSX.Element {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={[styles.button, disabled && styles.disabled]}
-    >
-      <Text style={styles.body}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  balance: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
-  body: { color: colors.foreground, fontSize: fontSizes.body },
-  button: {
+  navigation: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    justifyContent: 'space-between',
+    gap: spacing.md,
   },
+  title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '700' },
+  balanceHeader: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  balance: { color: colors.foreground, fontSize: 36, fontWeight: '700', flexShrink: 1 },
+  balanceRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md },
+  body: { color: colors.foreground, fontSize: fontSizes.body },
   container: { backgroundColor: colors.background, flex: 1 },
   content: { flexGrow: 1, gap: spacing.lg, padding: spacing.xxl },
-  disabled: { opacity: 0.5 },
   muted: { color: colors.muted, fontSize: fontSizes.label },
-  summary: { gap: spacing.lg },
-  title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
+  summary: { gap: spacing.md },
 });

@@ -86,16 +86,19 @@ describe('HomeCatalogScreen', () => {
 
   it('renders a published featured Harbor Lights series and selects it', async () => {
     const onSelectSeries = jest.fn();
+    const onOpenSignIn = jest.fn();
+    const onOpenAccount = jest.fn();
     const view = await render(
       <HomeCatalogScreen
         client={stubClient({ outcome: 'ok', data: harborLightsHome })}
-        onOpenSignIn={() => {}}
+        onOpenSignIn={onOpenSignIn}
+        onOpenAccount={onOpenAccount}
         onSelectSeries={onSelectSeries}
       />,
     );
 
     await waitFor(() => expect(view.getByTestId('home-rail-featured')).toBeTruthy());
-    expect(view.getByText('Harbor Lights')).toBeTruthy();
+    expect(view.getByTestId('home-featured-series')).toHaveTextContent(/Harbor Lights/);
     expect(view.getByRole('header', { name: 'Featured' })).toBeTruthy();
     expectNoFreeOrLockedBadges(view);
     expect(view.getByTestId('home-sign-in')).toHaveStyle({
@@ -104,5 +107,11 @@ describe('HomeCatalogScreen', () => {
     });
     await fireEvent.press(view.getByTestId('series-card-ser_harbor'));
     expect(onSelectSeries).toHaveBeenCalledWith('ser_harbor');
+    onSelectSeries.mockClear();
+    await fireEvent.press(view.getByTestId('home-featured-series'));
+    expect(onSelectSeries).toHaveBeenCalledWith('ser_harbor');
+    await fireEvent.press(view.getByTestId('home-sign-in'));
+    expect(onOpenSignIn).toHaveBeenCalledTimes(1);
+    expect(view.queryByRole('button', { name: 'Account' })).toBeNull();
   });
 });

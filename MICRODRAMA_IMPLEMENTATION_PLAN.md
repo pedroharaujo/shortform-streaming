@@ -8,6 +8,12 @@
 
 ---
 
+## Coin-only launch amendment — D-037 (2026-09-20)
+
+The founder narrowed MVP monetization to purchased coins, with free episodes retained. Rewarded ads are post-MVP. This amendment overrides ad-at-launch dependencies in historical task descriptions below without marking their checks passed. P3-T07/P3-T08 ad-only work, AdMob setup/genuine reward evidence (#98), and ad-revenue reporting move out of MVP; retain P3-T08-F2 coin unlocks, all coin lifecycle/integrity work, acquisition measurement, content rights and applicable privacy/store gates.
+
+Use disabled client/backend ad modes and free/coin launch policies. Preserve dormant implementations and their activation safeguards; do not add new ad code or perform ad-provider setup for this launch. Any retained SDK must still be covered by exact-binary privacy review. Paid acquisition budget approval remains required and is not in-app advertising.
+
 ## 1. How to Use This Plan
 
 This file is the delivery plan: phases, task IDs, sequencing, and per-task acceptance. Codex and Cursor start from `AGENTS.md`. If this plan conflicts with `docs/product/MVP_PRODUCT_BRIEF.md`, `docs/product/DECISION_REGISTER.md`, or an accepted ADR, those documents win.
@@ -66,7 +72,7 @@ remaining phase-wide backlog. First bring up the existing catalog/player and
 Google sign-in using generated or approved self-owned media (P2-T08). Then finish
 the genuine Google Play/RevenueCat test purchase, server verification and recovery
 path (P3-T03/P3-T04/P3-T06), ending with coin unlock and continued playback.
-Rewarded ads and advanced reporting follow this checkpoint; existing financial,
+Rewarded ads are now post-MVP under D-037; required coin economics, financial,
 authorization, rights and production gates continue to apply. See
 `docs/runbooks/android-first-journey.md` for runnable steps and unchecked device
 acceptance. Synthetic checkout tests never count as a genuine Play purchase.
@@ -1614,6 +1620,30 @@ The player presents stable lock copy instead of raw server reason codes, uses th
 shared visual tokens and 48dp controls, and has compact-screen coverage without
 changing authorization, progress, completion, or next-episode behavior.
 
+**Catalog visual pass (P6-T01, 2026-09-19):** Home, series detail, and episode
+selection now use the founder-selected neutral cinematic dark direction, original
+abstract poster fallbacks, a featured series card, horizontal catalog rails, and
+clear episode rows and actions. The existing eligible catalog and navigation
+remain authoritative. See [design preview and validation](docs/runbooks/mobile-design-preview.md).
+
+**Remaining-screen visual pass (P6-T01, 2026-09-19):** Login, profile, wallet,
+coin packs, purchase history, episode unlock, rewards and player status screens
+now follow the same theme. Shared presentational controls preserve existing
+business gates; login/profile focused fields scroll above the Android keyboard.
+The design-preview runbook records emulator coverage and the existing test suite.
+The founder-requested revision replaces Home sign-in with a live profile avatar
+when authenticated, separates account menu/privacy/management, removes the
+out-of-scope country/language controls, and uses white actions on charcoal.
+The signed-in Home header also exposes a server-backed coin balance beside the
+avatar, with direct wallet access, focus/foreground refresh and session isolation.
+A founder-approved, no-charge purchase design preview is reachable from the
+wallet only in local Android development while real checkout is disabled.
+Example packs and simulated confirmation never call payment or wallet APIs.
+The unified Coins destination combines balance and packages. Home, account and
+episode links open it directly; old wallet/buy-coins links redirect. Shared cards
+show exact quantities/prices and a numeric same-currency Best Value comparison.
+Existing checkout/recovery and backend authority remain unchanged.
+
 These foundations do not complete P6-T01. The reward surface still needs migration;
 automated screenshot coverage and the Android TalkBack/device pass remain required
 before the task and checkpoint can close.
@@ -2274,7 +2304,7 @@ This is a hard commercial/publication gate, not permission to activate from a do
 - [ ] Generalized rights/market/language/segment domain supports future configuration; MVP active scope remains narrow and client input cannot widen eligibility.
 - [ ] Admin/catalog/ingestion, Firebase password/Google auth/deletion, Bunny HLS authorization, free viewing/progress and takedown operate safely.
 - [ ] Per-episode free/ad/coin/both policy and licensed permission intersection are verified at offers, grant/debit and playback.
-- [ ] AdMob intent/SSV path is idempotent and genuine provider→entitlement→Android evidence passes #98/D-028.
+- [ ] Client/backend ads stay disabled and no ad unlock is offered in the coin-only release. AdMob intent/SSV and genuine provider evidence (#98/D-028) are post-MVP activation gates under D-037.
 - [ ] Google coins: verified purchase lifecycle, immutable ledger, atomic debit/entitlement, persistent balance, refunds/chargebacks, interrupted/replayed events, reconciliation and support pass. No financial integrity deferral.
 - [ ] Typed commerce/product events and consent/identity/deletion controls pass; D-020 and actual Google Data safety/processor/retention declarations match binary and exports.
 - [ ] Minimum reliable cohort attribution and spend imports join authoritative ad/IAP/refund and private content/infra costs; BigQuery SQL and daily report reproduce known outcomes. CAC, D1/D7/D30, ARPPU, ad/IAP/blended revenue and observed/projected contribution LTV:CAC expose maturity/coverage/unknowns.
@@ -2282,6 +2312,8 @@ This is a hard commercial/publication gate, not permission to activate from a do
 - [ ] Controlled rollout, campaign/creative permissions and daily business/quality review operate within D-017; pause unreliable measurement or breached guardrails before further spend.
 
 ### Retained post-MVP work
+
+- [ ] Rewarded ads: AdMob/UMP/provider setup, ad-specific rights and verified ad→episode→playback evidence, plus ad-revenue measurement (D-037; #98).
 
 - [ ] Subscription products/state/purchase/restore/reconciliation and license permissions (D-009, P3-T03-P7/P3-T04-P7/P3-T05).
 - [ ] Apple/iOS implementation, device evidence, banking/store setup and commerce.

@@ -2,12 +2,15 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
 import PurchasesRoute from '../../../app/purchases';
-import WalletRoute from '../../../app/wallet';
+import CoinsRoute from '../../../app/coins';
+import WalletRedirect from '../../../app/wallet';
+import BuyCoinsRedirect from '../../../app/buy-coins';
 import { setAuthSession } from '../../auth/session';
 import type { PurchaseHistoryScreenProps } from './PurchaseHistoryScreen';
 import type { WalletScreenProps } from './WalletScreen';
 
 let mockParams: { returnEpisode?: string | string[] } = {};
+jest.mock('../purchases/purchasePreview', () => ({ isPurchasePreviewEnabled: () => true }));
 jest.mock('expo-router', () => ({
   router: {
     push: jest.fn(),
@@ -15,6 +18,10 @@ jest.mock('expo-router', () => ({
     dismissTo: jest.fn(),
     back: jest.fn(),
     canGoBack: jest.fn(() => false),
+  },
+  Redirect: ({ href }: { href: unknown }) => {
+    const { Text } = jest.requireActual('react-native');
+    return <Text testID="redirect">{JSON.stringify(href)}</Text>;
   },
   useLocalSearchParams: () => mockParams,
   useFocusEffect: jest.fn(),
@@ -57,7 +64,7 @@ afterEach(() => {
 it('preserves episode context through purchase history, account, sign-in and return navigation', async () => {
   setAuthSession({ credential: 'mock.synthetic-navigation' });
   mockParams = { returnEpisode: 'ep_synthetic' };
-  const wallet = await render(<WalletRoute />);
+  const wallet = await render(<CoinsRoute />);
   await fireEvent.press(wallet.getByText('Recent purchases'));
   expect(router.push).toHaveBeenLastCalledWith({ pathname: '/purchases', params: mockParams });
   await fireEvent.press(wallet.getByText('Check coin unlock'));
@@ -78,7 +85,7 @@ it('preserves episode context through purchase history, account, sign-in and ret
     params: { id: 'ep_synthetic' },
   });
   await fireEvent.press(history.getByText('Back'));
-  expect(router.replace).toHaveBeenLastCalledWith({ pathname: '/wallet', params: mockParams });
+  expect(router.replace).toHaveBeenLastCalledWith({ pathname: '/coins', params: mockParams });
   jest.mocked(router.canGoBack).mockReturnValue(true);
   await fireEvent.press(history.getByText('Back'));
   expect(router.back).toHaveBeenCalledTimes(1);
@@ -86,12 +93,26 @@ it('preserves episode context through purchase history, account, sign-in and ret
 
 it('opens purchases and falls back to wallet without an episode for a direct visit', async () => {
   mockParams = {};
-  const wallet = await render(<WalletRoute />);
+  const wallet = await render(<CoinsRoute />);
   await fireEvent.press(wallet.getByText('Recent purchases'));
   expect(router.push).toHaveBeenLastCalledWith('/purchases');
   await wallet.unmount();
   const history = await render(<PurchasesRoute />);
   expect(history.queryByText('Back to episode')).toBeNull();
   await fireEvent.press(history.getByText('Back'));
-  expect(router.replace).toHaveBeenLastCalledWith('/wallet');
+  expect(router.replace).toHaveBeenLastCalledWith('/coins');
 });
+
+it.each([WalletRedirect, BuyCoinsRedirect])(
+  'redirects legacy coin links to the unified screen with episode context',
+  async (Route) => {
+    mockParams = { returnEpisode: 'ep_synthetic' };
+    const view = await render(<Route />);
+    expect(view.getByTestId('redirect')).toHaveTextContent(
+      JSON.stringify({ pathname: '/coins', params: mockParams }),
+    );
+    mockParams = {};
+    await view.rerender(<Route />);
+    expect(view.getByTestId('redirect')).toHaveTextContent('"/coins"');
+  },
+);

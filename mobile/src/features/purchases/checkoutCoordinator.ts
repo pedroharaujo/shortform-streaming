@@ -109,7 +109,10 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
     );
     if (!Array.isArray(providerOffers) || providerOffers.length !== catalog.data.products.length)
       return null;
-    const byId = new Map<string, string>();
+    const byId = new Map<
+      string,
+      { readonly price: string; readonly priceAmount?: number; readonly currencyCode?: string }
+    >();
     for (const offer of providerOffers) {
       if (
         !isRecord(offer) ||
@@ -125,13 +128,23 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
         offer.price.length > 128
       )
         return null;
-      byId.set(offer.productId, offer.price);
+      const comparable =
+        typeof offer.priceAmount === 'number' &&
+        Number.isFinite(offer.priceAmount) &&
+        offer.priceAmount > 0 &&
+        typeof offer.currencyCode === 'string' &&
+        /^[A-Z]{3}$/.test(offer.currencyCode)
+          ? { priceAmount: offer.priceAmount, currencyCode: offer.currencyCode }
+          : {};
+      byId.set(offer.productId, { price: offer.price, ...comparable });
     }
     const result: CheckoutOffer[] = [];
     for (const product of catalog.data.products) {
-      const price = byId.get(product.product_id);
-      if (price === undefined) return null;
-      result.push(Object.freeze({ productId: product.product_id, coins: product.coins, price }));
+      const providerOffer = byId.get(product.product_id);
+      if (providerOffer === undefined) return null;
+      result.push(
+        Object.freeze({ productId: product.product_id, coins: product.coins, ...providerOffer }),
+      );
     }
     return Object.freeze(result);
   }
@@ -257,7 +270,9 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
         )
           return awaiting;
         if (
-          result.outcome === 'cancelled' &&
+          (result.outcome === 'cancelled' ||
+            result.outcome === 'product_unavailable' ||
+            result.outcome === 'purchase_not_allowed') &&
           Object.keys(result).length === 6 &&
           Object.keys(result).every((key) =>
             ['outcome', 'ownerId', 'applicationId', 'productId', 'store', 'environment'].includes(
@@ -266,7 +281,7 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
           )
         ) {
           await storage(() => options.storage.clear(attempt, isCurrent));
-          return { status: 'cancelled' };
+          return { status: result.outcome };
         }
         if (result.outcome !== 'completed' || !isTransactionId(result.transactionId))
           return awaiting;

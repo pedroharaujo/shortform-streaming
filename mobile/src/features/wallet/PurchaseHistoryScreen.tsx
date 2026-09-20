@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { PurchaseHistory, PurchasesClient } from '../../api/purchases/types';
@@ -10,7 +10,8 @@ import {
   subscribeAuthSession,
 } from '../../auth/session';
 import { useMessages } from '../../localization/messages';
-import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
+import { colors, fontSizes, radii, spacing } from '../../ui/theme';
+import { ActionButton as Action, ScreenIntro, panelStyles } from '../../ui/ScreenElements';
 import { useCatalogQuery } from '../catalog/useCatalog';
 
 type HistoryState =
@@ -68,11 +69,9 @@ export function PurchaseHistoryScreen({
   return (
     <SafeAreaView style={styles.container} testID="purchase-history-screen">
       <ScrollView contentContainerStyle={styles.content}>
-        <Text accessibilityRole="header" style={styles.title}>
-          {copy.title}
-        </Text>
+        <ScreenIntro title={copy.title} subtitle={messages.design.purchaseDescription} />
         <Text style={styles.muted}>{copy.historyExplanation}</Text>
-        <View accessibilityLiveRegion="polite" style={styles.summary}>
+        <View accessibilityLiveRegion="polite" style={[panelStyles.card, styles.summary]}>
           {sessionChanged ? (
             <Text style={styles.body}>{copy.sessionChanged}</Text>
           ) : state.phase === 'ready' ? (
@@ -114,59 +113,25 @@ export function PurchaseHistoryScreen({
         {onReturnToEpisode ? (
           <Action label={messages.wallet.backToEpisode} onPress={onReturnToEpisode} />
         ) : null}
-        <Action label={messages.common.back} onPress={onBack} />
+        <Action tone="quiet" label={messages.common.back} onPress={onBack} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function Action({
-  label,
-  disabled = false,
-  onPress,
-}: {
-  readonly label: string;
-  readonly disabled?: boolean;
-  readonly onPress: () => void;
-}): JSX.Element {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={[styles.button, disabled && styles.disabled]}
-    >
-      <Text style={styles.body}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   body: { color: colors.foreground, fontSize: fontSizes.body },
-  button: {
-    alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
   container: { backgroundColor: colors.background, flex: 1 },
   content: { flexGrow: 1, gap: spacing.lg, padding: spacing.xxl },
-  credit: { color: colors.foreground, fontSize: fontSizes.body, fontWeight: '600' },
-  disabled: { opacity: 0.5 },
+  credit: { color: colors.accent, fontSize: fontSizes.section, fontWeight: '700' },
   muted: { color: colors.muted, fontSize: fontSizes.label },
   record: {
     borderColor: colors.border,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.md,
   },
   summary: { gap: spacing.lg },
-  title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
 });

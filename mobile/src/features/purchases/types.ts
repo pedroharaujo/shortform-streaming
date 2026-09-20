@@ -5,6 +5,8 @@ export interface CheckoutOffer {
   readonly productId: string;
   readonly coins: number;
   readonly price: string;
+  readonly priceAmount?: number;
+  readonly currencyCode?: string;
 }
 export type CheckoutState =
   | {
@@ -14,6 +16,8 @@ export type CheckoutState =
         | 'session_changed'
         | 'storage_unavailable'
         | 'awaiting_verification'
+        | 'product_unavailable'
+        | 'purchase_not_allowed'
         | 'cancelled';
     }
   | { readonly status: 'ready'; readonly offers: readonly CheckoutOffer[] }

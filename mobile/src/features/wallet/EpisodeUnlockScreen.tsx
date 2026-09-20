@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type JSX } from 'react';
-import { ActivityIndicator, AppState, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { randomUUID } from 'expo-crypto';
 import type { CatalogClient } from '../../api/catalog/types';
@@ -13,7 +13,8 @@ import {
   subscribeAuthSession,
 } from '../../auth/session';
 import { useMessages } from '../../localization/messages';
-import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
+import { colors, fontSizes, radii, spacing } from '../../ui/theme';
+import { ActionButton as Action, ScreenIntro, panelStyles } from '../../ui/ScreenElements';
 import { readPendingRewardAttempt } from '../rewards/pendingRewardAttempt';
 import {
   clearPendingCoinUnlock,
@@ -448,12 +449,12 @@ export function EpisodeUnlockScreen({
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Action label={messages.common.back} onPress={() => leave(onClose)} />
-        <Text accessibilityRole="header" style={styles.title}>
-          {copy.title}
-        </Text>
-        {busy && !sessionChanged ? <ActivityIndicator accessibilityLabel={copy.loading} /> : null}
-        <Text accessibilityLiveRegion="polite" style={styles.body}>
+        <Action tone="quiet" label={messages.common.back} onPress={() => leave(onClose)} />
+        <ScreenIntro title={copy.title} subtitle={messages.design.unlockDescription} />
+        {busy && !sessionChanged ? (
+          <ActivityIndicator color={colors.accent} accessibilityLabel={copy.loading} />
+        ) : null}
+        <Text accessibilityLiveRegion="polite" style={[styles.body, styles.notice]}>
           {displayMessage}
         </Text>
         {!sessionChanged && pending !== null ? (
@@ -466,7 +467,7 @@ export function EpisodeUnlockScreen({
           />
         ) : null}
         {visible !== null ? (
-          <>
+          <View style={panelStyles.card}>
             <Text accessibilityRole="header" style={styles.title}>
               {visible.title}
             </Text>
@@ -475,6 +476,7 @@ export function EpisodeUnlockScreen({
             ) : null}
             {pending !== null ? null : visible.offer.decision === 'granted' ? (
               <Action
+                tone="primary"
                 label={messages.common.play}
                 onPress={() => {
                   void run(() => confirmPlayback(visible));
@@ -491,6 +493,7 @@ export function EpisodeUnlockScreen({
                     ) : confirming ? (
                       <>
                         <Action
+                          tone="primary"
                           label={copy.confirm(price)}
                           onPress={() => {
                             void run(spend);
@@ -505,6 +508,7 @@ export function EpisodeUnlockScreen({
                       </>
                     ) : (
                       <Action
+                        tone="primary"
                         label={copy.coins(price)}
                         onPress={() => {
                           if (isCurrent()) setConfirming(true);
@@ -532,7 +536,7 @@ export function EpisodeUnlockScreen({
                 ) : null}
               </>
             )}
-          </>
+          </View>
         ) : null}
         {!sessionChanged ? (
           <Action
@@ -550,43 +554,16 @@ export function EpisodeUnlockScreen({
   );
 }
 
-function Action({
-  label,
-  onPress,
-  disabled = false,
-}: {
-  readonly label: string;
-  readonly onPress: () => void;
-  readonly disabled?: boolean;
-}): JSX.Element {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={[styles.action, disabled && styles.disabled]}
-    >
-      <Text style={styles.actionText}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.xxl, gap: spacing.lg },
   title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
-  balance: { color: colors.foreground, fontSize: fontSizes.section },
+  balance: { color: colors.accent, fontSize: fontSizes.section, fontWeight: '600' },
   body: { color: colors.muted, fontSize: fontSizes.body },
-  action: {
-    minHeight: minimumTouchTarget,
-    padding: spacing.md,
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+  notice: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
     borderRadius: radii.md,
+    lineHeight: 24,
   },
-  actionText: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
-  disabled: { opacity: 0.5 },
 });

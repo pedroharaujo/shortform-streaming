@@ -25,7 +25,7 @@ export default function PurchasesRoute(): JSX.Element {
         router.canGoBack()
           ? router.back()
           : router.replace(
-              returnEpisode ? { pathname: '/wallet', params: { returnEpisode } } : '/wallet',
+              returnEpisode ? { pathname: '/coins', params: { returnEpisode } } : '/coins',
             )
       }
       onAccount={() => {

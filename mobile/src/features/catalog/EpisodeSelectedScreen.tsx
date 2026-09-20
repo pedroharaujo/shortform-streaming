@@ -6,6 +6,7 @@ import type { CatalogClient } from '../../api/catalog/types';
 import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
+import { CatalogArtwork } from './CatalogArtwork';
 import { useCatalogEpisode } from './useCatalog';
 
 export interface EpisodeSelectedScreenProps {
@@ -33,7 +34,7 @@ export function EpisodeSelectedScreen({
         style={styles.back}
         testID="episode-selected-back"
       >
-        <Text style={styles.backLabel}>{messages.common.back}</Text>
+        <Text style={styles.backLabel}>‹ {messages.common.back}</Text>
       </Pressable>
 
       <CatalogFetchStatus
@@ -61,16 +62,22 @@ export function EpisodeSelectedScreen({
           style={styles.scroll}
           testID="episode-selected"
         >
+          <CatalogArtwork size="hero" title={state.episode.title} uri={null} />
           <Text accessibilityRole="header" style={styles.kicker}>
             {messages.catalog.selectedEpisode}
           </Text>
           <Text style={styles.title}>{state.episode.title}</Text>
           <Text style={styles.synopsis}>{state.episode.synopsis}</Text>
+          <Text style={styles.metadata}>
+            {messages.catalog.season(state.episode.season_number)} ·{' '}
+            {messages.catalog.episode(state.episode.order)} ·{' '}
+            {messages.catalog.duration(state.episode.duration_seconds)}
+          </Text>
           <Pressable
             accessibilityLabel={messages.common.play}
             accessibilityRole="button"
             onPress={() => onPlay(episodeId)}
-            style={styles.play}
+            style={({ pressed }) => [styles.play, pressed && styles.pressed]}
             testID="episode-selected-play"
           >
             <Text style={styles.playLabel}>{messages.common.play}</Text>
@@ -88,17 +95,25 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     minHeight: minimumTouchTarget,
     minWidth: minimumTouchTarget,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
   },
-  backLabel: { color: colors.muted, fontSize: fontSizes.body },
+  backLabel: { color: colors.foreground, fontSize: fontSizes.body },
   body: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
   centered: { alignItems: 'center', flex: 1, gap: spacing.md, justifyContent: 'center' },
   container: { backgroundColor: colors.background, flex: 1, padding: spacing.xxl },
   content: { flexGrow: 1, paddingBottom: spacing.xxl },
-  kicker: { color: colors.muted, fontSize: fontSizes.label, marginBottom: spacing.sm },
+  kicker: {
+    color: colors.accent,
+    fontSize: fontSizes.label,
+    marginBottom: spacing.sm,
+    marginTop: spacing.xxl,
+  },
   play: {
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: colors.foreground,
+    alignSelf: 'stretch',
+    backgroundColor: colors.accent,
     borderRadius: radii.md,
     justifyContent: 'center',
     marginTop: spacing.xl,
@@ -107,12 +122,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   playLabel: {
-    color: colors.background,
+    color: colors.onAccent,
     fontSize: fontSizes.body,
     fontWeight: '600',
     textAlign: 'center',
   },
   scroll: { flex: 1 },
-  synopsis: { color: colors.muted, fontSize: fontSizes.body, marginTop: spacing.sm },
-  title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
+  metadata: { color: colors.muted, fontSize: fontSizes.caption, marginTop: spacing.lg },
+  pressed: { opacity: 0.75 },
+  synopsis: {
+    color: colors.muted,
+    fontSize: fontSizes.body,
+    marginTop: spacing.sm,
+    lineHeight: 24,
+  },
+  title: { color: colors.foreground, fontSize: fontSizes.display, fontWeight: '700' },
 });

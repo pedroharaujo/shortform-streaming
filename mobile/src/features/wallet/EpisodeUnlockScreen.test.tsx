@@ -572,7 +572,7 @@ it('honors disabled spending and insufficient balance without starting a purchas
   });
   const view = await render(<EpisodeUnlockScreen {...props} />);
   await view.findByText('You do not have enough coins for this episode.');
-  await fireEvent.press(view.getByText('Coin wallet'));
+  await fireEvent.press(view.getByText('Coins'));
   expect(props.onWallet).toHaveBeenCalled();
   expect(wallet.unlock).not.toHaveBeenCalled();
   await view.unmount();

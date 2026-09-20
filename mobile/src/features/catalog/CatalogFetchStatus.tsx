@@ -34,7 +34,11 @@ export function CatalogFetchStatus({
         style={styles.centered}
         testID={`${testIDPrefix}-loading`}
       >
-        <ActivityIndicator accessibilityLabel={loadingAccessibilityLabel} />
+        <ActivityIndicator
+          color={colors.accent}
+          size="large"
+          accessibilityLabel={loadingAccessibilityLabel}
+        />
         <Text style={styles.muted}>{loadingText}</Text>
       </View>
     );
@@ -67,6 +71,7 @@ export function CatalogFetchStatus({
 const styles = StyleSheet.create({
   body: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
   button: {
+    backgroundColor: colors.accent,
     alignItems: 'center',
     borderColor: colors.border,
     borderRadius: radii.md,
@@ -77,7 +82,18 @@ const styles = StyleSheet.create({
     minWidth: minimumTouchTarget,
     paddingHorizontal: spacing.xl,
   },
-  buttonLabel: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
-  centered: { alignItems: 'center', flex: 1, gap: spacing.md, justifyContent: 'center' },
+  buttonLabel: {
+    color: colors.onAccent,
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  centered: {
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+    justifyContent: 'center',
+    padding: spacing.xxl,
+  },
   muted: { color: colors.muted, fontSize: fontSizes.body },
 });

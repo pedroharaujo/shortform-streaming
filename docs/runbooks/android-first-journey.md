@@ -6,8 +6,8 @@
 
 The next checkpoint is an app the founder can use: choose a series, watch a free
 episode, sign in with Google, buy a test coin pack through Google Play, unlock the
-next episode and keep watching. Reuse the existing services and screens. Ads and
-advanced reporting follow this checkpoint; public-release requirements remain.
+next episode and keep watching. Reuse the existing services and screens. D-037 now defers rewarded ads until after MVP. Required coin economics and
+applicable public-release requirements remain.
 
 ## What exists and what is missing
 
@@ -231,12 +231,35 @@ The full checkpoint remains incomplete until the genuine test checkout works.
 - [x] Resume mid-episode and continue to the next free episode (generated clips,
       Pixel 9 emulator, 2026-09-13).
 - [ ] Sign in with Google and return to the selected locked episode.
-- [ ] Display a Google Play test product with the store-provided price.
-- [ ] Complete a license-tester purchase and observe verified server coin credit.
+- [x] Display a Google Play test product with the store-provided price (2026-09-20,
+      100 test coins at EUR 0.99; unified Coins screen).
+- [x] Complete a license-tester purchase and observe verified server coin credit
+      (2026-09-20; explicit no-charge test card, one purchase/decision/100-coin
+      ledger entry; repeated server verification/recovery added no credit).
 - [x] Spend generated test coins once and authorize the unlocked episode on
-      Android (2026-09-13); genuine Play-funded acceptance remains above.
-- [ ] Cancel or interrupt checkout without duplicate charges or coin credits;
-      recover a completed purchase after restarting the app.
+      Android (2026-09-13).
+- [x] Spend a genuine Play-test-funded coin and play the unlocked episode
+      (2026-09-20; founder-approved local episode-2 price of 1 test coin;
+      balance 100 → 99, one debit/receipt/entitlement, generated clip played
+      through its end; reopening playback created no further debit).
+- [x] Cancel checkout without additional purchases or coin credits (2026-09-20;
+      Android Back from Google Play's review-and-agree sheet returned explicit
+      cancellation feedback, cleared the pending marker, restored package
+      selection and retained 199 coins/two purchase credits).
+- [x] Buy the same consumable pack again after consumption (2026-09-20;
+      two genuine sandbox purchases produced exactly two 100-coin credits,
+      with the existing one-coin unlock debit retained).
+- [x] Recover a completed purchase after restarting the app (2026-09-20;
+      backend stopped during no-charge payment, native result retained,
+      app force-stopped, backend restored and app cold-launched; Check purchase
+      credited exactly 100 coins, balance 199 → 299, and cleared the pending marker).
+- [ ] Verify interruption before the native purchase result is saved.
+- [x] Credit a genuine no-charge purchase while the app is stopped after a local
+  server outage, then cold-launch and recover without a second credit
+  (2026-09-20; manual RevenueCat redelivery, 399 coins / four purchase credits).
+- [x] Receive a genuine signed sandbox refund, preserve review through repeated
+  verification, and show that review in Recent purchases (2026-09-20; no
+  unapproved debit or entitlement removal; commercial settlement still open).
 - [ ] Keep an unlocked episode available to the same account after sign-in;
       prevent access by another account or after a content takedown.
 

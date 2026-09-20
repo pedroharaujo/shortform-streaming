@@ -12,6 +12,10 @@ authorization or entitlement bypass, financial corruption, destructive
 migration/data loss, or unsafe production activation. Those checks remain
 immediate blockers.
 
+## Active release scope — D-037 (2026-09-20)
+
+The MVP launches with free viewing and purchased-coin unlocks only. Rewarded-ad-only checks below are retained as **post-MVP activation gates, not passes and not coin-only launch blockers**. This includes P3-T07/P3-T08 ad paths and #98 genuine AdMob verification. Keep client/backend ads disabled and confirm there is no ad unlock choice. Existing SDKs still require actual-binary privacy review. Coin integrity, authentication, rights, deletion, attribution and applicable release checks remain mandatory; paid acquisition is unchanged.
+
 ## How to add a deferred check
 
 For each deferral, record:
@@ -60,7 +64,7 @@ P3/P4 follow-ups must supply exact commands, private prerequisites, expected sta
 | P4-T02/T03 | Generated cohort with known ad/IAP/refund/cost/spend facts, late/duplicate records, multiple original currencies, missing joins and immature dates; rerun model/import and stop a feed | Same reconciled metric totals; observed versus projected LTV, consent/maturity/unmatched coverage and allocation residual visible. Missing inputs unknown; failure/hold procedure works. Private output only for real data |
 | P0-T03 / P2-T02 / P6-T04 | Review new Google/RevenueCat, financial audit, attribution and warehouse processing; test deletion/opt-out and actual binary/network flows | D-020-approved region/retention/minimization, legally required finance retention and processor cleanup; declarations and notices cover the exact binary. No production enablement inferred |
 
-Initial paid-test activation also requires one approved audience, approximately 3–5 independently cleared titles and paid creatives, D-008 terms/prices, Google finance/EUR settlement, genuine AdMob #98 evidence and D-017 capped budget/business guardrails. Subscriptions, iOS, Looker, Remote Config, push and an automatic MMP remain outside this MVP gate. Conditional MMP need is D-018.
+Initial paid-test activation also requires one approved audience, approximately 3–5 independently cleared titles and paid creatives, D-008 terms/prices, Google finance/EUR settlement and D-017 capped budget/business guardrails. Subscriptions, iOS, Looker, Remote Config, push and an automatic MMP remain outside this MVP gate. Conditional MMP need is D-018.
 
 ## Deferred validation register
 
@@ -321,7 +325,15 @@ provider, release-device and refund gates.
 
 ### P3-T04 — Sandbox purchase notifications while the app is closed
 
-- **Status:** Unchecked genuine-provider validation, D-029; issue #169. Automated
+- **Status:** Partial genuine-provider validation, D-029; issue #169. On
+  2026-09-20, signed TEST and genuine sandbox refund deliveries returned HTTP 200;
+  refund quarantine and repeated live reconciliation preserved review with no
+  ledger changes. A second approved temporary window verified positive callback
+  credit while the app was stopped, manual provider redelivery after local-server
+  outage, and cold-launch client recovery without duplicate credit (399 coins,
+  four purchase credits). Duplicate/reordered successful HTTP deliveries,
+  automatic retry timing and provider-API outage remain unchecked. See the
+  [normalized Android record](android-play-registration.md). Automated
   financial, authentication and privacy checks are immediate merge requirements.
 - **Setup:** Follow [sandbox notification setup](revenuecat-sandbox.md#sandbox-notifications-while-the-app-is-closed).
   Requires the isolated RevenueCat/Play app, license tester, approved callback

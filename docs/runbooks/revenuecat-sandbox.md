@@ -2,8 +2,10 @@
 
 **Scope:** P3-T04/P3-T06, D-036, related to issue #164. This implements server
 verification, opt-in Android checkout and recovery of a known Google Play tester
-transaction. Checkout defaults to disabled; genuine purchase evidence is still
-required to complete the first journey.
+transaction. Checkout defaults to disabled. The first genuine no-charge purchase,
+verified credit and episode unlock are recorded in
+[Android test observations](android-play-registration.md); remaining lifecycle
+checks below are not implied by that happy-path result.
 
 ## Private setup
 
@@ -35,7 +37,7 @@ requirements; this implementation does not publish the local development server.
 
 ## Sandbox notifications while the app is closed
 
-Issue #169 / P3-T04 adds an opt-in handler at `POST /v1/webhooks/revenuecat`.
+Issue #169 / P3-T04 adds an opt-in handler at `POST /v1/purchases/revenuecat`.
 Use only the isolated test project and an approved callback route. Keep
 `REVENUECAT_SANDBOX_WEBHOOK_ENABLED=false` until those prerequisites exist.
 
@@ -77,6 +79,38 @@ is `REVENUECAT_SANDBOX_WEBHOOK_ENABLED=false`; retain immutable review/credit
 history. This does not resolve an unknown local checkout attempt or enable a
 second charge.
 
+### Temporary callback receiver for the local Android test
+
+`backend/config/purchase_callback_bridge.py` supplies a separate loopback-only
+receiver for the signed JSON POST. Run it as a module with `PYTHONPATH=backend`,
+for example `uv run python -m config.purchase_callback_bridge --port 18082
+--upstream-port 8000 --lifetime 1800` against the explicitly selected local test
+backend. Its default upstream port is 18000; select 8000 only for the supervised
+Android test instance. Never tunnel Django itself.
+
+Only exact `POST /v1/purchases/revenuecat` is forwarded. The bridge preserves raw
+body bytes and the Authorization/signature headers, bounds input to 32 KiB and
+30 forwarded requests per minute, and rejects query strings, duplicate required
+headers and transfer encoding. It returns empty no-store responses, never backend
+bodies/cookies/redirects, and suppresses request logs. Client and upstream sockets
+have absolute deadlines; the receiver expires within one hour.
+
+Public activation is a separate step: approve a temporary callback-only HTTPS
+route, verify ngrok capture and exports are disabled using harmless probes, and
+supervise both receiver and tunnel with automatic expiry. Stop only those owned
+processes on expiry or failure. The existing app backend must remain private.
+The RevenueCat integration must select Sandbox only and the intended Play app.
+Use dedicated Authorization and HMAC credentials stored outside Git. Do not
+enable callbacks until both credentials and route validation are complete.
+
+On 2026-09-20, engineering prepared the unsaved RevenueCat integration form and
+implemented this receiver. Local socket tests and independent review cover exact
+bytes, path/header isolation, framing/size rejection, empty responses, upstream
+outage, rate limiting, expiry and slow clients/upstreams. Review found that the
+earlier version of this runbook named a nonexistent route; it now matches Django,
+with a regression test against the registered URL. This preparation is not
+evidence of genuine callback or refund delivery, and starts no external tunnel.
+
 ## Android test checkout
 
 The development client includes `react-native-purchases` 10.9.1. Rebuild the
@@ -98,11 +132,14 @@ production, release JavaScript and non-Android runtimes cannot enable checkout.
 Missing or malformed purchase manifest settings disable the feature without
 breaking older clients. The default disabled factory does not load the provider.
 
-Open Account → Coin wallet → Buy coins. Quantities come from the server registry;
+Open the home coin shortcut (or Account → Coins) to the unified Coins screen.
+Quantities come from the server registry;
 prices remain the exact store strings. RevenueCat owns acknowledgement and
 consumption; the app does not manually consume or call `syncPurchases()`. Native
 success starts server verification, then refreshes the wallet. Only explicit
-store cancellation or verified completion clears the saved attempt. An uncertain
+store cancellation, explicit product unavailability, identity-checked purchase
+rejection (`purchase_not_allowed`) or verified completion clears
+the matching saved attempt. An uncertain
 attempt blocks another purchase. Provider logs, diagnostics and automatic device
 identifier collection are disabled by the adapter.
 
@@ -164,7 +201,26 @@ match. This remaining resolution path and full production refund lifecycle are
 follow-up engineering work. The sandbox notification implementation above still
 requires genuine provider validation; no production activation is implied.
 
-Genuine tester purchase, acknowledgement/consumption, provider refund, restart
-and reinstall evidence remain unchecked in [final validation](final-validation.md).
-Keep checkout and production purchases disabled until their gates pass. Rollback
+An explicit SDK product-not-available result from the native purchase call now
+returns a retryable pack-availability message, after revalidating the same owner.
+Like an explicit cancellation, only that exact scoped active attempt is cleared.
+Identity errors before/after the purchase call, uncertain store/network errors
+and contradictory results remain unresolved. This classification does not
+retroactively resolve an attempt whose native result was already lost.
+
+The 2026-09-20 [Android validation record](android-play-registration.md) now
+covers genuine no-charge purchase, repeat purchase of the consumed pack,
+cancellation before payment submission and known-result recovery after a cold
+app restart. A signed provider TEST and a genuine sandbox refund callback also
+returned HTTP 200 through an approved temporary receiver. The refund established
+review without changing the 299-coin balance; repeated live verification and
+known-result recovery preserved that review and the immutable ledger. The
+first receiver window was stopped and its gate disabled. A second approved window
+verified a fourth purchase credited while the app was stopped, manual RevenueCat
+redelivery after local-server outage, and cold-launch recovery without duplicate
+credit (399 coins). Final acceptance remains incomplete: duplicate and reordered
+successful HTTP delivery, automatic retries/provider-API outage, interruption
+before the native result is saved, and reinstall handling still need evidence. Commercial refund
+settlement remains subject to D-008. See [final validation](final-validation.md).
+Keep production purchases disabled until their gates pass. Rollback
 is `COIN_PURCHASE_MODE=disabled`; retain the immutable ledger and receipt history.

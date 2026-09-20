@@ -1,7 +1,7 @@
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
-import BuyCoinsRoute from '../../../app/buy-coins';
+import CoinsRoute from '../../../app/coins';
 import { setAuthSession } from '../../auth/session';
 import { englishMessages } from '../../localization/messages';
 import { renderWithSafeArea } from '../../testUtils';
@@ -10,6 +10,8 @@ import type { CheckoutCoordinator, CheckoutState } from './types';
 
 const mockParams = { returnEpisode: 'ep_synthetic' };
 let mockFocus: () => void;
+let mockPreviewEnabled = false;
+jest.mock('./purchasePreview', () => ({ isPurchasePreviewEnabled: () => mockPreviewEnabled }));
 jest.mock('expo-router', () => ({
   router: {
     push: jest.fn(),
@@ -27,11 +29,58 @@ jest.mock('expo-router', () => ({
     }, [callback]);
   },
 }));
+const mockWallet = { getWallet: jest.fn(), unlock: jest.fn(), resolve: jest.fn() };
+jest.mock('../../api/createAppClients', () => ({
+  createAppWalletClient: () => mockWallet,
+  createAppMeClient: () => ({
+    getMe: async () => ({ outcome: 'ok', data: { public_id: 'usr_preview' } }),
+  }),
+}));
+jest.mock('../wallet/pendingCoinUnlock', () => ({
+  readPendingCoinUnlockForProfile: async () => null,
+}));
+beforeEach(() => {
+  mockWallet.getWallet.mockResolvedValue({
+    outcome: 'ok',
+    data: { balance: 25, spending_available: true },
+  });
+});
 jest.mock('./createAppCheckoutCoordinator', () => ({ createAppCheckoutCoordinator: jest.fn() }));
 
 afterEach(() => {
+  mockPreviewEnabled = false;
   setAuthSession(null);
   jest.clearAllMocks();
+});
+
+it('previews pack selection, cancellation and completion without constructing a checkout coordinator', async () => {
+  mockPreviewEnabled = true;
+  setAuthSession({ credential: 'mock.preview-owner' });
+  const view = await renderWithSafeArea(<CoinsRoute />);
+  const copy = englishMessages.purchasePreview;
+  expect(view.getByText(copy.notice)).toBeTruthy();
+  await waitFor(() => expect(view.getByTestId('wallet-balance')).toHaveTextContent('25 coins'));
+  expect(view.getByRole('button', { name: englishMessages.coinStore.selectPack })).toBeDisabled();
+  expect(view.getByText(englishMessages.coinStore.bestValue)).toBeTruthy();
+  await fireEvent.press(view.getByRole('radio', { name: copy.packLabel(500, '\u20ac4.99') }));
+  await fireEvent.press(
+    view.getByRole('button', { name: englishMessages.coinStore.previewBuy(500, '\u20ac4.99') }),
+  );
+  expect(view.getByRole('header', { name: copy.confirmation })).toBeTruthy();
+  expect(view.getByText('500 coins')).toBeTruthy();
+  await fireEvent.press(view.getByRole('button', { name: copy.cancel }));
+  expect(view.queryByRole('header', { name: copy.confirmation })).toBeNull();
+  await fireEvent.press(
+    view.getByRole('button', { name: englishMessages.coinStore.previewBuy(500, '\u20ac4.99') }),
+  );
+  await fireEvent.press(view.getByRole('button', { name: copy.simulate }));
+  expect(view.getByText(copy.completeDescription)).toBeTruthy();
+  expect(createAppCheckoutCoordinator).not.toHaveBeenCalled();
+  await fireEvent.press(view.getByRole('button', { name: englishMessages.coinStore.done }));
+  expect(view.getByTestId('wallet-balance')).toHaveTextContent('25 coins');
+  expect(mockWallet.unlock).not.toHaveBeenCalled();
+  expect(router.push).not.toHaveBeenCalled();
+  expect(router.dismissTo).not.toHaveBeenCalled();
 });
 
 it('loads once on initial focus, preserves episode navigation and rebinds after account return', async () => {
@@ -46,13 +95,11 @@ it('loads once on initial focus, preserves episode navigation and rebinds after 
     sync: jest.fn(),
   };
   jest.mocked(createAppCheckoutCoordinator).mockReturnValue(first);
-  const view = await renderWithSafeArea(<BuyCoinsRoute />);
+  const view = await renderWithSafeArea(<CoinsRoute />);
   await waitFor(() => expect(first.load).toHaveBeenCalledTimes(1));
   expect(createAppCheckoutCoordinator).toHaveBeenCalledTimes(1);
-  await fireEvent.press(view.getByLabelText(englishMessages.coinPacks.openWallet));
-  expect(router.dismissTo).toHaveBeenLastCalledWith({ pathname: '/wallet', params: mockParams });
   await fireEvent.press(view.getByLabelText(englishMessages.common.back));
-  expect(router.replace).toHaveBeenLastCalledWith({ pathname: '/wallet', params: mockParams });
+  expect(router.replace).toHaveBeenLastCalledWith('/');
   await fireEvent.press(view.getByLabelText(englishMessages.common.account));
   expect(router.push).toHaveBeenLastCalledWith({ pathname: '/account', params: mockParams });
   await act(() => setAuthSession(null));
@@ -86,4 +133,48 @@ it('loads once on initial focus, preserves episode navigation and rebinds after 
   expect(view.getByText('EUR 0.99')).toBeOnTheScreen();
   expect(first.purchase).not.toHaveBeenCalled();
   expect(returned.purchase).not.toHaveBeenCalled();
+});
+
+it('refreshes the unified balance from the server after verification, never from the historical credit', async () => {
+  setAuthSession({ credential: 'mock.verified-owner' });
+  const coordinator: CheckoutCoordinator = {
+    load: jest.fn().mockResolvedValue({
+      status: 'ready',
+      offers: [{ productId: 'coins_test', coins: 100, price: 'EUR 0.99' }],
+    }),
+    purchase: jest.fn().mockResolvedValue({
+      status: 'credited',
+      historicalCreditedCoins: 100,
+      supportReference: 'synthetic',
+      wallet: { status: 'available', data: { balance: 80, spending_available: true } },
+    }),
+    sync: jest.fn(),
+  };
+  jest.mocked(createAppCheckoutCoordinator).mockReturnValue(coordinator);
+  const view = await renderWithSafeArea(<CoinsRoute />);
+  await waitFor(() => expect(view.getByTestId('wallet-balance')).toHaveTextContent('25 coins'));
+  await fireEvent.press(await view.findByRole('radio', { name: '100 coins · EUR 0.99' }));
+  expect(coordinator.purchase).not.toHaveBeenCalled();
+  mockWallet.getWallet.mockResolvedValue({
+    outcome: 'ok',
+    data: { balance: 80, spending_available: true },
+  });
+  await fireEvent.press(
+    view.getByRole('button', { name: englishMessages.coinStore.buy(100, 'EUR 0.99') }),
+  );
+  await waitFor(() => expect(view.getByText(englishMessages.coinPacks.credited)).toBeOnTheScreen());
+  await waitFor(() => expect(view.getByTestId('wallet-balance')).toHaveTextContent('80 coins'));
+  expect(mockWallet.getWallet).toHaveBeenCalledTimes(2);
+  expect(coordinator.purchase).toHaveBeenCalledWith('coins_test');
+  expect(mockWallet.unlock).not.toHaveBeenCalled();
+});
+
+it('does not create checkout or expose preview packs for a signed-out visit', async () => {
+  mockPreviewEnabled = true;
+  setAuthSession(null);
+  const view = await renderWithSafeArea(<CoinsRoute />);
+  expect(await view.findByText(englishMessages.wallet.signIn)).toBeOnTheScreen();
+  expect(view.queryAllByRole('radio')).toHaveLength(0);
+  expect(mockWallet.getWallet).not.toHaveBeenCalled();
+  expect(createAppCheckoutCoordinator).not.toHaveBeenCalled();
 });

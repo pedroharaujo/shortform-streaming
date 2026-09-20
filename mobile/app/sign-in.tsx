@@ -23,6 +23,10 @@ export default function SignInRoute(): JSX.Element {
       analytics={analytics}
       analyticsConsent={analyticsConsent}
       meClient={meClient}
+      onBack={() => {
+        if (router.canGoBack()) router.back();
+        else router.replace('/');
+      }}
       onFinished={() => {
         if (returnEpisode) {
           router.dismissTo({ pathname: '/unlock/[id]', params: { id: returnEpisode } });

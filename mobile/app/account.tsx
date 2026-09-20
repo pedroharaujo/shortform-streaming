@@ -41,7 +41,12 @@ export default function AccountRoute(): JSX.Element {
           : undefined
       }
       onWallet={() =>
-        router.push(returnEpisode ? { pathname: '/wallet', params: { returnEpisode } } : '/wallet')
+        router.push(returnEpisode ? { pathname: '/coins', params: { returnEpisode } } : '/coins')
+      }
+      onPurchases={() =>
+        router.push(
+          returnEpisode ? { pathname: '/purchases', params: { returnEpisode } } : '/purchases',
+        )
       }
       onHome={() => router.replace('/')}
     />

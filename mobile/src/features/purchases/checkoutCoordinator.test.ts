@@ -37,7 +37,13 @@ const product = {
   environment: 'SANDBOX',
   price_source: 'store',
 };
-const offer = { ...scope, productType: 'consumable', price: ' 1.234,56 € ' };
+const offer = {
+  ...scope,
+  productType: 'consumable',
+  price: ' 1.234,56 € ',
+  priceAmount: 1234.56,
+  currencyCode: 'EUR',
+};
 const transactionId = 'synthetic-private-transaction';
 const waiting = {
   status: 'awaiting_verification',
@@ -241,9 +247,29 @@ test('loads exact store price and server quantity only after confirming server i
   const f = fixture();
   await expect(f.controller.load()).resolves.toEqual({
     status: 'ready',
-    offers: [{ productId, coins: 100, price: offer.price }],
+    offers: [
+      {
+        productId,
+        coins: 100,
+        price: offer.price,
+        priceAmount: 1234.56,
+        currencyCode: 'EUR',
+      },
+    ],
   });
   expect(f.provider.prepare).toHaveBeenCalledWith({ ownerId: owner, applicationId });
+});
+test.each([
+  { priceAmount: Number.NaN, currencyCode: 'EUR' },
+  { priceAmount: 1.99, currencyCode: 'eur' },
+  { priceAmount: 1.99, currencyCode: undefined },
+])('loads the offer but omits invalid comparison metadata %#', async (metadata) => {
+  const f = fixture();
+  f.provider.getOffers.mockResolvedValue([{ ...offer, ...metadata }]);
+  await expect(f.controller.load()).resolves.toEqual({
+    status: 'ready',
+    offers: [{ productId, coins: 100, price: offer.price }],
+  });
 });
 test('default and nondevelopment/nonlocal factories stay unavailable before dependencies execute', async () => {
   const f = fixture();
@@ -270,12 +296,28 @@ test('requires load then explicit confirmation again when price or coins change'
   f.provider.getOffers.mockResolvedValue([{ ...offer, price: '2,00 €' }]);
   expect(await f.controller.purchase(productId)).toEqual({
     status: 'ready',
-    offers: [{ productId, coins: 100, price: '2,00 €' }],
+    offers: [
+      {
+        productId,
+        coins: 100,
+        price: '2,00 €',
+        priceAmount: 1234.56,
+        currencyCode: 'EUR',
+      },
+    ],
   });
   f.responses['/v1/purchases/catalog'] = { products: [{ ...product, coins: 200 }] };
   expect(await f.controller.purchase(productId)).toEqual({
     status: 'ready',
-    offers: [{ productId, coins: 200, price: '2,00 €' }],
+    offers: [
+      {
+        productId,
+        coins: 200,
+        price: '2,00 €',
+        priceAmount: 1234.56,
+        currencyCode: 'EUR',
+      },
+    ],
   });
   expect(f.provider.purchase).not.toHaveBeenCalled();
   expect(await f.controller.purchase(productId)).toEqual({ status: 'awaiting_verification' });
@@ -380,6 +422,47 @@ test('only scoped explicit cancellation clears the active marker', async () => {
   f.provider.purchase.mockResolvedValue({ ...scope, outcome: 'cancelled' });
   expect(await f.controller.purchase(productId)).toEqual({ status: 'cancelled' });
   expect(records.size).toBe(0);
+});
+
+test.each(['product_unavailable', 'purchase_not_allowed'])(
+  'explicit scoped %s permits reloading packs without crediting coins',
+  async (outcome) => {
+    const f = nativeFixture();
+    await f.controller.load();
+    f.provider.purchase.mockResolvedValue({ ...f.nativeScope, outcome });
+    expect(await f.controller.purchase(f.nativeScope.productId)).toEqual({
+      status: outcome,
+    });
+    expect(records.size).toBe(0);
+    expect((await f.controller.load()).status).toBe('ready');
+    expect(f.fetcher.mock.calls.map(([input]) => requestUrl(input))).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('/v1/purchases/sync')]),
+    );
+  },
+);
+
+test.each([
+  ['product_unavailable', 'foreign'],
+  ['product_unavailable', 'transaction'],
+  ['purchase_not_allowed', 'foreign'],
+  ['purchase_not_allowed', 'transaction'],
+  ['purchase_not_allowed', 'extra'],
+])('does not clear a %s rejection with %s evidence', async (outcome, kind) => {
+  const f = nativeFixture();
+  await f.controller.load();
+  f.provider.purchase.mockResolvedValue({
+    ...f.nativeScope,
+    outcome,
+    ...(kind === 'foreign'
+      ? { ownerId: reference }
+      : kind === 'transaction'
+        ? { transactionId }
+        : { unexpected: true }),
+  });
+  expect(await f.controller.purchase(f.nativeScope.productId)).toEqual({
+    status: 'awaiting_verification',
+  });
+  expect(records.size).toBe(1);
 });
 test('server credit survives registry repricing and wallet outage with historical evidence only', async () => {
   const f = fixture();
@@ -595,6 +678,8 @@ test('valid maximum catalog and price bounds retain exact strings and project kn
       ...offer,
       productId: p.product_id,
       price: '€'.repeat(128),
+      priceAmount: undefined,
+      currencyCode: undefined,
       private: transactionId,
     })),
   );

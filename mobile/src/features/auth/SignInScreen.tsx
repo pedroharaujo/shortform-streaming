@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
-import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRef, useState, useSyncExternalStore } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { MeClient } from '../../api/me/types';
@@ -11,9 +11,16 @@ import type {
 } from '../../analytics/accountAnalytics';
 import type { AnalyticsConsentController } from '../../analytics/consentController';
 import type { AppAuth, AuthOutcome } from '../../auth/localMockFirebaseAuth';
-import { getAuthSessionRevision, setAuthSession } from '../../auth/session';
+import {
+  getAuthSession,
+  getAuthSessionRevision,
+  setAuthSession,
+  subscribeAuthSession,
+} from '../../auth/session';
 import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
+import { ActionButton, BackButton, ScreenIntro } from '../../ui/ScreenElements';
+import { useKeyboardScroll } from '../../ui/useKeyboardScroll';
 
 export interface SignInScreenProps {
   readonly auth: AppAuth;
@@ -21,6 +28,7 @@ export interface SignInScreenProps {
   readonly analyticsConsent: AnalyticsConsentController;
   readonly meClient: MeClient;
   readonly onFinished: () => void;
+  readonly onBack?: () => void;
 }
 
 export function SignInScreen({
@@ -29,8 +37,11 @@ export function SignInScreen({
   analyticsConsent,
   meClient,
   onFinished,
+  onBack,
 }: SignInScreenProps): JSX.Element {
   const messages = useMessages();
+  const session = useSyncExternalStore(subscribeAuthSession, getAuthSession);
+  const { scrollRef, revealField, onFieldFocus, onFieldBlur } = useKeyboardScroll();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -117,152 +128,126 @@ export function SignInScreen({
   return (
     <SafeAreaView style={styles.container} testID="sign-in-screen">
       <ScrollView
+        ref={scrollRef}
+        onLayout={revealField}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         testID="sign-in-scroll"
       >
-        <Text accessibilityRole="header" style={styles.title}>
-          {messages.auth.title}
-        </Text>
-        <Text style={styles.muted}>{messages.auth.description}</Text>
-        <TextInput
-          accessibilityLabel={messages.auth.email}
-          autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-          onChangeText={setEmail}
-          placeholder={messages.auth.email}
-          placeholderTextColor={colors.placeholder}
-          style={styles.input}
-          testID="sign-in-email"
-          value={email}
-        />
-        <TextInput
-          accessibilityLabel={messages.auth.credential}
-          autoComplete="password"
-          onChangeText={setPassword}
-          placeholder={messages.auth.credential}
-          placeholderTextColor={colors.placeholder}
-          secureTextEntry
-          style={styles.input}
-          testID="sign-in-password"
-          value={password}
-        />
-        {message !== null ? (
-          <Text accessibilityLiveRegion="polite" style={styles.body} testID="sign-in-message">
-            {message}
-          </Text>
+        {onBack ? (
+          <BackButton label={messages.common.back} onPress={onBack} disabled={busy} />
         ) : null}
-        <View style={styles.actions}>
-          <ActionButton
-            busy={busy}
-            label={messages.common.signIn}
-            onPress={() => void run(() => auth.signIn(email, password), 'login', 'password')}
-            testID="sign-in-submit"
+        <ScreenIntro title={messages.auth.title} subtitle={messages.auth.description} />
+        <View style={styles.form}>
+          <Text style={styles.fieldLabel}>{messages.auth.email}</Text>
+          <TextInput
+            accessibilityLabel={messages.auth.email}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            onChangeText={setEmail}
+            onFocus={onFieldFocus}
+            onBlur={onFieldBlur}
+            placeholder={messages.auth.email}
+            placeholderTextColor={colors.placeholder}
+            style={styles.input}
+            testID="sign-in-email"
+            value={email}
           />
-          <ActionButton
-            busy={busy}
-            label={messages.auth.createAccount}
-            onPress={() => void run(() => auth.signUp(email, password), 'sign_up', 'password')}
-            testID="sign-in-create"
+          <Text style={styles.fieldLabel}>{messages.auth.credential}</Text>
+          <TextInput
+            accessibilityLabel={messages.auth.credential}
+            autoComplete="password"
+            onChangeText={setPassword}
+            onFocus={onFieldFocus}
+            onBlur={onFieldBlur}
+            placeholder={messages.auth.credential}
+            placeholderTextColor={colors.placeholder}
+            secureTextEntry
+            style={styles.input}
+            testID="sign-in-password"
+            value={password}
           />
-          <ActionButton
-            busy={busy}
-            label={messages.auth.signInGoogle}
-            onPress={() => void run(() => auth.signInWithGoogle(), 'login', 'google')}
-            testID="sign-in-google"
-          />
-          <ActionButton
-            busy={busy}
-            label={messages.auth.signOut}
-            onPress={() => {
-              void (async () => {
-                if (getAuthSessionRevision() !== sessionOwner.current) {
-                  setMessage(messages.auth.sessionChanged);
-                  return;
-                }
-                setBusy(true);
-                setMessage(null);
-                setAuthSession(null);
-                const signingOutRevision = getAuthSessionRevision();
-                sessionOwner.current = signingOutRevision;
-                await analyticsConsent.clear();
-                if (getAuthSessionRevision() !== signingOutRevision) {
-                  setBusy(false);
-                  return;
-                }
-                try {
-                  await auth.signOut();
-                } finally {
-                  setBusy(false);
-                  setMessage(messages.auth.signedOut);
-                }
-              })();
-            }}
-            testID="sign-in-sign-out"
-          />
+          {message !== null ? (
+            <Text accessibilityLiveRegion="polite" style={styles.body} testID="sign-in-message">
+              {message}
+            </Text>
+          ) : null}
+          <View style={styles.actions}>
+            <ActionButton
+              disabled={busy}
+              tone="primary"
+              label={messages.common.signIn}
+              onPress={() => void run(() => auth.signIn(email, password), 'login', 'password')}
+              testID="sign-in-submit"
+            />
+            <ActionButton
+              disabled={busy}
+              label={messages.auth.createAccount}
+              onPress={() => void run(() => auth.signUp(email, password), 'sign_up', 'password')}
+              testID="sign-in-create"
+            />
+            <ActionButton
+              disabled={busy}
+              label={messages.auth.signInGoogle}
+              onPress={() => void run(() => auth.signInWithGoogle(), 'login', 'google')}
+              testID="sign-in-google"
+            />
+            {session !== null ? (
+              <ActionButton
+                disabled={busy}
+                tone="quiet"
+                label={messages.auth.signOut}
+                onPress={() => {
+                  void (async () => {
+                    if (getAuthSessionRevision() !== sessionOwner.current) {
+                      setMessage(messages.auth.sessionChanged);
+                      return;
+                    }
+                    setBusy(true);
+                    setMessage(null);
+                    setAuthSession(null);
+                    const signingOutRevision = getAuthSessionRevision();
+                    sessionOwner.current = signingOutRevision;
+                    await analyticsConsent.clear();
+                    if (getAuthSessionRevision() !== signingOutRevision) {
+                      setBusy(false);
+                      return;
+                    }
+                    try {
+                      await auth.signOut();
+                    } finally {
+                      setBusy(false);
+                      setMessage(messages.auth.signedOut);
+                    }
+                  })();
+                }}
+                testID="sign-in-sign-out"
+              />
+            ) : null}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function ActionButton({
-  busy,
-  label,
-  onPress,
-  testID,
-}: {
-  readonly busy: boolean;
-  readonly label: string;
-  readonly onPress: () => void;
-  readonly testID: string;
-}): JSX.Element {
-  return (
-    <Pressable
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: busy }}
-      disabled={busy}
-      onPress={onPress}
-      style={[styles.button, busy && styles.disabled]}
-      testID={testID}
-    >
-      <Text style={styles.buttonLabel}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
+  form: { gap: spacing.lg },
   actions: { gap: spacing.md, marginTop: spacing.lg },
   body: { color: colors.foreground, fontSize: fontSizes.body, marginTop: spacing.md },
-  button: {
-    alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.xl,
-  },
-  buttonLabel: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
   container: { backgroundColor: colors.background, flex: 1 },
-  content: { flexGrow: 1, padding: spacing.xxl },
-  disabled: { opacity: 0.5 },
+  content: { flexGrow: 1, padding: spacing.xxl, gap: spacing.xl },
+  fieldLabel: { color: colors.foreground, fontSize: fontSizes.label, fontWeight: '600' },
   input: {
     borderColor: colors.border,
     borderRadius: radii.md,
     borderWidth: 1,
     color: colors.foreground,
-    marginTop: spacing.md,
+    backgroundColor: colors.surfaceRaised,
     minHeight: minimumTouchTarget,
     paddingHorizontal: spacing.md,
-  },
-  muted: { color: colors.muted, fontSize: fontSizes.label, marginBottom: spacing.sm },
-  title: {
-    color: colors.foreground,
-    fontSize: fontSizes.title,
-    fontWeight: '600',
-    marginBottom: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: fontSizes.body,
   },
 });
