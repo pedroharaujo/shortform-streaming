@@ -36,6 +36,13 @@ class WatchProgress(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        indexes = [
+            models.Index(
+                fields=("updated_at", "id"),
+                condition=Q(user_profile__isnull=True, device_id__isnull=False),
+                name="progress_guest_retention_idx",
+            ),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=("user_profile", "episode"),
@@ -86,6 +93,7 @@ def resolve_completed(
     return position_seconds >= duration_seconds * COMPLETION_RATIO
 
 
+@transaction.atomic
 def upsert_watch_progress(
     *,
     episode: Episode,
@@ -119,7 +127,9 @@ def upsert_watch_progress(
         lookup["device_id"] = device_id
         create_defaults["user_profile"] = None
 
-    existing = WatchProgress.objects.filter(**lookup).first()
+    # Hold the row through the write so retention cannot delete a stale row
+    # between lookup and save. A cleanup that wins first permits a fresh insert.
+    existing = WatchProgress.objects.select_for_update().filter(**lookup).first()
     if existing is not None:
         existing.position_seconds = clamped
         existing.completed = resolve_completed(
@@ -137,7 +147,7 @@ def upsert_watch_progress(
     except IntegrityError:
         pass
 
-    row = WatchProgress.objects.get(**lookup)
+    row = WatchProgress.objects.select_for_update().get(**lookup)
     row.position_seconds = clamped
     row.completed = resolve_completed(
         position_seconds=clamped,

@@ -30,8 +30,9 @@ rewarded-ad unlocks.
   password.
 - **Viewing and access information.** We store the series and episode involved,
   playback position, completion state, timestamps, and episode entitlements.
-  Guest progress is linked to a random app-generated identifier stored on the
-  device; signed-in progress and entitlements are linked to the account.
+  Guest progress is stored on the server and linked to a random app-generated
+  identifier stored on the device; signed-in progress and entitlements are linked
+  to the account. Clearing device storage alone does not erase server history.
 - **Coin and purchase information.** Google Play and RevenueCat handle the store
   purchase flow. We process product and application identifiers, opaque purchase
   and transaction references or fingerprints, purchase status and reason,

@@ -19,7 +19,7 @@ resolved. Do not publish a final policy until actual behavior matches its text.
 | Category | Target and starting point | Required protections |
 | --- | --- | --- |
 | Active profile, preferences and signed-in progress | While active; delete promptly following verified account deletion. After 24 months without sign-in or purchase activity, give advance notice, deactivate the profile and delete nonessential preferences/progress. | Preserve the minimum access link needed to recover purchased content; do not expire bought access through inactivity cleanup. Notice timing and the recovery mechanism need implementation design. |
-| Guest viewing progress | Delete locally after 12 months, or earlier through the documented user control. | Specify and verify the per-record age timestamp before implementation; never apply this period to pending financial recovery. |
+| Guest viewing progress | Expire after 12 months from the last saved episode progress, or earlier through a verified guest-erasure control. | Existing progress is server-held under the app's random device identifier. The original proposal incorrectly described it as local-only. The first enforcement tool covers those existing server records; no new collection/storage is authorized. Never apply this period to pending financial recovery. |
 | Routine support/privacy emails | 12 months after case closure. | Separate justified dispute, rights-request, fraud or accounting holds from routine mail; review each hold under its applicable purpose and period. |
 | Operational/security logs | Rolling six months. A specific incident may justify retention up to 12 months. | Minimize fields; no credentials, message bodies, raw purchase identifiers or provider payloads. Inventory provider-controlled audit logs separately. |
 | Completed account-deletion receipts | Three years after completion. | Minimal pseudonymous evidence, restricted access; clear raw Firebase identity after provider cleanup. Never expire pending cleanup or remove replay protection without verifying the remaining protections. |
@@ -57,6 +57,20 @@ retention job to these records based on this approval.
 - Firebase Analytics, RevenueCat, Bunny, Gmail, the final database/backup
   provider and public-page hosting still need exact-account lifecycle checks.
   No provider account settings were changed during this preparation.
+
+## First enforcement slice
+
+`expire_guest_progress` now provides a bounded, preview-first cleanup tool for
+existing server-held guest progress. `--apply` is required to delete a batch.
+The cutoff uses the server's UTC time minus 12 calendar months, clamping a leap
+day to the final day of the corresponding month. It uses each episode's last
+progress write, not account creation, app opening or history reads. Signed-in
+progress and all financial/recovery records are outside its scope.
+
+This tool has not been scheduled or applied to live data. The user-facing guest
+erase control remains unimplemented. Clearing the app's device identifier alone
+does not erase existing server-held history. Deployment and remaining acceptance
+are in the [guest progress retention runbook](../runbooks/guest-progress-retention.md).
 
 Only normalized configuration observations belong in public evidence; never
 include account payloads, user records, credentials or mailbox contents.
