@@ -1,5 +1,8 @@
 # P5-T04: entirely synthetic, no provider calls or live apply.
 mock_provider "google" {
+  mock_data "google_project" {
+    defaults = { number = "123456789012" }
+  }
   mock_resource "google_service_account" {
     defaults = {
       name  = "projects/example-only/serviceAccounts/example@example-only.iam.gserviceaccount.com"
@@ -25,6 +28,12 @@ variables {
 run "defaults_exclude_unused_secrets" {
   command = plan
 
+  assert {
+    condition = length(data.google_project.secret_access) == 0 && alltrue([
+      for grant in google_secret_manager_secret_iam_member.runtime_accessor : length(grant.condition) == 0
+    ])
+    error_message = "Default configuration must preserve existing grants without an extra project lookup."
+  }
   assert {
     condition = toset(keys(google_secret_manager_secret_iam_member.runtime_accessor)) == toset([
       "django-secret-key", "database-url"
@@ -61,6 +70,12 @@ run "pin_versions_and_scope_optional_bunny_names" {
       BUNNY_STREAM_API_KEY   = "13"
       BUNNY_STREAM_TOKEN_KEY = "14"
     }
+    runtime_secret_allowed_versions = {
+      django-secret-key = ["10", "11"]
+      database-url      = ["12"]
+      example-api       = ["13"]
+      example-token     = ["14"]
+    }
   }
 
   assert {
@@ -68,6 +83,18 @@ run "pin_versions_and_scope_optional_bunny_names" {
       "django-secret-key", "database-url", "example-api", "example-token"
     ])
     error_message = "Only explicitly consumed custom Bunny names may gain access; creation alone is insufficient."
+  }
+  assert {
+    condition = alltrue([
+      for secret_id, grant in google_secret_manager_secret_iam_member.runtime_accessor :
+      length(grant.condition) == 1 && grant.condition[0].expression == format(
+        "resource.type == 'secretmanager.googleapis.com/SecretVersion' && resource.name in %s",
+        jsonencode([for version in sort(var.runtime_secret_allowed_versions[secret_id]) :
+          "projects/123456789012/secrets/${secret_id}/versions/${version}"
+        ])
+      )
+    ])
+    error_message = "Every grant must restrict access to exact numeric project/secret/version names, including rollback and custom Bunny names."
   }
   assert {
     condition = alltrue([
@@ -154,4 +181,146 @@ run "reject_missing_optional_consumed_name" {
     bunny_stream_cdn_hostname = "example.invalid"
   }
   expect_failures = [google_secret_manager_secret_iam_member.runtime_accessor]
+}
+
+run "reject_allowlist_missing_secret" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = ["1"] }
+    secret_versions                 = {}
+  }
+  expect_failures = [google_secret_manager_secret_iam_member.runtime_accessor]
+}
+
+run "reject_allowlist_extra_secret" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = ["1"], database-url = ["2"], unused = ["1"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "2" }
+  }
+  expect_failures = [google_secret_manager_secret_iam_member.runtime_accessor]
+}
+
+run "reject_allowlist_latest_selector" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = ["1"], database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "latest" }
+  }
+  expect_failures = [google_secret_manager_secret_iam_member.runtime_accessor]
+}
+
+run "reject_allowlist_omitted_selector" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = ["1"], database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1" }
+  }
+  expect_failures = [google_secret_manager_secret_iam_member.runtime_accessor]
+}
+
+run "reject_allowlist_unlisted_selector" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = ["1"], database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "3" }
+  }
+  expect_failures = [google_secret_manager_secret_iam_member.runtime_accessor]
+}
+
+run "reject_allowlist_empty" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = [], database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "2" }
+  }
+  expect_failures = [var.runtime_secret_allowed_versions]
+}
+
+run "reject_allowlist_null_set" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = null, database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "2" }
+  }
+  expect_failures = [var.runtime_secret_allowed_versions]
+}
+
+run "reject_allowlist_null_member" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = [null], database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "2" }
+  }
+  expect_failures = [var.runtime_secret_allowed_versions]
+}
+
+run "reject_allowlist_alias" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = ["latest"], database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "2" }
+  }
+  expect_failures = [var.runtime_secret_allowed_versions]
+}
+
+run "reject_allowlist_zero" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = ["0"], database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "2" }
+  }
+  expect_failures = [var.runtime_secret_allowed_versions]
+}
+
+run "reject_allowlist_negative" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = ["-1"], database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "2" }
+  }
+  expect_failures = [var.runtime_secret_allowed_versions]
+}
+
+run "reject_allowlist_leading_zero" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = ["01"], database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "2" }
+  }
+  expect_failures = [var.runtime_secret_allowed_versions]
+}
+
+run "reject_allowlist_text" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { django-secret-key = ["candidate"], database-url = ["2"] }
+    secret_versions                 = { DJANGO_SECRET_KEY = "1", DATABASE_URL = "2" }
+  }
+  expect_failures = [var.runtime_secret_allowed_versions]
+}
+
+run "shared_secret_requires_both_consumer_versions" {
+  command = plan
+  variables {
+    video_provider                = "bunny"
+    bunny_stream_library_id       = "123"
+    bunny_stream_cdn_hostname     = "example.invalid"
+    bunny_stream_api_key_secret   = format("%s", "shared-bunny")
+    bunny_stream_token_key_secret = format("%s", "shared-bunny")
+    extra_secret_ids              = ["shared-bunny"]
+    secret_versions = {
+      DJANGO_SECRET_KEY = "1", DATABASE_URL = "2", BUNNY_STREAM_API_KEY = "3", BUNNY_STREAM_TOKEN_KEY = "4"
+    }
+    runtime_secret_allowed_versions = { django-secret-key = ["1"], database-url = ["2"], shared-bunny = ["3"] }
+  }
+  expect_failures = [google_secret_manager_secret_iam_member.runtime_accessor]
+}
+
+run "reject_allowlist_invalid_secret_id" {
+  command = plan
+  variables {
+    runtime_secret_allowed_versions = { "not/a/secret" = ["1"] }
+  }
+  expect_failures = [var.runtime_secret_allowed_versions]
 }

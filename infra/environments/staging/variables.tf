@@ -40,6 +40,23 @@ variable "secret_versions" {
   }
 }
 
+variable "runtime_secret_allowed_versions" {
+  type        = map(set(string))
+  description = "Opt-in version authorization by consumed secret ID, never values. When nonempty, include every consumed secret and all current/rollback numeric versions. Empty preserves existing secret-level access."
+  default     = {}
+  nullable    = false
+
+  validation {
+    condition = alltrue([
+      for secret_id, versions in var.runtime_secret_allowed_versions : try(
+        can(regex("^[A-Za-z0-9_-]{1,255}$", secret_id)) &&
+        length(versions) > 0 && alltrue([for version in versions : can(regex("^[1-9][0-9]*$", version))]), false
+      )
+    ])
+    error_message = "Use valid secret IDs and nonempty sets of positive numeric version strings; nulls and aliases are forbidden."
+  }
+}
+
 variable "project_id" {
   type        = string
   description = "GCP project ID. Required with no default. Not a D-020/D-025 approval."

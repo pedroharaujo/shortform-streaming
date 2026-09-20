@@ -27,13 +27,13 @@ this runbook grants no legal, region, retention, provider-account or budget scop
 
 | Name / configuration | Purpose, storage and consumer | Owner; rotation / overlap / rollback |
 | --- | --- | --- |
-| `DJANGO_SECRET_KEY` → `django-secret-key` | Secret Manager; Django service and migration settings; never injected into HTTP-only smoke. Signs Django material and staff-upload HMAC. | Engineering. **Do not rotate through this foundation alone.** No overlap implementation is added. Assess Django sessions/signatures and `upload_views.py` / `objectstore.py` HMAC compatibility together; old/new revisions may reject each other's material. Rollback to the old revision/key only while safe and enabled. |
+| `DJANGO_SECRET_KEY` → `django-secret-key` | Secret Manager; Django service and migration settings; never injected into HTTP-only smoke. Signs Django material; the local fake object store also uses it for upload HMAC. Production GCS upload URLs use Google signing. | Engineering. **Do not rotate through this foundation alone.** No overlap implementation is added. Assess real Django session/signature consumers across overlapping revisions. The fake upload handler is unavailable in production; do not add production upload HMAC fallbacks for that local-only implementation. Rollback to the old revision/key only while safe and enabled. |
 | `DATABASE_URL` → `database-url` | Secret Manager; PostgreSQL connection for Django/migrate; never injected into HTTP-only smoke. Never put the password-bearing URL in tfvars or build args. | Database owner + engineering. Use independently valid old/new database identities only after privileges, pooling and migration ownership are reviewed. Verify both during overlap, adopt the new identity, drain old connections, then revoke old login. Resetting one user's password does **not** provide overlap. Rollback requires the old login to remain valid. |
 | `BUNNY_STREAM_API_KEY` → `bunny-stream-api-key` (configurable name) | Secret Manager; Bunny asset management/takedown through the backend; service/migrate receive it only with `video_provider = "bunny"`. Staff upload and encode masters directly in Bunny. | Provider owner + engineering. Confirm provider-supported independent credentials/overlap before regenerating anything. Validate playback authorization and takedown with generated media. If only immediate replacement is possible, stop the zero-downtime drill and prepare a separately approved procedure. Rollback needs an independently valid old credential. |
 | `BUNNY_STREAM_TOKEN_KEY` → `bunny-stream-token-key` (configurable name) | Secret Manager; short-lived CDN authorization. Name is an explicit extra by default; no grant while Bunny is disabled. | Provider owner + engineering. Verify CDN acceptance of overlapping keys, cached manifests and outstanding URL expiry before rotation. Current backend config selects one signing key. No dual-key support is asserted. Reverting an app revision is insufficient if the provider invalidated its key. |
 | `FIREBASE_PROJECT_ID`, native Firebase app config; optional server credential | Project/app config is public environment-specific configuration. Backend verifies tokens with Firebase Admin/ADC. Prefer runtime workload identity; an exceptional server private key belongs in an approved vault, never EAS/mobile. | Identity/provider owner. Verify project isolation and credential consumers first. Firebase public verification-key rollover is provider-managed, not rotation of `DJANGO_SECRET_KEY`. If a private key is used, stage a second valid credential, verify, revoke old; assess user-session revocation separately. No server key is provisioned here. |
 | AdMob app/ad-unit identifiers and SSV public verification keys | Identifiers are public native config, **not shared secrets**. Google owns SSV signing keys; Django fetches public keys. Provider-account credentials stay in the provider vault and are not runtime env. | Ads/provider owner. Provider-managed SSV rollover must retain signature verification and bounded cache behavior. Rotate account access through its approved provider procedure; do not invent a webhook shared key. Production ads remain disabled; publisher testing/release prerequisites remain #98. |
-| RevenueCat / Google store private keys and webhook authentication (planned MVP coins) | Provider vault/Secret Manager required for the planned MVP integration; current foundation adds no consumer/name/grant. | Commerce/provider owner. P3-T03/T04 and P5-T04 must define actual env names, least-privilege owners, duplicate-event-safe rotation and revocation tests before MVP provider activation. Apple/subscription secrets remain later. No credential provisioning is authorized by this documentation update. |
+| `REVENUECAT_API_KEY`, `COIN_PURCHASE_AUTHORIZATION`, `COIN_PURCHASE_SIGNING_SECRET`; Google store service credential | The backend consumes these environment variables for the implemented sandbox purchase/provider callback paths. The Google store credential belongs in the provider vault, not the mobile app. Staging OpenTofu does not yet inject or grant these secrets. | Commerce/provider owner. Review each actual consumer and duplicate-event-safe old/new authentication before adding staging references or rotating credentials. Production purchase modes remain blocked. Apple/subscription secrets remain later. No credential provisioning or activation is authorized here. |
 | GitHub OIDC/WIF and runtime ADC | Short-lived identity tokens; no static GCP key in GitHub, container or repository. | Platform owner. Revoke federation/IAM when compromised; tokens expire. Trust changes need P5-T03 verification. Deploy identity has no direct Secret Accessor grant but can deploy code as runtime: it remains privileged. |
 | `DJANGO_ALLOWED_HOSTS`, `DJANGO_SETTINGS_MODULE`, `VIDEO_PROVIDER`, `BUNNY_STREAM_LIBRARY_ID`, `BUNNY_STREAM_CDN_HOSTNAME` | Non-secret service/migration-job config; absent from HTTP-only smoke. Optional Bunny fields now pass through staging. | Engineering. Change with revision review and smoke; rollback the revision and saved job config. Production settings still reject missing/unsafe configuration. |
 | Public API URL / Expo environment selection | Non-secret build configuration. GCP video fallback remains inactive. | Engineering/release owner. Keep environment selection explicit; no private signing material in JS, analytics, or EAS updates. |
@@ -62,15 +62,36 @@ Enabling Bunny also requires the real non-secret library ID and CDN hostname.
 Before removing an existing grant or disabling Bunny, retire every old revision,
 tag and job execution that still needs it; old revisions can cold-start later.
 
-**Limit:** these are secret-level IAM grants. Numeric selection is not
-authorization to only that version; the runtime can access other enabled versions
-of a granted secret. Service and migrate still share the Django runtime identity
-and the same secret set. Migration imports production Django settings, so this
-slice preserves those dependencies; separating its identity and narrowing its
-provider/storage access requires its own consumer review. Version conditions
-with an explicit old/new overlap allowlist remain a P5-T04 follow-up. Google documents
-[version-aware IAM conditions](https://docs.cloud.google.com/secret-manager/docs/access-control);
-do not mark the full “only needed secret versions” criterion complete here.
+### Optional version authorization (#101)
+
+`runtime_secret_allowed_versions` maps consumed **secret IDs** to nonempty sets
+of positive numeric version strings. Empty keeps the existing secret-level IAM
+policy for compatibility. When supplied, it must contain all and only consumed
+IDs, and every active environment-variable selector must be explicitly numeric
+and belong to its secret's set. Aliases, nulls, zero and leading zeros fail.
+Custom Bunny IDs and multiple consumers sharing one ID obey the same contract.
+
+The existing runtime grant becomes conditional on SecretVersion type and exact
+project-number/secret/version resource names. No second unconditional grant is
+added. Project-number metadata is resolved only when this option is enabled;
+no secret values are read or provisioned. This follows Google's
+[version-aware IAM conditions](https://docs.cloud.google.com/secret-manager/docs/access-control)
+and [resource-name contract](https://docs.cloud.google.com/iam/docs/conditions-resource-attributes).
+Numeric conditions deliberately reject requests using `latest` or another alias.
+
+Before activation, pin and verify **every** current/rollback revision, tag and
+job, including old executions. Allow all versions they still need, review the
+exact plan, and account for IAM propagation before changing traffic or removing
+old access. Returning the map to empty broadens access to every enabled version;
+it is not a routine rollback. Additional project/folder/organization or unmanaged
+secret grants can bypass these conditions. Independently verify effective IAM and
+allowed/forbidden-version access with the actual identity before claiming live
+enforcement. Mocked tests do not satisfy that acceptance.
+
+Service and migrate still share the runtime identity and secret set. Migration
+imports production settings; its provider/storage consumer review and separate
+identity remain follow-up work. Live overlap, rollback, provider revocation and
+zero-downtime acceptance remain open in #101.
 
 ## HTTP-only smoke isolation (#101 engineering slice)
 
@@ -100,7 +121,7 @@ These live access checks remain required and are not waived under D-029. No
 cloud state, credentials, secret values, live IAM verification or infrastructure
 apply is part of this local acceptance. The remaining #101 gates include
 service/migrate consumer isolation, version authorization, proven overlap,
-Django/upload-signing compatibility, staging rotation and old-value revocation.
+Django signing compatibility, staging rotation and old-value revocation.
 
 ## Staging drill: prepare first, approve external actions last
 
@@ -184,5 +205,5 @@ python scripts/validate_ai_governance.py
 Mocked plans test configuration and grant membership, not effective live IAM,
 provider overlap, credential validity, runtime redaction or zero downtime.
 The explicit P5-T04 follow-up must cover those live checks, remaining service/migrate
-identity and version-access tightening, and Django/upload signing compatibility. P5-T05
-general abuse controls and the planned MVP coin integration stay separate implementation slices; their final release dependencies now include purchase integrity and reconciliation.
+identity separation, effective version-access enforcement, and Django signing compatibility. P5-T05
+general abuse controls and the MVP coin integration stay separate implementation slices; their final release dependencies now include purchase integrity and reconciliation.

@@ -12,8 +12,12 @@ The **P5-T04 foundation** adds `secret_versions` and limits runtime access to
 consumed secret names. See `docs/runbooks/secrets-and-rotation.md` for the
 inventory, safe adoption/rollback procedure and required live follow-up. Pin
 numeric versions before rotation; omitted selectors retain `latest`. Creating
-an extra secret never grants runtime access on its own. Full version-level
-least privilege and service/migrate identity separation remain follow-up work.
+an extra secret never grants runtime access on its own. Optional
+`runtime_secret_allowed_versions` restricts the existing grants to exact numeric
+versions, including explicitly retained rollback versions. It requires every
+consumed secret and matching numeric workload selectors. Empty preserves broad
+secret-level access; returning to empty broadens access. Effective live denial
+checks and service/migrate identity separation remain follow-up work.
 The HTTP-only smoke job now has its own identity and no backend configuration
 or secret injection; live effective-IAM and job checks remain open under #101.
 

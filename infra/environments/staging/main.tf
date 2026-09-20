@@ -12,12 +12,19 @@ locals {
 
   # P5-T04: creating a secret name must never implicitly grant runtime access.
   # These are the union consumed by the service and the migration job.
-  runtime_secret_ids = toset(concat(
-    ["django-secret-key", "database-url"],
-    var.video_provider == "bunny" ? [
-      var.bunny_stream_api_key_secret, var.bunny_stream_token_key_secret
-    ] : []
-  ))
+  runtime_secret_names = merge(
+    {
+      DJANGO_SECRET_KEY = format("%s", "django-secret-key")
+      DATABASE_URL      = format("%s", "database-url")
+    },
+    var.video_provider == "bunny" ? {
+      BUNNY_STREAM_API_KEY   = format("%s", var.bunny_stream_api_key_secret)
+      BUNNY_STREAM_TOKEN_KEY = format("%s", var.bunny_stream_token_key_secret)
+    } : {}
+  )
+  runtime_secret_ids = toset(
+    values(local.runtime_secret_names)
+  )
 
   # Enable only APIs this composition uses. Enable iamcredentials and sts for
   # WIF. Do not enable transcoder, dns, sqladmin, cloudtasks, cloudscheduler,

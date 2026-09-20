@@ -18,6 +18,11 @@ resource "google_artifact_registry_repository_iam_member" "runtime_reader" {
   member     = "serviceAccount:${google_service_account.runtime.email}"
 }
 
+data "google_project" "secret_access" {
+  count      = length(var.runtime_secret_allowed_versions) > 0 ? 1 : 0
+  project_id = var.project_id
+}
+
 resource "google_secret_manager_secret_iam_member" "runtime_accessor" {
   for_each  = local.runtime_secret_ids
   project   = var.project_id
@@ -25,10 +30,32 @@ resource "google_secret_manager_secret_iam_member" "runtime_accessor" {
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.runtime.email}"
 
+  dynamic "condition" {
+    for_each = length(var.runtime_secret_allowed_versions) > 0 ? [1] : []
+    content {
+      title       = "runtime-approved-secret-versions"
+      description = "Only explicitly approved current and rollback versions."
+      expression = format("resource.type == 'secretmanager.googleapis.com/SecretVersion' && resource.name in %s", jsonencode([
+        for version in sort(coalesce(lookup(var.runtime_secret_allowed_versions, each.value, null), toset([]))) :
+        "projects/${data.google_project.secret_access[0].number}/secrets/${each.value}/versions/${version}"
+      ]))
+    }
+  }
+
   lifecycle {
     precondition {
       condition     = length(setsubtract(local.runtime_secret_ids, local.secret_ids)) == 0
       error_message = "Every consumed runtime secret must be declared in secret_ids or extra_secret_ids."
+    }
+    precondition {
+      condition = length(var.runtime_secret_allowed_versions) == 0 || (
+        toset(keys(var.runtime_secret_allowed_versions)) == local.runtime_secret_ids && alltrue([
+          for name, secret_id in local.runtime_secret_names : try(
+            contains(var.runtime_secret_allowed_versions[secret_id], lookup(var.secret_versions, name, "latest")), false
+          )
+        ])
+      )
+      error_message = "Version authorization requires all and only consumed secret IDs, with each workload's explicit numeric selector in its allowed set. Include rollback versions before activation."
     }
   }
 
