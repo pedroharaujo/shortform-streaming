@@ -8,8 +8,12 @@ item is resolved and the final text is approved.
 
 - [ ] Approve the purpose-to-legal-basis mapping, legitimate-interest analysis,
   user contract boundary, consent wording and any age-related requirements.
-- [ ] Approve a retention schedule for profiles, progress, entitlements,
-  analytics, security logs, support mail and deletion receipts.
+- [x] Founder approves the discretionary retention defaults for profiles,
+  progress, analytics, routine logs, support mail, backups and deletion receipts
+  (2026-09-20; [D-020 partial decision](MVP_RETENTION_DECISION.md)).
+- [ ] Implement and verify those defaults on the exact release, including
+  inactivity notice, purchased-access preservation, pending-cleanup/recovery
+  protections, provider-controlled log exceptions and backup restore behavior.
 - [ ] Approve the lawful basis, exact retained fields, access controls and
   deletion/anonymization period for detached wallets, coin ledgers, purchase
   decisions/events and unlock/cancellation receipts, including refund,
