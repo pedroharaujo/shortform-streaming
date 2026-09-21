@@ -54,7 +54,7 @@ EAS project were found. New logo/store assets remain launch work.
 | Google Analytics | Existing property `551836456`, Stovio, detached from old Firebase and linked to `stovio-app`; new stream mapping verified. Property/history retained. Founder-approved profile: Arts & Entertainment, 1–10 employees, user behavior. Shared parent account unchanged. |
 | Google Play | Stovio app `4974380022274793607`, package `com.stovio.app`. Signed version 1 / 0.1.0 accepted and released to internal track `4701745217816412686`; existing one-person founder tester list selected and track Active. No production release. New RevenueCat verifier retains four approved app-only permissions; no account-wide/release access. |
 | Supabase | Organization/project Stovio; existing opaque reference/host retained. ACTIVE_HEALTHY and read-only connectivity verified. |
-| Bunny Stream | `stovio-spike-nonprod` (7 videos) and `stovio-production` (0 videos); existing opaque IDs, media, CDN URLs and keys preserved. |
+| Bunny Stream | `stovio-spike-nonprod` (7 videos at migration) and `stovio-production` (0 videos); existing opaque IDs, media, CDN URLs and keys preserved. Two generated QA uploads were subsequently added to nonproduction, as recorded below. |
 | RevenueCat | Existing project/app/customer/product records retained. Display and secret-key labels use Stovio. Founder saved the Stovio credential; package `com.stovio.app` persisted. All three credential-validation checks pass. |
 | AdMob | Stovio (Development); opaque app/ad-unit IDs retained. Ads remain disabled. |
 
@@ -75,7 +75,8 @@ enumerate customers; that inventory was verified in the dashboard without
 broadening permissions. No customer or purchase record was deleted.
 After credential cutover, a fresh read returned the same customer and five
 sandbox purchase IDs. The ignored backend product mapping now uses
-`com.stovio.app`; purchases and spending remain disabled.
+`com.stovio.app`. Purchases and spending stayed disabled during cutover;
+the supervised local validation below subsequently enabled sandbox mode only.
 
 The new Play test product is `test_coins_100`, purchase option `buy`, active and
 backwards compatible, single quantity, France only, displayed price EUR 0.99.
@@ -153,11 +154,49 @@ or replacing the credential again.
 Private account exports, Terraform plans/state, logs, provider payloads, secret
 copies and signing material stay outside tracked evidence.
 
+### Local prelaunch validation — 2026-09-21
+
+Scope: P6-T03, D-036/D-037, issues #164/#187. All ten CI checks passed on
+candidate `909166c`; `pnpm mobile:bundle:check` and
+`pnpm mobile:config:check` also passed. These are automated checks, not a
+replacement for the outstanding genuine device/payment journey.
+
+The fresh local `stovio` database was inspected before initialization. Fixed
+dotenv quoting around the existing private product-registry JSON without
+changing its values, then ran `uv run --env-file .env python
+backend/manage.py migrate --noinput` and `uv run --env-file .env python
+backend/manage.py check` successfully. The previous local volume remains intact.
+
+Play Console confirms the existing founder tester list is selected for license
+testing. Only the private local backend and Android debug configuration now
+enable `revenuecat_sandbox`; the backend listens on loopback port 8001, while
+the emulator uses `http://10.0.2.2:8001`. Cloud Firebase authentication is
+selected. Public deployment, callbacks, ads and analytics remain disabled.
+
+Two generated 12-second silent test videos were uploaded to the existing
+nonproduction Bunny library and became READY. The generated series appears in
+the catalog. Both episodes' signed master and variant playlists returned 200
+with valid HLS content; unsigned and expired links returned 403. A live backend
+authorization also led to a successful nonempty media-segment download. Episode 2 was
+then configured to cost one test coin, and anonymous authorization returned no
+playable URL. Wallet, purchase identity and purchase catalog reject anonymous
+requests with 401. Live local health, readiness and catalog requests return 200.
+This verifies API/CDN behavior, not visible device playback or audio.
+
+The sandbox debug build passed with 482 Gradle tasks (24 executed). Installation
+preserved existing app data, and the `stovio://` route resolves. Its APK contains
+the Stovio label/package, cloud authentication, local port 8001 and sandbox
+purchase configuration. ZIP integrity and a bounded scan for known server
+secrets/private keys passed. Metro responds on loopback port 8081. No Google
+sign-in, genuine new-package purchase, wallet credit, unlock or restart is
+claimed from build/install success.
+
 ## Remaining gates and exceptions
 
 1. Verify a genuine new-package test purchase/recovery. Credential validation,
    signed bundle registration and test-product setup are complete.
-   Purchases and coin spending remain disabled meanwhile.
+   Public purchases and coin spending remain disabled; the supervised local
+   debug environment is now configured for sandbox validation only.
 2. Verify Google sign-in and the complete device playback journey on the new
    package. User import and APK installation do not prove sign-in/playback.
 3. Old Play, staging and Firebase are in their provider recovery periods;
