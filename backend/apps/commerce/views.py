@@ -175,7 +175,7 @@ class PurchaseSyncView(APIView):
         tags=["commerce"],
         summary="Verify a known Google Play sandbox purchase with RevenueCat",
         description=(
-            "Explicit local RevenueCat sandbox mode only. Uses the current account's existing "
+            "Explicit RevenueCat sandbox mode only. Uses the current account's existing "
             "server purchase identity and trusted provider facts; client success never grants "
             "coins. May create one verified credit or retain refund review. Unknown, foreign "
             "and unverifiable purchases remain indistinguishable. Awaiting verification does "
@@ -218,7 +218,7 @@ class PurchaseRecoveryView(APIView):
         tags=["commerce"],
         summary="Recover a known sandbox purchase using its exact fingerprint",
         description=(
-            "Explicit local RevenueCat sandbox mode only. Resolves an owner-bound SHA-256 "
+            "Explicit RevenueCat sandbox mode only. Resolves an owner-bound SHA-256 "
             "fingerprint from at most 100 customer purchases, requiring a complete page and "
             "exactly one match before full provider verification and idempotent credit. "
             "Incomplete, ambiguous and missing evidence stays awaiting verification and cannot "
@@ -262,7 +262,12 @@ class PurchaseCallbackView(APIView):
             reconciliation_enabled()
             and getattr(settings, "REVENUECAT_SANDBOX_WEBHOOK_ENABLED", False) is True
         )
-        if not settings.DEBUG or (settings.COIN_PURCHASE_MODE != "test" and not sandbox):
+        synthetic = (
+            settings.DEBUG is True
+            and getattr(settings, "HOSTED_SANDBOX", False) is False
+            and settings.COIN_PURCHASE_MODE == "test"
+        )
+        if not (synthetic or sandbox):
             raise PurchaseUnavailable()
         # Read bounded exact bytes; neither DRF JSON parsing nor user authentication applies.
         raw = request.read(MAX_BODY + 1)

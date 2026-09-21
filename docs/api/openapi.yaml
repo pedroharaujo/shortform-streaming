@@ -694,7 +694,7 @@ paths:
   /v1/purchases/recover:
     post:
       operationId: v1_purchases_recover_create
-      description: Explicit local RevenueCat sandbox mode only. Resolves an owner-bound
+      description: Explicit RevenueCat sandbox mode only. Resolves an owner-bound
         SHA-256 fingerprint from at most 100 customer purchases, requiring a complete
         page and exactly one match before full provider verification and idempotent
         credit. Incomplete, ambiguous and missing evidence stays awaiting verification
@@ -796,7 +796,7 @@ paths:
   /v1/purchases/sync:
     post:
       operationId: v1_purchases_sync_create
-      description: Explicit local RevenueCat sandbox mode only. Uses the current account's
+      description: Explicit RevenueCat sandbox mode only. Uses the current account's
         existing server purchase identity and trusted provider facts; client success
         never grants coins. May create one verified credit or retain refund review.
         Unknown, foreign and unverifiable purchases remain indistinguishable. Awaiting

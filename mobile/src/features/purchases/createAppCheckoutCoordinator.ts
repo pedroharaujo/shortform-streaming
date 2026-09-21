@@ -9,11 +9,11 @@ export function createAppCheckoutCoordinator(): CheckoutCoordinator {
   const configuration = getPurchaseConfiguration();
   const applicationId = Constants.expoConfig?.android?.package;
   if (
-    __DEV__ &&
     Platform.OS === 'android' &&
     configuration.mode === 'revenuecat_sandbox' &&
     isAndroidApplication(applicationId) &&
-    getApiConfiguration().environment === 'local'
+    (getApiConfiguration().environment === 'staging' ||
+      (__DEV__ && getApiConfiguration().environment === 'local'))
   ) {
     // Keep native modules and account dependencies outside the disabled path.
     const { createAppPurchaseCheckoutClient, createAppWalletClient } =
@@ -27,7 +27,7 @@ export function createAppCheckoutCoordinator(): CheckoutCoordinator {
     const revision = getAuthSessionRevision();
     return createCheckoutCoordinator({
       mode: configuration.mode,
-      environment: 'local',
+      environment: getApiConfiguration().environment,
       development: __DEV__,
       applicationId,
       api: createAppPurchaseCheckoutClient(configuration.mode),

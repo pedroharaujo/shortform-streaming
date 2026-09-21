@@ -22,6 +22,13 @@ PLAYBACK_ENVIRONMENT = (
     "STAFF_UPLOAD_URL_TTL_SECONDS",
 )
 CONFIGURATION_ENVIRONMENT = (
+    "COIN_PURCHASE_MODE",
+    "COIN_PURCHASE_PRODUCTS",
+    "COIN_PURCHASE_AUTHORIZATION",
+    "COIN_PURCHASE_SIGNING_SECRET",
+    "REVENUECAT_PROJECT_ID",
+    "REVENUECAT_API_KEY",
+    "REVENUECAT_SANDBOX_WEBHOOK_ENABLED",
     "COIN_SPENDING_MODE",
     "REWARDED_ADS_MODE",
     "REWARDED_ADS_UNIT_ID",
@@ -45,7 +52,7 @@ IMPORT_VALID_ENVIRONMENT = {
 }
 
 
-@pytest.mark.parametrize("mode", ["test", "production", "enabled"])
+@pytest.mark.parametrize("mode", ["test", "production", "enabled", "revenuecat_sandbox"])
 def test_coin_spending_cannot_be_enabled_in_production(mode: str) -> None:
     result = run_settings_import({**IMPORT_VALID_ENVIRONMENT, "COIN_SPENDING_MODE": mode})
     assert result.returncode != 0

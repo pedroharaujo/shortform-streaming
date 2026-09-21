@@ -118,6 +118,26 @@ export function createAppPurchasesClient(): PurchasesClient {
 export function createAppPurchaseCheckoutClient(
   mode: 'synthetic' | 'revenuecat_sandbox' = 'synthetic',
 ): PurchaseCheckoutClient {
+  let enabled = false;
+  try {
+    const { environment } = getApiConfiguration();
+    enabled =
+      (environment === 'local' && __DEV__) ||
+      (environment === 'staging' && mode === 'revenuecat_sandbox');
+  } catch {
+    // Invalid or insecure manifest URLs never initiate checkout requests.
+  }
+  if (!enabled) {
+    const unavailable = async () =>
+      ({ outcome: 'unavailable', message: 'Coin checkout is unavailable.' }) as const;
+    return {
+      getIdentity: unavailable,
+      getCatalog: unavailable,
+      getStatus: unavailable,
+      sync: unavailable,
+      recover: unavailable,
+    };
+  }
   return createPurchaseCheckoutClient({
     ...appApiOptions(),
     getCredential: getSessionCredential,

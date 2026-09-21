@@ -251,7 +251,7 @@ export function resolveAppCheckConfiguration(
   return { mode: mode as AppCheckMode };
 }
 
-/** A public Android SDK identifier enables local testing; it never authorizes coin credits. */
+/** A public Android SDK identifier enables sandbox testing; it never authorizes coin credits. */
 export function resolvePurchaseConfiguration(
   source: Readonly<Record<string, string | undefined>>,
   environment: ApiEnvironment,
@@ -263,9 +263,9 @@ export function resolvePurchaseConfiguration(
       'EXPO_PUBLIC_COIN_PURCHASE_MODE must be disabled or revenuecat_sandbox.',
     );
   }
-  if (environment !== 'local' || source.NODE_ENV === 'production') {
+  if (environment !== 'staging' && (environment !== 'local' || source.NODE_ENV === 'production')) {
     throw new EnvironmentConfigurationError(
-      'Coin checkout is available only in local development builds.',
+      'Coin checkout is available only in local development or staging sandbox builds.',
     );
   }
   const androidSdk = source.EXPO_PUBLIC_REVENUECAT_ANDROID_SDK;
