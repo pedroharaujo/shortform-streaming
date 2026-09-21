@@ -64,6 +64,11 @@ new package registration pass. Firebase user/Analytics preservation already
 verified. The founder approved old Play deletion after replacement verification,
 including its seven-day recovery/data-loss rule.
 
+RevenueCat's retained customer has five sandbox purchases. Their provider records
+were backed up privately through the existing purchase-read scope. The key cannot
+enumerate customers; that inventory was verified in the dashboard without
+broadening permissions. No customer or purchase record was deleted.
+
 ## Verification
 
 - `pnpm check`: repository safety/governance and **61 repository tests** passed;
@@ -96,7 +101,28 @@ including its seven-day recovery/data-loss rule.
 - New least-privilege Firebase verifier read the preserved account successfully;
   UID, provider identity, email and disabled status match the private export.
 - Android upload-key filename/alias migrated privately to Stovio; exported
-  certificate bytes identical before/after. Registration build pending.
+  certificate bytes identical before/after. Signed ARM64 registration build
+  passed (790 Gradle tasks). Bundletool validation, manifest/package/version,
+  JAR signature, original certificate match, ZIP integrity, all 22 native
+  libraries' 16 KB alignment, embedded disabled capabilities and bounded
+  private-secret scanning passed. Artifact SHA-256:
+  `89bdb5c9700184168a2440410c787dffcc62532e959eb5aeec54d483d3500dbe`.
+- All ten GitHub check results passed on implementation commit `1ae4f48`,
+  including Backend, Mobile, Container, OpenAPI contract, OpenTofu validate,
+  Repository foundation and the Application CI gate.
+
+The signed bundle is private at
+`%LOCALAPPDATA%/Stovio/play-registration/stovio-registration-v1.aab` (42,080,490
+bytes). It uses the local test API and is for store registration, not public
+production. Chrome refused its chooser upload with `Not allowed`; the Stovio
+internal release draft is prepared, but the bundle is not yet registered.
+The supported browser fix is to enable the ChatGPT extension's file-URL access,
+or have the founder upload the verified bundle manually.
+
+RevenueCat's new service-account JSON is private at
+`%LOCALAPPDATA%/Stovio/play-credentials/stovio-revenuecat.json`. Browser rules
+require the founder to perform credential replacement and submission. Its
+prepared settings page has package `com.stovio.app`; that change is not yet saved.
 
 Private account exports, Terraform plans/state, logs, provider payloads, secret
 copies and signing material stay outside tracked evidence.

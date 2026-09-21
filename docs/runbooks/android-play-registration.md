@@ -8,6 +8,22 @@ must not be used to configure or upload Stovio. The new application is
 `com.stovio.app`; see [Stovio migration status](stovio-rebrand.md) for current
 service identities, signing preservation and remaining store checks.
 
+## Stovio replacement, 2026-09-21
+
+The new signed registration bundle is
+`%LOCALAPPDATA%/Stovio/play-registration/stovio-registration-v1.aab`.
+Package `com.stovio.app`, version 1 / 0.1.0, target SDK 36, ARM64; SHA-256
+`89bdb5c9700184168a2440410c787dffcc62532e959eb5aeec54d483d3500dbe`.
+Bundle validation, original upload-certificate match, signature, ZIP integrity,
+22 native libraries' 16 KB alignment and bounded private-secret scans passed.
+Purchases, ads, analytics and App Check remain disabled; cloud Auth is selected
+and the API is local. This is registration evidence, not a launch build.
+
+The new Stovio Play app and internal release draft exist. Chrome blocked the
+bundle upload; new-package product creation and purchase verification remain
+pending. Do not upload the old artifact below to the new app or treat the
+historical internal release as validation of Stovio.
+
 ## Verified artifact, 2026-09-19
 
 An existing release bundle was revalidated and copied to a stable private
