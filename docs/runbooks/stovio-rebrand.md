@@ -42,21 +42,21 @@ EAS project were found. New logo/store assets remain launch work.
 
 ## Connected services
 
-| Service | Applied state and preservation |
-|---|---|
-| GCP staging | New project `stovio-staging` (`540100582720`), same billing account, region and budget amount. New `stovio-api`, `stovio-migrate`, `stovio-smoke`, registry `stovio` and dedicated runtime/deploy/smoke identities. Internal ingress and resource-scoped access retained. |
-| GCP data/secrets | New private bucket `stovio-staging-nonvideo-540100582720`; both inventories contain zero objects. Existing database and Django secret bytes/numeric versions copied and verified. Empty Bunny placeholder remains empty. Supabase endpoint/data unchanged. |
-| Infrastructure state | Private, versioned `stovio-staging-tfstate-540100582720`, prefix `staging`. Ignored operator inputs and local backend initialization now target this state. Source state/inventories backed up privately. |
-| GitHub deployment | Seven staging variables updated/read back: project, registry, service, migrate/smoke jobs, identity provider and deploy service account. Region unchanged. Trust remains exact repository + main + staging; no static cloud keys added to GitHub. |
-| Old staging | Source-project-only budget deleted. `shortform-streaming-stg` reports `DELETE_REQUESTED`; normal Google recovery period precedes permanent deletion. |
-| Firebase | New free-plan project `stovio-app` (`72201543210`), Android app `1:72201543210:android:ce5116c0d31697c2afed53`, package `com.stovio.app`. Existing Google-linked user imported with identical UID/provider identity; no password users existed. Two signing fingerprints copied unchanged. Google sign-in enabled; public name Stovio. |
-| Firebase credentials | New project-bound `stovio-auth-verifier` with only `firebaseauth.users.get`. Ignored backend/native configuration points to Stovio. API-key labels renamed, restrictions preserved. Project-bound credentials necessarily replaced; unrelated secret values preserved. |
-| Google Analytics | Existing property `551836456`, Stovio, detached from old Firebase and linked to `stovio-app`; new stream mapping verified. Property/history retained. Founder-approved profile: Arts & Entertainment, 1–10 employees, user behavior. Shared parent account unchanged. |
-| Google Play | Stovio app `4974380022274793607`, package `com.stovio.app`. Signed version 1 / 0.1.0 accepted and released to internal track `4701745217816412686`; existing one-person founder tester list selected and track Active. No production release. New RevenueCat verifier retains four approved app-only permissions; no account-wide/release access. |
-| Supabase | Organization/project Stovio; existing opaque reference/host retained. ACTIVE_HEALTHY and read-only connectivity verified. |
-| Bunny Stream | `stovio-spike-nonprod` (7 videos at migration) and `stovio-production` (0 videos); existing opaque IDs, media, CDN URLs and keys preserved. Two generated QA uploads were subsequently added to nonproduction, as recorded below. |
-| RevenueCat | Existing project/app/customer/product records retained. Display and secret-key labels use Stovio. Founder saved the Stovio credential; package `com.stovio.app` persisted. All three credential-validation checks pass. |
-| AdMob | Stovio (Development); opaque app/ad-unit IDs retained. Ads remain disabled. |
+| Service              | Applied state and preservation                                                                                                                                                                                                                                                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GCP staging          | New project `stovio-staging` (`540100582720`), same billing account, region and budget amount. New `stovio-api`, `stovio-migrate`, `stovio-smoke`, registry `stovio` and dedicated runtime/deploy/smoke identities. Internal ingress and resource-scoped access retained.                                                                         |
+| GCP data/secrets     | New private bucket `stovio-staging-nonvideo-540100582720`; both inventories contain zero objects. Existing database and Django secret bytes/numeric versions copied and verified. Empty Bunny placeholder remains empty. Supabase endpoint/data unchanged.                                                                                        |
+| Infrastructure state | Private, versioned `stovio-staging-tfstate-540100582720`, prefix `staging`. Ignored operator inputs and local backend initialization now target this state. Source state/inventories backed up privately.                                                                                                                                         |
+| GitHub deployment    | Seven staging variables updated/read back: project, registry, service, migrate/smoke jobs, identity provider and deploy service account. Region unchanged. Trust remains exact repository + main + staging; no static cloud keys added to GitHub.                                                                                                 |
+| Old staging          | Source-project-only budget deleted. `shortform-streaming-stg` reports `DELETE_REQUESTED`; normal Google recovery period precedes permanent deletion.                                                                                                                                                                                              |
+| Firebase             | New free-plan project `stovio-app` (`72201543210`), Android app `1:72201543210:android:ce5116c0d31697c2afed53`, package `com.stovio.app`. Existing Google-linked user imported with identical UID/provider identity; no password users existed. Two signing fingerprints copied unchanged. Google sign-in enabled; public name Stovio.            |
+| Firebase credentials | New project-bound `stovio-auth-verifier` with only `firebaseauth.users.get`. Ignored backend/native configuration points to Stovio. API-key labels renamed, restrictions preserved. Project-bound credentials necessarily replaced; unrelated secret values preserved.                                                                            |
+| Google Analytics     | Existing property `551836456`, Stovio, detached from old Firebase and linked to `stovio-app`; new stream mapping verified. Property/history retained. Founder-approved profile: Arts & Entertainment, 1–10 employees, user behavior. Shared parent account unchanged.                                                                             |
+| Google Play          | Stovio app `4974380022274793607`, package `com.stovio.app`. Signed version 1 / 0.1.0 accepted and released to internal track `4701745217816412686`; existing one-person founder tester list selected and track Active. No production release. New RevenueCat verifier retains four approved app-only permissions; no account-wide/release access. |
+| Supabase             | Organization/project Stovio; existing opaque reference/host retained. ACTIVE_HEALTHY and read-only connectivity verified.                                                                                                                                                                                                                         |
+| Bunny Stream         | `stovio-spike-nonprod` (7 videos at migration) and `stovio-production` (0 videos); existing opaque IDs, media, CDN URLs and keys preserved. Two generated QA uploads were subsequently added to nonproduction, as recorded below.                                                                                                                 |
+| RevenueCat           | Existing project/app/customer/product records retained. Display and secret-key labels use Stovio. Founder saved the Stovio credential; package `com.stovio.app` persisted. All three credential-validation checks pass.                                                                                                                           |
+| AdMob                | Stovio (Development); opaque app/ad-unit IDs retained. Ads remain disabled.                                                                                                                                                                                                                                                                       |
 
 After new-package registration and RevenueCat validation passed, old Firebase
 project `throwaway-project-3d95c` entered `DELETE_REQUESTED`. Before retirement,
@@ -233,6 +233,42 @@ Minor UI polish observed: one-coin unlock labels still use the plural "coins";
 the generic Android launcher icon also remains part of the store-assets gate.
 
 ## Remaining gates and exceptions
+
+### Hosted-release prerequisite check (2026-09-21; #122 / #164)
+
+- Enabled the Firebase App Check API in `stovio-app`. After the founder's
+  explicit approval of the Play Integrity terms, linked `com.stovio.app` to
+  Firebase project `72201543210` in Google Play. Play reports the expected
+  project and active licensing, app-recognition and device-integrity responses.
+- Firebase Console reports Stovio Android registered with Play Integrity and
+  four SHA-256 signing fingerprints. The existing configuration requires
+  `PLAY_RECOGNIZED`; license and explicit device-integrity requirements remain
+  unchanged. This is provider setup evidence, **not** a successful real-device
+  attestation or backend-enforcement test. Server enforcement remains disabled.
+- Prepared an ignored private Cloud Run bootstrap plan: 22 creates, four
+  updates, no deletes; one consumer sandbox instance maximum per revision and
+  minimum zero. The plan preserves the existing budget amount, secret values
+  and private ingress. It also enables nonproduction Bunny configuration on
+  the existing private service/job and updates the smoke script. It has not
+  been applied. Missing secret versions must be populated before service creation.
+  A local check of the exact proposed image with private hosted settings passed:
+  DEBUG off, sandbox-only purchases/spending, ads disabled, staff routes absent,
+  authenticated purchase callback route present. This check made no database
+  changes and is not a live hosted or webhook-delivery test.
+- Supabase remains healthy. Read-only checks found zero hosted profiles,
+  series, purchase decisions and wallet entries, and no schema access for
+  the Supabase `anon` or `authenticated` roles. The existing PostgreSQL role,
+  schema and role search path still use `shortform_staging`. Their coordinated
+  migration, including the connection secret and rollback, remains a rebrand
+  exception; renaming the Supabase display name did not rename these identities.
+- Google Play still requires 12 closed-test participants for 14 continuous
+  days and reports zero enrolled closed testers. Saved the factual no-ads
+  (D-037), non-government-app and no-health-features declarations as unpublished
+  drafts. Privacy,
+  data safety, content rating, reviewer access and store-listing requirements
+  remain separate release gates. No review or public release was submitted.
+
+### Outstanding work
 
 1. Complete interrupted-purchase recovery, reinstall/account isolation and
    genuine refund/callback validation. The basic new-package sandbox purchase,

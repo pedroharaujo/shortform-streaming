@@ -106,8 +106,12 @@ claimed here. [Cloud Run pricing](https://cloud.google.com/run/pricing),
 
 ## Focused live acceptance
 
-These checks are **not yet performed**. They prove the newly hosted environment;
-do not repeat the completed emulator decline/refund/outage matrix.
+These hosted checks are **not yet performed**. The Stovio emulator evidence
+currently proves checkout cancellation, a successful no-charge purchase, one
+credit and unlock debit, restart/replay persistence, and unavailable-content
+rejection. Interrupted checkout, genuine refunds/callbacks and the hosted outage
+matrix remain open; historical or synthetic checks do not prove those journeys
+for the new package. See [the exact device evidence](stovio-rebrand.md).
 
 - With the founder's computer/local services stopped, a registered test account
   opens the catalog, signs in, plays an eligible episode and sees its server balance.
