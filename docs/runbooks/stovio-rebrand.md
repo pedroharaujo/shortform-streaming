@@ -255,18 +255,73 @@ the generic Android launcher icon also remains part of the store-assets gate.
   DEBUG off, sandbox-only purchases/spending, ads disabled, staff routes absent,
   authenticated purchase callback route present. This check made no database
   changes and is not a live hosted or webhook-delivery test.
-- Supabase remains healthy. Read-only checks found zero hosted profiles,
-  series, purchase decisions and wallet entries, and no schema access for
-  the Supabase `anon` or `authenticated` roles. The existing PostgreSQL role,
-  schema and role search path still use `shortform_staging`. Their coordinated
-  migration, including the connection secret and rollback, remains a rebrand
-  exception; renaming the Supabase display name did not rename these identities.
+- Supabase remains healthy. The coordinated PostgreSQL role/schema migration
+  is complete; see the verification and recovery evidence below. The hosted
+  application tables still contain zero profiles, series, purchase decisions
+  and wallet entries. This does not mean the whole schema is empty.
 - Google Play still requires 12 closed-test participants for 14 continuous
   days and reports zero enrolled closed testers. Saved the factual no-ads
   (D-037), non-government-app and no-health-features declarations as unpublished
   drafts. Privacy,
   data safety, content rating, reviewer access and store-listing requirements
   remain separate release gates. No review or public release was submitted.
+
+### Database identity cutover — 2026-09-21 (#187)
+
+With the founder's explicit approval, renamed the PostgreSQL login role,
+application schema and role-default search path from `shortform_staging` to
+`stovio_staging`. Supabase migration
+`rename_stovio_staging_database_identity` records the change. The provider
+project and its data were retained; this was a transactional metadata rename,
+not a database rebuild or table migration.
+
+Before committing the rename, created a private PostgreSQL 17 custom-format
+dump and verified its archive listing. Rehearsed the rename inside a transaction
+and rolled it back successfully. The archive was not restored into a separate
+database, so this is not a full backup-restore drill.
+
+Server-side checks confirmed SCRAM password storage and compared the role's
+attributes and password hash before/after without returning the hash. The role
+and schema retain their original object IDs. A fresh connection with full TLS
+certificate verification now resolves both the login and schema to
+`stovio_staging`. Post-cutover verification confirms:
+
+- All 37 tables and 196 rows have unchanged counts and content checksums.
+- All 215 database objects retain their identities, owners, permissions and
+  row-level-security settings; sequence positions are unchanged.
+- The old role/schema are absent. Supabase `anon` and `authenticated` have no
+  schema access, and the runtime role has no new elevated privileges.
+- Secret Manager `database-url` version 2 changes only the connection username.
+  The password, endpoint and TLS options are unchanged. Version 1 is retained
+  privately for coordinated rollback; it cannot authenticate while the old
+  role name is absent.
+- The API and migration job use version 2. Candidate cloud health/readiness
+  checks and `python manage.py migrate --check` passed before traffic promotion.
+  Revision `stovio-api-00002-qug` now receives 100% of traffic; normal-origin
+  cloud health/readiness checks also passed (`stovio-smoke-9x5mc`). No Django
+  application migration or data rewrite was needed.
+- Active private infrastructure inputs select version 2. A reviewed
+  refresh-only OpenTofu plan updated remote state without changing cloud
+  resources. The future hosted-consumer plan was regenerated with version 2;
+  it remains unapplied and contains no deletion.
+
+The first two cloud verification executions failed because Windows shell
+argument handling combined their overrides. Corrected argument-list executions
+passed; the failures were not database or application test passes.
+Private connection files, backups, checksums and provider logs remain outside
+the public repository. Local emulator data and its verified sandbox purchase
+were not modified by this hosted-database rename.
+
+Validation commands: `uv run python
+.tmp/stovio-migration/verify_database_rename.py` (fresh TLS login, identity and
+data comparison), `uv run python
+.tmp/stovio-migration/run_database_cutover_checks.py` (candidate smoke and
+read-only migration check), and `uv run python
+.tmp/stovio-migration/finalize_database_cutover.py` (traffic/configuration and
+normal-origin smoke), all passed. These private operational scripts and their
+inputs are retained in the ignored migration workspace. Repository safety,
+61 repository tests and governance passed via
+`python scripts/check_repository_foundation.py`; `git diff --check` passed.
 
 ### Outstanding work
 
@@ -303,6 +358,17 @@ project only through its normal recovery procedure, then verify IAM, secrets,
 endpoints and deployment variables before traffic changes. Do not mix old-project
 credentials with the new Firebase audience/package. Preserve original signing
 material privately; renaming aliases must never generate replacement keys.
+
+For the database cutover, prefer rolling back application code while retaining
+the renamed database identity and connection secret version 2. Routing traffic
+to a revision using version 1 alone will fail authentication. A full identity
+rollback requires a coordinated maintenance window: stop writers, verify the
+current state, transactionally rename the role and schema back to their original
+names and restore the original role-default search path, then restore version 1
+on the API and migration job. Require fresh TLS login, migration checks and
+cloud health/readiness checks before resuming traffic; reconcile infrastructure
+inputs/state afterward. Use the private dump only for a separately reviewed data
+recovery, not as the routine rename rollback.
 
 References: [Firebase Analytics unlink behavior](https://firebase.google.com/docs/reference/firebase-management/rest/v1beta1/projects/removeAnalytics),
 [Play deletion requirements](https://support.google.com/googleplay/android-developer/answer/16483176),
