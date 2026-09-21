@@ -109,14 +109,34 @@ expired-token and provider-outage live cases remain unverified.
 Saved the original emulator session before opening a temporary read-only
 session for store installation. The original app's login, 99-coin wallet and
 private local database are preserved. The founder completed Google Play Terms
-acceptance; the temporary session reaches the signed-in Play Store. Chrome's
-separate first-run setup currently blocks opening the direct tester download
-link. Store installation and genuine device attestation remain unverified.
+acceptance and Chrome setup. Google Play initially installed version 1; the
+store's available-updates screen then delivered version 2. `adb shell dumpsys
+package com.stovio.app` confirms version code 2 and installer
+`com.android.vending`, with the x86_64 split installed. The pulled installed
+base APK passes `apksigner verify --verbose --print-certs`; its signer matches
+the registered Play signing certificates. Its embedded JavaScript, hosted
+origin, App Check enforcement, sandbox purchase mode and compiled Firebase
+app/project/sender IDs match the intended build.
+
+The Play-signed app starts and displays Stovio without Metro, but its first real
+App Check attempt returns HTTP 403, `App attestation failed`. The catalog stays
+unavailable. No fatal exception or missing-JavaScript error was observed. Live
+read-back confirms the matching Firebase signing fingerprints and linked Play
+Integrity project `72201543210`. Configuration still requires Play recognition;
+no verdict, signing or enforcement settings were weakened. Google documents
+that emulators can be rejected by the real provider; the exact verdict causing
+this rejection is not exposed by the client error. A physical Android test is
+the next gate, not an emulator success claim. The founder has a phone available.
+See [Firebase's emulator guidance](https://firebase.google.com/docs/app-check/android/play-integrity-provider#use_app_check_in_debug_environments).
+
+The optional Cloud Monitoring API metrics query was unavailable because this
+Firebase project has no billing enabled. Billing was not changed; this metrics
+limitation is not evidence of an App Check configuration failure or success.
 No public backend activation or real purchase follows from this internal release.
 
 Mobile configuration, lint and type checks passed; repository foundation
 (secret scan, 61 tests and governance) and `git diff --check` passed. All ten
-GitHub checks passed for code commit `ddc5633`, including backend, mobile,
+GitHub checks passed for code commit `ddc5633` and evidence commit `d37f81d`, including backend, mobile,
 container, contract, infrastructure and repository/governance checks.
 
 The code keeps the existing private service for staff. An optional second service

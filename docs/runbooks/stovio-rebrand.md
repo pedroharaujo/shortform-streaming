@@ -351,10 +351,14 @@ Play accepted the same bundle from a checksum-identical Desktop copy. Version 2
 is now available on the existing internal tester track; no public release was
 made. All ten GitHub checks passed for code commit `ddc5633`. A private,
 zero-traffic App Check candidate passed live missing/invalid-token rejection
-checks; genuine Play-distributed token acceptance is still unverified. The
-founder completed Google Play Terms acceptance; Chrome's separate first-run
-setup remains before opening the direct tester download on the temporary
-emulator. See the hosted release runbook for artifact identity and open gates.
+checks. After completing Play/Chrome setup, the temporary emulator installed
+version 2 directly from Google Play. Its installed signature, embedded bundle,
+hosted configuration and compiled Firebase identities passed checks. Stovio
+starts without Metro, but Firebase rejects the emulator's real attestation
+with HTTP 403. No verification settings were weakened. A physical Android
+test remains required; the founder has a phone available. The generic rejection
+does not establish its precise cause, and hosted playback/purchases remain
+unverified. See the hosted release runbook for artifact identity and open gates.
 
 ### Outstanding work
 
