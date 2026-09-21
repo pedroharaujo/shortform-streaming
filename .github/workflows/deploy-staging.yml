@@ -35,6 +35,7 @@ jobs:
       CLOUD_RUN_SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
       MIGRATE_JOB: ${{ vars.MIGRATE_JOB }}
       SMOKE_JOB: ${{ vars.SMOKE_JOB }}
+      HOSTED_SANDBOX_SERVICE: ${{ vars.HOSTED_SANDBOX_SERVICE }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -110,7 +111,15 @@ jobs:
           set -euo pipefail
           gcloud run jobs update "${SMOKE_JOB}" --image="${IMAGE_DIGEST}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
           gcloud run jobs execute "${SMOKE_JOB}" --wait --update-env-vars="SMOKE_BASE_URL=${CANDIDATE_URL},SMOKE_AUDIENCE=${SERVICE_URL},FAIL_SMOKE=${FAIL_SMOKE}" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
+      - name: Prepare and check hosted sandbox candidate
+        if: env.HOSTED_SANDBOX_SERVICE != ''
+        run: python scripts/deploy_hosted_sandbox.py
       - name: Promote revision
         run: |
           set -euo pipefail
           gcloud run services update-traffic "${CLOUD_RUN_SERVICE}" --to-revisions="${CANDIDATE}=100" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
+      - name: Promote hosted sandbox revision
+        if: env.HOSTED_SANDBOX_SERVICE != ''
+        run: |
+          set -euo pipefail
+          gcloud run services update-traffic "${HOSTED_SANDBOX_SERVICE}" --to-revisions="${HOSTED_SANDBOX_CANDIDATE}=100" --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"

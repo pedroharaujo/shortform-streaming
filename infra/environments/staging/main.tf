@@ -83,7 +83,7 @@ except Exception as exc:
     sys.stderr.write("identity token failed: %s\n" % exc)
     sys.exit(1)
 
-def check(path):
+def check(path, expected=(200,), method="GET"):
     url = base + path
     last_error = "unknown"
     attempts = 5
@@ -91,16 +91,22 @@ def check(path):
         request = urllib.request.Request(
             url,
             headers={
-                "Authorization": "Bearer " + token,
+                "X-Serverless-Authorization": "Bearer " + token,
                 "X-Forwarded-Proto": "https",
+                "Content-Type": "application/json",
             },
+            method=method,
+            data=b"{}" if method == "POST" else None,
         )
         try:
             with urllib.request.urlopen(request, timeout=10) as resp:
-                if resp.status == 200:
+                if resp.status in expected:
                     return
                 last_error = "%s returned %s" % (path, resp.status)
         except urllib.error.HTTPError as exc:
+            exc.close()
+            if exc.code in expected:
+                return
             last_error = "%s returned %s" % (path, exc.code)
         except Exception as exc:
             last_error = "%s failed: %s" % (path, exc)
@@ -111,6 +117,10 @@ def check(path):
 
 check("/health/ready")
 check("/health/live")
+if os.environ.get("CHECK_HOSTED_SANDBOX", "false") == "true":
+    check("/admin/", (404,))
+    check("/internal/staff-masters/1", (404,))
+    check("/v1/purchases/revenuecat", (401, 403), "POST")
 PY
 }
 
