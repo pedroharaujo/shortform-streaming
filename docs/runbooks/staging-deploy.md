@@ -5,6 +5,10 @@ This runbook is the WIF / deploy-workflow contract. It does **not** replace
 `docs/runbooks/staging-apply.md` (OpenTofu apply of the staging composition)
 or `docs/runbooks/django-container.md` (local image and migrate-vs-web).
 
+The optional consumer-only Android sandbox service and its separate activation
+gate are described in [hosted Android test release](hosted-android-test-release.md).
+With `HOSTED_SANDBOX_SERVICE` empty, the existing deployment path is unchanged.
+
 The founder authorized private staging bootstrap and verification on
 2026-09-08. The WIF pool, deploy SA, migrate/smoke jobs and GitHub Environment
 protection are now applied; see the [scoped evidence](../superpowers/reports/2026-09-08-p5-t04-live-verification.md).
