@@ -60,9 +60,17 @@ def unlock(client: Client, payload: dict[str, Any], uid: str = "synthetic-coin-o
 
 
 @pytest.mark.django_db
-def test_unlock_is_atomic_idempotent_and_owner_scoped(client: Client, coin_setup: Any) -> None:
+@pytest.mark.parametrize("hosted", [False, True], ids=["local", "hosted"])
+def test_unlock_is_atomic_idempotent_and_owner_scoped(
+    client: Client, coin_setup: Any, settings: Any, hosted: bool
+) -> None:
     from apps.wallet.models import CoinLedgerEntry, CoinUnlock
 
+    if hosted:
+        settings.DEBUG = False
+        settings.HOSTED_SANDBOX = True
+        settings.COIN_SPENDING_MODE = "revenuecat_sandbox"
+        settings.ROOT_URLCONF = "config.consumer_urls"
     profile, wallet, episode = coin_setup
     payload = unlock_payload(episode)
     assert (

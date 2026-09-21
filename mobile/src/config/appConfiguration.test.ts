@@ -88,7 +88,7 @@ it('reads the fail-closed ad and analytics switches frozen into the manifest', (
   });
 });
 
-describe('local Android purchase configuration', () => {
+describe('Android sandbox purchase configuration', () => {
   const androidSdk = 'goog_SyntheticPublicAndroidSdk12345';
   const enabled = { mode: 'revenuecat_sandbox', androidSdk };
   const source = {
@@ -138,14 +138,21 @@ describe('local Android purchase configuration', () => {
     ).toEqual({ mode: 'disabled' });
   });
 
-  it.each(['staging', 'production'] as const)('rejects activation in %s', (environment) => {
+  it('accepts staging release configuration and its frozen runtime manifest', () => {
+    expect(resolvePurchaseConfiguration({ ...source, NODE_ENV: 'production' }, 'staging')).toEqual(
+      enabled,
+    );
+    expect(readPurchaseConfiguration({ purchases: enabled }, 'staging')).toEqual(enabled);
+  });
+
+  it.each(['production'] as const)('rejects activation in %s', (environment) => {
     expect(() => resolvePurchaseConfiguration(source, environment)).toThrow('local development');
     expect(readPurchaseConfiguration({ purchases: enabled }, environment)).toEqual({
       mode: 'disabled',
     });
   });
 
-  it('rejects release builds and malformed modes while retaining the public-secret guard', () => {
+  it('rejects local release builds and malformed modes while retaining the public-secret guard', () => {
     expect(() =>
       resolvePurchaseConfiguration({ ...source, NODE_ENV: 'production' }, 'local'),
     ).toThrow('local development');

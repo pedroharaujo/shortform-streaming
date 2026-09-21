@@ -120,15 +120,16 @@ def load_products(value: Any, *, mode: str = "test") -> tuple[Product, ...]:
 
 
 def purchases_enabled() -> bool:
-    return bool(
-        settings.DEBUG
-        and getattr(settings, "COIN_PURCHASE_MODE", "disabled") in {"test", "revenuecat_sandbox"}
+    return reconciliation_enabled() or bool(
+        settings.DEBUG is True
+        and getattr(settings, "HOSTED_SANDBOX", False) is False
+        and getattr(settings, "COIN_PURCHASE_MODE", "disabled") == "test"
     )
 
 
 def reconciliation_enabled() -> bool:
     return bool(
-        settings.DEBUG
+        (settings.DEBUG is True or getattr(settings, "HOSTED_SANDBOX", False) is True)
         and getattr(settings, "COIN_PURCHASE_MODE", "disabled") == "revenuecat_sandbox"
     )
 

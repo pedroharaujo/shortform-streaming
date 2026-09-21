@@ -300,7 +300,8 @@ export const englishMessages: AppMessages = {
     productUnavailable:
       'Google Play could not sell this pack. You were not charged. Reload coin packs to check availability.',
     title: 'Buy coins',
-    description: 'Pay through Google Play. Coins are added after your purchase is verified.',
+    description:
+      'Test checkout only. Use Google Play’s test payment method for a no-charge purchase. Cancel if a real payment method appears. Coins are added after verification.',
     loading: 'Checking coin packs and purchases…',
     unavailable: 'Coin purchases are unavailable right now. Check your connection and try again.',
     busy: 'Another purchase is being checked. Check again in a moment.',

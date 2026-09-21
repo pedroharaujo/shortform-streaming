@@ -27,8 +27,8 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
   let offers: readonly CheckoutOffer[] | null = null;
   let completed: { attempt: PendingPurchaseAttempt; transactionId: string } | null = null;
   const enabled =
-    options.environment === 'local' &&
-    options.development &&
+    ((options.environment === 'local' && options.development) ||
+      (options.environment === 'staging' && options.mode === 'revenuecat_sandbox')) &&
     ((options.mode === 'synthetic' && isSyntheticApplication(options.applicationId)) ||
       (options.mode === 'revenuecat_sandbox' && isAndroidApplication(options.applicationId)));
   const isCurrent = () => {

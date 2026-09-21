@@ -172,6 +172,36 @@ template otherwise inherits React Native's older compiler. Keep these settings
 in the Expo configuration, since prebuild regenerates the ignored native Android
 directory.
 
+## Hosted Android test release
+
+P5-T05-F4 / #121 prepares the existing Android app for the approved hosted test
+journey. Use [`mobile/staging.env.example`](staging.env.example) as the public
+build configuration, supplying the approved permanent Cloud Run HTTPS service
+URL and the existing RevenueCat public Google SDK identifier privately. Keep the
+existing Android package, Firebase configuration and Play product registry; this
+example creates no new provider app or prices. Server credentials never belong
+in these values.
+
+Staging allows `revenuecat_sandbox` with release JavaScript (`NODE_ENV=production`,
+`__DEV__=false`). Local checkout still requires a development build. Production
+checkout, synthetic staging checkout and nonlocal purchase previews stay disabled.
+The backend must independently verify every SANDBOX transaction before crediting
+coins; the client switch does not grant a balance or make a real payment a test.
+
+Before distributing a signed Android release through the existing Play internal
+test process, register the release/app-signing certificate with the same Firebase
+app, validate Google sign-in and Play Integrity App Check, and enroll the exact
+Google Play account as a license tester. The purchase sheet must show a Google
+test payment method with no charge; cancel if it offers a real payment method.
+The app keeps Google Play's displayed prices and warns testers before checkout.
+App Check remains enforced, ads and analytics stay disabled in this example.
+
+Build and install a new signed release with embedded JavaScript and these frozen
+settings; it runs without Metro or the founder's computer. Live service activation,
+signing/distribution and the real-device test are separate release gates, not
+outcomes established by Jest or the JavaScript bundle check. Do not commit signing
+material, `google-services.json`, private provider configuration or build output.
+
 ## Checks
 
 ```shell

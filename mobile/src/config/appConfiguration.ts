@@ -8,6 +8,7 @@ import Constants from 'expo-constants';
 import {
   resolveAdsConfiguration,
   resolveFirebaseAuthConfiguration,
+  resolveApiConfiguration,
   resolvePurchaseConfiguration,
   type AdsConfiguration,
   type AppCheckConfiguration,
@@ -58,7 +59,10 @@ export function readApiConfiguration(extra: ExtraShape | null | undefined): ApiC
       'Expo manifest extra.api.baseUrl must be a non-empty absolute URL.',
     );
   }
-  return { environment, baseUrl };
+  return resolveApiConfiguration({
+    EXPO_PUBLIC_API_ENVIRONMENT: environment,
+    EXPO_PUBLIC_API_BASE_URL: baseUrl,
+  });
 }
 
 export function getApiConfiguration(): ApiConfiguration {
@@ -170,7 +174,11 @@ export function readPurchaseConfiguration(
   }
   try {
     return resolvePurchaseConfiguration(
-      { EXPO_PUBLIC_COIN_PURCHASE_MODE: mode, EXPO_PUBLIC_REVENUECAT_ANDROID_SDK: androidSdk },
+      {
+        EXPO_PUBLIC_COIN_PURCHASE_MODE: mode,
+        EXPO_PUBLIC_REVENUECAT_ANDROID_SDK: androidSdk,
+        NODE_ENV: __DEV__ ? 'development' : 'production',
+      },
       environment,
     );
   } catch {

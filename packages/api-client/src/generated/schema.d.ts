@@ -300,7 +300,7 @@ export interface paths {
         put?: never;
         /**
          * Recover a known sandbox purchase using its exact fingerprint
-         * @description Explicit local RevenueCat sandbox mode only. Resolves an owner-bound SHA-256 fingerprint from at most 100 customer purchases, requiring a complete page and exactly one match before full provider verification and idempotent credit. Incomplete, ambiguous and missing evidence stays awaiting verification and cannot prove cancellation or make repurchasing safe. Cannot resolve unknown attempts. Shares the sync limit of six requests per minute per account. Returns historical credit, not current wallet balance or playback authorization.
+         * @description Explicit RevenueCat sandbox mode only. Resolves an owner-bound SHA-256 fingerprint from at most 100 customer purchases, requiring a complete page and exactly one match before full provider verification and idempotent credit. Incomplete, ambiguous and missing evidence stays awaiting verification and cannot prove cancellation or make repurchasing safe. Cannot resolve unknown attempts. Shares the sync limit of six requests per minute per account. Returns historical credit, not current wallet balance or playback authorization.
          */
         post: operations["v1_purchases_recover_create"];
         delete?: never;
@@ -340,7 +340,7 @@ export interface paths {
         put?: never;
         /**
          * Verify a known Google Play sandbox purchase with RevenueCat
-         * @description Explicit local RevenueCat sandbox mode only. Uses the current account's existing server purchase identity and trusted provider facts; client success never grants coins. May create one verified credit or retain refund review. Unknown, foreign and unverifiable purchases remain indistinguishable. Awaiting verification does not prove cancellation or make repurchasing safe. This cannot recover an unknown transaction after process loss. Returns historical credit, not current balance or playback access. Refresh those separately. Six requests per minute per account; send transaction identifiers only in the JSON body.
+         * @description Explicit RevenueCat sandbox mode only. Uses the current account's existing server purchase identity and trusted provider facts; client success never grants coins. May create one verified credit or retain refund review. Unknown, foreign and unverifiable purchases remain indistinguishable. Awaiting verification does not prove cancellation or make repurchasing safe. This cannot recover an unknown transaction after process loss. Returns historical credit, not current balance or playback access. Refresh those separately. Six requests per minute per account; send transaction identifiers only in the JSON body.
          */
         post: operations["v1_purchases_sync_create"];
         delete?: never;

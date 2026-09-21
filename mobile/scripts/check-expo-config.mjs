@@ -322,9 +322,38 @@ if (purchaseResult.status !== 0) {
     }
   });
 }
+const stagingPurchases = {
+  ...localPurchases,
+  NODE_ENV: 'production',
+  EXPO_PUBLIC_API_ENVIRONMENT: 'staging',
+  EXPO_PUBLIC_API_BASE_URL: 'https://sandbox.example.invalid',
+  EXPO_PUBLIC_REWARDED_ADS_MODE: 'disabled',
+  EXPO_PUBLIC_ANALYTICS_ENABLED: 'false',
+  EXPO_PUBLIC_FIREBASE_APP_CHECK_MODE: 'enforce',
+};
+const stagingPurchaseResult = runExpoConfig(stagingPurchases);
+if (stagingPurchaseResult.status !== 0) {
+  fail('explicit staging release sandbox purchase configuration must resolve');
+} else {
+  const extra = JSON.parse(stagingPurchaseResult.stdout).extra;
+  if (
+    extra?.api?.environment !== 'staging' ||
+    extra?.api?.baseUrl !== stagingPurchases.EXPO_PUBLIC_API_BASE_URL ||
+    extra?.purchases?.mode !== 'revenuecat_sandbox' ||
+    extra?.auth?.mode !== 'cloud' ||
+    extra?.appCheck?.mode !== 'enforce' ||
+    extra?.ads?.mode !== 'disabled' ||
+    extra?.analytics?.enabled !== false
+  )
+    fail('staging release sandbox switches were not frozen into the manifest');
+}
 for (const overrides of [
   { NODE_ENV: 'production' },
-  { EXPO_PUBLIC_API_ENVIRONMENT: 'staging' },
+  {
+    EXPO_PUBLIC_API_ENVIRONMENT: 'staging',
+    EXPO_PUBLIC_API_BASE_URL: 'http://sandbox.example.invalid',
+  },
+  { EXPO_PUBLIC_API_ENVIRONMENT: 'staging', EXPO_PUBLIC_COIN_PURCHASE_MODE: 'synthetic' },
   { EXPO_PUBLIC_API_ENVIRONMENT: 'production' },
 ]) {
   if (
@@ -334,7 +363,9 @@ for (const overrides of [
       ...overrides,
     }).status === 0
   ) {
-    fail('coin checkout must reject nonlocal and release builds');
+    fail(
+      'coin checkout must reject production, local release, synthetic staging and insecure staging builds',
+    );
   }
 }
 

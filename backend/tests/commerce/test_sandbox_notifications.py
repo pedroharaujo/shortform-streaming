@@ -26,6 +26,14 @@ from tests.commerce.test_revenuecat import Response, records, transport
 pytestmark = pytest.mark.usefixtures("sandbox_mode")
 
 
+@pytest.fixture(autouse=True, params=[False, True], ids=["local", "hosted"])
+def notification_runtime(settings: Any, sandbox_mode: None, request: pytest.FixtureRequest) -> None:
+    settings.HOSTED_SANDBOX = request.param
+    settings.DEBUG = not request.param
+    if request.param:
+        settings.ROOT_URLCONF = "config.consumer_urls"
+
+
 def notification(owner: str, **changes: Any) -> bytes:
     return payload(
         owner,
@@ -322,6 +330,7 @@ def test_notification_activation_is_separately_gated(
     flag: bool,
     mode: str,
 ) -> None:
+    settings.HOSTED_SANDBOX = False
     settings.DEBUG = debug
     settings.REVENUECAT_SANDBOX_WEBHOOK_ENABLED = flag
     settings.COIN_PURCHASE_MODE = mode
