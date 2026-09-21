@@ -158,8 +158,8 @@ copies and signing material stay outside tracked evidence.
 
 Scope: P6-T03, D-036/D-037, issues #164/#187. All ten CI checks passed on
 candidate `909166c`; `pnpm mobile:bundle:check` and
-`pnpm mobile:config:check` also passed. These are automated checks, not a
-replacement for the outstanding genuine device/payment journey.
+`pnpm mobile:config:check` also passed. All ten checks also passed on `faa59ea`.
+These automated checks are separate from the device evidence below.
 
 The fresh local `stovio` database was inspected before initialization. Fixed
 dotenv quoting around the existing private product-registry JSON without
@@ -169,7 +169,10 @@ backend/manage.py check` successfully. The previous local volume remains intact.
 
 Play Console confirms the existing founder tester list is selected for license
 testing. Only the private local backend and Android debug configuration now
-enable `revenuecat_sandbox`; the backend listens on loopback port 8001, while
+enable `revenuecat_sandbox` purchases; local coin spending uses `test` (the
+`revenuecat_sandbox` spending flag is reserved for hosted sandbox settings).
+The initial spending-flag mismatch was corrected during device validation and
+`coin_spending_enabled()` verified true. The backend listens on loopback port 8001, while
 the emulator uses `http://10.0.2.2:8001`. Cloud Firebase authentication is
 selected. Public deployment, callbacks, ads and analytics remain disabled.
 
@@ -189,16 +192,56 @@ the Stovio label/package, cloud authentication, local port 8001 and sandbox
 purchase configuration. ZIP integrity and a bounded scan for known server
 secrets/private keys passed. Metro responds on loopback port 8081. No Google
 sign-in, genuine new-package purchase, wallet credit, unlock or restart is
-claimed from build/install success.
+claimed from build/install success alone.
+
+### Genuine Android sandbox journey — 2026-09-21
+
+Validated `com.stovio.app` in the API 36.1 Android emulator with the debug build,
+cloud Firebase authentication, the local backend and nonproduction Bunny media.
+The founder completed Google sign-in; Stovio created the authenticated profile
+and retained the session through restart. Android initially stopped the app
+while automatically updating WebView; the system log identified
+`installPackageLI`, rather than an app exception. The repeated journey passed.
+
+- The free generated episode visibly played to completion. Authenticated
+  progress recorded completion at 12 seconds, and continuation stopped at the
+  locked second episode.
+- Google Play displayed the expected 100-coin test pack, its EUR 0.99 catalog
+  price, the always-approves test card and an explicit no-charge notice.
+  Dismissing the first checkout produced the cancellation message and no credit.
+- A subsequent no-charge order succeeded. RevenueCat-backed server verification
+  produced exactly one Stovio purchase decision and one 100-coin ledger credit;
+  the app displayed the verified credit and balance.
+- Confirming the second episode's one-coin unlock produced exactly one debit
+  and one unlock receipt. The episode visibly played to completion.
+- After `adb -s emulator-5554 shell am force-stop com.stovio.app` (without
+  clearing data), launcher startup retained login and the 99-coin balance.
+  Replaying the unlocked episode required no further payment or debit.
+- Temporarily unpublishing only the generated second episode prevented playback
+  despite its existing unlock. Publication was restored immediately afterward;
+  no financial or entitlement records were changed.
+- Purchase history retained one original 100-coin credit after refresh. Final
+  database reconciliation remained one purchase credit, one one-coin debit,
+  one unlock receipt and zero quarantined purchase decisions.
+
+No account identifiers, order IDs, support references, provider payloads or
+device screenshots are committed. This proves the basic emulator sandbox
+journey and persistence after an already-verified purchase; it does not prove
+interruption recovery before verification, reinstall/account isolation, genuine
+refund/callback delivery, audio, physical-device or store-signed release behavior.
+Minor UI polish observed: one-coin unlock labels still use the plural "coins";
+the generic Android launcher icon also remains part of the store-assets gate.
 
 ## Remaining gates and exceptions
 
-1. Verify a genuine new-package test purchase/recovery. Credential validation,
-   signed bundle registration and test-product setup are complete.
+1. Complete interrupted-purchase recovery, reinstall/account isolation and
+   genuine refund/callback validation. The basic new-package sandbox purchase,
+   credit, unlock and post-credit restart/replay checks above passed.
    Public purchases and coin spending remain disabled; the supervised local
    debug environment is now configured for sandbox validation only.
-2. Verify Google sign-in and the complete device playback journey on the new
-   package. User import and APK installation do not prove sign-in/playback.
+2. Repeat the journey on a physical Android device with the intended store-signed
+   release and hosted test backend; finish the remaining P6-T03 device, privacy
+   and release checks. The local debug/emulator result is not release sign-off.
 3. Old Play, staging and Firebase are in their provider recovery periods;
    retirement actions are complete. Preserve required financial evidence and
    the private sandbox-purchase backup. Old Play recovery ends 2026-09-28.
