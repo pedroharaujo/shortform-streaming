@@ -62,9 +62,12 @@ After new-package registration and RevenueCat validation passed, old Firebase
 project `throwaway-project-3d95c` entered `DELETE_REQUESTED`. Before retirement,
 the source user export was compared again, the new verifier read the preserved
 account, and the retained Analytics property linkage was reverified. Google’s
-normal project recovery period applies. Old Play deletion remains pending its
-developer-registration transaction ID. The founder already approved deletion,
-including its seven-day recovery/data-loss rule.
+normal project recovery period applies. The founder supplied the required
+registration receipt reference privately, and old Play app
+`com.shortformstreaming.app` was deleted on 2026-09-21 under the existing
+approval. Play Console confirms recovery is available until 2026-09-28;
+afterward its app data and metrics become permanently inaccessible. The
+receipt reference is not stored in repository evidence.
 
 RevenueCat's retained customer has five sandbox purchases. Their provider records
 were backed up privately through the existing purchase-read scope. The key cannot
@@ -157,9 +160,9 @@ copies and signing material stay outside tracked evidence.
    Purchases and coin spending remain disabled meanwhile.
 2. Verify Google sign-in and the complete device playback journey on the new
    package. User import and APK installation do not prove sign-in/playback.
-3. Finish old Play retirement using the developer registration transaction ID.
-   Old staging/Firebase are already in recoverable deletion. Preserve required
-   financial evidence and the private sandbox-purchase backup.
+3. Old Play, staging and Firebase are in their provider recovery periods;
+   retirement actions are complete. Preserve required financial evidence and
+   the private sandbox-purchase backup. Old Play recovery ends 2026-09-28.
 4. Verify GitHub deployment after reviewed merge; manual smoke does not prove
    the new workflow's end-to-end identity authentication.
 5. Complete listing, privacy/content declarations, graphics, required closed
