@@ -8,8 +8,56 @@ Tracking: [#121](https://github.com/pedroharaujo/stovio/issues/121),
 Prepare the existing app to run without Metro, the local Django server or a
 temporary callback tunnel. The founder selected the generated Cloud Run HTTPS
 address on 2026-09-21 and authorized preparation. This is an Android license-tester
-release, not a public paid launch. No new infrastructure, provider configuration,
-Google terms, real payments or spending is authorized by this document.
+release, not a public paid launch. The founder subsequently approved the private
+bootstrap described below, including its dedicated identity and secret access.
+This document does not authorize public activation or real payments.
+
+### Private bootstrap verified — 2026-09-21 (#164 / #187)
+
+Deployed `stovio-consumer-test` in `stovio-staging`, `europe-west9`, with the
+existing verified Stovio backend image and `config.settings.hosted_sandbox`.
+The service is internal-only and requires Google invocation credentials;
+unauthenticated external requests are blocked. It is not yet a usable Android
+tester endpoint outside the project.
+
+- Capacity: 1 vCPU, 512 MiB, concurrency eight, minimum zero and maximum one
+  instance per revision. The existing BRL 588/month staging budget alert and
+  recipient remain unchanged; the alert is not a spending cap.
+- Created five missing secret containers and populated six existing sandbox
+  credential values, with byte-for-byte read-back verification. Database secret
+  version 2 retains the renamed login; all other consumed versions are pinned
+  to version 1. Secret values were not rotated or placed in infrastructure state.
+- The consumer identity can read the selected database secret version but is
+  denied the previous version and private staff bucket. A temporary Cloud Run
+  verification job confirmed these effective permissions, the renamed database
+  login/schema, and Bunny nonproduction library connectivity. Its Firebase
+  permissions are exactly the approved account-read/account-delete pair among
+  the checked account/IAM permissions; create-user and project-IAM editing are
+  denied. The temporary job was deleted after passing.
+- Live consumer smoke `stovio-smoke-p76pz` passed database readiness, liveness,
+  absent staff routes and rejection of unsigned purchase notifications. The
+  existing private service also passed smoke `stovio-smoke-hml8g` after receiving
+  the nonproduction Bunny configuration. Purchases/spending remain sandbox-only
+  on the consumer service and disabled on the ordinary secure service.
+- Rechecked all 37 hosted tables / 196 rows against the pre-rename baseline:
+  content, permissions, object identities and sequence positions are unchanged.
+  The local emulator's purchase and wallet were untouched.
+- Persisted the deployed topology in ignored staging inputs and remote state;
+  set GitHub staging variable `HOSTED_SANDBOX_SERVICE=stovio-consumer-test`.
+  The final plan has no creates/deletes or secret/IAM changes, only provider
+  normalization of budget project ID/number and zero-minimum scaling blocks.
+
+Exact operational checks: `uv run python
+.tmp/stovio-migration/validate_hosted_runtime.py`, `uv run python
+.tmp/stovio-migration/verify_hosted_deployment.py`, `uv run python
+.tmp/stovio-migration/run_hosted_runtime_probe.py`, and `uv run python
+.tmp/stovio-migration/verify_database_rename.py`, all passed. Inputs and raw
+provider evidence stay in the ignored private migration workspace.
+
+This proves the private bootstrap, not public tester activation, Firebase
+attestation, visible hosted playback, genuine callback delivery, or a store-signed
+Android journey. The rebrand PR remains unmerged, so GitHub deployment after its
+reviewed merge also remains unverified. No automatic merge was performed.
 
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified
@@ -29,7 +77,7 @@ App Check, not from purchase authentication. See [RevenueCat signing](https://ww
 - Existing Firebase, Supabase, private Cloud Run service, image registry and
   deployment workflow remain in place.
 - One opt-in consumer service: request-based billing, 1 vCPU / 512 MiB per
-  instance, minimum zero, proposed maximum two per revision, concurrency eight, 60-second
+  instance, minimum zero, approved maximum one per revision, concurrency eight, 60-second
   request timeout. The input requires an explicit choice of one to three instances.
 - A dedicated consumer identity reads only the configured numeric secret versions.
   It has no staff upload bucket grant. A custom role in the configured Firebase
@@ -52,8 +100,9 @@ Google provider does not support a service-wide maximum field. Existing database
 and video bills are separate.
 Before activation, record the founder's monthly testing budget, alert recipient,
 selected capacity and pricing estimate for the anticipated testing traffic.
-No traffic forecast or budget has been supplied, so no total monthly price is
-claimed here. [Cloud Run pricing](https://cloud.google.com/run/pricing),
+The private bootstrap uses the approved existing staging alert budget above.
+No traffic forecast has been supplied, so no total monthly price is claimed
+here. [Cloud Run pricing](https://cloud.google.com/run/pricing),
 [instance limits](https://docs.cloud.google.com/run/docs/configuring/max-instances).
 
 ## Activation order — engineering work after approval
@@ -106,7 +155,8 @@ claimed here. [Cloud Run pricing](https://cloud.google.com/run/pricing),
 
 ## Focused live acceptance
 
-These hosted checks are **not yet performed**. The Stovio emulator evidence
+The end-to-end device checks below are **not yet performed**. Private service
+and permission checks passed as recorded above. The Stovio emulator evidence
 currently proves checkout cancellation, a successful no-charge purchase, one
 credit and unlock debit, restart/replay persistence, and unavailable-content
 rejection. Interrupted checkout, genuine refunds/callbacks and the hosted outage

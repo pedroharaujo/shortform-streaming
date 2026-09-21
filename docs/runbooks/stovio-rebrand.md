@@ -250,7 +250,8 @@ the generic Android launcher icon also remains part of the store-assets gate.
   minimum zero. The plan preserves the existing budget amount, secret values
   and private ingress. It also enables nonproduction Bunny configuration on
   the existing private service/job and updates the smoke script. It has not
-  been applied. Missing secret versions must be populated before service creation.
+  been applied at that prerequisite check; the approved private bootstrap is now
+  deployed and verified as recorded below.
   A local check of the exact proposed image with private hosted settings passed:
   DEBUG off, sandbox-only purchases/spending, ads disabled, staff routes absent,
   authenticated purchase callback route present. This check made no database
@@ -303,7 +304,8 @@ certificate verification now resolves both the login and schema to
 - Active private infrastructure inputs select version 2. A reviewed
   refresh-only OpenTofu plan updated remote state without changing cloud
   resources. The future hosted-consumer plan was regenerated with version 2;
-  it remains unapplied and contains no deletion.
+  it contained no deletion. That regenerated plan was subsequently applied in
+  the private hosted bootstrap below.
 
 The first two cloud verification executions failed because Windows shell
 argument handling combined their overrides. Corrected argument-list executions
@@ -322,6 +324,26 @@ normal-origin smoke), all passed. These private operational scripts and their
 inputs are retained in the ignored migration workspace. Repository safety,
 61 repository tests and governance passed via
 `python scripts/check_repository_foundation.py`; `git diff --check` passed.
+
+### Private hosted consumer bootstrap — 2026-09-21 (#164 / #187)
+
+The founder approved the proposed private service and its resource-scoped
+permissions. Deployed `stovio-consumer-test` with the existing backend image,
+renamed database connection, nonproduction Bunny library and unchanged sandbox
+credential values. The consumer service is internal-only, with sandbox-only
+commerce, no staff routes and a maximum of one instance per revision. The
+existing BRL 588/month budget alert remains unchanged.
+
+Both consumer and ordinary private API smoke checks passed. A temporary job
+using the consumer identity verified database/video connectivity, access to
+the selected secret version, denial of the previous version and staff bucket,
+and the approved Firebase permissions. The job was removed. Hosted database
+contents and the local emulator wallet remain unchanged. Active infrastructure
+inputs/state and the GitHub staging consumer-service variable are updated.
+
+See [hosted test release evidence](hosted-android-test-release.md) for exact
+checks and limits. Public access, device attestation, genuine provider callback
+delivery and the standalone Android release remain separate unfinished gates.
 
 ### Outstanding work
 
