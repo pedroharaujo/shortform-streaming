@@ -36,13 +36,18 @@ visual identity is separate from replacing existing names.
 | GCP staging | Project display `Stovio staging`; runtime/deploy/smoke service-account display names updated | Project/resource identities retained |
 | GCP resource labels | Existing secret, registry and private non-video bucket `product=stovio` | No secret versions or resource contents changed |
 | Firebase/GCP Android project | Project and public-facing name `Stovio`; Android nickname `Stovio Android local` | Existing project, app ID, package and certificates retained |
-| GCP credentials | Firebase Android/browser API-key display labels, OAuth Android label and backend-auth service-account display name updated | Key restrictions retained; no key values regenerated |
+| GCP credentials | Firebase Android/browser API-key display labels, OAuth Android/web labels and backend-auth service-account display name updated | Key restrictions retained; no key values regenerated. OAuth branding also reads Stovio; blank home/privacy/terms URLs were not invented |
 | Supabase | Organization and project display names `Stovio` | Same project reference/host; `ACTIVE_HEALTHY`; read-only `SELECT 1` succeeded |
 | Bunny Stream | `stovio-spike-nonprod` and `stovio-production` library names | Same libraries, media, CDN endpoints and keys |
 | RevenueCat | Project `Stovio Test`; app `Stovio Test (Play Store)` | Same project/app/product IDs; dashboard shows valid existing Play credentials. Secret-key label `Stovio local Android test verification`; key permissions/value preserved |
 | Google Analytics | Property `Stovio`; Android stream `Stovio Android local` | Same property/stream IDs and Firebase linkage. Founder approved required business details: Arts & Entertainment, 1–10 employees, understanding user behavior (engagement/retention). Shared parent account remains untouched. |
 | Google Play | Default English app-name draft saved as `Stovio` | Existing package/internal release retained; incomplete listing remains a draft |
 | AdMob | Development app display `Stovio (Development)` | Same app/ad-unit identifiers; advertising remains disabled in MVP code |
+
+Review: correctness, readability, architecture, security and performance checked.
+App/package identity, stored financial journals and purchase digest inputs are
+unchanged; logger and monitoring event filters remain compatible. No new runtime
+dependency was introduced.
 
 Provider display updates are already live. Code and Terraform changes still
 require the normal reviewed merge/deployment. No release or traffic promotion
