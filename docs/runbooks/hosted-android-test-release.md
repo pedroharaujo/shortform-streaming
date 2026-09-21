@@ -62,6 +62,55 @@ attestation, visible hosted playback, genuine callback delivery, or a store-sign
 Android journey. The rebrand PR remains unmerged, so GitHub deployment after its
 reviewed merge also remains unverified. No automatic merge was performed.
 
+### Signed verification build — 2026-09-21 (#122 / #164)
+
+Prepared Android version code 2, keeping version name `0.1.0`, package
+`com.stovio.app` and the existing upload certificate. The bundle embeds its
+JavaScript and the private hosted consumer HTTPS origin, cloud Firebase auth,
+App Check enforcement and sandbox purchases. Ads and analytics are disabled.
+The release selects Play Integrity rather than the development debug provider.
+
+`uv run python .tmp/stovio-migration/build_hosted_release.py` passed: 802 Gradle
+tasks, 95 executed, 707 up-to-date. The private bundle verifier
+`uv run python .tmp/stovio-migration/validate_hosted_release.py` passed bundletool
+validation, archive integrity, preserved signing certificate, package/version/
+target-SDK checks, embedded configuration checks, known-server-secret and
+private-key scans, and 16 KB alignment for all 44 native libraries across
+`arm64-v8a` and `x86_64`. This is build evidence, not Google Play acceptance or
+successful device attestation.
+
+The private artifact is `Stovio/play-release/stovio-hosted-v2.aab` under the
+operator's local application-data directory (55,087,449 bytes; SHA-256
+`f39ee5239eee7cffb6f82399aa89a3c1a818bf15f7f369fd8f749cc778d7a7c3`).
+Google Play's existing internal-track release draft is named
+`Stovio 0.1.0 - Hosted verification`. Two uploads reached distribution
+optimization, then returned the same generic Android App Bundle upload error
+with advice to retry later or contact developer support. Browser error logs
+gave no additional cause. Version 2 has not been accepted or released; the
+version 1 registration release remains active. Retain the verified artifact
+and retry processing before changing its signing material or configuration.
+
+Prepared private revision `stovio-consumer-test-00002-yit` with enforcement on,
+tagged `app-check`, receiving zero normal traffic. The normal consumer revision
+remains private with enforcement disabled while device proof is pending.
+`uv run python .tmp/stovio-migration/check_appcheck_candidate.py` passed live
+health/readiness, staff exclusion, unsigned-callback rejection and HTTP 401
+`app_check_required` for missing, empty, whitespace, oversized and malformed
+tokens. Two initial probe executions failed from Windows command-argument
+handling; corrected structured Cloud Run API execution `stovio-smoke-mxg2p`
+passed. These are
+negative cases only: genuine Play-distributed tokens, wrong-project/app,
+expired-token and provider-outage live cases remain unverified.
+
+Saved the original emulator session before opening a temporary read-only
+session for store installation. The original app's login, 99-coin wallet and
+private local database are preserved. The temporary session requires Google
+Play Terms acceptance before installation; approval is pending. No public
+backend activation or real purchase follows from preparing this build.
+
+Mobile configuration, lint and type checks passed; repository foundation
+(secret scan, 61 tests and governance) and `git diff --check` passed.
+
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified
 Firebase identity and consumer-only routes. `/admin/` and `/internal/staff-masters/1`

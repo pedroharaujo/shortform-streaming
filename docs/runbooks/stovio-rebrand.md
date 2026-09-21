@@ -345,6 +345,14 @@ See [hosted test release evidence](hosted-android-test-release.md) for exact
 checks and limits. Public access, device attestation, genuine provider callback
 delivery and the standalone Android release remain separate unfinished gates.
 
+The version 2 signed hosted-verification bundle now passes local artifact and
+configuration checks. Google Play returned a generic processing error on both
+upload attempts, so version 1 remains active. A private, zero-traffic App Check
+candidate passed the live missing/invalid-token rejection checks; genuine
+Play-distributed token acceptance is still unverified. The temporary emulator
+also awaits explicit Google Play Terms acceptance. See the hosted release
+runbook for artifact identity and the exact outstanding gates.
+
 ### Outstanding work
 
 1. Complete interrupted-purchase recovery, reinstall/account isolation and
