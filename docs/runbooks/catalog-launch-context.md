@@ -4,7 +4,7 @@
 activation is approved by this implementation.
 
 Implementation and review evidence:
-[PR #139](https://github.com/pedroharaujo/shortform-streaming/pull/139).
+[PR #139](https://github.com/pedroharaujo/stovio/pull/139).
 
 ## Server configuration
 

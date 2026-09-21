@@ -266,7 +266,7 @@ PostgreSQL 17.6 container bound only to loopback port 55436, with generated data
   regenerated OpenAPI/TypeScript consistency, mobile lint/format/types,
   **38 suites / 232 mobile tests**, and Expo configuration checks.
 - The aggregate mobile run recovered from a Windows `realpath` warning. Follow-up
-  `pnpm --filter @shortform/mobile test --runInBand src/features/catalog/EpisodeSelectedScreen.test.tsx src/features/rewards/RewardScreen.test.tsx`
+  `pnpm --filter @stovio/mobile test --runInBand src/features/catalog/EpisodeSelectedScreen.test.tsx src/features/rewards/RewardScreen.test.tsx`
   passed **2 suites / 30 tests** without that warning.
 - `git diff --check` and `git diff --cached --check`: passed.
 

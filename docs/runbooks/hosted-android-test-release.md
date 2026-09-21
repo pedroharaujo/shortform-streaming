@@ -1,7 +1,7 @@
 # Hosted Android test release
 
-Tracking: [#121](https://github.com/pedroharaujo/shortform-streaming/issues/121),
-[#164](https://github.com/pedroharaujo/shortform-streaming/issues/164), P5-T05-F4.
+Tracking: [#121](https://github.com/pedroharaujo/stovio/issues/121),
+[#164](https://github.com/pedroharaujo/stovio/issues/164), P5-T05-F4.
 
 ## Purpose and current status
 

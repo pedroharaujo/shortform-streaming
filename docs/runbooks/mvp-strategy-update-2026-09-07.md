@@ -73,7 +73,7 @@ Recommended next engineering action: start **P2-T03-F3**, making launch settings
 - [docs/adr/0006-store-billing-revenuecat-ledger.md](../adr/0006-store-billing-revenuecat-ledger.md)
 - [docs/adr/0007-firebase-bigquery-experimentation.md](../adr/0007-firebase-bigquery-experimentation.md)
 - [docs/analytics/README.md](../analytics/README.md)
-- [docs/architecture/shortform-streaming.drawio](../architecture/shortform-streaming.drawio)
+- [docs/architecture/stovio.drawio](../architecture/stovio.drawio)
 - [docs/archive/2026-08-cost-scenarios.md](../archive/2026-08-cost-scenarios.md)
 - [docs/privacy/DEVELOPMENT_PRIVACY_NOTICE_DRAFT.md](../privacy/DEVELOPMENT_PRIVACY_NOTICE_DRAFT.md)
 - [docs/product/CONTENT_RIGHTS_CHECKLIST.md](../product/CONTENT_RIGHTS_CHECKLIST.md)

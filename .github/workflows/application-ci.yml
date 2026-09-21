@@ -150,7 +150,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build backend image
-        run: docker build -f backend/Dockerfile -t shortform-backend:ci .
+        run: docker build -f backend/Dockerfile -t stovio-backend:ci .
 
   dependency-review:
     name: Dependency review

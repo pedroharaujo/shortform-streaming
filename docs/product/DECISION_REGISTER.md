@@ -77,6 +77,14 @@ The current table is authoritative. The rows below preserve the exact previous v
 **Historical hypothesis (MVP brief, founder 2026-08-27; Superseded by D-032 on 2026-09-07):** “Will viewers progress through an approved catalog of vertical series and use rewarded ads to unlock more episodes?” The prior brief treated paid acquisition, coin IAP and cohort LTV/CAC as the later experiment. The current MVP tests contribution LTV versus CAC with purchased coins; rewarded-ad monetization was deferred by D-037 on 2026-09-20.
 
 
+## Brand decision — D-038
+
+Founder approved 2026-09-21: **Stovio** replaces Short Form Streaming as the final
+brand; use `stovio` for new technical names. Issue #187 tracks the rollout.
+Existing credentials, data and working integrations must survive. Fixed IDs and
+persistent namespaces remain compatibility exceptions until a separately
+reviewed migration; a brand change does not approve a replacement app or resource.
+
 ## Decision protocol
 
 1. Record a proposed value and its owner.

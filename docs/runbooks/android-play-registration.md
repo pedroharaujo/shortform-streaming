@@ -402,7 +402,7 @@ The launch failure persisted after restoring the port forward and restarting
 Metro. Android's BundleDownloader reported a protocol exception while decoding
 the multipart bundle, matching the community reproduction in
 [Expo #49111](https://github.com/expo/expo/issues/49111). An opt-in Node-side
-Metro workaround, `SHORTFORM_METRO_PLAIN_ANDROID_BUNDLE=1`, requests ordinary
+Metro workaround, `STOVIO_METRO_PLAIN_ANDROID_BUNDLE=1`, requests ordinary
 JavaScript only for Android `.bundle` requests. The default, other platforms,
 maps and status requests are unchanged. The local validation launcher opts in.
 Routing checks, ESLint and formatting passed; independent review found no

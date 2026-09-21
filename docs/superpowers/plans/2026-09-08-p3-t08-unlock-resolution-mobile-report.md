@@ -32,7 +32,7 @@ review and the pull request remain the coordinating agent's responsibility.
 
 ## Test-first evidence
 
-`pnpm --filter @shortform/mobile test --runInBand src/features/wallet/EpisodeUnlockScreen.test.tsx`
+`pnpm --filter @stovio/mobile test --runInBand src/features/wallet/EpisodeUnlockScreen.test.tsx`
 initially failed 16 new/updated tests because recovery still retried debit,
 depended on the catalog and bypassed resolution for an existing grant. After
 implementation, 32 tests passed. Separate new regression tests then reproduced

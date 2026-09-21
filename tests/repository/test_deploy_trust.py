@@ -61,7 +61,7 @@ FORBIDDEN_DEPLOY_ROLES = (
     "roles/storage.admin",
 )
 
-REAL_REPO = "pedroharaujo/shortform-streaming"
+REAL_REPO = "pedroharaujo/stovio"
 
 
 def _read(path: Path) -> str:

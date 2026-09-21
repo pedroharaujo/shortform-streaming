@@ -1,12 +1,12 @@
 {
-  "name": "shortform-streaming",
+  "name": "stovio",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "check": "python scripts/check_repository_foundation.py && pnpm backend:check && pnpm contract:check && pnpm mobile:check",
     "contract:generate:schema": "uv run python scripts/generate_openapi.py",
-    "contract:generate:client": "pnpm --filter @shortform/api-client generate",
+    "contract:generate:client": "pnpm --filter @stovio/api-client generate",
     "contract:generate": "pnpm contract:generate:schema && pnpm contract:generate:client",
     "contract:check": "pnpm contract:generate && uv run python scripts/check_generated_api_contract.py",
     "backend:lint": "uv run ruff check backend",
@@ -16,12 +16,12 @@
     "backend:test": "uv run pytest backend/tests",
     "backend:test:coverage": "uv run pytest backend/tests --cov=apps --cov=config --cov-report=term-missing",
     "backend:check": "pnpm backend:lint && pnpm backend:format:check && pnpm backend:typecheck && pnpm backend:migrations:check && pnpm backend:test",
-    "mobile:lint": "pnpm --filter @shortform/mobile lint",
-    "mobile:format:check": "pnpm --filter @shortform/mobile format:check",
-    "mobile:typecheck": "pnpm --filter @shortform/mobile typecheck",
-    "mobile:test": "pnpm --filter @shortform/mobile test",
-    "mobile:config:check": "pnpm --filter @shortform/mobile config:check",
-    "mobile:bundle:check": "pnpm --filter @shortform/mobile bundle:check",
+    "mobile:lint": "pnpm --filter @stovio/mobile lint",
+    "mobile:format:check": "pnpm --filter @stovio/mobile format:check",
+    "mobile:typecheck": "pnpm --filter @stovio/mobile typecheck",
+    "mobile:test": "pnpm --filter @stovio/mobile test",
+    "mobile:config:check": "pnpm --filter @stovio/mobile config:check",
+    "mobile:bundle:check": "pnpm --filter @stovio/mobile bundle:check",
     "mobile:android": "uv run python scripts/run_mobile_android.py",
     "mobile:check": "pnpm mobile:lint && pnpm mobile:format:check && pnpm mobile:typecheck && pnpm mobile:test && pnpm mobile:config:check"
   }

@@ -140,7 +140,7 @@ Initial paid-test activation also requires one approved audience, approximately 
   whose analytics preference can be tested both off and on. Use synthetic campaign
   tokens only.
 - **Actions:** from a logged-out cold state and again while the app is foregrounded,
-  open direct, organic, and fully tagged `shortform://series/<generated-id>` intents.
+  open direct, organic, and fully tagged `stovio://series/<generated-id>` intents.
   Repeat after login, with analytics consent off and on. Open malformed and
   unavailable series links. Clear app data and repeat the installed-link cases; do
   not label this a fresh-install/referrer test. Inspect bounded device logs and
@@ -196,7 +196,7 @@ Initial paid-test activation also requires one approved audience, approximately 
 - **Automated reproduction:**
 
   ```text
-  pnpm --filter @shortform/mobile test --runInBand EpisodeUnlockScreen WalletScreen pendingCoinUnlock interruptedAdRecovery rewardNavigation
+  pnpm --filter @stovio/mobile test --runInBand EpisodeUnlockScreen WalletScreen pendingCoinUnlock interruptedAdRecovery rewardNavigation
   pnpm mobile:check
   pnpm mobile:bundle:check
   ```
@@ -211,7 +211,7 @@ Initial paid-test activation also requires one approved audience, approximately 
   Ad testing retains the preceding section's operator/privacy/SSV requirements.
 - **Required native actions (unchecked):** open Account → Coin wallet; background
   and resume after changing test balance on a second device. Open
-  `shortform://play/<generated-episode-id>` → View episode options. Check each
+  `stovio://play/<generated-episode-id>` → View episode options. Check each
   configured method, exact coin confirmation and cancellation, insufficient funds,
   disabled spending, large text/TalkBack and navigation through Wallet/Account/
   sign-in. Interrupt before sending and after server commit, reopen the same

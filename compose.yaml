@@ -1,3 +1,5 @@
+# Compatibility namespace: changing this would select a new empty Postgres volume.
+# See docs/runbooks/stovio-rebrand.md before migrating existing installations.
 name: shortform-streaming
 
 x-backend-container-environment: &backend-container-environment
@@ -27,7 +29,7 @@ services:
 
   migrate:
     profiles: ["container"]
-    image: ${SHORTFORM_BACKEND_IMAGE:-shortform-backend:ci}
+    image: ${STOVIO_BACKEND_IMAGE:-${SHORTFORM_BACKEND_IMAGE:-stovio-backend:ci}}
     environment: *backend-container-environment
     depends_on:
       postgres:
@@ -36,7 +38,7 @@ services:
 
   api:
     profiles: ["container"]
-    image: ${SHORTFORM_BACKEND_IMAGE:-shortform-backend:ci}
+    image: ${STOVIO_BACKEND_IMAGE:-${SHORTFORM_BACKEND_IMAGE:-stovio-backend:ci}}
     environment: *backend-container-environment
     depends_on:
       migrate:

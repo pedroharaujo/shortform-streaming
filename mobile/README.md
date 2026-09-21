@@ -154,7 +154,7 @@ the native build from the repository root, with the emulator running and private
 local configuration in place:
 
 ```shell
-pnpm --filter @shortform/mobile exec expo prebuild --platform android --no-install
+pnpm --filter @stovio/mobile exec expo prebuild --platform android --no-install
 pnpm mobile:android
 ```
 

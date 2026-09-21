@@ -8,7 +8,7 @@ from django.http import HttpRequest, HttpResponse
 
 from config.error_envelope import get_request_id
 
-_request_logger = logging.getLogger("shortform.request")
+_request_logger = logging.getLogger("stovio.request")
 
 
 def _route_label(request: HttpRequest) -> str:

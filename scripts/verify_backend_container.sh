@@ -7,9 +7,9 @@ set -euo pipefail
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$ROOT"
 
-IMAGE="${SHORTFORM_BACKEND_IMAGE:-shortform-backend:ci}"
-export SHORTFORM_BACKEND_IMAGE="$IMAGE"
-COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-shortform-backend-ci}"
+IMAGE="${STOVIO_BACKEND_IMAGE:-${SHORTFORM_BACKEND_IMAGE:-stovio-backend:ci}}"
+export STOVIO_BACKEND_IMAGE="$IMAGE"
+COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-stovio-backend-ci}"
 export COMPOSE_PROJECT_NAME
 
 API_URL="http://127.0.0.1:8080"
@@ -32,7 +32,7 @@ if ! docker compose version >/dev/null 2>&1; then
   die "docker compose is required"
 fi
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-  die "$IMAGE is missing; run: docker build -f backend/Dockerfile -t shortform-backend:ci ."
+  die "$IMAGE is missing; run: docker build -f backend/Dockerfile -t stovio-backend:ci ."
 fi
 
 user="$(docker inspect --format '{{.Config.User}}' "$IMAGE")"

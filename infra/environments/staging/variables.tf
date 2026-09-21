@@ -75,7 +75,7 @@ variable "billing_account_id" {
 variable "label_product" {
   type        = string
   description = "Product label."
-  default     = "shortform"
+  default     = "stovio"
 }
 
 variable "label_environment" {

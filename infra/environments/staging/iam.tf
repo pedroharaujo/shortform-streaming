@@ -4,7 +4,7 @@
 resource "google_service_account" "runtime" {
   project      = var.project_id
   account_id   = var.runtime_service_account_id
-  display_name = "shortform staging Cloud Run runtime"
+  display_name = "Stovio staging Cloud Run runtime"
   description  = "Least-privilege runtime identity for staging Cloud Run. Not a WIF deploy SA. Invoker is granted on this service only; no public invoker and no project-wide admin roles."
 
   depends_on = [google_project_service.required]
@@ -92,7 +92,7 @@ resource "google_cloud_run_v2_service_iam_member" "runtime_invoker" {
 resource "google_service_account" "smoke" {
   project      = var.project_id
   account_id   = "shortform-smoke"
-  display_name = "shortform staging HTTP smoke"
+  display_name = "Stovio staging HTTP smoke"
   description  = "HTTP-only staging checks. Artifact reader and service-scoped invoker; no Secret Manager access."
 
   lifecycle {
@@ -127,7 +127,7 @@ resource "google_cloud_run_v2_service_iam_member" "smoke_invoker" {
 resource "google_service_account" "deploy" {
   project      = var.project_id
   account_id   = "shortform-deploy"
-  display_name = "shortform staging GitHub Actions deploy"
+  display_name = "Stovio staging GitHub Actions deploy"
   description  = "Least-privilege WIF deploy identity (shortform-deploy). Not a runtime SA."
 
   depends_on = [google_project_service.required]

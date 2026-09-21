@@ -2,7 +2,7 @@
 
 **Decision:** D-036, founder approved 2026-09-13.
 **Tasks:** P2-T08, P3-T03, P3-T04 and P3-T06.
-**Tracking:** [issue #164](https://github.com/pedroharaujo/shortform-streaming/issues/164).
+**Tracking:** [issue #164](https://github.com/pedroharaujo/stovio/issues/164).
 
 The next checkpoint is an app the founder can use: choose a series, watch a free
 episode, sign in with Google, buy a test coin pack through Google Play, unlock the
@@ -65,7 +65,7 @@ $env:NODE_OPTIONS='--dns-result-order=ipv4first'
 node ../node_modules/expo/bin/cli start --dev-client --localhost --port 8081 --max-workers 2
 ```
 
-Open Shortform normally in the emulator. The installed debug APK used in the
+Open Stovio normally in the emulator. The installed debug APK used in the
 2026-09-13 check used port 8081; passing a different port in a development-client
 deep link did not redirect it. Confirm `http://127.0.0.1:8081/status` responds
 before troubleshooting the app's backend connection.

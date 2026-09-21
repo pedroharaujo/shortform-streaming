@@ -238,9 +238,9 @@ export const englishMessages: AppMessages = {
     emailBody:
       'Please describe what happened. Do not include passwords, verification codes or payment card details.',
     subjects: {
-      general: 'Shortform Streaming — Support and privacy',
-      purchase: 'Shortform Streaming — Coin purchase support',
-      unlock: 'Shortform Streaming — Episode unlock support',
+      general: 'Stovio — Support and privacy',
+      purchase: 'Stovio — Coin purchase support',
+      unlock: 'Stovio — Episode unlock support',
     },
     opening: 'Opening…',
     openFailed:
@@ -463,7 +463,7 @@ export const englishMessages: AppMessages = {
     viewReward: 'View episode options',
   },
   catalog: {
-    brand: 'SHORTFORM',
+    brand: 'Stovio',
     tagline: 'Small episodes. Big emotions.',
     discover: 'Find your next story',
     viewSeries: 'Explore series',

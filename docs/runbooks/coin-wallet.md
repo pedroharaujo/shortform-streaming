@@ -110,7 +110,7 @@ and network failures preserve the original recovery record. Ambiguous rejections
 keep the safe request reference for support; absence of a receipt alone still
 does not justify erasing a pending request or replacing coins.
 
-[Issue #144](https://github.com/pedroharaujo/shortform-streaming/issues/144) remains
+[Issue #144](https://github.com/pedroharaujo/stovio/issues/144) remains
 open for an approved public support contact and its remaining genuine provider,
 refund and release-device gates. Production coins remain disabled.
 

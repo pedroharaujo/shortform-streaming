@@ -18,7 +18,7 @@ subsequent MVP coding do not wait for operator identity/privacy contact or the
 dependent provider observation. Production remains disabled. Unobserved provider
 evidence is still a release blocker, never a passed check. Remaining setup and
 validation moved from #96 to
-[P6-T05A / #98](https://github.com/pedroharaujo/shortform-streaming/issues/98).
+[P6-T05A / #98](https://github.com/pedroharaujo/stovio/issues/98).
 D-005 requires login and D-007 grants one permanent episode entitlement per
 verified ad. P3-T08 implements the fuller offer-sheet experience. D-029 accepts
 its development merge while transferring the required native Maestro validation

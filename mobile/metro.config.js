@@ -14,8 +14,11 @@ config.resolver.nodeModulesPaths = [
 
 // Opt-in local workaround for Expo #49111: Android can reject large multipart
 // development bundles on Windows. Keep store builds and other requests unchanged.
-// eslint-disable-next-line no-restricted-syntax -- Metro runs in Node; this local server flag is never bundled.
-if (process.env.SHORTFORM_METRO_PLAIN_ANDROID_BUNDLE === '1') {
+/* eslint-disable no-restricted-syntax -- Metro runs in Node; these local server flags are never bundled. */
+const plainAndroidBundle =
+  process.env.STOVIO_METRO_PLAIN_ANDROID_BUNDLE ?? process.env.SHORTFORM_METRO_PLAIN_ANDROID_BUNDLE;
+/* eslint-enable no-restricted-syntax */
+if (plainAndroidBundle === '1') {
   const enhance = config.server.enhanceMiddleware;
   config.server.enhanceMiddleware = (middleware, server) => {
     const next = enhance ? enhance(middleware, server) : middleware;
