@@ -30,8 +30,9 @@ rewarded-ad unlocks.
   password.
 - **Viewing and access information.** We store the series and episode involved,
   playback position, completion state, timestamps, and episode entitlements.
-  Guest progress is linked to a random app-generated identifier stored on the
-  device; signed-in progress and entitlements are linked to the account.
+  Guest progress is stored on the server and linked to a random app-generated
+  identifier stored on the device; signed-in progress and entitlements are linked
+  to the account. Clearing device storage alone does not erase server history.
 - **Coin and purchase information.** Google Play and RevenueCat handle the store
   purchase flow. We process product and application identifiers, opaque purchase
   and transaction references or fingerprints, purchase status and reason,
@@ -103,11 +104,13 @@ review.
 
 ## Retention and account deletion
 
-No public retention schedule has been approved. **Proposed rule:** keep each
-category only as long as needed for its stated purpose, then delete or
-irreversibly anonymize it, subject to provider lifecycle and any legally
-required accounting, tax, fraud-prevention or dispute period. Exact periods and
-their legal grounds must be approved before launch.
+The founder approved [discretionary retention defaults](MVP_RETENTION_DECISION.md)
+on 2026-09-20: routine support mail for 12 months after closure, routine logs for
+six months, backups for 35 days and opted-in analytics for 14 months from
+collection, plus the account, guest-progress and deletion-receipt rules in that
+decision. These are implementation targets, not verified current behavior or
+an effective public retention promise. Provider lifecycles, financial-record
+periods and applicable legal grounds still require confirmation before launch.
 
 The in-app deletion flow requires recent reauthentication. It deletes the local
 profile, signed-in watch progress and episode entitlements, and requests deletion
