@@ -254,7 +254,7 @@ Primary provider references: [webhook signatures and retry behavior](https://www
 
 On `codex/p3-t06-purchase-sync`, based on main `ae95d8f`, tests used a disposable
 PostgreSQL 17.6 container bound only to loopback port 55436, with generated data.
-`DATABASE_URL=postgresql://shortform@127.0.0.1:55436/shortform` and
+`DATABASE_URL=postgresql://stovio@127.0.0.1:55436/stovio` and
 `PYTEST_ADDOPTS=-p no:cacheprovider` selected it; no private environment file was loaded.
 
 - `uv run pytest backend/tests/commerce/test_purchase_sync.py -q`: initially
@@ -285,7 +285,7 @@ validation, with its server implementation unchanged.
 P3-T06 / #142 adds the bounded read and Android history screen described above.
 The backend implementation is `fe6aeb1`; the mobile implementation is `85f1ef7`.
 Tests used generated data in disposable PostgreSQL 17.6 on loopback port 55436,
-with `DATABASE_URL=postgresql://shortform@127.0.0.1:55436/shortform` and
+with `DATABASE_URL=postgresql://stovio@127.0.0.1:55436/stovio` and
 `PYTEST_ADDOPTS=-p no:cacheprovider`.
 
 - `uv run pytest backend/tests/commerce/test_purchase_history.py -q` — **19 passed**,

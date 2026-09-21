@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$ROOT"
 
-IMAGE="${STOVIO_BACKEND_IMAGE:-${SHORTFORM_BACKEND_IMAGE:-stovio-backend:ci}}"
+IMAGE="${STOVIO_BACKEND_IMAGE:-stovio-backend:ci}"
 export STOVIO_BACKEND_IMAGE="$IMAGE"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-stovio-backend-ci}"
 export COMPOSE_PROJECT_NAME

@@ -60,7 +60,7 @@ to production retention. Do not silently extend an abandoned experiment.
 
 Privacy & messaging → European regulations → Create message:
 
-1. Name: `Shortform development consent`.
+1. Name: `Stovio development consent`.
 2. Select only **Stovio (Development), Android**. Leave both unrelated
    SmartBite+ apps unselected and all-app/fallback deployment switches unchanged.
 3. Privacy-policy URL: the checked final document URL, never a placeholder.

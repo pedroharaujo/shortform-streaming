@@ -129,7 +129,7 @@ locals {
                 targetAxis = "Y1"
                 timeSeriesQuery = {
                   timeSeriesFilter = {
-                    filter = "metric.type=\"logging.googleapis.com/user/shortform_request_completed\" AND ${local.monitoring_service_filter}"
+                    filter = "metric.type=\"logging.googleapis.com/user/stovio_request_completed\" AND ${local.monitoring_service_filter}"
                     aggregation = {
                       alignmentPeriod    = "60s"
                       perSeriesAligner   = "ALIGN_RATE"
@@ -159,7 +159,7 @@ locals {
                 targetAxis = "Y1"
                 timeSeriesQuery = {
                   timeSeriesFilter = {
-                    filter = "metric.type=\"logging.googleapis.com/user/shortform_request_duration_ms\" AND ${local.monitoring_service_filter}"
+                    filter = "metric.type=\"logging.googleapis.com/user/stovio_request_duration_ms\" AND ${local.monitoring_service_filter}"
                     aggregation = {
                       alignmentPeriod    = "300s"
                       perSeriesAligner   = "ALIGN_SUM"
@@ -245,7 +245,7 @@ resource "google_logging_metric" "request_completed" {
   count = var.enabled ? 1 : 0
 
   project     = var.project_id
-  name        = "shortform_request_completed"
+  name        = "stovio_request_completed"
   description = "Privacy-safe request completions emitted by stovio.request."
   filter      = local.request_log_filter
 
@@ -273,7 +273,7 @@ resource "google_logging_metric" "request_duration" {
   count = var.enabled ? 1 : 0
 
   project         = var.project_id
-  name            = "shortform_request_duration_ms"
+  name            = "stovio_request_duration_ms"
   description     = "Privacy-safe request duration emitted by stovio.request."
   filter          = local.request_log_filter
   value_extractor = "EXTRACT(jsonPayload.duration_ms)"

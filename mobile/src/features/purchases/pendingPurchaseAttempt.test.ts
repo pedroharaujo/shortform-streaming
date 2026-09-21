@@ -8,7 +8,7 @@ jest.mock('expo-secure-store', () => ({
 const attempt = {
   version: 1 as const,
   ownerId: '11111111-1111-4111-8111-111111111111',
-  applicationId: 'test.synthetic.shortform',
+  applicationId: 'test.synthetic.stovio',
   productId: 'synthetic_consumable',
   attemptId: '33333333-3333-4333-8333-333333333333',
 };
@@ -62,7 +62,7 @@ test('fingerprint recording cannot replace a newer attempt, an existing fingerpr
   const native = {
     ...attempt,
     version: 2 as const,
-    applicationId: 'com.example.shortform',
+    applicationId: 'com.example.stovio',
     productId: 'test_coins',
   };
   const fingerprint = 'a'.repeat(64);

@@ -115,7 +115,7 @@ spending limit, and it does not establish a maximum for newly created services.
 
 Ingress stays `INGRESS_TRAFFIC_INTERNAL_ONLY`. GitHub-hosted runners must
 **not** HTTP-smoke the Cloud Run URL. Smoke runs as a Job inside the project,
-using dedicated identity `shortform-smoke`. Its grants are Artifact Registry
+using dedicated identity `stovio-smoke`. Its grants are Artifact Registry
 reader on this repository and invoker on this service only. It receives no
 Django, database, Firebase or provider configuration/secrets. The service and
 migration job retain the Django runtime identity. Before the first deploy after
@@ -209,7 +209,7 @@ Leave this box unchecked until founder evidence exists:
 - Forks cannot satisfy `assertion.repository`.
 - Workflow default `permissions.contents: read`. `id-token: write` is job
   scoped on the federating job only.
-- Deploy SA `shortform-deploy` has Artifact Registry writer, Cloud Run
+- Deploy SA `stovio-deploy` has Artifact Registry writer, Cloud Run
   developer on the service and jobs, `serviceAccountUser` on the **runtime**
   and dedicated **smoke** SAs only, and `workloadIdentityUser` for this repository
   principalSet. It

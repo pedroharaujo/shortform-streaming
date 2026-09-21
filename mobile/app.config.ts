@@ -293,14 +293,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'Stovio',
     slug: 'stovio',
-    // Retain old links for existing installs and external integrations.
-    scheme: ['stovio', 'shortform'],
+    scheme: 'stovio',
     version: '0.1.0',
     orientation: 'portrait',
     userInterfaceStyle: 'dark',
     android: {
-      // Permanent Play/Firebase identity; changing it creates a different app.
-      package: 'com.shortformstreaming.app',
+      // New Stovio application identity; requires its own Firebase/Play registration.
+      package: 'com.stovio.app',
       // Path only; Expo JS export does not read the gitignored file. Prebuild
       // copies it when present. The MVP ships Android only.
       googleServicesFile: './google-services.json',

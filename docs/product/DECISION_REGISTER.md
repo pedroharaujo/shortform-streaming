@@ -81,9 +81,13 @@ The current table is authoritative. The rows below preserve the exact previous v
 
 Founder approved 2026-09-21: **Stovio** replaces Short Form Streaming as the final
 brand; use `stovio` for new technical names. Issue #187 tracks the rollout.
-Existing credentials, data and working integrations must survive. Fixed IDs and
-persistent namespaces remain compatibility exceptions until a separately
-reviewed migration; a brand change does not approve a replacement app or resource.
+The founder subsequently approved full identity replacement: fresh Stovio local
+Postgres, replacement Stovio cloud projects and app registration, followed by
+retirement/deletion of the old services. Remote users/data and financial history
+must survive the verified cutover; retain existing secret values and signing
+material wherever the provider permits. New project-bound OAuth/SDK credentials
+are necessary for new identities. No public launch is approved by this migration;
+all existing launch gates still apply.
 
 ## Decision protocol
 

@@ -91,14 +91,14 @@ resource "google_cloud_run_v2_service_iam_member" "runtime_invoker" {
 # HTTP-only smoke never receives backend secrets or bucket permissions.
 resource "google_service_account" "smoke" {
   project      = var.project_id
-  account_id   = "shortform-smoke"
+  account_id   = "stovio-smoke"
   display_name = "Stovio staging HTTP smoke"
   description  = "HTTP-only staging checks. Artifact reader and service-scoped invoker; no Secret Manager access."
 
   lifecycle {
     precondition {
-      condition     = var.runtime_service_account_id != "shortform-smoke"
-      error_message = "The Django runtime identity must be distinct from the HTTP-only shortform-smoke identity."
+      condition     = var.runtime_service_account_id != "stovio-smoke"
+      error_message = "The Django runtime identity must be distinct from the HTTP-only stovio-smoke identity."
     }
   }
 
@@ -121,14 +121,14 @@ resource "google_cloud_run_v2_service_iam_member" "smoke_invoker" {
   member   = "serviceAccount:${google_service_account.smoke.email}"
 }
 
-# Dedicated GitHub Actions deploy identity. account_id shortform-deploy.
+# Dedicated GitHub Actions deploy identity. account_id stovio-deploy.
 # Resource-scoped roles only. Do not grant owner, editor, iam.securityAdmin,
 # secretmanager.admin, or project-wide storage.admin.
 resource "google_service_account" "deploy" {
   project      = var.project_id
-  account_id   = "shortform-deploy"
+  account_id   = "stovio-deploy"
   display_name = "Stovio staging GitHub Actions deploy"
-  description  = "Least-privilege WIF deploy identity (shortform-deploy). Not a runtime SA."
+  description  = "Least-privilege WIF deploy identity (stovio-deploy). Not a runtime SA."
 
   depends_on = [google_project_service.required]
 }

@@ -1,4 +1,4 @@
-# Stovio rebrand — issue #187
+# Stovio rebrand â€” issue #187
 
 Founder approval: 2026-09-21. Display brand: **Stovio**; technical brand: `stovio`.
 
@@ -20,3 +20,23 @@ Founder approval: 2026-09-21. Display brand: **Stovio**; technical brand: `stovi
 The existing graph was queried for config, environment, Firebase, mobile and
 Supabase dependencies; current source and provider records are authoritative.
 No graph extraction or semantic-model call was needed.
+
+## Founder-directed full identity migration (2026-09-21)
+
+The founder superseded the identity-preservation boundary above: use a fresh
+Stovio Compose database and replace the old app/cloud projects, then delete the
+superseded services. Preserve remote account/data/financial identity through the
+cutover; do not delete source services until replacement evidence passes.
+
+1. Rename local database, cookie, emulator, fixtures, native package, storage
+   keys, current protocol names and infrastructure resource defaults to Stovio.
+2. Create `stovio-staging`, Firebase `stovio-app`, Android `com.stovio.app`, and
+   replacement Play/RevenueCat registration. Keep existing signing material.
+3. Preserve Firebase user IDs and remote database contents; copy secret versions
+   without changing values. Move private assets, deployment trust and provider
+   callbacks. New project-bound OAuth/SDK credentials are necessarily distinct.
+4. Run automated suites, container/infra checks and native/provider verification.
+   Readiness requires actual evidence; no unfinished launch gate becomes a pass.
+5. Cut over configuration, then retire old resources and record any provider
+   deletion restrictions. Keep a restricted recovery backup; no parallel legacy
+   service is the intended final state.

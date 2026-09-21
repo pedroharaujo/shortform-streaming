@@ -292,7 +292,7 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
             digestStringAsync(
               CryptoDigestAlgorithm.SHA256,
               JSON.stringify([
-                'shortform-purchase-v1',
+                'stovio-purchase-v1',
                 attempt.ownerId,
                 attempt.applicationId,
                 attempt.productId,

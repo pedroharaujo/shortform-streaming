@@ -111,7 +111,7 @@ EXPO_PUBLIC_FIREBASE_AUTH_MODE=cloud
 # Backend .env: same non-production project as google-services.json
 FIREBASE_AUTH_MODE=admin
 FIREBASE_PROJECT_ID=replace-with-test-project-id
-GOOGLE_APPLICATION_CREDENTIALS=C:/private/shortform/firebase-auth-verifier.json
+GOOGLE_APPLICATION_CREDENTIALS=C:/private/stovio/firebase-auth-verifier.json
 # FIREBASE_AUTH_EMULATOR_HOST must be absent, including inherited process environment.
 ```
 

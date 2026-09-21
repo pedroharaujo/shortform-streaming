@@ -5,7 +5,7 @@ variables {
   project_id                    = "example-only"
   region                        = "europe-west9"
   job_name                      = "example-smoke"
-  image                         = "example.invalid/shortform:synthetic"
+  image                         = "example.invalid/stovio:synthetic"
   runtime_service_account_email = "smoke@example-only.iam.gserviceaccount.com"
   include_django_configuration  = false
 }

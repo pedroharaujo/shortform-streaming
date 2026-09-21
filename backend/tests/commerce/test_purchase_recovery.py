@@ -23,14 +23,14 @@ RECOVER = "/v1/purchases/recover"
 pytestmark = pytest.mark.usefixtures("sandbox_mode")
 
 
-def query(owner: str) -> dict[str, str]:
+def query(owner: str, namespace: str = "stovio-purchase-v1") -> dict[str, str]:
     return {
         "application_id": QUERY["application_id"],
         "product_id": QUERY["product_id"],
         "transaction_fingerprint": hashlib.sha256(
             json.dumps(
                 [
-                    "shortform-purchase-v1",
+                    namespace,
                     owner,
                     QUERY["application_id"],
                     QUERY["product_id"],
@@ -49,12 +49,17 @@ def test_exact_recovery_reuses_verification_and_credit_once_then_preserves_revie
 ) -> None:
     owner = identity()
     purchases, product = records((products()[0], QUERY["transaction_id"], str(owner.pk)))
-    for state in ("owned", "owned", "refunded", "owned"):
+    for namespace, state in (
+        ("shortform-purchase-v1", "owned"),
+        ("stovio-purchase-v1", "owned"),
+        ("stovio-purchase-v1", "refunded"),
+        ("shortform-purchase-v1", "owned"),
+    ):
         purchases["items"][0]["status"] = state
         connections = transport(
             monkeypatch, Response(purchases), Response(purchases), Response(product)
         )
-        result = post(client, RECOVER, query(str(owner.pk)), UID)
+        result = post(client, RECOVER, query(str(owner.pk), namespace), UID)
         assert result.status_code == 200
         assert result["Cache-Control"] == "no-store"
         assert result.json()["status"] == (

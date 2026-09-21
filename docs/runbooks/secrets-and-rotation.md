@@ -95,7 +95,7 @@ zero-downtime acceptance remain open in #101.
 
 ## HTTP-only smoke isolation (#101 engineering slice)
 
-`shortform-smoke` uses a dedicated service account. Its only grants in this
+`stovio-smoke` uses a dedicated service account. Its only grants in this
 composition are Artifact Registry reader on this repository and Cloud Run
 invoker on this service. It has no Secret Manager, storage, project logging,
 metrics, WIF or impersonation grants. The deploy identity can act as this

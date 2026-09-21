@@ -71,7 +71,7 @@ late-event identity handling before real financial processing.
 Use an isolated PostgreSQL database and generated fixtures. Example PowerShell:
 
 ```powershell
-$env:DATABASE_URL = 'postgresql://shortform@127.0.0.1:55432/shortform'
+$env:DATABASE_URL = 'postgresql://stovio@127.0.0.1:55432/stovio'
 uv run pytest backend/tests/wallet backend/tests/entitlements/test_admin_coin_safety.py -q -p no:cacheprovider
 pnpm check
 pnpm mobile:bundle:check

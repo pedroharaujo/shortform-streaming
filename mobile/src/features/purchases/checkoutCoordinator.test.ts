@@ -20,7 +20,7 @@ jest.mock('expo-crypto', () => ({
 }));
 const owner = '11111111-1111-4111-8111-111111111111';
 const reference = '22222222-2222-4222-8222-222222222222';
-const applicationId = 'test.synthetic.shortform';
+const applicationId = 'test.synthetic.stovio';
 const productId = 'synthetic_consumable';
 const scope = {
   ownerId: owner,
@@ -107,7 +107,7 @@ function fixture() {
 }
 function nativeFixture() {
   const f = fixture();
-  const nativeScope = { ...scope, applicationId: 'com.example.shortform', productId: 'test_coins' };
+  const nativeScope = { ...scope, applicationId: 'com.example.stovio', productId: 'test_coins' };
   f.responses['/v1/purchases/catalog'] = {
     products: [{ ...product, product_id: nativeScope.productId }],
   };
@@ -162,7 +162,7 @@ test('native purchase stores only an exact fingerprint and recovers verified cre
     applicationId: f.nativeScope.applicationId,
     productId: f.nativeScope.productId,
     attemptId: '33333333-3333-4333-8333-333333333333',
-    transactionFingerprint: 'ab66eaa1719cc777d9e5cc9951d0d757a8db7f268bb0b3d86d26e5cd0cecefd1',
+    transactionFingerprint: '3bd283f628e02af46f939bd3fff5296eee8b6233b766c19e9ae88636ec632354',
   });
   expect(JSON.stringify(saved)).not.toContain('GPA.');
   f.responses['/v1/purchases/recover'] = credited;

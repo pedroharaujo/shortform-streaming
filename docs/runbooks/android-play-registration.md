@@ -3,6 +3,11 @@
 Scope: issue #164, D-036, P3-T04/P3-T06. This is the initial store-registration
 step for the isolated Android test journey, not production activation.
 
+**Superseded registration:** the evidence below records the previous app and
+must not be used to configure or upload Stovio. The new application is
+`com.stovio.app`; see [Stovio migration status](stovio-rebrand.md) for current
+service identities, signing preservation and remaining store checks.
+
 ## Verified artifact, 2026-09-19
 
 An existing release bundle was revalidated and copied to a stable private

@@ -5,7 +5,7 @@
 # and genuine signed SSV delivery. Shared demo ads cannot establish that result.
 # Supply LOCKED_EPISODE_ID and the observed test creative's AD_CLOSE_LABEL.
 # Never use production accounts, licensed media or a client/synthetic grant hook.
-appId: com.shortformstreaming.app
+appId: com.stovio.app
 ---
 - launchApp
 - openLink: 'stovio://play/${LOCKED_EPISODE_ID}'
