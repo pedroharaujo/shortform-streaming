@@ -36,8 +36,11 @@ tester endpoint outside the project.
   denied. The temporary job was deleted after passing.
 - Live consumer smoke `stovio-smoke-p76pz` passed database readiness, liveness,
   absent staff routes and rejection of unsigned purchase notifications. The
-  existing private service also passed smoke `stovio-smoke-hml8g` after receiving
-  the nonproduction Bunny configuration. Purchases/spending remain sandbox-only
+  existing private service also passed smoke `stovio-smoke-hml8g`. A final
+  traffic check found its updated template had not replaced the serving
+  revision; separately prepared and smoke-tested `stovio-api-00003-htf` before
+  promoting it to 100%. Both serving revisions now select the nonproduction
+  Bunny library and database secret version 2. Purchases/spending remain sandbox-only
   on the consumer service and disabled on the ordinary secure service.
 - Rechecked all 37 hosted tables / 196 rows against the pre-rename baseline:
   content, permissions, object identities and sequence positions are unchanged.
