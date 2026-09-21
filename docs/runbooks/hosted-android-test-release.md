@@ -83,12 +83,16 @@ The private artifact is `Stovio/play-release/stovio-hosted-v2.aab` under the
 operator's local application-data directory (55,087,449 bytes; SHA-256
 `f39ee5239eee7cffb6f82399aa89a3c1a818bf15f7f369fd8f749cc778d7a7c3`).
 Google Play's existing internal-track release draft is named
-`Stovio 0.1.0 - Hosted verification`. Two uploads reached distribution
-optimization, then returned the same generic Android App Bundle upload error
-with advice to retry later or contact developer support. Browser error logs
-gave no additional cause. Version 2 has not been accepted or released; the
-version 1 registration release remains active. Retain the verified artifact
-and retry processing before changing its signing material or configuration.
+`Stovio 0.1.0 - Hosted verification`. Two initial uploads returned a generic
+processing error. A subsequent upload from a checksum-identical Desktop copy
+succeeded, and version 2 is now **available to internal testers** on the existing
+track. No production or closed-test rollout was made. Play accepted both ABIs
+and reported no loss of previously supported devices. Its only warning was a
+missing deobfuscation file; R8/minification is disabled in this build.
+`uv run python .tmp/stovio-migration/check_release_packaging.py` additionally
+passed bundletool universal-APK generation with the preserved upload key.
+That diagnostic APK was not installed as a substitute for Play distribution.
+The original two upload failures have no confirmed root cause.
 
 Prepared private revision `stovio-consumer-test-00002-yit` with enforcement on,
 tagged `app-check`, receiving zero normal traffic. The normal consumer revision
@@ -104,12 +108,16 @@ expired-token and provider-outage live cases remain unverified.
 
 Saved the original emulator session before opening a temporary read-only
 session for store installation. The original app's login, 99-coin wallet and
-private local database are preserved. The temporary session requires Google
-Play Terms acceptance before installation; approval is pending. No public
-backend activation or real purchase follows from preparing this build.
+private local database are preserved. The founder completed Google Play Terms
+acceptance; the temporary session reaches the signed-in Play Store. Chrome's
+separate first-run setup currently blocks opening the direct tester download
+link. Store installation and genuine device attestation remain unverified.
+No public backend activation or real purchase follows from this internal release.
 
 Mobile configuration, lint and type checks passed; repository foundation
-(secret scan, 61 tests and governance) and `git diff --check` passed.
+(secret scan, 61 tests and governance) and `git diff --check` passed. All ten
+GitHub checks passed for code commit `ddc5633`, including backend, mobile,
+container, contract, infrastructure and repository/governance checks.
 
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified
