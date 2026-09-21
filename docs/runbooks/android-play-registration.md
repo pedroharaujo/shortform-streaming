@@ -19,10 +19,18 @@ Bundle validation, original upload-certificate match, signature, ZIP integrity,
 Purchases, ads, analytics and App Check remain disabled; cloud Auth is selected
 and the API is local. This is registration evidence, not a launch build.
 
-The new Stovio Play app and internal release draft exist. Chrome blocked the
-bundle upload; new-package product creation and purchase verification remain
-pending. Do not upload the old artifact below to the new app or treat the
-historical internal release as validation of Stovio.
+Google Play accepted the signed bundle and version 1 was released to internal
+track `4701745217816412686`. The existing founder tester list is selected and
+the track is Active. The new `test_coins_100` / `buy` product is active,
+backwards compatible, single quantity and France-only at displayed EUR 0.99;
+other and new regions are unavailable. RevenueCat saved `com.stovio.app` and
+the founder-provided Stovio credential, and all three credential checks pass.
+Existing RevenueCat customer/five sandbox purchase IDs were preserved.
+
+Play signing fingerprints were registered in Firebase and the ignored native
+configuration refreshed. A genuine purchase/recovery and Google sign-in/playback
+journey on the new package remain pending. Do not upload the old artifact below
+to the new app or treat historical device evidence as validation of Stovio.
 
 ## Verified artifact, 2026-09-19
 

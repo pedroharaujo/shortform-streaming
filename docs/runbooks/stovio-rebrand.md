@@ -52,22 +52,32 @@ EAS project were found. New logo/store assets remain launch work.
 | Firebase | New free-plan project `stovio-app` (`72201543210`), Android app `1:72201543210:android:ce5116c0d31697c2afed53`, package `com.stovio.app`. Existing Google-linked user imported with identical UID/provider identity; no password users existed. Two signing fingerprints copied unchanged. Google sign-in enabled; public name Stovio. |
 | Firebase credentials | New project-bound `stovio-auth-verifier` with only `firebaseauth.users.get`. Ignored backend/native configuration points to Stovio. API-key labels renamed, restrictions preserved. Project-bound credentials necessarily replaced; unrelated secret values preserved. |
 | Google Analytics | Existing property `551836456`, Stovio, detached from old Firebase and linked to `stovio-app`; new stream mapping verified. Property/history retained. Founder-approved profile: Arts & Entertainment, 1–10 employees, user behavior. Shared parent account unchanged. |
-| Google Play | Stovio app `4974380022274793607`, package `com.stovio.app`, created after explicit approval of Google's declarations. No production release. New RevenueCat verifier active with four approved app-only permissions; no account-wide/release access. |
+| Google Play | Stovio app `4974380022274793607`, package `com.stovio.app`. Signed version 1 / 0.1.0 accepted and released to internal track `4701745217816412686`; existing one-person founder tester list selected and track Active. No production release. New RevenueCat verifier retains four approved app-only permissions; no account-wide/release access. |
 | Supabase | Organization/project Stovio; existing opaque reference/host retained. ACTIVE_HEALTHY and read-only connectivity verified. |
 | Bunny Stream | `stovio-spike-nonprod` (7 videos) and `stovio-production` (0 videos); existing opaque IDs, media, CDN URLs and keys preserved. |
-| RevenueCat | Existing project/app/customer/product records retained. Display and secret-key labels use Stovio. New package/Play credential transfer prepared, awaiting required browser credential handoff and validation. |
+| RevenueCat | Existing project/app/customer/product records retained. Display and secret-key labels use Stovio. Founder saved the Stovio credential; package `com.stovio.app` persisted. All three credential-validation checks pass. |
 | AdMob | Stovio (Development); opaque app/ad-unit IDs retained. Ads remain disabled. |
 
-Old Firebase and Play identities are retirement dependencies, not permanent
-branding exceptions. Do not delete them before purchase-verifier transfer and
-new package registration pass. Firebase user/Analytics preservation already
-verified. The founder approved old Play deletion after replacement verification,
+After new-package registration and RevenueCat validation passed, old Firebase
+project `throwaway-project-3d95c` entered `DELETE_REQUESTED`. Before retirement,
+the source user export was compared again, the new verifier read the preserved
+account, and the retained Analytics property linkage was reverified. Google’s
+normal project recovery period applies. Old Play deletion remains pending its
+developer-registration transaction ID. The founder already approved deletion,
 including its seven-day recovery/data-loss rule.
 
 RevenueCat's retained customer has five sandbox purchases. Their provider records
 were backed up privately through the existing purchase-read scope. The key cannot
 enumerate customers; that inventory was verified in the dashboard without
 broadening permissions. No customer or purchase record was deleted.
+After credential cutover, a fresh read returned the same customer and five
+sandbox purchase IDs. The ignored backend product mapping now uses
+`com.stovio.app`; purchases and spending remain disabled.
+
+The new Play test product is `test_coins_100`, purchase option `buy`, active and
+backwards compatible, single quantity, France only, displayed price EUR 0.99.
+All other and newly added regions are unavailable. This preserves the approved
+test-pack configuration; it is not approval of commercial launch pricing.
 
 ## Verification
 
@@ -115,28 +125,41 @@ The signed bundle is private at
 `%LOCALAPPDATA%/Stovio/play-registration/stovio-registration-v1.aab` (42,080,490
 bytes). It uses the local test API and is for store registration, not public
 production. Chrome refused its chooser upload with `Not allowed`; the Stovio
-internal release draft is prepared, but the bundle is not yet registered.
-The supported browser fix is to enable the ChatGPT extension's file-URL access,
-or have the founder upload the verified bundle manually.
+internal release was subsequently uploaded after the founder enabled extension
+file-URL access. An initial transferred file failed Play ZIP validation. The
+same locally validated bytes, copied to a shorter Windows path and uploaded
+with Windows path separators, transferred fully and were accepted by Play.
+No signing key or artifact bytes changed. The internal release is Active;
+Google uses `com.stovio.app (unreviewed)` as its temporary store name until
+listing setup and review are complete.
+
+The six SHA-1/SHA-256 fingerprints for the current classical, post-quantum and
+previous Play signing certificates were added to the new Firebase Android app;
+the two existing fingerprints were preserved. Ignored native Firebase config
+was refreshed. This config change does not prove a device Google sign-in test.
 
 RevenueCat's new service-account JSON is private at
 `%LOCALAPPDATA%/Stovio/play-credentials/stovio-revenuecat.json`. Browser rules
 require the founder to perform credential replacement and submission. Its
-prepared settings page has package `com.stovio.app`; that change is not yet saved.
+saved settings have package `com.stovio.app`. A fresh page verified the saved
+file, and all three checks now pass: subscription purchases, in-app product
+catalog, and subscription catalog/base plans. Validation passed after bundle,
+internal release and test-product registration, without broadening permissions
+or replacing the credential again.
 
 Private account exports, Terraform plans/state, logs, provider payloads, secret
 copies and signing material stay outside tracked evidence.
 
 ## Remaining gates and exceptions
 
-1. Complete RevenueCat credential handoff, register the new signed bundle/test
-   product, and verify credentials plus a genuine test purchase/recovery.
+1. Verify a genuine new-package test purchase/recovery. Credential validation,
+   signed bundle registration and test-product setup are complete.
    Purchases and coin spending remain disabled meanwhile.
 2. Verify Google sign-in and the complete device playback journey on the new
    package. User import and APK installation do not prove sign-in/playback.
-3. Retire old Play/Firebase after their replacement dependencies pass. Play
-   deletion also requires the developer registration transaction ID. Preserve
-   required financial evidence.
+3. Finish old Play retirement using the developer registration transaction ID.
+   Old staging/Firebase are already in recoverable deletion. Preserve required
+   financial evidence and the private sandbox-purchase backup.
 4. Verify GitHub deployment after reviewed merge; manual smoke does not prove
    the new workflow's end-to-end identity authentication.
 5. Complete listing, privacy/content declarations, graphics, required closed
