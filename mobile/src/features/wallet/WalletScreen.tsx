@@ -11,7 +11,7 @@ import {
   subscribeAuthSession,
 } from '../../auth/session';
 import { useMessages } from '../../localization/messages';
-import { colors, fontSizes, spacing } from '../../ui/theme';
+import { colors, fontSizes, radii, spacing } from '../../ui/theme';
 import { ActionButton as Action, BackButton, panelStyles } from '../../ui/ScreenElements';
 import { CoinIcon } from '../../ui/CoinIcon';
 import { useCatalogQuery } from '../catalog/useCatalog';
@@ -115,7 +115,9 @@ export function WalletScreen({
         </View>
         <View accessibilityLiveRegion="polite" style={[panelStyles.card, styles.summary]}>
           <View style={styles.balanceHeader}>
-            <Text style={styles.body}>{messages.coinStore.balanceLabel}</Text>
+            <Text style={styles.balanceEyebrow}>
+              {messages.coinStore.balanceLabel.toUpperCase()}
+            </Text>
             {!requiresSignIn ? (
               <Action
                 tone="quiet"
@@ -130,11 +132,12 @@ export function WalletScreen({
           ) : state.phase === 'ready' ? (
             <>
               <View style={styles.balanceRow}>
-                <CoinIcon size={36} />
+                <CoinIcon size={40} />
                 <Text style={styles.balance} testID="wallet-balance">
                   {messages.wallet.balance(state.wallet.balance)}
                 </Text>
               </View>
+              <Text style={styles.muted}>{messages.coinStore.description}</Text>
               {!state.wallet.spending_available ? (
                 <Text style={styles.body}>{messages.wallet.spendingUnavailable}</Text>
               ) : null}
@@ -187,7 +190,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '700' },
+  title: {
+    color: colors.foreground,
+    fontSize: fontSizes.title,
+    fontWeight: '800',
+    letterSpacing: -0.6,
+  },
   balanceHeader: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -195,11 +203,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  balance: { color: colors.foreground, fontSize: 36, fontWeight: '700', flexShrink: 1 },
+  balanceEyebrow: {
+    color: colors.coin,
+    fontSize: fontSizes.caption,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  balance: {
+    color: colors.foreground,
+    fontSize: 44,
+    fontWeight: '800',
+    letterSpacing: -1,
+    flexShrink: 1,
+    fontVariant: ['tabular-nums'],
+  },
   balanceRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md },
   body: { color: colors.foreground, fontSize: fontSizes.body },
   container: { backgroundColor: colors.background, flex: 1 },
-  content: { flexGrow: 1, gap: spacing.lg, padding: spacing.xxl },
+  content: {
+    flexGrow: 1,
+    gap: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
+  },
   muted: { color: colors.muted, fontSize: fontSizes.label },
-  summary: { gap: spacing.md },
+  summary: {
+    gap: spacing.lg,
+    padding: spacing.xxl,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.coinRim,
+    backgroundColor: colors.coinSurface,
+    experimental_backgroundImage: `linear-gradient(135deg, ${colors.accentSoft} 0%, ${colors.surface} 85%)`,
+  },
 });

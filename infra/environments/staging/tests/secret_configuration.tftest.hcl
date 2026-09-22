@@ -16,7 +16,7 @@ variables {
   region               = "europe-west9"
   billing_account_id   = "000000-000000-000000"
   private_bucket_name  = "example-only-nonvideo"
-  cloud_run_image      = "example.invalid/shortform:synthetic"
+  cloud_run_image      = "example.invalid/stovio:synthetic"
   django_allowed_hosts = "localhost"
   firebase_project_id  = "example-only"
   github_repository    = "example-org/example-repo"
@@ -136,7 +136,7 @@ run "reject_unknown_selector" {
 run "reject_shared_smoke_identity" {
   command = plan
   variables {
-    runtime_service_account_id = "shortform-smoke"
+    runtime_service_account_id = "stovio-smoke"
   }
   expect_failures = [google_service_account.smoke]
 }

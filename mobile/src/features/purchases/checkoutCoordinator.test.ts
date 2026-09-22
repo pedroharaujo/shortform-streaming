@@ -20,7 +20,7 @@ jest.mock('expo-crypto', () => ({
 }));
 const owner = '11111111-1111-4111-8111-111111111111';
 const reference = '22222222-2222-4222-8222-222222222222';
-const applicationId = 'test.synthetic.shortform';
+const applicationId = 'test.synthetic.stovio';
 const productId = 'synthetic_consumable';
 const scope = {
   ownerId: owner,
@@ -107,7 +107,7 @@ function fixture() {
 }
 function nativeFixture() {
   const f = fixture();
-  const nativeScope = { ...scope, applicationId: 'com.example.shortform', productId: 'test_coins' };
+  const nativeScope = { ...scope, applicationId: 'com.example.stovio', productId: 'test_coins' };
   f.responses['/v1/purchases/catalog'] = {
     products: [{ ...product, product_id: nativeScope.productId }],
   };
@@ -162,7 +162,7 @@ test('native purchase stores only an exact fingerprint and recovers verified cre
     applicationId: f.nativeScope.applicationId,
     productId: f.nativeScope.productId,
     attemptId: '33333333-3333-4333-8333-333333333333',
-    transactionFingerprint: 'ab66eaa1719cc777d9e5cc9951d0d757a8db7f268bb0b3d86d26e5cd0cecefd1',
+    transactionFingerprint: '3bd283f628e02af46f939bd3fff5296eee8b6233b766c19e9ae88636ec632354',
   });
   expect(JSON.stringify(saved)).not.toContain('GPA.');
   f.responses['/v1/purchases/recover'] = credited;
@@ -200,6 +200,94 @@ test('native unknown result survives restart and never infers credit or retries 
     false,
   );
   expect(records.size).toBe(1);
+});
+
+test.each(['load', 'sync'] as const)(
+  'restarts the native provider for a pending payment during %s without another charge',
+  async (operation) => {
+    const f = nativeFixture();
+    await f.controller.load();
+    f.provider.purchase.mockResolvedValue({ ...f.nativeScope, outcome: 'pending' });
+    await f.controller.purchase(f.nativeScope.productId);
+    const saved = [...records.values()];
+    f.provider.prepare.mockClear();
+    f.provider.getOffers.mockClear();
+    f.fetcher.mockClear();
+    const restarted = createCheckoutCoordinator(f.dependencies);
+
+    expect(await restarted[operation]()).toEqual({ status: 'awaiting_verification' });
+    expect(f.provider.prepare).toHaveBeenCalledWith({
+      ownerId: owner,
+      applicationId: f.nativeScope.applicationId,
+    });
+    expect(f.provider.getOffers).not.toHaveBeenCalled();
+    expect(f.provider.purchase).toHaveBeenCalledTimes(1);
+    expect([...records.values()]).toEqual(saved);
+    expect(
+      f.fetcher.mock.calls.some(([input]) => /\/(sync|recover)$/.test(requestUrl(input))),
+    ).toBe(false);
+  },
+);
+
+test.each(['load', 'sync'] as const)(
+  'pending %s stops when the session changes while reconnecting the store',
+  async (operation) => {
+    const f = nativeFixture();
+    await f.controller.load();
+    f.provider.purchase.mockResolvedValue({ ...f.nativeScope, outcome: 'pending' });
+    await f.controller.purchase(f.nativeScope.productId);
+    const saved = [...records.values()];
+    f.fetcher.mockClear();
+    f.provider.prepare.mockImplementation(async () => {
+      setAuthSession({ credential: 'synthetic.other-owner' });
+      return { ownerId: owner, applicationId: f.nativeScope.applicationId };
+    });
+    const restarted = createCheckoutCoordinator(f.dependencies);
+    expect(await restarted[operation]()).toEqual({ status: 'session_changed' });
+    expect([...records.values()]).toEqual(saved);
+    expect(f.provider.purchase).toHaveBeenCalledTimes(1);
+    expect(
+      f.fetcher.mock.calls.some(([input]) => /\/(sync|recover)$/.test(requestUrl(input))),
+    ).toBe(false);
+  },
+);
+
+test.each(['load', 'sync'] as const)(
+  'pending %s refuses a store prepared for another owner',
+  async (operation) => {
+    const f = nativeFixture();
+    await f.controller.load();
+    f.provider.purchase.mockResolvedValue({ ...f.nativeScope, outcome: 'pending' });
+    await f.controller.purchase(f.nativeScope.productId);
+    const saved = [...records.values()];
+    f.fetcher.mockClear();
+    f.provider.prepare.mockResolvedValue({
+      ownerId: reference,
+      applicationId: f.nativeScope.applicationId,
+    });
+    const restarted = createCheckoutCoordinator(f.dependencies);
+    expect(await restarted[operation]()).toEqual({ status: 'unavailable' });
+    expect([...records.values()]).toEqual(saved);
+    expect(f.provider.purchase).toHaveBeenCalledTimes(1);
+    expect(
+      f.fetcher.mock.calls.some(([input]) => /\/(sync|recover)$/.test(requestUrl(input))),
+    ).toBe(false);
+  },
+);
+
+test('exact saved purchase recovers from the server even when store initialization is unavailable', async () => {
+  const f = nativeFixture();
+  await f.controller.load();
+  await f.controller.purchase(f.nativeScope.productId);
+  f.provider.prepare.mockClear();
+  f.provider.prepare.mockRejectedValue(new Error('Synthetic provider unavailable'));
+  f.responses['/v1/purchases/recover'] = credited;
+  const restarted = createCheckoutCoordinator(f.dependencies);
+  expect(await restarted.load()).toEqual({ status: 'awaiting_verification' });
+  expect(await restarted.sync()).toMatchObject({ status: 'credited' });
+  expect(f.provider.prepare).not.toHaveBeenCalled();
+  expect(f.provider.purchase).toHaveBeenCalledTimes(1);
+  expect(records.size).toBe(0);
 });
 
 test('native recovery response is discarded when the account changes during verification', async () => {

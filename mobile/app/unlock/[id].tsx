@@ -9,13 +9,22 @@ import {
   createAppWalletClient,
 } from '../../src/api/createAppClients';
 import { getSessionCredential } from '../../src/auth/session';
-import { getAdsConfiguration, getApiConfiguration } from '../../src/config/appConfiguration';
+import {
+  getAdsConfiguration,
+  getApiConfiguration,
+  getPurchaseConfiguration,
+} from '../../src/config/appConfiguration';
 import { readRouteId } from '../../src/features/catalog/readRouteId';
 import { EpisodeUnlockScreen } from '../../src/features/wallet/EpisodeUnlockScreen';
 
 export default function UnlockRoute(): JSX.Element {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const episodeId = readRouteId(params.id);
+  const environment = getApiConfiguration().environment;
+  const coinsEnabled =
+    Platform.OS === 'android' &&
+    (environment === 'local' ||
+      (environment === 'staging' && getPurchaseConfiguration().mode === 'revenuecat_sandbox'));
   const clients = useMemo(
     () => ({
       catalog: createAppCatalogClient(),
@@ -38,7 +47,7 @@ export default function UnlockRoute(): JSX.Element {
       {...clients}
       episodeId={episodeId}
       adsEnabled={getAdsConfiguration().mode !== 'disabled'}
-      coinsEnabled={Platform.OS === 'android' && getApiConfiguration().environment === 'local'}
+      coinsEnabled={coinsEnabled}
       onClose={() => {
         if (router.canGoBack()) router.back();
         else router.replace({ pathname: '/episodes/[id]', params: { id: episodeId } });

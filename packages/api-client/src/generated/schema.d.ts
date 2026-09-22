@@ -503,6 +503,10 @@ export interface components {
             title: string;
             synopsis: string;
             artwork_url: string | null;
+            genres: string[];
+            episode_count: number;
+            /** @description Editorial count of episodes that open without coins. Playback authorization stays on the server. */
+            free_episode_count: number;
         };
         CatalogSeriesDetail: {
             id: string;
@@ -787,7 +791,7 @@ export interface components {
         PurchaseRecoveryRequestRequest: {
             application_id: string;
             product_id: string;
-            /** @description SHA-256 of UTF-8 compact JSON ["shortform-purchase-v1", owner purchase UUID, application_id, product_id, Google transaction ID]. Lowercase hex; ASCII identifiers. */
+            /** @description SHA-256 of UTF-8 compact JSON ["stovio-purchase-v1", owner purchase UUID, application_id, product_id, Google transaction ID]. Lowercase hex; ASCII identifiers. */
             transaction_fingerprint: string;
         };
         PurchaseStatus: {

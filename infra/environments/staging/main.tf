@@ -137,6 +137,7 @@ module "artifact_registry" {
   project_id    = var.project_id
   region        = var.region
   repository_id = var.artifact_registry_repository_id
+  description   = "Stovio backend containers"
   labels        = local.labels
 
   depends_on = [google_project_service.required]

@@ -31,7 +31,7 @@ AI agents start at the root `AGENTS.md`. Operating notes are in
 
 ## Architecture diagrams
 
-- `architecture/shortform-streaming.drawio` — system map, monorepo layout, and workflows (home, playback, login, Google coins, rewarded ads, ingestion, minimal cohort economics; Apple/subscriptions and advanced tools remain P7). Open in draw.io / diagrams.net.
+- `architecture/stovio.drawio` — system map, monorepo layout, and workflows (home, playback, login, Google coins, rewarded ads, ingestion, minimal cohort economics; Apple/subscriptions and advanced tools remain P7). Open in draw.io / diagrams.net.
 
 ## API
 
@@ -67,3 +67,5 @@ AI agents start at the root `AGENTS.md`. Operating notes are in
 - Additional runbooks for deployments, incidents, recovery, payments, rewards, and takedowns.
 
 Create these directories only when the corresponding implementation task produces real content; avoid empty placeholders.
+
+- [Stovio brand rollout and compatibility exceptions](runbooks/stovio-rebrand.md) — issue #187.

@@ -11,7 +11,7 @@ Each Django response receives `X-Request-ID`. A caller value is accepted only by
 the shared bounded printable validation; otherwise Django generates a UUID. The
 same value is used by API `ErrorEnvelope.request_id` and the completion log.
 
-The `shortform.request` JSON line contains only:
+The `stovio.request` JSON line contains only:
 
 - `event` (`request_completed`)
 - `request_id`

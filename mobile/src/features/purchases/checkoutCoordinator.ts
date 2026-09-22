@@ -90,17 +90,38 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
     ownerId = result.data.app_user_id;
     return ownerId;
   }
+  async function prepareProvider(owner: string): Promise<boolean> {
+    const scope = { ownerId: owner, applicationId: options.applicationId };
+    const prepared = await boundary(() => options.provider.prepare(scope));
+    return (
+      isRecord(prepared) &&
+      prepared.ownerId === owner &&
+      prepared.applicationId === scope.applicationId
+    );
+  }
+  async function resumeProvider(attempt: PendingPurchaseAttempt, owner: string): Promise<boolean> {
+    if (options.mode !== 'revenuecat_sandbox') return true;
+    // Exact known purchases can be reconciled by the server without a working SDK.
+    if (
+      attempt.transactionFingerprint ||
+      (completed && samePurchaseAttempt(completed.attempt, attempt))
+    )
+      return true;
+    if (
+      attempt.version !== 2 ||
+      attempt.ownerId !== owner ||
+      attempt.applicationId !== options.applicationId
+    )
+      return false;
+    // Reconnect the store after a cold start even when a pending marker blocks checkout.
+    // SDK initialization may deliver completed payments; it is never evidence of credit.
+    return prepareProvider(owner);
+  }
   async function freshOffers(owner: string): Promise<readonly CheckoutOffer[] | null> {
     const catalog = await boundary(() => options.api.getCatalog(options.applicationId));
     if (catalog.outcome !== 'ok') return null;
     const scope = { ownerId: owner, applicationId: options.applicationId };
-    const prepared = await boundary(() => options.provider.prepare(scope));
-    if (
-      !isRecord(prepared) ||
-      prepared.ownerId !== owner ||
-      prepared.applicationId !== scope.applicationId
-    )
-      return null;
+    if (!(await prepareProvider(owner))) return null;
     const providerOffers = await boundary(() =>
       options.provider.getOffers({
         ...scope,
@@ -219,7 +240,9 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
         const owner = await identity();
         if (!owner) return unavailable;
         const pending = await storage(() => options.storage.read(owner));
-        if (pending) return awaiting;
+        if (pending) {
+          return (await resumeProvider(pending, owner)) ? awaiting : unavailable;
+        }
         offers = await freshOffers(owner);
         return offers ? { status: 'ready', offers } : unavailable;
       }),
@@ -292,7 +315,7 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
             digestStringAsync(
               CryptoDigestAlgorithm.SHA256,
               JSON.stringify([
-                'shortform-purchase-v1',
+                'stovio-purchase-v1',
                 attempt.ownerId,
                 attempt.applicationId,
                 attempt.productId,
@@ -313,6 +336,7 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
         if (!owner) return unavailable;
         const pending = await storage(() => options.storage.read(owner));
         if (!pending) return unavailable;
+        if (!(await resumeProvider(pending, owner))) return unavailable;
         return verify(pending);
       }),
   };

@@ -562,13 +562,27 @@ export function EpisodeUnlockScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xxl, gap: spacing.lg },
-  title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '600' },
-  balance: { color: colors.accent, fontSize: fontSizes.section, fontWeight: '600' },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
+  },
+  title: {
+    color: colors.foreground,
+    fontSize: fontSizes.title,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+  balance: {
+    color: colors.coin,
+    fontSize: fontSizes.section,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
   body: { color: colors.muted, fontSize: fontSizes.body },
   notice: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: radii.md,
     lineHeight: 24,
   },

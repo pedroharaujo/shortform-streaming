@@ -1,6 +1,0 @@
-{
-  "name": "Stovio - Short Form Streaming",
-  "description": "Short-form vertical microdrama streaming platform with instant video playback, coin wallet, episode unlocks, and catalog discovery.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

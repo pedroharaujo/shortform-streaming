@@ -4,10 +4,10 @@ mock_provider "google" {}
 variables {
   project_id   = "example-only"
   region       = "europe-west9"
-  service_name = "shortform-api"
-  job_names    = ["shortform-migrate", "shortform-smoke"]
+  service_name = "stovio-api"
+  job_names    = ["stovio-migrate", "stovio-smoke"]
   labels = {
-    product     = "shortform"
+    product     = "stovio"
     environment = "staging"
   }
 }
@@ -71,8 +71,8 @@ run "module_enabled_uses_only_existing_safe_signals" {
         "run.googleapis.com/request_latencies",
         "run.googleapis.com/container/completed_probe_count",
         "run.googleapis.com/job/completed_execution_count",
-        "logging.googleapis.com/user/shortform_request_completed",
-        "logging.googleapis.com/user/shortform_request_duration_ms"
+        "logging.googleapis.com/user/stovio_request_completed",
+        "logging.googleapis.com/user/stovio_request_duration_ms"
       ] : strcontains(google_monitoring_dashboard.backend[0].dashboard_json, metric_type)
     ])
     error_message = "Dashboard must chart only the documented Cloud Run and request-completion signals."

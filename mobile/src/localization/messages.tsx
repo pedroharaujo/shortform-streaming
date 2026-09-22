@@ -191,6 +191,11 @@ export interface AppMessages {
     readonly retry: string;
     readonly signIn: string;
   };
+  readonly nav: {
+    readonly home: string;
+    readonly wallet: string;
+    readonly account: string;
+  };
   readonly playback: {
     readonly close: string;
     readonly episodeUnavailable: string;
@@ -205,6 +210,13 @@ export interface AppMessages {
     readonly tagline: string;
     readonly discover: string;
     readonly viewSeries: string;
+    readonly featured: string;
+    readonly synopsis: string;
+    readonly episodes: string;
+    readonly startWatching: string;
+    readonly seriesCount: (count: number) => string;
+    readonly allGenres: string;
+    readonly freeEpisodes: (count: number) => string;
     readonly emptyHint: string;
     readonly episodeCount: (count: number) => string;
     readonly duration: (seconds: number) => string;
@@ -238,9 +250,9 @@ export const englishMessages: AppMessages = {
     emailBody:
       'Please describe what happened. Do not include passwords, verification codes or payment card details.',
     subjects: {
-      general: 'Shortform Streaming — Support and privacy',
-      purchase: 'Shortform Streaming — Coin purchase support',
-      unlock: 'Shortform Streaming — Episode unlock support',
+      general: 'Stovio — Support and privacy',
+      purchase: 'Stovio — Coin purchase support',
+      unlock: 'Stovio — Episode unlock support',
     },
     opening: 'Opening…',
     openFailed:
@@ -453,6 +465,11 @@ export const englishMessages: AppMessages = {
     retry: 'Try again',
     signIn: 'Sign in',
   },
+  nav: {
+    home: 'Home',
+    wallet: 'Wallet',
+    account: 'Account',
+  },
   playback: {
     close: 'Close',
     episodeUnavailable: 'This episode is not available.',
@@ -463,10 +480,18 @@ export const englishMessages: AppMessages = {
     viewReward: 'View episode options',
   },
   catalog: {
-    brand: 'SHORTFORM',
+    brand: 'Stovio',
     tagline: 'Small episodes. Big emotions.',
     discover: 'Find your next story',
     viewSeries: 'Explore series',
+    featured: 'Featured',
+    synopsis: 'Synopsis',
+    episodes: 'Episodes',
+    startWatching: 'Start watching',
+    seriesCount: (count) => `${count} ${count === 1 ? 'title' : 'titles'}`,
+    allGenres: 'All',
+    freeEpisodes: (count) =>
+      count === 1 ? '1 free episode' : `${count.toLocaleString('en-US')} free episodes`,
     emptyHint: 'Your next story is on its way. Check back soon.',
     episodeCount: (count) => `${count} ${count === 1 ? 'episode' : 'episodes'}`,
     duration: (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`,

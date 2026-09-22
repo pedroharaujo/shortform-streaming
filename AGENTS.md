@@ -1,6 +1,6 @@
 # Agent instructions
 
-Short Form Streaming is a public monorepo for a mobile-first vertical microdrama
+Stovio is a public monorepo for a mobile-first vertical microdrama
 platform: Django REST plus Django Admin, and one React Native/Expo app for iOS
 and Android. A consumer web client is post-MVP.
 

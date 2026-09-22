@@ -3,6 +3,35 @@
 Scope: issue #164, D-036, P3-T04/P3-T06. This is the initial store-registration
 step for the isolated Android test journey, not production activation.
 
+**Superseded registration:** the evidence below records the previous app and
+must not be used to configure or upload Stovio. The new application is
+`com.stovio.app`; see [Stovio migration status](stovio-rebrand.md) for current
+service identities, signing preservation and remaining store checks.
+
+## Stovio replacement, 2026-09-21
+
+The new signed registration bundle is
+`%LOCALAPPDATA%/Stovio/play-registration/stovio-registration-v1.aab`.
+Package `com.stovio.app`, version 1 / 0.1.0, target SDK 36, ARM64; SHA-256
+`89bdb5c9700184168a2440410c787dffcc62532e959eb5aeec54d483d3500dbe`.
+Bundle validation, original upload-certificate match, signature, ZIP integrity,
+22 native libraries' 16 KB alignment and bounded private-secret scans passed.
+Purchases, ads, analytics and App Check remain disabled; cloud Auth is selected
+and the API is local. This is registration evidence, not a launch build.
+
+Google Play accepted the signed bundle and version 1 was released to internal
+track `4701745217816412686`. The existing founder tester list is selected and
+the track is Active. The new `test_coins_100` / `buy` product is active,
+backwards compatible, single quantity and France-only at displayed EUR 0.99;
+other and new regions are unavailable. RevenueCat saved `com.stovio.app` and
+the founder-provided Stovio credential, and all three credential checks pass.
+Existing RevenueCat customer/five sandbox purchase IDs were preserved.
+
+Play signing fingerprints were registered in Firebase and the ignored native
+configuration refreshed. A genuine purchase/recovery and Google sign-in/playback
+journey on the new package remain pending. Do not upload the old artifact below
+to the new app or treat historical device evidence as validation of Stovio.
+
 ## Verified artifact, 2026-09-19
 
 An existing release bundle was revalidated and copied to a stable private
@@ -402,7 +431,7 @@ The launch failure persisted after restoring the port forward and restarting
 Metro. Android's BundleDownloader reported a protocol exception while decoding
 the multipart bundle, matching the community reproduction in
 [Expo #49111](https://github.com/expo/expo/issues/49111). An opt-in Node-side
-Metro workaround, `SHORTFORM_METRO_PLAIN_ANDROID_BUNDLE=1`, requests ordinary
+Metro workaround, `STOVIO_METRO_PLAIN_ANDROID_BUNDLE=1`, requests ordinary
 JavaScript only for Android `.bundle` requests. The default, other platforms,
 maps and status requests are unchanged. The local validation launcher opts in.
 Routing checks, ESLint and formatting passed; independent review found no

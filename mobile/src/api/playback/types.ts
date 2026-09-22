@@ -5,7 +5,7 @@
  * is narrowed on `decision`: granted is playable, locked is not success.
  */
 
-import type { components } from '@shortform/api-client';
+import type { components } from '@stovio/api-client';
 
 import type { EnvelopeOutcome, UnreachableOutcome } from '../outcomes';
 

@@ -1,6 +1,7 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { createAppAccountClient } from '../src/api/createAppClients';
 import { getAppAccountAnalytics } from '../src/analytics/appAnalytics';
@@ -8,6 +9,8 @@ import { getAppAnalyticsConsentController } from '../src/analytics/appAnalyticsC
 import { createEmailPasswordAuth } from '../src/auth/createEmailPasswordAuth';
 import { AccountScreen } from '../src/features/account/AccountScreen';
 import { readRouteId } from '../src/features/catalog/readRouteId';
+import { BottomNav } from '../src/ui/BottomNav';
+import { colors } from '../src/ui/theme';
 
 export default function AccountRoute(): JSX.Element {
   const params = useLocalSearchParams<{ returnEpisode?: string | string[] }>();
@@ -24,31 +27,41 @@ export default function AccountRoute(): JSX.Element {
     }, []),
   );
   return (
-    <AccountScreen
-      key={visit}
-      auth={auth}
-      analytics={analytics}
-      analyticsConsent={analyticsConsent}
-      client={client}
-      onSignIn={() =>
-        router.push(
-          returnEpisode ? { pathname: '/sign-in', params: { returnEpisode } } : '/sign-in',
-        )
-      }
-      onReturnToEpisode={
-        returnEpisode
-          ? () => router.dismissTo({ pathname: '/unlock/[id]', params: { id: returnEpisode } })
-          : undefined
-      }
-      onWallet={() =>
-        router.push(returnEpisode ? { pathname: '/coins', params: { returnEpisode } } : '/coins')
-      }
-      onPurchases={() =>
-        router.push(
-          returnEpisode ? { pathname: '/purchases', params: { returnEpisode } } : '/purchases',
-        )
-      }
-      onHome={() => router.replace('/')}
-    />
+    <View style={styles.screen}>
+      <AccountScreen
+        key={visit}
+        auth={auth}
+        analytics={analytics}
+        analyticsConsent={analyticsConsent}
+        client={client}
+        onSignIn={() =>
+          router.push(
+            returnEpisode ? { pathname: '/sign-in', params: { returnEpisode } } : '/sign-in',
+          )
+        }
+        onReturnToEpisode={
+          returnEpisode
+            ? () => router.dismissTo({ pathname: '/unlock/[id]', params: { id: returnEpisode } })
+            : undefined
+        }
+        onWallet={() =>
+          router.push(returnEpisode ? { pathname: '/coins', params: { returnEpisode } } : '/coins')
+        }
+        onPurchases={() =>
+          router.push(
+            returnEpisode ? { pathname: '/purchases', params: { returnEpisode } } : '/purchases',
+          )
+        }
+        onHome={() => router.replace('/')}
+      />
+      {returnEpisode ? null : (
+        <BottomNav
+          active="account"
+          onNavigate={(tab) => router.replace(tab === 'browse' ? '/' : '/coins')}
+        />
+      )}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({ screen: { flex: 1, backgroundColor: colors.background } });
