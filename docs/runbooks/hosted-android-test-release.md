@@ -254,6 +254,27 @@ prove callback delivery, refunds or interrupted/pending purchase recovery.
 The next device gate is one-coin unlock, second-episode playback and persistence
 after restart/replay, with an expected balance of 99 coins and no second debit.
 
+### Hosted unlock build gate corrected — 2026-09-22 (#164)
+
+The physical test exposed a client routing bug: version 2 passed
+`coinsEnabled=false` outside the local API environment, even with a funded wallet
+and hosted sandbox spending enabled. The phone therefore displayed no available
+unlock method and "Coin unlocks are unavailable in this build." No unlock or
+99-coin outcome is claimed for version 2.
+
+The unlock route now admits Android staging builds with validated RevenueCat
+sandbox configuration, retaining the server's `spending_available` check and
+existing price confirmation, owner checks and idempotent unlock request. Local
+Android behavior is preserved; production, iOS, disabled sandbox configuration
+and server-disabled spending remain blocked. Android version code advances to 3.
+A route-level test reproduced the exact unavailable message before the fix and
+now covers confirmation, the server-priced request and continuation to playback,
+plus the disabled cases and local compatibility. All 531 mobile tests (53 suites),
+lint, formatting, type checking, Expo configuration and API contract checks passed.
+Scoped correctness, security, maintainability and performance review found no
+additional issue. Signed build, Play delivery and physical retest are still
+pending; the existing wallet balance must be preserved across the update.
+
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified
 Firebase identity and consumer-only routes. `/admin/` and `/internal/staff-masters/1`

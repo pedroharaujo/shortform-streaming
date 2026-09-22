@@ -300,7 +300,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       // New Stovio application identity; requires its own Firebase/Play registration.
       package: 'com.stovio.app',
-      versionCode: 2,
+      versionCode: 3,
       // Path only; Expo JS export does not read the gitignored file. Prebuild
       // copies it when present. The MVP ships Android only.
       googleServicesFile: './google-services.json',
