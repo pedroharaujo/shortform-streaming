@@ -1,4 +1,6 @@
-import type { JSX } from 'react';
+import Film from 'lucide-react-native/icons/film';
+import Play from 'lucide-react-native/icons/play';
+import { useState, type JSX } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,6 +9,7 @@ import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { ProfileAvatar } from '../../ui/ScreenElements';
 import { CatalogArtwork } from './CatalogArtwork';
+import { CatalogHero } from './CatalogHero';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
 import { useCatalogHome } from './useCatalog';
 
@@ -19,6 +22,22 @@ export interface HomeCatalogScreenProps {
   readonly onOpenAccount?: () => void;
 }
 
+/** Web Navbar wordmark: white → neutral-100 → amber-200; logo tile amber→rose→violet. */
+const wordmarkShades = [
+  '#ffffff',
+  '#f5f5f5',
+  '#e5e5e5',
+  colors.brandHighlight,
+  '#fcd34d',
+  colors.coin,
+] as const;
+
+function shownFreeEpisodes(series: CatalogSeriesCard): number {
+  if (series.episode_count <= 0 || series.free_episode_count <= 0) return 0;
+  return Math.min(series.free_episode_count, series.episode_count);
+}
+
+/** Poster card with overlay badges, laid out two per row like the reference design. */
 function SeriesCard({
   series,
   onSelect,
@@ -26,6 +45,8 @@ function SeriesCard({
   series: CatalogSeriesCard;
   onSelect: (seriesId: string) => void;
 }): JSX.Element {
+  const messages = useMessages();
+  const freeCount = shownFreeEpisodes(series);
   return (
     <Pressable
       accessibilityLabel={series.title}
@@ -34,11 +55,41 @@ function SeriesCard({
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       testID={`series-card-${series.id}`}
     >
-      <CatalogArtwork size="card" title={series.title} uri={series.artwork_url} />
-      <Text style={styles.cardTitle}>{series.title}</Text>
-      <Text numberOfLines={2} style={styles.cardSynopsis}>
-        {series.synopsis}
-      </Text>
+      <View style={styles.poster}>
+        <CatalogArtwork size="card" title={series.title} uri={series.artwork_url} />
+        <View
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          style={styles.posterShade}
+        />
+        {freeCount > 0 ? (
+          <View style={styles.posterBadge}>
+            <Text style={styles.posterBadgeLabel}>{messages.catalog.freeEpisodes(freeCount)}</Text>
+          </View>
+        ) : null}
+        {series.episode_count > 0 ? (
+          <View style={styles.posterMeta}>
+            <Text style={styles.posterMetaLabel}>
+              {messages.catalog.episodeCount(series.episode_count)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      <View style={styles.cardBody}>
+        <Text numberOfLines={1} style={styles.cardTitle}>
+          {series.title}
+        </Text>
+        <Text numberOfLines={2} style={styles.cardSynopsis}>
+          {series.synopsis}
+        </Text>
+        <View style={styles.cardFooter}>
+          <Text numberOfLines={1} style={styles.cardTag}>
+            {series.genres[0] ? `#${series.genres[0]}` : messages.catalog.featured}
+          </Text>
+          <Text style={styles.cardAction}>{messages.common.play}</Text>
+          <Play color={colors.brand} fill={colors.brand} size={12} strokeWidth={2} />
+        </View>
+      </View>
     </Pressable>
   );
 }
@@ -57,18 +108,31 @@ export function HomeCatalogScreen({
   const compactHeader = signedIn && (width < 380 || fontScale > 1.2);
   const firstRail =
     state.phase === 'loaded' ? state.home.rails.find((rail) => rail.series.length > 0) : undefined;
-  const featured = firstRail?.series[0];
+  const [genre, setGenre] = useState(messages.catalog.allGenres);
+  const genres = [...new Set((firstRail?.series ?? []).flatMap((series) => series.genres))];
+  const featured = genre === messages.catalog.allGenres ? firstRail?.series[0] : undefined;
+  const freeFeatured = featured ? shownFreeEpisodes(featured) : 0;
 
   return (
-    <SafeAreaView style={styles.container} testID="home-screen">
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container} testID="home-screen">
       <View style={styles.header}>
         <View style={styles.brand} accessible accessibilityLabel={messages.catalog.brand}>
           <View style={styles.brandMark} accessible={false}>
-            <View style={styles.playMark} />
+            <Film color="#ffffff" size={16} strokeWidth={2} />
           </View>
           {!compactHeader ? (
             <Text style={styles.brandLabel} numberOfLines={1}>
-              {messages.catalog.brand}
+              {messages.catalog.brand
+                .toUpperCase()
+                .split('')
+                .map((letter, index) => (
+                  <Text
+                    key={`${letter}-${index}`}
+                    style={{ color: wordmarkShades[index] ?? colors.brand }}
+                  >
+                    {letter}
+                  </Text>
+                ))}
             </Text>
           ) : null}
         </View>
@@ -131,40 +195,108 @@ export function HomeCatalogScreen({
               style={({ pressed }) => [styles.featured, pressed && styles.pressed]}
               testID="home-featured-series"
             >
-              <CatalogArtwork size="hero" title={featured.title} uri={featured.artwork_url} />
-              <View style={styles.featuredContent}>
-                <Text style={styles.eyebrow}>{firstRail?.title}</Text>
+              <CatalogHero title={featured.title} uri={featured.artwork_url}>
+                <View style={styles.badgeRow}>
+                  <View style={styles.featuredBadge}>
+                    <View style={styles.badgeDot} />
+                    <Text style={styles.eyebrow}>
+                      {firstRail && firstRail.title !== messages.catalog.featured
+                        ? firstRail.title
+                        : messages.catalog.featured}
+                    </Text>
+                  </View>
+                  {featured.episode_count > 0 ? (
+                    <View style={styles.railChip}>
+                      <Text style={styles.railChipLabel}>
+                        {messages.catalog.episodeCount(featured.episode_count)}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {freeFeatured > 0 ? (
+                    <Text style={styles.freeBadge}>
+                      {messages.catalog.freeEpisodes(freeFeatured)}
+                    </Text>
+                  ) : null}
+                </View>
                 <Text style={styles.featuredTitle}>{featured.title}</Text>
-                <Text numberOfLines={2} style={styles.cardSynopsis}>
+                <Text numberOfLines={3} style={styles.featuredSynopsis}>
                   {featured.synopsis}
                 </Text>
-                <View style={styles.explore}>
-                  <Text style={styles.exploreLabel}>{messages.catalog.viewSeries}</Text>
-                  <Text style={styles.exploreLabel} accessible={false}>
-                    ↗
-                  </Text>
+                {featured.genres.length > 0 ? (
+                  <View style={styles.tagRow}>
+                    {featured.genres.map((tag) => (
+                      <View key={tag} style={styles.tagChip}>
+                        <Text style={styles.tagLabel}>#{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+                <View style={styles.heroActions}>
+                  <View style={styles.explore}>
+                    <Play
+                      color={colors.onAccent}
+                      fill={colors.onAccent}
+                      size={16}
+                      strokeWidth={2}
+                    />
+                    <Text style={styles.exploreLabel}>{messages.catalog.startWatching}</Text>
+                  </View>
+                  <View style={styles.exploreSecondary}>
+                    <Text style={styles.exploreSecondaryLabel}>{messages.catalog.viewSeries}</Text>
+                  </View>
                 </View>
-              </View>
+              </CatalogHero>
             </Pressable>
           ) : null}
-          {state.home.rails.map((rail) =>
-            rail.series.length === 0 ? null : (
+          {genres.length > 0 ? (
+            <ScrollView
+              horizontal
+              contentContainerStyle={styles.filters}
+              showsHorizontalScrollIndicator={false}
+              testID="home-genre-filters"
+            >
+              {[messages.catalog.allGenres, ...genres].map((tag) => {
+                const selected = tag === genre;
+                return (
+                  <Pressable
+                    key={tag}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => setGenre(tag)}
+                    style={[styles.filterChip, selected && styles.filterChipSelected]}
+                  >
+                    <Text style={[styles.filterLabel, selected && styles.filterLabelSelected]}>
+                      {tag}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : null}
+          {state.home.rails.map((rail) => {
+            const visible = rail.series.filter(
+              (series) => genre === messages.catalog.allGenres || series.genres.includes(genre),
+            );
+            if (visible.length === 0) return null;
+            return (
               <View key={rail.id} style={styles.rail} testID={`home-rail-${rail.id}`}>
-                <Text accessibilityRole="header" style={styles.railTitle}>
-                  {rail.title}
-                </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.railRow}
-                >
-                  {rail.series.map((series) => (
+                <View style={styles.railHeading}>
+                  <View style={styles.railAccent} />
+                  <Text accessibilityRole="header" style={styles.railTitle}>
+                    {rail.title}
+                  </Text>
+                  <Text style={styles.railCount}>
+                    {messages.catalog.seriesCount(visible.length)}
+                  </Text>
+                </View>
+                <View style={styles.grid}>
+                  {visible.map((series) => (
                     <SeriesCard key={series.id} onSelect={onSelectSeries} series={series} />
                   ))}
-                </ScrollView>
+                </View>
               </View>
-            ),
-          )}
+            );
+          })}
         </ScrollView>
       ) : null}
     </SafeAreaView>
@@ -174,14 +306,6 @@ export function HomeCatalogScreen({
 const styles = StyleSheet.create({
   accountActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   body: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
-  card: { width: 148 },
-  cardSynopsis: { color: colors.muted, fontSize: fontSizes.caption, marginTop: spacing.xs },
-  cardTitle: {
-    color: colors.foreground,
-    fontSize: fontSizes.body,
-    fontWeight: '600',
-    marginTop: spacing.sm,
-  },
   centered: {
     alignItems: 'center',
     flex: 1,
@@ -196,33 +320,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   brandMark: {
-    width: 30,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: 10,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.brand,
+    experimental_backgroundImage: `linear-gradient(135deg, ${colors.brand} 0%, ${colors.brandRose} 55%, ${colors.brandViolet} 100%)`,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playMark: {
-    width: 0,
-    height: 0,
-    borderTopWidth: 6,
-    borderBottomWidth: 6,
-    borderLeftWidth: 9,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: colors.onAccent,
-    marginStart: 3,
-  },
   brandLabel: {
-    color: colors.foreground,
-    fontSize: fontSizes.label,
+    fontSize: fontSizes.section,
     fontWeight: '800',
-    letterSpacing: 2,
+    letterSpacing: 3,
     flexShrink: 1,
   },
   signIn: {
@@ -232,35 +347,9 @@ const styles = StyleSheet.create({
     minWidth: minimumTouchTarget,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.pill,
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.brand,
   },
-  signInLabel: { color: colors.foreground, fontSize: fontSizes.label, fontWeight: '600' },
-  eyebrow: {
-    color: colors.accent,
-    fontSize: fontSizes.caption,
-    fontWeight: '600',
-    letterSpacing: 0.7,
-  },
-  featured: {
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.xxl,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    overflow: 'hidden',
-  },
-  featuredContent: { padding: spacing.xl, gap: spacing.sm },
-  featuredTitle: { color: colors.foreground, fontSize: 28, fontWeight: '800', letterSpacing: -0.8 },
-  explore: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    minHeight: minimumTouchTarget,
-    padding: spacing.md,
-    marginTop: spacing.md,
-  },
-  exploreLabel: { color: colors.onAccent, fontSize: fontSizes.body, fontWeight: '700' },
+  signInLabel: { color: colors.onAccent, fontSize: fontSizes.label, fontWeight: '800' },
   avatarButton: {
     minWidth: minimumTouchTarget,
     minHeight: minimumTouchTarget,
@@ -270,15 +359,168 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.75 },
   emptyArt: { width: 140, marginBottom: spacing.lg },
   emptyHint: { color: colors.muted, fontSize: fontSizes.body, textAlign: 'center' },
-  rail: { marginBottom: spacing.xxl },
-  railRow: { paddingHorizontal: spacing.xl, gap: spacing.md },
+  rails: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
+
+  featured: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xxl,
+    borderRadius: radii.lg,
+  },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
+  featuredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.brand,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  badgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.onAccent },
+  eyebrow: { color: colors.onAccent, fontSize: fontSizes.caption, fontWeight: '800' },
+  railChip: {
+    backgroundColor: 'rgba(38, 38, 38, 0.85)',
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  railChipLabel: { color: colors.foreground, fontSize: fontSizes.caption, fontWeight: '600' },
+  featuredTitle: {
+    color: colors.foreground,
+    fontSize: fontSizes.display,
+    fontWeight: '800',
+    letterSpacing: -1,
+    lineHeight: 38,
+  },
+  featuredSynopsis: { color: colors.muted, fontSize: fontSizes.label, lineHeight: 21 },
+  heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
+  explore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.brand,
+    borderRadius: radii.md,
+    minHeight: minimumTouchTarget,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    flexGrow: 1,
+  },
+  exploreLabel: { color: colors.onAccent, fontSize: fontSizes.label, fontWeight: '800' },
+  exploreSecondary: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(38, 38, 38, 0.9)',
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    minHeight: minimumTouchTarget,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  exploreSecondaryLabel: { color: colors.foreground, fontSize: fontSizes.label, fontWeight: '700' },
+
+  rail: { marginBottom: spacing.xxl, paddingHorizontal: spacing.lg },
+  railHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  railAccent: { width: 3, height: 18, borderRadius: 2, backgroundColor: colors.brand },
   railTitle: {
     color: colors.foreground,
     fontSize: fontSizes.section,
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: -0.4,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.xl,
+    flexShrink: 1,
+    flexGrow: 1,
   },
-  rails: { paddingTop: spacing.lg, paddingBottom: spacing.lg },
+  railCount: { color: colors.muted, fontSize: fontSizes.caption, fontWeight: '600' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  card: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    maxWidth: '50%',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  poster: { width: '100%', backgroundColor: colors.surfaceRaised },
+  posterShade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 48,
+    experimental_backgroundImage: `linear-gradient(180deg, rgba(23,23,23,0) 0%, ${colors.surface} 100%)`,
+  },
+  cardBody: { padding: spacing.md, gap: spacing.xs },
+  cardTitle: {
+    color: colors.foreground,
+    fontSize: fontSizes.label,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    lineHeight: 20,
+  },
+  cardSynopsis: { color: colors.muted, fontSize: fontSizes.caption, lineHeight: 18, minHeight: 36 },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    marginTop: spacing.xs,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  cardTag: { color: colors.muted, fontSize: fontSizes.caption, fontWeight: '600', flexShrink: 1 },
+  cardAction: { color: colors.brand, fontSize: fontSizes.caption, fontWeight: '800' },
+  posterBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    backgroundColor: 'rgba(10, 10, 12, 0.82)',
+    borderColor: colors.coinRim,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  posterBadgeLabel: { color: colors.coin, fontSize: 11, fontWeight: '800' },
+  posterMeta: {
+    position: 'absolute',
+    left: spacing.sm,
+    bottom: spacing.sm,
+  },
+  posterMetaLabel: { color: colors.foreground, fontSize: 11, fontWeight: '700' },
+  freeBadge: { color: colors.coin, fontSize: fontSizes.caption, fontWeight: '700' },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  tagChip: {
+    backgroundColor: 'rgba(23, 23, 23, 0.72)',
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  tagLabel: { color: colors.foreground, fontSize: 11, fontWeight: '600' },
+  filters: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
+  filterChip: {
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    minHeight: minimumTouchTarget,
+    justifyContent: 'center',
+  },
+  filterChipSelected: { backgroundColor: colors.brand, borderColor: colors.brand },
+  filterLabel: { color: colors.muted, fontSize: fontSizes.caption, fontWeight: '700' },
+  filterLabelSelected: { color: colors.onAccent, fontWeight: '800' },
 });

@@ -179,9 +179,9 @@ test('checkout factory authenticates and attests identity/catalog/status with tr
   try {
     const client = createAppPurchaseCheckoutClient();
     await client.getIdentity();
-    await client.getCatalog('test.synthetic.shortform');
+    await client.getCatalog('test.synthetic.stovio');
     await client.getStatus({
-      application_id: 'test.synthetic.shortform',
+      application_id: 'test.synthetic.stovio',
       product_id: 'synthetic_consumable',
       transaction_id: 'synthetic-private-transaction',
     });
@@ -201,7 +201,7 @@ test('checkout factory authenticates and attests identity/catalog/status with tr
     const request = fetcher.mock.calls[2]![0] as Request;
     expect(request.method).toBe('POST');
     expect(await request.clone().json()).toEqual({
-      application_id: 'test.synthetic.shortform',
+      application_id: 'test.synthetic.stovio',
       product_id: 'synthetic_consumable',
       transaction_id: 'synthetic-private-transaction',
     });

@@ -527,7 +527,13 @@ function Consent({
 }
 
 const styles = StyleSheet.create({
-  menu: { backgroundColor: colors.surface, borderRadius: radii.lg, overflow: 'hidden' },
+  menu: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
   body: { color: colors.foreground, fontSize: fontSizes.body },
   notice: {
     backgroundColor: colors.surface,
@@ -551,16 +557,22 @@ const styles = StyleSheet.create({
     minHeight: minimumTouchTarget,
   },
   container: { backgroundColor: colors.background, flex: 1 },
-  content: { flexGrow: 1, gap: spacing.lg, padding: spacing.xxl },
+  content: {
+    flexGrow: 1,
+    gap: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
+  },
   input: {
     borderColor: colors.border,
     borderRadius: radii.md,
     borderWidth: 1,
     color: colors.foreground,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceRaised,
     fontSize: fontSizes.body,
     minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
   muted: { color: colors.muted, fontSize: fontSizes.label, lineHeight: 22 },

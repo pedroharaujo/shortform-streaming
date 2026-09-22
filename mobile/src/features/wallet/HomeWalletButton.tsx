@@ -4,7 +4,7 @@ import { AppState, Pressable, StyleSheet, Text } from 'react-native';
 
 import type { WalletClient } from '../../api/wallet/types';
 import { getAuthSessionRevision, getSessionCredential } from '../../auth/session';
-import { CoinIcon } from '../../ui/CoinIcon';
+import Coins from 'lucide-react-native/icons/coins';
 import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 
@@ -79,7 +79,7 @@ export function HomeWalletButton({
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       testID="home-wallet"
     >
-      <CoinIcon />
+      <Coins color={colors.coin} size={16} strokeWidth={2.5} />
       <Text style={styles.label} numberOfLines={1}>
         {state.phase === 'ready'
           ? messages.wallet.shortBalance(state.balance)
@@ -105,11 +105,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.coinRim,
+    backgroundColor: colors.coinSurface,
   },
   label: {
-    color: colors.foreground,
+    color: colors.coin,
     fontSize: fontSizes.label,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],

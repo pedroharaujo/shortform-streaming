@@ -1,7 +1,7 @@
 # Local Maestro flow for P2-T04 anonymous discovery.
 # Not executed in CI. Requires a development build, a running local API, and
 # seeded synthetic catalog data (Harbor Lights in territory FR).
-appId: com.shortformstreaming.app
+appId: com.stovio.app
 ---
 - launchApp
 - extendedWaitUntil:

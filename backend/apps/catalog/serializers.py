@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
+from apps.catalog.eligibility import eligible_episodes_for_series
 from apps.catalog.metadata import catalog_metadata
 from apps.catalog.models import Episode, Season, Series
 
@@ -19,6 +20,14 @@ class CatalogSeriesCardSerializer(serializers.Serializer[Mapping[str, object]]):
     title = serializers.CharField()
     synopsis = serializers.CharField()
     artwork_url = serializers.CharField(allow_null=True)
+    genres = serializers.ListField(child=serializers.CharField())
+    episode_count = serializers.IntegerField()
+    free_episode_count = serializers.IntegerField(
+        help_text=(
+            "Editorial count of episodes that open without coins. "
+            "Playback authorization stays on the server."
+        ),
+    )
 
 
 @extend_schema_serializer(component_name="CatalogRail")
@@ -76,6 +85,9 @@ def serialize_series_card(series: Series) -> dict[str, object]:
         "title": title,
         "synopsis": synopsis,
         "artwork_url": series_artwork_url(series),
+        "genres": [genre.name for genre in series.genres.all()],
+        "episode_count": eligible_episodes_for_series(series).count(),
+        "free_episode_count": series.free_episode_count,
     }
 
 
@@ -106,9 +118,13 @@ def serialize_series_detail(
         for season in seasons
         if episodes_by_season.get(season.number)
     ]
+    card = serialize_series_card(series)
     return {
-        **serialize_series_card(series),
-        "genres": [genre.name for genre in series.genres.all()],
+        "id": card["id"],
+        "title": card["title"],
+        "synopsis": card["synopsis"],
+        "artwork_url": card["artwork_url"],
+        "genres": card["genres"],
         "seasons": season_payload,
     }
 

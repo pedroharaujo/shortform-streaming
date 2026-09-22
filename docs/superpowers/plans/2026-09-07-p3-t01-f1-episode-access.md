@@ -70,7 +70,7 @@ client, mechanical mobile typed fixture updates, documentation and evidence.
 - [x] Publish a reviewable PR with revision/check evidence and the human merge boundary.
 
 Before handoff, verify required CI on the final head and record its result in
-[PR #140](https://github.com/pedroharaujo/shortform-streaming/pull/140). No automatic merge.
+[PR #140](https://github.com/pedroharaujo/stovio/pull/140). No automatic merge.
 
 ## Progress ledger
 

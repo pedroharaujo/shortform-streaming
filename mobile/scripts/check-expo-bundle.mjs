@@ -71,7 +71,7 @@ function hasPlatformBundle(files, outputRoot, platform) {
   });
 }
 
-const outputDir = mkdtempSync(path.join(tmpdir(), 'shortform-expo-export-'));
+const outputDir = mkdtempSync(path.join(tmpdir(), 'stovio-expo-export-'));
 
 try {
   const result = spawnSync(

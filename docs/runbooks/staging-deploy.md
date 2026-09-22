@@ -1,6 +1,6 @@
 # Staging deploy with GitHub OIDC (P5-T03)
 
-Issue: [#81](https://github.com/pedroharaujo/shortform-streaming/issues/81).
+Issue: [#81](https://github.com/pedroharaujo/stovio/issues/81).
 This runbook is the WIF / deploy-workflow contract. It does **not** replace
 `docs/runbooks/staging-apply.md` (OpenTofu apply of the staging composition)
 or `docs/runbooks/django-container.md` (local image and migrate-vs-web).
@@ -53,7 +53,7 @@ No GitHub secrets are required for GCP keys. Map staging outputs:
 | `migrate_job_name` | `MIGRATE_JOB` |
 | `smoke_job_name` | `SMOKE_JOB` |
 
-The real GitHub repository name is `pedroharaujo/shortform-streaming`. Put it
+The real GitHub repository name is `pedroharaujo/stovio`. Put it
 in gitignored `infra/environments/staging/staging.tfvars` as
 `github_repository` and keep it in this runbook. Committed `.tf` and
 `staging.tfvars.example` use `example-org/example-repo` only.
@@ -99,7 +99,7 @@ spending limit, and it does not establish a maximum for newly created services.
 
 1. Fail closed if any required Environment var is empty.
 2. Authenticate with WIF (`vars.WIF_PROVIDER` / `vars.WIF_SERVICE_ACCOUNT`).
-3. `docker build -f backend/Dockerfile -t shortform-backend:ci .`
+3. `docker build -f backend/Dockerfile -t stovio-backend:ci .`
 4. Trivy (`HIGH,CRITICAL`, `exit-code: 1`).
 5. `gcloud auth configure-docker` (not `docker login`, not
    `docker/login-action`).
@@ -115,7 +115,7 @@ spending limit, and it does not establish a maximum for newly created services.
 
 Ingress stays `INGRESS_TRAFFIC_INTERNAL_ONLY`. GitHub-hosted runners must
 **not** HTTP-smoke the Cloud Run URL. Smoke runs as a Job inside the project,
-using dedicated identity `shortform-smoke`. Its grants are Artifact Registry
+using dedicated identity `stovio-smoke`. Its grants are Artifact Registry
 reader on this repository and invoker on this service only. It receives no
 Django, database, Firebase or provider configuration/secrets. The service and
 migration job retain the Django runtime identity. Before the first deploy after
@@ -203,13 +203,13 @@ Leave this box unchecked until founder evidence exists:
 - Deploy workflows have no `pull_request` / `pull_request_target` /
   `workflow_call` trigger.
 - WIF `attribute_condition` is exact
-  `assertion.repository == "pedroharaujo/shortform-streaming"` **and**
+  `assertion.repository == "pedroharaujo/stovio"` **and**
   `assertion.ref == "refs/heads/main"` **and**
   `assertion.environment == "staging"`. No `startsWith`.
 - Forks cannot satisfy `assertion.repository`.
 - Workflow default `permissions.contents: read`. `id-token: write` is job
   scoped on the federating job only.
-- Deploy SA `shortform-deploy` has Artifact Registry writer, Cloud Run
+- Deploy SA `stovio-deploy` has Artifact Registry writer, Cloud Run
   developer on the service and jobs, `serviceAccountUser` on the **runtime**
   and dedicated **smoke** SAs only, and `workloadIdentityUser` for this repository
   principalSet. It

@@ -1,0 +1,80 @@
+packages:
+  - mobile
+  - packages/*
+
+# React Native and Expo autolinking resolve native modules through a hoisted
+# layout; Expo documents this setting for pnpm monorepos.
+nodeLinker: hoisted
+
+# Expo SDK 57 compatibility: transitives must not pull RN 0.87 or React 19.2.8.
+# @react-native/metro-config is an optional peer of RN 0.86; without an override
+# pnpm resolves it to latest 0.87 and pulls the 0.87 metro toolchain.
+# Worklets 0.12 renamed WorkletRuntime::executeSync → runSync; Expo SDK 57
+# expo-modules-core still calls executeSync (expo/expo#49225). Reanimated 4.6
+# requires worklets 0.12, so both must pin to the SDK 57 table together.
+# Gesture Handler 3.x (3.2.1) CMake-links libworklets.so from a worklets 0.12
+# layout; with worklets 0.10.1 the .so is missing and ninja fails. Pin RNGH to
+# the SDK 57 table (~2.32.0) so Android native compile can find libworklets.so.
+overrides:
+  react: "19.2.3"
+  react-native: "0.86.3"
+  react-test-renderer: "19.2.3"
+  "@react-native/metro-config": "0.86.3"
+  react-native-worklets: "0.10.1"
+  react-native-reanimated: "4.5.1"
+  react-native-gesture-handler: "2.32.0"
+  # GHSA-2883-xcg3-v3hh: keep YAML readers in Jest/Expo tooling on patched
+  # releases within each existing major; do not widen the native SDK matrix.
+  "js-yaml@>=3 <4": "3.15.2"
+  "js-yaml@>=4 <5": "4.3.2"
+
+# Install scripts are denied by default. Every entry below is an explicit,
+# justified exception and must stay minimal. `false` records an intentional deny
+# so install does not fail with ERR_PNPM_IGNORED_BUILDS (pnpm 11).
+allowBuilds:
+  # Native path resolver used by the ESLint import plugin in eslint-config-expo.
+  unrs-resolver: true
+  # Transitive from @react-native-firebase. Do not run: postinstall can write
+  # FIREBASE_WEBAPP_CONFIG (including api keys) into package dist.
+  '@firebase/util': false
+  # Transitive from @react-native-firebase. Postinstall is a version-scheme warning only.
+  protobufjs: false
+
+# pnpm 11 defaults minimumReleaseAge to 24h. Expo SDK 57.0.16/57.0.17 patches
+# and matching packages were published inside that window. Exclude only these
+# exact versions so frozen CI installs succeed without disabling the age gate.
+minimumReleaseAgeExclude:
+  - '@expo/cli@57.0.18 || 57.0.19 || 57.0.20 || 57.0.21 || 57.0.23'
+  - '@expo/config-plugins@57.0.9'
+  - '@expo/config@57.0.9'
+  - '@expo/fingerprint@0.20.10 || 0.20.11 || 0.20.12'
+  - '@expo/image-utils@0.11.5'
+  - '@expo/metro-config@57.0.10 || 57.0.11 || 57.0.12'
+  - '@expo/metro-file-map@57.0.2 || 57.0.3'
+  - '@expo/prebuild-config@57.0.14 || 57.0.15'
+  - '@expo/require-utils@57.0.5'
+  - babel-preset-expo@57.0.8 || 57.0.9 || 57.0.10 || 57.0.11
+  - expo-asset@57.0.14 || 57.0.15 || 57.0.16
+  - expo-constants@57.0.14 || 57.0.15 || 57.0.16 || 57.0.17
+  - expo-modules-autolinking@57.0.11 || 57.0.12
+  - expo-modules-core@57.0.13 || 57.0.14 || 57.0.15 || 57.0.17
+  - expo@57.0.16 || 57.0.17 || 57.0.18 || 57.0.19 || 57.0.21
+  - '@expo/metro-runtime@57.0.13 || 57.0.14 || 57.0.15'
+  - '@expo/ui@57.0.13 || 57.0.14 || 57.0.15 || 57.0.17'
+  - expo-router@57.0.16 || 57.0.17 || 57.0.18 || 57.0.20
+  - eslint-config-expo@57.0.2
+  - expo-linking@57.0.8 || 57.0.9
+  - expo-video@57.0.3
+  - jest-expo@57.0.5
+  - react-native@0.86.3
+  - '@react-native/metro-config@0.86.3'
+  - '@expo/inline-modules@0.1.7'
+  - '@expo/local-build-cache-provider@57.0.8'
+  - '@expo/log-box@57.0.4'
+  - '@expo/router-server@57.0.8 || 57.0.9'
+  - expo-file-system@57.0.6
+  - expo-modules-jsi@57.0.6 || 57.0.7 || 57.1.0
+  - '@expo/env@2.4.3'
+  - expo-font@57.0.2 || 57.0.3
+  - expo-secure-store@57.0.2 || 57.0.3
+  - expo-glass-effect@57.0.2

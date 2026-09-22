@@ -251,19 +251,24 @@ def recover_transaction_id(product: Product, fingerprint: str, owner_id: str) ->
                 or _TRANSACTION_ID.fullmatch(transaction_id) is None
             ):
                 return None
-            candidate = hashlib.sha256(
-                json.dumps(
-                    [
-                        "shortform-purchase-v1",
-                        owner_id,
-                        product.application_id,
-                        product.product_id,
-                        transaction_id,
-                    ],
-                    separators=(",", ":"),
-                ).encode("utf-8")
-            ).hexdigest()
-            if candidate == fingerprint:
+            # During project/app cutover, interrupted old-app attempts must still
+            # resolve to the same provider transaction and single ledger credit.
+            candidates = {
+                hashlib.sha256(
+                    json.dumps(
+                        [
+                            namespace,
+                            owner_id,
+                            product.application_id,
+                            product.product_id,
+                            transaction_id,
+                        ],
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                ).hexdigest()
+                for namespace in ("stovio-purchase-v1", "shortform-purchase-v1")
+            }
+            if fingerprint in candidates:
                 matches.append(transaction_id)
         return matches[0] if len(matches) == 1 else None
     except Exception:

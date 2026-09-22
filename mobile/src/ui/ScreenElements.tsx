@@ -1,3 +1,4 @@
+import User from 'lucide-react-native/icons/user';
 import type { JSX } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -23,8 +24,7 @@ export function ScreenIntro({
 export function ProfileAvatar(): JSX.Element {
   return (
     <View style={styles.avatar} accessible={false} importantForAccessibility="no-hide-descendants">
-      <View style={styles.head} />
-      <View style={styles.shoulders} />
+      <User color={colors.foreground} size={16} strokeWidth={2} />
     </View>
   );
 }
@@ -116,17 +116,17 @@ export function ActionButton({
 export const panelStyles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radii.lg,
+    borderWidth: 1,
     padding: spacing.xl,
     gap: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   label: { color: colors.accent, fontSize: fontSizes.caption, fontWeight: '700', letterSpacing: 1 },
 });
 
 const styles = StyleSheet.create({
-  intro: { gap: spacing.md, marginBottom: spacing.sm },
+  intro: { gap: spacing.sm, marginBottom: spacing.lg },
   avatar: {
     width: 36,
     height: 36,
@@ -137,20 +137,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-  },
-  head: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.foreground,
-    marginBottom: 3,
-  },
-  shoulders: {
-    width: 20,
-    height: 9,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    backgroundColor: colors.foreground,
   },
   back: {
     alignSelf: 'flex-start',
@@ -166,18 +152,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-    minHeight: 64,
-    padding: spacing.lg,
+    minHeight: 68,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   rowLabel: { color: colors.foreground, fontSize: fontSizes.body, flex: 1 },
-  chevron: { color: colors.muted, fontSize: 26 },
+  chevron: { color: colors.muted, fontSize: 24 },
   title: {
     color: colors.foreground,
     fontSize: fontSizes.display,
-    fontWeight: '700',
-    letterSpacing: -0.7,
+    fontWeight: '800',
+    letterSpacing: -0.8,
   },
   subtitle: { color: colors.muted, fontSize: fontSizes.body, lineHeight: 24 },
   button: {
@@ -200,7 +187,7 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: colors.accent, borderColor: colors.accent },
   primaryLabel: { color: colors.onAccent },
-  secondary: { backgroundColor: colors.surfaceRaised },
+  secondary: { backgroundColor: colors.surfaceRaised, borderColor: 'transparent' },
   quiet: { backgroundColor: 'transparent', borderColor: 'transparent' },
   quietLabel: { color: colors.muted },
   danger: { backgroundColor: colors.surface, borderColor: colors.danger },

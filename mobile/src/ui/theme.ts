@@ -1,35 +1,60 @@
-/** Shared Android MVP visual tokens. Keep semantic roles here, not in screens. */
+/** Shared Android MVP visual tokens. Keep semantic roles here, not in screens.
+
+ * Palette matches the web reference client (commit e6e0d5f) and Tailwind
+ * amber / neutral / rose / violet stops used there.
+ */
 export const colors = {
-  background: '#101010',
-  border: '#363636',
-  accent: '#f5f5f5',
-  onAccent: '#111111',
-  accentSoft: '#454545',
-  danger: '#ef4444',
-  dangerForeground: '#ff9c9c',
-  foreground: '#fafafa',
-  muted: '#b3b3b3',
-  placeholder: '#a3a3a3',
-  surface: '#1c1c1c',
-  surfaceRaised: '#292929',
-  coin: '#e0b653',
-  coinRim: '#a87c25',
-  coinInk: '#38290d',
+  /** body background #0a0a0c from web index.css */
+  background: '#0a0a0c',
+  /** amber-500 */
+  brand: '#f59e0b',
+  brandSoft: '#2a2114',
+  /** neutral-800 */
+  border: '#27272a',
+  /** amber-500 — primary CTA fill */
+  accent: '#f59e0b',
+  onAccent: '#0a0a0c',
+  accentSoft: '#3a2a12',
+  /** rose-500 / rose-300 for danger copy */
+  danger: '#f43f5e',
+  dangerForeground: '#fda4af',
+  /** zinc-100 body text from web index.css */
+  foreground: '#f4f4f5',
+  /** neutral-400 */
+  muted: '#a3a3a3',
+  /** neutral-500 */
+  placeholder: '#737373',
+  /** neutral-900 */
+  surface: '#171717',
+  /** neutral-800 */
+  surfaceRaised: '#262626',
+  coinSurface: '#1c170f',
+  /** amber-400 */
+  coin: '#fbbf24',
+  /** amber-600 */
+  coinRim: '#d97706',
+  coinInk: '#0a0a0c',
+  /** violet-600 — logo tile end stop */
+  brandViolet: '#7c3aed',
+  /** rose-500 — logo tile mid stop */
+  brandRose: '#f43f5e',
+  /** amber-200 — wordmark end stop */
+  brandHighlight: '#fde68a',
 } as const;
 
 export const spacing = {
   xxs: 2,
   xs: 4,
   sm: 8,
-  md: 8,
+  md: 12,
   lg: 16,
   xl: 20,
   xxl: 24,
 } as const;
 
 export const radii = {
-  md: 8,
-  lg: 12,
+  md: 12,
+  lg: 16,
   pill: 999,
 } as const;
 
@@ -37,9 +62,9 @@ export const fontSizes = {
   caption: 13,
   label: 14,
   body: 16,
-  section: 18,
-  title: 22,
-  display: 34,
+  section: 20,
+  title: 24,
+  display: 32,
   artworkFallback: 28,
 } as const;
 

@@ -7,7 +7,7 @@ from django.core.exceptions import ImproperlyConfigured
 os.environ.setdefault("DJANGO_SECRET_KEY", "replace-with-provider-value")
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql://shortform@127.0.0.1:5432/shortform",
+    "postgresql://stovio@127.0.0.1:5432/stovio",
 )
 os.environ.setdefault("VIDEO_PROVIDER", "fake")
 os.environ.setdefault("STAFF_UPLOAD_STORE", "fake")
@@ -22,7 +22,7 @@ FIREBASE_AUTH_MODE = os.environ.get("FIREBASE_AUTH_MODE", "mock").strip().lower(
 if FIREBASE_AUTH_MODE not in {"mock", "admin"}:
     raise ImproperlyConfigured("FIREBASE_AUTH_MODE must be 'mock' or 'admin'")
 FIREBASE_PROJECT_ID = (
-    os.environ.get("FIREBASE_PROJECT_ID", "demo-shortform-local").strip() or "demo-shortform-local"
+    os.environ.get("FIREBASE_PROJECT_ID", "demo-stovio-local").strip() or "demo-stovio-local"
 )
 local_allowed_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = (

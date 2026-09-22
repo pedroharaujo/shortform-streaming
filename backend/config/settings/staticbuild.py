@@ -7,7 +7,7 @@ import os
 os.environ.setdefault("DJANGO_SECRET_KEY", "replace-with-provider-value")
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql://shortform@127.0.0.1:5432/shortform",
+    "postgresql://stovio@127.0.0.1:5432/stovio",
 )
 
 from .base import *  # noqa: E402,F403

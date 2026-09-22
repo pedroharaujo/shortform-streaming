@@ -20,6 +20,7 @@ import {
 import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { ActionButton, BackButton, ScreenIntro } from '../../ui/ScreenElements';
+import { GoogleSignInButton } from '../../ui/GoogleSignInButton';
 import { useKeyboardScroll } from '../../ui/useKeyboardScroll';
 
 export interface SignInScreenProps {
@@ -187,7 +188,7 @@ export function SignInScreen({
               onPress={() => void run(() => auth.signUp(email, password), 'sign_up', 'password')}
               testID="sign-in-create"
             />
-            <ActionButton
+            <GoogleSignInButton
               disabled={busy}
               label={messages.auth.signInGoogle}
               onPress={() => void run(() => auth.signInWithGoogle(), 'login', 'google')}
@@ -237,7 +238,13 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.md, marginTop: spacing.lg },
   body: { color: colors.foreground, fontSize: fontSizes.body, marginTop: spacing.md },
   container: { backgroundColor: colors.background, flex: 1 },
-  content: { flexGrow: 1, padding: spacing.xxl, gap: spacing.xl },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
+    gap: spacing.xl,
+  },
   fieldLabel: { color: colors.foreground, fontSize: fontSizes.label, fontWeight: '600' },
   input: {
     borderColor: colors.border,
@@ -246,7 +253,7 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     backgroundColor: colors.surfaceRaised,
     minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: fontSizes.body,
   },

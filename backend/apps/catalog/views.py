@@ -58,7 +58,7 @@ class CatalogHomeView(CatalogAnonymousView):
     )
     def get(self, request: Request) -> Response:
         del request
-        series_list = list(eligible_series_queryset())
+        series_list = list(eligible_series_queryset().prefetch_related("genres"))
         return Response(
             {
                 "rails": [

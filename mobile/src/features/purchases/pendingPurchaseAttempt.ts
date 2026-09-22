@@ -54,7 +54,7 @@ function valid(value: unknown): value is PendingPurchaseAttempt {
 function key(ownerId: string) {
   if (!isUuid(ownerId) || ownerId !== ownerId.toLowerCase())
     throw new Error('Invalid purchase owner.');
-  return `shortform.pending_purchase.v1.${ownerId}`;
+  return `stovio.pending_purchase.v1.${ownerId}`;
 }
 export function samePurchaseAttempt(
   left: PendingPurchaseAttempt,

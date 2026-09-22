@@ -1,11 +1,11 @@
 /**
  * Mobile catalog outcomes mapped through the generated OpenAPI client.
  *
- * HTTP paths and JSON bodies come from `@shortform/api-client`. Monetization
+ * HTTP paths and JSON bodies come from `@stovio/api-client`. Monetization
  * lock state is omitted (P2-T03); 404 is not-found, never locked.
  */
 
-import type { components } from '@shortform/api-client';
+import type { components } from '@stovio/api-client';
 
 import type { EnvelopeOutcome, UnreachableOutcome } from '../outcomes';
 

@@ -24,7 +24,7 @@ receipts, CustomerInfo or provider responses.
 
 Known-result restart recovery stores a SHA-256 fingerprint, bound to the saved
 owner/app/product/attempt, instead of the Google order ID. The digest input is
-UTF-8 JSON.stringify(["shortform-purchase-v1", ownerId, applicationId, productId,
+UTF-8 JSON.stringify(["stovio-purchase-v1", ownerId, applicationId, productId,
 transactionId]) (compact JSON, all identifiers restricted to ASCII). The new
 authenticated recovery endpoint enumerates a bounded complete purchase list for
 that owner, requires one exact fingerprint match, then calls the existing full

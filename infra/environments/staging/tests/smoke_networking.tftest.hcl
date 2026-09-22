@@ -13,7 +13,7 @@ variables {
   region               = "europe-west9"
   billing_account_id   = "000000-000000-000000"
   private_bucket_name  = "example-only-nonvideo"
-  cloud_run_image      = "example.invalid/shortform:synthetic"
+  cloud_run_image      = "example.invalid/stovio:synthetic"
   django_allowed_hosts = "localhost"
   firebase_project_id  = "example-only"
   github_repository    = "example-org/example-repo"
@@ -57,8 +57,8 @@ run "opt_in_routes_only_smoke_through_private_google_access" {
     condition = (
       length(module.smoke_job.vpc_access) == 1 &&
       module.smoke_job.vpc_access[0].egress == "ALL_TRAFFIC" &&
-      module.smoke_job.vpc_access[0].network_interfaces[0].network == "projects/example-only/global/networks/shortform-smoke-private" &&
-      module.smoke_job.vpc_access[0].network_interfaces[0].subnetwork == "projects/example-only/regions/europe-west9/subnetworks/shortform-smoke-private" &&
+      module.smoke_job.vpc_access[0].network_interfaces[0].network == "projects/example-only/global/networks/stovio-smoke-private" &&
+      module.smoke_job.vpc_access[0].network_interfaces[0].subnetwork == "projects/example-only/regions/europe-west9/subnetworks/stovio-smoke-private" &&
       length(module.migrate_job.vpc_access) == 0 &&
       length(module.smoke_job.environment_variable_names) == 0 &&
       length(module.smoke_job.secret_references) == 0
