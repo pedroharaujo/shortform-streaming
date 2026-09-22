@@ -359,9 +359,14 @@ with HTTP 403. No verification settings were weakened. A physical Android
 test was then performed on 2026-09-22: version 2 is installed from Google Play,
 and Firebase service metrics record a successful Play Integrity token exchange.
 No token was collected as evidence. The verified enforcement revision now serves
-all private consumer traffic. An unapplied plan prepares protected internet
-access under the existing capacity and budget settings; activation approval and
-hosted catalog/playback/purchase acceptance remain outstanding. The emulator's
+all consumer traffic. The founder approved protected test access, and the saved
+activation plan was applied under the existing capacity and budget settings.
+External health, staff exclusion, unsigned callback and five invalid/missing
+App Check rejection checks passed on the normal and tagged consumer origins;
+both existing cloud smoke-job executions passed, and staff access stays private.
+Hosted catalog/playback/purchase acceptance and sandbox callback setup remain
+outstanding. The GitHub staging deployment remains a post-review merge gate;
+the direct live checks do not claim that workflow ran. The emulator's
 precise rejection cause remains unknown. See the hosted release runbook for
 artifact identity and open gates.
 

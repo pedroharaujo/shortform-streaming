@@ -166,8 +166,43 @@ private. The shared App Check input also enables enforcement in the private API
 template; ordinary API traffic remains on its existing revision. Remaining plan
 differences are provider normalization of the existing budget project selector,
 zero-minimum scaling and deployment metadata. The BRL 588/month alert remains
-an alert, not a spending cap. Public activation awaits explicit approval under
-the activation order below; no production release or real payment is authorized.
+an alert, not a spending cap. This plan awaited the separate approval recorded
+below; no production release or real payment is authorized.
+
+### Protected test access activated — 2026-09-22 (#122 / #164)
+
+The founder explicitly approved: "Activate protected test access." Applied the
+reviewed saved plan successfully, with three in-place updates and no resource
+creation/deletion, secret-value changes or new IAM grants. Persisted the approved
+public-access and App Check enforcement settings in the ignored active staging
+inputs so a subsequent plan cannot silently restore the old configuration.
+
+Both the normal consumer origin and its existing `app-check` tagged origin passed
+external checks without Google invocation credentials: readiness returned 200,
+staff paths returned 404, the unsigned RevenueCat notification returned 403,
+and all five missing/invalid App Check cases returned 401 `app_check_required`.
+Every routed consumer revision enforces App Check, uses sandbox purchases and
+retains maximum one instance per revision. The ordinary staff API remains private
+and rejects unauthenticated external access. Existing isolated cloud smoke-job
+executions passed against both services after activation. No credentials, tokens,
+personal records or provider event bodies were included in repository evidence.
+A follow-up plan preserves the approved access and verification settings; its
+remaining differences are only the existing budget ID/number representation and
+zero/default scaling normalization. It is not a zero-difference plan. Repository
+safety (628 files), all 61 repository tests, governance and whitespace checks passed.
+
+The staging GitHub deployment workflow was not dispatched: its cloud identity is
+restricted to `main`, and this draft PR has not been approved for merge. The live
+checks above used the workflow's public-boundary checker and existing cloud smoke
+job directly; they are not a claimed successful GitHub staging deployment. That
+deployment remains a release gate after reviewed merge. All ten PR checks passed
+on preceding evidence commit `a1182e7`.
+
+The founder was asked to retry the catalog on the physical phone. Successful
+Firebase token issuance is already recorded above; acceptance of that token by
+the hosted backend, catalog contents and the hosted playback/purchase journey
+remain unverified pending that retry. Sandbox provider callback setup/delivery
+also remains outstanding. No production release or real payments were enabled.
 
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified
