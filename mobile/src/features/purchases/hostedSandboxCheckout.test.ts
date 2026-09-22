@@ -8,7 +8,7 @@ import { createAppCheckoutCoordinator } from './createAppCheckoutCoordinator';
 import { createRevenueCatProvider } from './revenueCatProvider';
 
 jest.mock('expo-constants', () => ({
-  expoConfig: { extra: {}, android: { package: 'com.example.shortform' } },
+  expoConfig: { extra: {}, android: { package: 'com.example.stovio' } },
 }));
 jest.mock('../../appCheck/nativeAppCheck', () => ({
   getNativeAppCheckToken: async () => 'synthetic.attestation',
@@ -34,7 +34,7 @@ jest.mock('expo-crypto', () => ({
 }));
 
 const ownerId = '11111111-1111-4111-8111-111111111111';
-const applicationId = 'com.example.shortform';
+const applicationId = 'com.example.stovio';
 const productId = 'test_coins';
 const scope = { ownerId, applicationId, productId, store: 'PLAY_STORE', environment: 'SANDBOX' };
 const provider = {

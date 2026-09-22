@@ -1,4 +1,4 @@
-# @shortform/api-client
+# @stovio/api-client
 
 Fetch-based TypeScript client generated from `docs/api/openapi.yaml`.
 
@@ -28,7 +28,7 @@ pnpm contract:generate:client
 ## Usage
 
 ```ts
-import { createApiClient } from '@shortform/api-client';
+import { createApiClient } from '@stovio/api-client';
 
 const api = createApiClient({ baseUrl: 'http://127.0.0.1:8000' });
 const { data, error, response } = await api.GET('/health/live');

@@ -61,11 +61,11 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
       - name: Build image
-        run: docker build -f backend/Dockerfile -t shortform-backend:ci .
+        run: docker build -f backend/Dockerfile -t stovio-backend:ci .
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: shortform-backend:ci
+          image-ref: stovio-backend:ci
           format: table
           severity: HIGH,CRITICAL
           exit-code: '1'
@@ -74,8 +74,8 @@ jobs:
       - name: Push image digest
         run: |
           set -euo pipefail
-          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPOSITORY}/shortform-backend"
-          docker tag shortform-backend:ci "${IMAGE}:${GITHUB_SHA}"
+          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPOSITORY}/stovio-backend"
+          docker tag stovio-backend:ci "${IMAGE}:${GITHUB_SHA}"
           docker push "${IMAGE}:${GITHUB_SHA}"
           DIGEST="$(gcloud artifacts docker images describe "${IMAGE}:${GITHUB_SHA}" --project="${GCP_PROJECT_ID}" --format='get(image_summary.digest)')"
           IMAGE_DIGEST="${IMAGE}@${DIGEST}"

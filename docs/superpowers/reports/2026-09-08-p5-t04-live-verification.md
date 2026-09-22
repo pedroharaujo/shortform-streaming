@@ -80,11 +80,11 @@ PR #150 reached main. PR #167 fixed the unsupported gcloud candidate lookup
 without changing smoke ordering, access boundaries or production triggers.
 The following actual main workflow runs complete the remaining gate:
 
-- [Successful staging deployment](https://github.com/pedroharaujo/shortform-streaming/actions/runs/34762964220)
+- [Successful staging deployment](https://github.com/pedroharaujo/stovio/actions/runs/34762964220)
   at `823bab02ee2d20102617a9e67f74eb7c08706bd2`: image security scan,
   migration, authenticated smoke and promotion all passed. The service then
   served `shortform-api-00016-vib` at 100%.
-- [Deliberate smoke failure](https://github.com/pedroharaujo/shortform-streaming/actions/runs/34763173284)
+- [Deliberate smoke failure](https://github.com/pedroharaujo/stovio/actions/runs/34763173284)
   on the same main revision with `fail_smoke=true`: the smoke step failed
   and **Promote revision was skipped**. A fresh service read confirmed the
   same serving revision and 100% allocation as before the run.

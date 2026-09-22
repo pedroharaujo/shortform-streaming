@@ -194,9 +194,9 @@ def inject_shared_components(
 
 
 SPECTACULAR_SETTINGS: dict[str, object] = {
-    "TITLE": "Shortform Streaming API",
+    "TITLE": "Stovio API",
     "DESCRIPTION": (
-        "HTTP API for the Shortform Streaming MVP. This document is generated from Django; "
+        "HTTP API for the Stovio MVP. This document is generated from Django; "
         "do not edit docs/api/openapi.yaml by hand. Shared conventions (error envelope, "
         "cursor pagination, opaque public IDs, and Firebase ID-token bearer auth) are "
         "documented as components. Protected consumer /v1/ operations also require a "

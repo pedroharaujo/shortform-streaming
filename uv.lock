@@ -1402,7 +1402,7 @@ wheels = [
 ]
 
 [[package]]
-name = "shortform-streaming-backend"
+name = "stovio-backend"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

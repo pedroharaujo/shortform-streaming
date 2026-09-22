@@ -111,7 +111,7 @@ and [Google sign-in account creation](https://firebase.google.com/docs/auth/andr
 - `$env:EXPO_NO_DOTENV='1'; pnpm mobile:bundle:check`: PASS, Android JS export.
 - `uv run pytest backend/tests/accounts/test_lifecycle_races.py -q`: PASS (2),
   deterministic first-profile deletion race and old-revision insert.
-- `pnpm --filter @shortform/mobile test --runInBand src/features/account/AccountScreen.test.tsx src/auth/nativeFirebaseAuth.test.ts`:
+- `pnpm --filter @stovio/mobile test --runInBand src/features/account/AccountScreen.test.tsx src/auth/nativeFirebaseAuth.test.ts`:
   PASS (21), including delayed account-A results after account-B session change.
 - Historical Pixel_9 Android validation used the since-removed synthetic password
   surface. Account showed English, blank country, both preferences off; saved

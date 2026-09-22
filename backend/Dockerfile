@@ -1,6 +1,6 @@
 # Production Cloud Run image (P5-T02 / #77). Deterministic, non-root, no
 # build secrets. Runtime production settings are injected at process start.
-# Build: docker build -f backend/Dockerfile -t shortform-backend:ci .
+# Build: docker build -f backend/Dockerfile -t stovio-backend:ci .
 # This file never imports production Django settings and never bakes
 # credentials into layers.
 

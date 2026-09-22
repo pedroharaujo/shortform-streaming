@@ -1,4 +1,4 @@
-# Shortform Streaming
+# Stovio
 
 Public monorepo for a mobile-first vertical microdrama streaming platform.
 
@@ -34,8 +34,8 @@ runs migrations and `runserver` on `127.0.0.1:8000` in the foreground. If a giti
 Equivalent commands without Make:
 
 ```shell
-git clone https://github.com/pedroharaujo/shortform-streaming.git
-cd shortform-streaming
+git clone https://github.com/pedroharaujo/stovio.git
+cd stovio
 uv sync --locked
 docker compose up -d --wait postgres
 uv run python backend/manage.py migrate
@@ -138,7 +138,7 @@ are **local** evidence (dummy production values in `compose.yaml`; do not use
 is deferred so it does not ALWAYS_RUN Mobile (P2-T08 / P5-T03):
 
 ```shell
-docker build -f backend/Dockerfile -t shortform-backend:ci .
+docker build -f backend/Dockerfile -t stovio-backend:ci .
 docker compose --profile container up -d --wait
 scripts/verify_backend_container.sh
 ```

@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { CatalogClient, CatalogEpisodeSummary } from '../../api/catalog/types';
 import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
-import { CatalogArtwork } from './CatalogArtwork';
+import { CatalogHero } from './CatalogHero';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
 import { useCatalogSeries } from './useCatalog';
 
@@ -94,16 +94,17 @@ export function SeriesDetailScreen({
 
       {state.phase === 'loaded' ? (
         <ScrollView contentContainerStyle={styles.content} testID="series-detail-loaded">
-          <CatalogArtwork size="hero" title={state.series.title} uri={state.series.artwork_url} />
-          <Text accessibilityRole="header" style={styles.title} testID="series-detail-title">
-            {state.series.title}
-          </Text>
+          <CatalogHero compact title={state.series.title} uri={state.series.artwork_url}>
+            <Text style={styles.metadata}>
+              {messages.catalog.episodeCount(
+                state.series.seasons.reduce((count, season) => count + season.episodes.length, 0),
+              )}
+            </Text>
+            <Text accessibilityRole="header" style={styles.title} testID="series-detail-title">
+              {state.series.title}
+            </Text>
+          </CatalogHero>
           <Text style={styles.synopsis}>{state.series.synopsis}</Text>
-          <Text style={styles.metadata}>
-            {messages.catalog.episodeCount(
-              state.series.seasons.reduce((count, season) => count + season.episodes.length, 0),
-            )}
-          </Text>
           {state.series.seasons.map((season) => (
             <View key={season.number} testID={`series-season-${season.number}`}>
               <Text accessibilityRole="header" style={styles.seasonTitle}>
@@ -127,14 +128,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     minHeight: minimumTouchTarget,
     minWidth: minimumTouchTarget,
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
     paddingHorizontal: spacing.lg,
   },
   backLabel: { color: colors.foreground, fontSize: fontSizes.body },
   body: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
   centered: { alignItems: 'center', flex: 1, gap: spacing.md, justifyContent: 'center' },
-  container: { backgroundColor: colors.background, flex: 1, padding: spacing.xxl },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+  },
   content: { paddingBottom: spacing.xxl },
   episodeOrder: {
     color: colors.accent,
@@ -145,29 +149,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     minHeight: minimumTouchTarget,
-    padding: spacing.md,
+    paddingVertical: spacing.lg,
   },
   episodeCopy: { flex: 1, gap: spacing.xs },
   episodeNumber: {
-    width: 42,
-    minHeight: 56,
+    width: 60,
+    minHeight: 76,
     borderRadius: radii.md,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.brandSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  numberLabel: { color: colors.accent, fontSize: fontSizes.section, fontWeight: '700' },
+  numberLabel: { color: colors.brand, fontSize: 28, fontWeight: '800' },
   chevron: { color: colors.accent, fontSize: fontSizes.title },
   metadata: {
-    color: colors.accent,
+    color: colors.foreground,
     fontSize: fontSizes.caption,
-    marginTop: spacing.md,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surfaceRaised,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
     fontWeight: '600',
   },
   pressed: { opacity: 0.75 },
@@ -178,19 +183,19 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.section,
     fontWeight: '600',
     marginBottom: spacing.md,
-    marginTop: spacing.lg,
+    marginTop: spacing.xxl,
   },
   synopsis: {
     color: colors.muted,
     fontSize: fontSizes.body,
     marginBottom: spacing.sm,
-    marginTop: spacing.sm,
+    marginTop: spacing.lg,
     lineHeight: 24,
   },
   title: {
     color: colors.foreground,
     fontSize: fontSizes.display,
     fontWeight: '700',
-    marginTop: spacing.lg,
+    letterSpacing: -0.7,
   },
 });

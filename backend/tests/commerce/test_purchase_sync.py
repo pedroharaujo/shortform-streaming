@@ -21,7 +21,7 @@ from tests.test_openapi import build_schema
 
 CATALOG = "/v1/purchases/catalog"
 STATUS = "/v1/purchases/status"
-APPLICATION = "test.synthetic.shortform"
+APPLICATION = "test.synthetic.stovio"
 QUERY = {
     "application_id": APPLICATION,
     "product_id": "synthetic_consumable",

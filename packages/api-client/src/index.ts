@@ -1,5 +1,5 @@
 /**
- * Typed fetch client for the Shortform Streaming API.
+ * Typed fetch client for the Stovio API.
  *
  * Files under `./generated` are produced by `pnpm contract:generate`.
  * Do not edit generated output by hand.

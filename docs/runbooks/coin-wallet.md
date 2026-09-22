@@ -71,7 +71,7 @@ late-event identity handling before real financial processing.
 Use an isolated PostgreSQL database and generated fixtures. Example PowerShell:
 
 ```powershell
-$env:DATABASE_URL = 'postgresql://shortform@127.0.0.1:55432/shortform'
+$env:DATABASE_URL = 'postgresql://stovio@127.0.0.1:55432/stovio'
 uv run pytest backend/tests/wallet backend/tests/entitlements/test_admin_coin_safety.py -q -p no:cacheprovider
 pnpm check
 pnpm mobile:bundle:check
@@ -110,7 +110,7 @@ and network failures preserve the original recovery record. Ambiguous rejections
 keep the safe request reference for support; absence of a receipt alone still
 does not justify erasing a pending request or replacing coins.
 
-[Issue #144](https://github.com/pedroharaujo/shortform-streaming/issues/144) remains
+[Issue #144](https://github.com/pedroharaujo/stovio/issues/144) remains
 open for an approved public support contact and its remaining genuine provider,
 refund and release-device gates. Production coins remain disabled.
 

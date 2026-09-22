@@ -7,6 +7,7 @@ import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { ProfileAvatar } from '../../ui/ScreenElements';
 import { CatalogArtwork } from './CatalogArtwork';
+import { CatalogHero } from './CatalogHero';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
 import { useCatalogHome } from './useCatalog';
 
@@ -35,8 +36,10 @@ function SeriesCard({
       testID={`series-card-${series.id}`}
     >
       <CatalogArtwork size="card" title={series.title} uri={series.artwork_url} />
-      <Text style={styles.cardTitle}>{series.title}</Text>
-      <Text numberOfLines={2} style={styles.cardSynopsis}>
+      <Text numberOfLines={2} style={styles.cardTitle}>
+        {series.title}
+      </Text>
+      <Text numberOfLines={1} style={styles.cardSynopsis}>
         {series.synopsis}
       </Text>
     </Pressable>
@@ -131,9 +134,11 @@ export function HomeCatalogScreen({
               style={({ pressed }) => [styles.featured, pressed && styles.pressed]}
               testID="home-featured-series"
             >
-              <CatalogArtwork size="hero" title={featured.title} uri={featured.artwork_url} />
-              <View style={styles.featuredContent}>
-                <Text style={styles.eyebrow}>{firstRail?.title}</Text>
+              <CatalogHero title={featured.title} uri={featured.artwork_url}>
+                <View style={styles.featuredBadge}>
+                  <View style={styles.badgeDot} />
+                  <Text style={styles.eyebrow}>{firstRail?.title}</Text>
+                </View>
                 <Text style={styles.featuredTitle}>{featured.title}</Text>
                 <Text numberOfLines={2} style={styles.cardSynopsis}>
                   {featured.synopsis}
@@ -144,15 +149,18 @@ export function HomeCatalogScreen({
                     ↗
                   </Text>
                 </View>
-              </View>
+              </CatalogHero>
             </Pressable>
           ) : null}
           {state.home.rails.map((rail) =>
             rail.series.length === 0 ? null : (
               <View key={rail.id} style={styles.rail} testID={`home-rail-${rail.id}`}>
-                <Text accessibilityRole="header" style={styles.railTitle}>
-                  {rail.title}
-                </Text>
+                <View style={styles.railHeading}>
+                  <View style={styles.railAccent} />
+                  <Text accessibilityRole="header" style={styles.railTitle}>
+                    {rail.title}
+                  </Text>
+                </View>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -174,12 +182,13 @@ export function HomeCatalogScreen({
 const styles = StyleSheet.create({
   accountActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   body: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
-  card: { width: 148 },
-  cardSynopsis: { color: colors.muted, fontSize: fontSizes.caption, marginTop: spacing.xs },
+  card: { width: 132, gap: spacing.xs },
+  cardSynopsis: { color: colors.muted, fontSize: fontSizes.caption, lineHeight: 20 },
   cardTitle: {
     color: colors.foreground,
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.label,
     fontWeight: '600',
+    lineHeight: 22,
     marginTop: spacing.sm,
   },
   centered: {
@@ -196,33 +205,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   brandMark: {
-    width: 30,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: colors.accent,
+    width: 28,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   playMark: {
     width: 0,
     height: 0,
-    borderTopWidth: 6,
-    borderBottomWidth: 6,
-    borderLeftWidth: 9,
+    borderTopWidth: 12,
+    borderBottomWidth: 12,
+    borderLeftWidth: 19,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
-    borderLeftColor: colors.onAccent,
+    borderLeftColor: colors.brand,
     marginStart: 3,
   },
   brandLabel: {
     color: colors.foreground,
-    fontSize: fontSizes.label,
+    fontSize: 26,
     fontWeight: '800',
-    letterSpacing: 2,
+    letterSpacing: -0.5,
     flexShrink: 1,
   },
   signIn: {
@@ -232,24 +239,37 @@ const styles = StyleSheet.create({
     minWidth: minimumTouchTarget,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.pill,
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   signInLabel: { color: colors.foreground, fontSize: fontSizes.label, fontWeight: '600' },
+  featuredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+  },
+  badgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.brand },
   eyebrow: {
-    color: colors.accent,
+    color: colors.foreground,
     fontSize: fontSizes.caption,
     fontWeight: '600',
-    letterSpacing: 0.7,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
   featured: {
     marginHorizontal: spacing.xl,
     marginBottom: spacing.xxl,
     borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    overflow: 'hidden',
   },
-  featuredContent: { padding: spacing.xl, gap: spacing.sm },
-  featuredTitle: { color: colors.foreground, fontSize: 28, fontWeight: '700' },
+  featuredTitle: {
+    color: colors.foreground,
+    fontSize: 36,
+    fontWeight: '800',
+    letterSpacing: -1,
+  },
   explore: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -257,8 +277,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderRadius: radii.md,
     minHeight: minimumTouchTarget,
-    padding: spacing.md,
-    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
   },
   exploreLabel: { color: colors.onAccent, fontSize: fontSizes.body, fontWeight: '700' },
   avatarButton: {
@@ -272,12 +293,19 @@ const styles = StyleSheet.create({
   emptyHint: { color: colors.muted, fontSize: fontSizes.body, textAlign: 'center' },
   rail: { marginBottom: spacing.xxl },
   railRow: { paddingHorizontal: spacing.xl, gap: spacing.md },
+  railHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+  },
+  railAccent: { width: 3, height: 18, borderRadius: 2, backgroundColor: colors.brand },
   railTitle: {
     color: colors.foreground,
     fontSize: fontSizes.section,
-    fontWeight: '600',
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.xl,
+    fontWeight: '700',
+    flexShrink: 1,
   },
-  rails: { paddingTop: spacing.lg, paddingBottom: spacing.lg },
+  rails: { paddingTop: spacing.sm, paddingBottom: spacing.xxl },
 });
