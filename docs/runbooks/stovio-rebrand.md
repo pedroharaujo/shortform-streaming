@@ -364,7 +364,14 @@ activation plan was applied under the existing capacity and budget settings.
 External health, staff exclusion, unsigned callback and five invalid/missing
 App Check rejection checks passed on the normal and tagged consumer origins;
 both existing cloud smoke-job executions passed, and staff access stays private.
-Hosted catalog/playback/purchase acceptance and sandbox callback setup remain
+The physical phone then loaded the empty catalog successfully; a normalized
+Android request returned 200 on the App Check-enforced revision. The database
+contained no catalog rows. Added only the existing self-owned generated test
+series, one season, two episodes and two existing Bunny media references, with
+publication and provenance checks. Signed playlists passed, unsigned/expired
+links were rejected, and a repeat import created no duplicates. Episode 1 is
+free and episode 2 retains its one-coin test lock. Visible populated-catalog and
+hosted playback/purchase acceptance plus sandbox callback setup remain
 outstanding. The GitHub staging deployment remains a post-review merge gate;
 the direct live checks do not claim that workflow ran. The emulator's
 precise rejection cause remains unknown. See the hosted release runbook for
@@ -375,8 +382,8 @@ artifact identity and open gates.
 1. Complete interrupted-purchase recovery, reinstall/account isolation and
    genuine refund/callback validation. The basic new-package sandbox purchase,
    credit, unlock and post-credit restart/replay checks above passed.
-   Public purchases and coin spending remain disabled; the supervised local
-   debug environment is now configured for sandbox validation only.
+   Production purchases and coin spending remain disabled; the supervised local
+   debug environment and protected hosted test service allow sandbox validation.
 2. Repeat the journey on a physical Android device with the intended store-signed
    release and hosted test backend; finish the remaining P6-T03 device, privacy
    and release checks. The local debug/emulator result is not release sign-off.

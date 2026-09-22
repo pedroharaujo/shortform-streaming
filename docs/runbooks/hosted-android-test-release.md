@@ -198,11 +198,34 @@ job directly; they are not a claimed successful GitHub staging deployment. That
 deployment remains a release gate after reviewed merge. All ten PR checks passed
 on preceding evidence commit `a1182e7`.
 
-The founder was asked to retry the catalog on the physical phone. Successful
-Firebase token issuance is already recorded above; acceptance of that token by
-the hosted backend, catalog contents and the hosted playback/purchase journey
-remain unverified pending that retry. Sandbox provider callback setup/delivery
-also remains outstanding. No production release or real payments were enabled.
+The founder retried on the physical phone and confirmed the error disappeared,
+leaving an empty catalog. Normalized Cloud Run request evidence corroborates an
+Android catalog request returning 200 on `stovio-consumer-test-00002-yit`, where
+App Check remains enforced. This establishes hosted acceptance of the verified
+app request; no device token or account data was collected as evidence.
+
+### Hosted generated catalog populated — 2026-09-22 (#164)
+
+Read-only database inspection confirmed zero series, episodes and media assets.
+Copied only the existing self-owned `Stovio playback check` fixture from the
+local test database, in one transaction: one series, one season, two episodes and
+two references to existing Bunny test-library assets. No user, wallet, receipt,
+entitlement or licensed-content rows were copied; no media was uploaded again.
+Source provenance and file checksums were verified. The FR / Android / Google
+Play / English scope, caption metadata and publication validations were retained.
+
+Both 12-second generated videos passed live provider readiness, portrait/caption
+checks, signed master and variant playlist retrieval, and unsigned/expired-link
+403 rejection. Django publication validation and catalog selection passed against
+the hosted database using its secure sandbox configuration. Episode 1 remains
+free; episode 2 remains locked with the existing one-coin test price. Repeating
+the import preserved the same rows without duplication. These application-level
+checks do not substitute for watching playback on the physical phone.
+
+The founder was asked to reopen the app and play the first generated episode.
+Visible populated-catalog/playback acceptance, the hosted purchase journey and
+sandbox provider callback setup/delivery remain outstanding. No production
+release or real payments were enabled.
 
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified
