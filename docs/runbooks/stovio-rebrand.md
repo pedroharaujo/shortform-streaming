@@ -356,9 +356,14 @@ version 2 directly from Google Play. Its installed signature, embedded bundle,
 hosted configuration and compiled Firebase identities passed checks. Stovio
 starts without Metro, but Firebase rejects the emulator's real attestation
 with HTTP 403. No verification settings were weakened. A physical Android
-test remains required; the founder has a phone available. The generic rejection
-does not establish its precise cause, and hosted playback/purchases remain
-unverified. See the hosted release runbook for artifact identity and open gates.
+test was then performed on 2026-09-22: version 2 is installed from Google Play,
+and Firebase service metrics record a successful Play Integrity token exchange.
+No token was collected as evidence. The verified enforcement revision now serves
+all private consumer traffic. An unapplied plan prepares protected internet
+access under the existing capacity and budget settings; activation approval and
+hosted catalog/playback/purchase acceptance remain outstanding. The emulator's
+precise rejection cause remains unknown. See the hosted release runbook for
+artifact identity and open gates.
 
 ### Outstanding work
 

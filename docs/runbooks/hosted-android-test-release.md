@@ -129,15 +129,45 @@ this rejection is not exposed by the client error. A physical Android test is
 the next gate, not an emulator success claim. The founder has a phone available.
 See [Firebase's emulator guidance](https://firebase.google.com/docs/app-check/android/play-integrity-provider#use_app_check_in_debug_environments).
 
-The optional Cloud Monitoring API metrics query was unavailable because this
-Firebase project has no billing enabled. Billing was not changed; this metrics
-limitation is not evidence of an App Check configuration failure or success.
+The initial Cloud Monitoring query against the free Firebase project's quota
+was unavailable. The read-only query subsequently succeeded using the existing
+staging quota project; Firebase billing was not changed. See physical evidence below.
 No public backend activation or real purchase follows from this internal release.
 
 Mobile configuration, lint and type checks passed; repository foundation
 (secret scan, 61 tests and governance) and `git diff --check` passed. All ten
 GitHub checks passed for code commit `ddc5633` and evidence commit `d37f81d`, including backend, mobile,
 container, contract, infrastructure and repository/governance checks.
+
+### Physical verification and activation preparation — 2026-09-22 (#122 / #164)
+
+The authorized physical Samsung Android phone is connected for diagnostics.
+Package inspection confirms version code 2, installed by `com.android.vending`.
+Its running Stovio process shows no fatal exception, missing-JavaScript error,
+or App Check rejection in the inspected logs. Absence of errors alone is not
+the positive attestation evidence: Cloud Monitoring reports one HTTP 200
+`google.firebase.appcheck.v1.TokenExchangeService.ExchangePlayIntegrityToken`
+request in `stovio-app`, sampled at `2026-09-22T10:37:12Z`, following one successful
+challenge request. This corroborates real token issuance for the physical test;
+no token was extracted, printed, or persisted as test evidence. Backend acceptance
+of that token and the hosted catalog journey still require endpoint activation.
+
+Repeated the private candidate health/readiness, absent-staff, unsigned-callback
+and five missing/invalid App Check checks successfully. Promoted the verified
+enforcement revision `stovio-consumer-test-00002-yit` to 100% while retaining
+internal ingress and Google invoker authentication. This supersedes the earlier
+disabled-enforcement serving revision and prevents exposing it at activation.
+
+A saved, unapplied activation plan proposes no creates/deletes, secret changes,
+new IAM grants or budget-amount/notification changes. It opens only the existing
+consumer service to internet HTTPS with App Check enforced, retains sandbox
+purchases and the one-instance-per-revision limit, and keeps the staff service
+private. The shared App Check input also enables enforcement in the private API
+template; ordinary API traffic remains on its existing revision. Remaining plan
+differences are provider normalization of the existing budget project selector,
+zero-minimum scaling and deployment metadata. The BRL 588/month alert remains
+an alert, not a spending cap. Public activation awaits explicit approval under
+the activation order below; no production release or real payment is authorized.
 
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified
