@@ -231,6 +231,15 @@ coin unlock, purchase credit, replay persistence or callback delivery. Those
 hosted journey checks and sandbox callback setup remain outstanding. No
 production release or real payments were enabled.
 
+The founder then confirmed Google sign-in on the physical phone, followed by
+the second-episode lock and a Coins page offering the existing 100-coin pack at
+EUR 1. Read-only hosted accounting inspection found one wallet, zero ledger
+entries, zero net coins and zero unlock receipts before checkout. The displayed
+price is not evidence that this phone's Google Play checkout uses a test payment
+method; that must be checked before completing any order. The founder reported
+returning to Home to sign in, which is a navigation observation to review after
+the functional journey. No checkout, credit or unlock is claimed by this step.
+
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified
 Firebase identity and consumer-only routes. `/admin/` and `/internal/staff-masters/1`
