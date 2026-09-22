@@ -20,6 +20,8 @@ import { createPlaybackClient } from './playback/playbackClient';
 import type { PlaybackClient } from './playback/types';
 import { createProgressClient } from './progress/progressClient';
 import type { ProgressClient } from './progress/types';
+import { createPackPreviewClient } from './purchases/packPreviewClient';
+import type { PackPreviewClient } from './purchases/packPreviewClient';
 import { createPurchaseCheckoutClient } from './purchases/purchaseCheckoutClient';
 import type { PurchaseCheckoutClient } from './purchases/checkoutTypes';
 import { createPurchasesClient } from './purchases/purchasesClient';
@@ -72,6 +74,14 @@ export function createAppPlaybackClient(
   return createPlaybackClient({ ...appApiOptions(), ...options });
 }
 
+export function createAppProgressClient(): ProgressClient {
+  return createProgressClient({
+    ...appApiOptions(),
+    getCredential: getSessionCredential,
+    getDeviceId: getOrCreateDeviceId,
+  });
+}
+
 export function createAppPlayerClients(): {
   readonly catalog: CatalogClient;
   readonly playback: PlaybackClient;
@@ -81,11 +91,7 @@ export function createAppPlayerClients(): {
   return {
     catalog: createCatalogClient(options),
     playback: createPlaybackClient({ ...options, getCredential: getSessionCredential }),
-    progress: createProgressClient({
-      ...options,
-      getCredential: getSessionCredential,
-      getDeviceId: getOrCreateDeviceId,
-    }),
+    progress: createAppProgressClient(),
   };
 }
 
@@ -113,6 +119,10 @@ export function createAppWalletClient(): WalletClient {
 
 export function createAppPurchasesClient(): PurchasesClient {
   return createPurchasesClient({ ...appApiOptions(), getCredential: getSessionCredential });
+}
+
+export function createAppPackPreviewClient(): PackPreviewClient {
+  return createPackPreviewClient({ ...appApiOptions(), getCredential: getSessionCredential });
 }
 
 export function createAppPurchaseCheckoutClient(

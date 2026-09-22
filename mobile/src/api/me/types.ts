@@ -10,5 +10,6 @@ export type MeRequestOutcome =
   | UnreachableOutcome;
 
 export interface MeClient {
-  getMe(): Promise<MeRequestOutcome>;
+  /** When `credential` is set, confirm that token before it is stored as the session. */
+  getMe(credential?: string): Promise<MeRequestOutcome>;
 }

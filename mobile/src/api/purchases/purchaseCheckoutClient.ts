@@ -12,6 +12,7 @@ import {
   isCoins,
   isAndroidApplication,
   isAndroidProduct,
+  isPackPresentation,
   isRecord,
   isSyntheticApplication,
   isSyntheticProduct,
@@ -44,6 +45,7 @@ function catalog(
       !isRecord(row) ||
       !validProduct(row.product_id) ||
       !isCoins(row.coins) ||
+      !isPackPresentation(row) ||
       row.product_type !== 'consumable' ||
       row.store !== 'PLAY_STORE' ||
       row.environment !== 'SANDBOX' ||
@@ -55,6 +57,9 @@ function catalog(
     products.push({
       product_id: row.product_id,
       coins: row.coins,
+      bonus_percent: row.bonus_percent,
+      badge: row.badge,
+      highlighted: row.highlighted,
       product_type: 'consumable',
       store: 'PLAY_STORE',
       environment: 'SANDBOX',

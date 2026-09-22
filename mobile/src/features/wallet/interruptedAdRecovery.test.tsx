@@ -78,6 +78,7 @@ it('reconciles an interrupted ad granted by the server when reopening episode ch
         country: 'FR',
         ads_consent: false,
         analytics_consent: true,
+        auto_unlock_next: false,
         consent_updated_at: '2026-09-07T00:00:00Z',
       },
     })),
@@ -103,6 +104,10 @@ it('reconciles an interrupted ad granted by the server when reopening episode ch
   };
   const wallet: WalletClient = {
     resolve: jest.fn(),
+    getActivity: jest.fn<ReturnType<WalletClient['getActivity']>, []>(async () => ({
+      outcome: 'ok',
+      data: { entries: [], has_more: false },
+    })),
     getWallet: jest.fn<ReturnType<WalletClient['getWallet']>, []>(async () => ({
       outcome: 'ok',
       data: { balance: 20, spending_available: false },

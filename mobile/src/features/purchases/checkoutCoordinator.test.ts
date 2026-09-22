@@ -32,11 +32,15 @@ const scope = {
 const product = {
   product_id: productId,
   coins: 100,
+  bonus_percent: 20,
+  badge: 'Best value',
+  highlighted: true,
   product_type: 'consumable',
   store: 'PLAY_STORE',
   environment: 'SANDBOX',
   price_source: 'store',
 };
+const presentation = { bonusPercent: 20, badge: 'Best value', highlighted: true };
 const offer = {
   ...scope,
   productType: 'consumable',
@@ -339,6 +343,7 @@ test('loads exact store price and server quantity only after confirming server i
       {
         productId,
         coins: 100,
+        ...presentation,
         price: offer.price,
         priceAmount: 1234.56,
         currencyCode: 'EUR',
@@ -356,7 +361,7 @@ test.each([
   f.provider.getOffers.mockResolvedValue([{ ...offer, ...metadata }]);
   await expect(f.controller.load()).resolves.toEqual({
     status: 'ready',
-    offers: [{ productId, coins: 100, price: offer.price }],
+    offers: [{ productId, coins: 100, ...presentation, price: offer.price }],
   });
 });
 test('default and nondevelopment/nonlocal factories stay unavailable before dependencies execute', async () => {
@@ -388,6 +393,7 @@ test('requires load then explicit confirmation again when price or coins change'
       {
         productId,
         coins: 100,
+        ...presentation,
         price: '2,00 €',
         priceAmount: 1234.56,
         currencyCode: 'EUR',
@@ -401,6 +407,7 @@ test('requires load then explicit confirmation again when price or coins change'
       {
         productId,
         coins: 200,
+        ...presentation,
         price: '2,00 €',
         priceAmount: 1234.56,
         currencyCode: 'EUR',
@@ -779,6 +786,7 @@ test('valid maximum catalog and price bounds retain exact strings and project kn
     expect(state.offers[0]).toEqual({
       productId: 'synthetic_0',
       coins: 2147483647,
+      ...presentation,
       price: '€'.repeat(128),
     });
   }
@@ -861,6 +869,7 @@ test('checks session again before publishing a final result after the last depen
   const f = fixture();
   f.responses['/v1/purchases/status'] = credited;
   const wallet = {
+    getActivity: async () => ({ outcome: 'ok' as const, data: { entries: [], has_more: false } }),
     getWallet: async () => {
       void Promise.resolve().then(() =>
         Promise.resolve().then(() => setAuthSession({ credential: 'synthetic.replacement' })),

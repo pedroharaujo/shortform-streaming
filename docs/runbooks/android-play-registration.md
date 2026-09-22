@@ -32,6 +32,32 @@ configuration refreshed. A genuine purchase/recovery and Google sign-in/playback
 journey on the new package remain pending. Do not upload the old artifact below
 to the new app or treat historical device evidence as validation of Stovio.
 
+## Coin pack price tiers (D-041), 2026-09-22
+
+Django Admin now owns coins, bonus, badge and order for each pack (Admin →
+Commerce → Coin packs). Google Play owns only the price. Each tier below is one
+Play in-app product; Admin packs point to it by product ID. These are test
+tiers for the internal track; launch prices remain a D-008 decision.
+
+| Play product ID | Purchase option | France price | Local example pack |
+|---|---|---|---|
+| `coins_099` | `buy` | EUR 0.99 | 100 coins, "Quick top-up" |
+| `coins_499` | `buy` | EUR 4.99 | 500 + 10%, "Most popular" |
+| `coins_999` | `buy` | EUR 9.99 | 1,000 + 20%, "Best value" |
+| `coins_1999` | `buy` | EUR 19.99 | 2,000 + 50%, "Limited time" |
+
+Setup for each product, matching `test_coins_100`: Play Console → Stovio →
+Monetize with Play → Products → One-time products → Create; single quantity,
+backwards compatible, France only with the final displayed price above (check
+that bulk pricing did not add tax), then activate. Product IDs are permanent.
+
+Then in RevenueCat, import the four products for `com.stovio.app` (Products →
+Import); no entitlement or offering is needed. Finally add each ID to the
+server registry (`COIN_PURCHASE_PRODUCTS`, `approval_reference` `D-036`) with
+`coins` set to the base coins; that value is the minimum a purchase credits.
+Local design preview needs none of this: `manage.py seed_coin_packs` creates
+the example packs.
+
 ## Verified artifact, 2026-09-19
 
 An existing release bundle was revalidated and copied to a stable private

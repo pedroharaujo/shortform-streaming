@@ -71,7 +71,7 @@ export function AccountScreen({
   const [panel, setPanel] = useState<'overview' | 'privacy' | 'security' | 'help'>('overview');
   const [preferences, setPreferences] = useState<Pick<
     AccountPreferences,
-    'analytics_consent' | 'ads_consent'
+    'analytics_consent' | 'ads_consent' | 'auto_unlock_next'
   > | null>(null);
   const [profileRevision, setProfileRevision] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -176,8 +176,8 @@ export function AccountScreen({
           setLoading(false);
           return;
         }
-        const { analytics_consent, ads_consent } = result.data;
-        setPreferences({ analytics_consent, ads_consent });
+        const { analytics_consent, ads_consent, auto_unlock_next } = result.data;
+        setPreferences({ analytics_consent, ads_consent, auto_unlock_next });
         setProfileRevision(loadingRevision);
       } else {
         if (result.outcome === 'unauthenticated') await clearSession();
@@ -217,8 +217,8 @@ export function AccountScreen({
       sessionRevision: revision,
     });
     if (!requireSession(revision)) return;
-    const { analytics_consent, ads_consent } = result.data;
-    setPreferences({ analytics_consent, ads_consent });
+    const { analytics_consent, ads_consent, auto_unlock_next } = result.data;
+    setPreferences({ analytics_consent, ads_consent, auto_unlock_next });
     setProfileRevision(revision);
     setMessage(messages.account.preferencesSaved);
   }
@@ -327,6 +327,43 @@ export function AccountScreen({
           </View>
         ) : preferences !== null && !ended ? (
           <>
+            {panel === 'overview' ? (
+              <View style={panelStyles.card}>
+                <View style={styles.consent}>
+                  <View style={styles.autoUnlockCopy}>
+                    <Text style={styles.body}>{messages.account.autoUnlock}</Text>
+                    <Text style={styles.muted}>{messages.account.autoUnlockHint}</Text>
+                  </View>
+                  <Switch
+                    accessibilityLabel={messages.account.autoUnlock}
+                    disabled={busy}
+                    value={preferences.auto_unlock_next}
+                    onValueChange={(auto_unlock_next) => {
+                      void run(async () => {
+                        if (preferences === null) return;
+                        const previous = preferences;
+                        setPreferences({ ...previous, auto_unlock_next });
+                        const revision = sessionOwner.current;
+                        const result = await client.updatePreferences({ auto_unlock_next });
+                        if (!requireSession(revision)) return;
+                        if (result.outcome !== 'ok') {
+                          setPreferences(previous);
+                          await showFailure(result);
+                          return;
+                        }
+                        setPreferences({
+                          analytics_consent: result.data.analytics_consent,
+                          ads_consent: result.data.ads_consent,
+                          auto_unlock_next: result.data.auto_unlock_next,
+                        });
+                      });
+                    }}
+                    trackColor={{ false: colors.border, true: colors.accentSoft }}
+                    thumbColor={preferences.auto_unlock_next ? colors.accent : colors.muted}
+                  />
+                </View>
+              </View>
+            ) : null}
             {panel === 'overview' ? (
               <View style={styles.menu}>
                 {revision === profileRevision && getSessionCredential() !== null ? (
@@ -534,6 +571,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
+  autoUnlockCopy: { flex: 1, gap: spacing.xs },
   body: { color: colors.foreground, fontSize: fontSizes.body },
   notice: {
     backgroundColor: colors.surface,

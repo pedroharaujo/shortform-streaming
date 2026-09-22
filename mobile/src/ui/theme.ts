@@ -34,6 +34,10 @@ export const colors = {
   /** amber-600 */
   coinRim: '#d97706',
   coinInk: '#0a0a0c',
+  /** emerald-400 — coins credited to the wallet */
+  credit: '#34d399',
+  creditSoft: 'rgba(16, 185, 129, 0.1)',
+  creditRim: 'rgba(16, 185, 129, 0.2)',
   /** violet-600 — logo tile end stop */
   brandViolet: '#7c3aed',
   /** rose-500 — logo tile mid stop */

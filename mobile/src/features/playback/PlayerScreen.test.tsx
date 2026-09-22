@@ -149,6 +149,7 @@ function stubProgress(options?: {
 }): ProgressClient {
   return {
     get: async () => options?.get ?? missingProgress,
+    listContinue: async () => ({ outcome: 'ok', data: { items: [] } }),
     put: options?.put ?? (async (episodeId, body) => okPut(episodeId, body)),
   };
 }
@@ -366,6 +367,37 @@ describe('PlayerScreen', () => {
       true,
     );
     visibleHasSecrets(view);
+  });
+
+  it('plays the next episode after auto-unlock reports a completed debit', async () => {
+    let lockedChecks = 0;
+    const authorize = jest.fn(async (id: string): Promise<PlaybackRequestOutcome> => {
+      if (id === 'ep_harbor_6') {
+        lockedChecks += 1;
+        if (lockedChecks === 1) {
+          return { outcome: 'locked', lockReasons: ['entitlement_required'] };
+        }
+      }
+      return grantedAuthorize(id);
+    });
+    const tryUnlock = jest.fn(async () => 'unlocked' as const);
+    const view = await renderWithSafeArea(
+      <PlayerScreen
+        analytics={analyticsDouble()}
+        autoUnlock={{ tryUnlock }}
+        catalog={stubCatalog()}
+        episodeId="ep_harbor_1"
+        onClose={() => {}}
+        playback={stubPlayback(authorize)}
+        progress={stubProgress()}
+      />,
+    );
+
+    expect(await view.findByTestId('player-loaded')).toBeTruthy();
+    await userEvent.setup().press(view.getByTestId('player-simulate-end'));
+    await waitFor(() => expect(tryUnlock).toHaveBeenCalledWith('ep_harbor_6'));
+    expect(await view.findByText('Harbor Lights · Episode 6')).toBeTruthy();
+    expect(view.queryByTestId('player-locked')).toBeNull();
   });
 
   it('retries a failed completed PUT on end', async () => {

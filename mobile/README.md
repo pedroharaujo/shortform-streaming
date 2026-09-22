@@ -46,10 +46,10 @@ verifies AdMob server-side verification callbacks.
 
 ## Identity
 
-The MVP offers email/password and Google Sign-In. Catalog and free playback work anonymously;
-an account is required for persistent rewarded-ad unlocks; planned MVP coin
-purchases/unlocks use the same trusted-account boundary. Django trusts
-only verified Firebase ID tokens and never accepts client user IDs.
+The MVP offers email/password and Google Sign-In. Home and Wallet stay closed
+until that sign-in is accepted and the account profile loads (D-040). Watch
+history belongs to the signed-in account. Django trusts only verified Firebase
+ID tokens and never accepts client user IDs.
 
 Use a non-production Firebase project. For Google Sign-In, enable the Google
 provider, register the existing Android debug certificate's SHA-1, and place its

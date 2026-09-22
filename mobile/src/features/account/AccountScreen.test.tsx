@@ -27,6 +27,7 @@ const PROFILE = {
   country: '',
   analytics_consent: false,
   ads_consent: false,
+  auto_unlock_next: false,
   consent_updated_at: null,
 };
 
@@ -188,6 +189,21 @@ it('loads consent as off and writes only explicit preferences with the authentic
   expect(analyticsConsent.applyProfile).toHaveBeenLastCalledWith(
     expect.objectContaining({ profileId: 'usr_synthetic', analyticsConsent: true }),
   );
+});
+
+it('keeps auto-unlock off when the preference save fails', async () => {
+  const { view, requests } = await setup(
+    jsonResponse({ code: 'unavailable', message: 'Unavailable' }, 503),
+  );
+  const toggle = view.getByLabelText(englishMessages.account.autoUnlock);
+  expect(toggle).toHaveProp('value', false);
+  await fireEvent(toggle, 'valueChange', true);
+  await waitFor(() =>
+    expect(view.getByTestId('account-message')).toHaveTextContent(/could not be completed/),
+  );
+  expect(view.getByLabelText(englishMessages.account.autoUnlock)).toHaveProp('value', false);
+  expect(requests[1]?.method).toBe('PATCH');
+  expect(await requests[1]?.json()).toEqual({ auto_unlock_next: true });
 });
 
 it('keeps unsaved preferences after a failed save and permits retry', async () => {

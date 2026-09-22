@@ -26,8 +26,10 @@ export function createMeClient(options: MeClientOptions): MeClient {
   });
 
   return {
-    async getMe(): Promise<MeRequestOutcome> {
-      const headers = bearerHeaders(getCredential);
+    async getMe(credential?: string): Promise<MeRequestOutcome> {
+      const headers = bearerHeaders(() =>
+        credential !== undefined && credential !== '' ? credential : getCredential(),
+      );
       if (headers.Authorization === undefined) {
         return {
           outcome: 'unauthenticated',

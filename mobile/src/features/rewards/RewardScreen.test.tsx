@@ -91,6 +91,7 @@ async function setup(
         country: 'FR',
         ads_consent: adsConsent,
         analytics_consent: false,
+        auto_unlock_next: false,
         consent_updated_at: null,
       },
     })),

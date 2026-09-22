@@ -16,6 +16,7 @@ from apps.commerce.models import (
     PurchaseEvent,
     PurchaseIdentity,
 )
+from apps.commerce.packs import credited_coins
 from apps.commerce.verification import Event, digest
 from apps.wallet.models import CoinLedgerEntry, Wallet
 
@@ -119,8 +120,9 @@ def _decide(event: Event, *, conflict: bool) -> PurchaseDecision:
     if wallet.user_profile_id is None:
         return _quarantine(event, "unknown_or_deleted_owner")
     receipt_id = uuid4()
+    coins = credited_coins(product, event.purchased_at_ms)
     entry = CoinLedgerEntry.objects.create(
-        wallet=wallet, reference=receipt_id, kind="purchase", amount=product.coins
+        wallet=wallet, reference=receipt_id, kind="purchase", amount=coins
     )
     return PurchaseDecision.objects.create(
         id=receipt_id,
@@ -130,7 +132,7 @@ def _decide(event: Event, *, conflict: bool) -> PurchaseDecision:
         reason="verified_purchase",
         identity=identity,
         ledger_entry=entry,
-        coins=product.coins,
+        coins=coins,
         product_id=product.product_id,
         application_id=product.application_id,
         approval_reference=product.approval_reference,

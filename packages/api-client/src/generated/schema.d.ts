@@ -229,6 +229,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/progress/continue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List episodes to continue
+         * @description One resume row per series for the signed-in profile, or for the anonymous X-Device-Id when no token is sent. A partial episode is resumed. A finished episode advances to the next eligible episode that is not finished. Taken-down, unpublished and unknown titles are omitted. No playback URL is returned. Authenticated requests ignore X-Device-Id. A present invalid token is 401. Anonymous requests without a UUID device id are 400.
+         */
+        get: operations["v1_progress_continue_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/purchases/catalog": {
         parameters: {
             query?: never;
@@ -283,6 +303,26 @@ export interface paths {
          * @description Local test or RevenueCat sandbox mode only. The server binds the identity to an opaque wallet. No client identity or coin amount is accepted.
          */
         post: operations["v1_purchases_identity_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/purchases/packs/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Admin coin packs for the local design preview
+         * @description Local development with purchases disabled only. Returns live Django Admin packs without prices or store scope; nothing here can be purchased.
+         */
+        get: operations["v1_purchases_packs_preview_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -443,6 +483,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/wallet/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the authenticated account's recent coin activity
+         * @description Newest ledger lines for this account: purchases, episode unlocks and corrections. Each line includes the signed coin amount and the balance after that line. At most 20 lines are returned. No wallet id, profile id or provider payload is included. An unlock includes an episode title only while that episode remains catalog-eligible.
+         */
+        get: operations["v1_wallet_activity_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -516,6 +576,18 @@ export interface components {
             genres: string[];
             seasons: components["schemas"]["CatalogSeason"][];
         };
+        CoinPackOffer: {
+            product_id: string;
+            /** @description Total coins credited, bonus included. */
+            coins: number;
+            /** @description Bonus coins as a whole percent of base coins. */
+            bonus_percent: number;
+            badge: string;
+            highlighted: boolean;
+        };
+        CoinPackPreview: {
+            packs: components["schemas"]["CoinPackOffer"][];
+        };
         CoinUnlock: {
             episode_id: string;
             /** Format: uuid */
@@ -546,6 +618,21 @@ export interface components {
          * @enum {string}
          */
         CoinUnlockResolutionStatusEnum: "completed" | "cancelled";
+        ContinueWatching: {
+            items: components["schemas"]["ContinueWatchingItem"][];
+        };
+        ContinueWatchingItem: {
+            /** @description Opaque series public id. */
+            series_id: string;
+            series_title: string;
+            artwork_url: string | null;
+            /** @description Opaque episode public id. */
+            episode_id: string;
+            episode_title: string;
+            episode_order: number;
+            position_seconds: number;
+            duration_seconds: number;
+        };
         CurrentUserProfile: {
             /** @description Opaque profile public id. Sequential database integers are never used. */
             public_id: string;
@@ -557,6 +644,7 @@ export interface components {
             country: string;
             analytics_consent: boolean;
             ads_consent: boolean;
+            auto_unlock_next: boolean;
             /** Format: date-time */
             consent_updated_at: string | null;
         };
@@ -654,6 +742,13 @@ export interface components {
          */
         HealthStatusStatusEnum: "ok" | "unavailable";
         /**
+         * @description * `purchase` - purchase
+         *     * `unlock` - unlock
+         *     * `correction` - correction
+         * @enum {string}
+         */
+        KindEnum: "purchase" | "unlock" | "correction";
+        /**
          * @description * `en` - en
          * @enum {string}
          */
@@ -686,6 +781,7 @@ export interface components {
             country?: string;
             analytics_consent?: boolean;
             ads_consent?: boolean;
+            auto_unlock_next?: boolean;
         };
         PlaybackAuthorizeGranted: {
             /**
@@ -782,7 +878,12 @@ export interface components {
         };
         PurchaseProduct: {
             product_id: string;
+            /** @description Total coins credited, bonus included. */
             coins: number;
+            /** @description Bonus coins as a whole percent of base coins. */
+            bonus_percent: number;
+            badge: string;
+            highlighted: boolean;
             product_type: components["schemas"]["ProductTypeEnum"];
             store: components["schemas"]["StoreEnum"];
             environment: components["schemas"]["EnvironmentEnum"];
@@ -864,6 +965,22 @@ export interface components {
             /** Format: int64 */
             balance: number;
             spending_available: boolean;
+        };
+        WalletActivity: {
+            entries: components["schemas"]["WalletActivityEntry"][];
+            has_more: boolean;
+        };
+        WalletActivityEntry: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["KindEnum"];
+            amount: number;
+            /** Format: int64 */
+            balance_after: number;
+            /** Format: date-time */
+            created_at: string;
+            episode_id: string | null;
+            episode_title: string | null;
         };
         WatchProgress: {
             /** @description Opaque episode public id. */
@@ -1428,6 +1545,46 @@ export interface operations {
             };
         };
     };
+    v1_progress_continue_retrieve: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Anonymous device UUID (36-character hyphenated form). Required when no Authorization header is present. Ignored when a verified profile is present. Never a user id, profile public id, or Firebase UID. */
+                "X-Device-Id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContinueWatching"];
+                };
+            };
+            /** @description Unknown or unavailable public id. Does not confirm whether the id exists. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     v1_purchases_catalog_create: {
         parameters: {
             query?: never;
@@ -1560,6 +1717,52 @@ export interface operations {
                 };
             };
             /** @description Coin purchases are disabled or unavailable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_purchases_packs_preview_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoinPackPreview"];
+                };
+            };
+            /** @description Invalid or unexpected purchase lookup fields. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Coin purchases or the requested catalog are unavailable. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1934,6 +2137,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Wallet"];
+                };
+            };
+            /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    v1_wallet_activity_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletActivity"];
                 };
             };
             /** @description Missing, malformed, expired, revoked, or otherwise unverifiable Firebase ID token. The response never includes the token or firebase_uid. */

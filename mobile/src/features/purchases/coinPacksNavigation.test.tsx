@@ -29,9 +29,40 @@ jest.mock('expo-router', () => ({
     }, [callback]);
   },
 }));
-const mockWallet = { getWallet: jest.fn(), unlock: jest.fn(), resolve: jest.fn() };
+const mockWallet = {
+  getActivity: jest.fn(),
+  getWallet: jest.fn(),
+  unlock: jest.fn(),
+  resolve: jest.fn(),
+};
+jest.mock('../auth/AppSignInScreen', () => ({
+  AppSignInScreen: () => {
+    const { View } = jest.requireActual('react-native');
+    return <View testID="sign-in-screen" />;
+  },
+}));
+function mockPack(
+  productId: string,
+  coins: number,
+  bonusPercent: number,
+  badge: string,
+  highlighted: boolean,
+) {
+  return { productId, coins, bonusPercent, badge, highlighted };
+}
 jest.mock('../../api/createAppClients', () => ({
   createAppWalletClient: () => mockWallet,
+  createAppPackPreviewClient: () => ({
+    getPacks: async () => ({
+      outcome: 'ok',
+      data: [
+        mockPack('coins_099', 100, 0, 'Quick top-up', false),
+        mockPack('coins_499', 550, 10, 'Most popular', false),
+        mockPack('coins_999', 1200, 20, 'Best value', true),
+        mockPack('coins_1999', 3000, 50, 'Limited time', true),
+      ],
+    }),
+  }),
   createAppMeClient: () => ({
     getMe: async () => ({ outcome: 'ok', data: { public_id: 'usr_preview' } }),
   }),
@@ -53,25 +84,33 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
-it('previews pack selection, cancellation and completion without constructing a checkout coordinator', async () => {
+it('previews Admin packs with example prices, selection, cancellation and completion without constructing a checkout coordinator', async () => {
   mockPreviewEnabled = true;
   setAuthSession({ credential: 'mock.preview-owner' });
   const view = await renderWithSafeArea(<CoinsRoute />);
   const copy = englishMessages.purchasePreview;
-  expect(view.getByText(copy.notice)).toBeTruthy();
   await waitFor(() => expect(view.getByTestId('wallet-balance')).toHaveTextContent('25 coins'));
-  expect(view.getByRole('button', { name: englishMessages.coinStore.selectPack })).toBeDisabled();
-  expect(view.getByText(englishMessages.coinStore.bestValue)).toBeTruthy();
-  await fireEvent.press(view.getByRole('radio', { name: copy.packLabel(500, '\u20ac4.99') }));
+  expect(view.queryByRole('radio')).toBeNull();
+  await fireEvent.press(view.getByRole('button', { name: englishMessages.wallet.topUp }));
+  expect(view.queryByText(copy.badge)).toBeNull();
+  expect(
+    await view.findByRole('button', { name: englishMessages.coinStore.selectPack }),
+  ).toBeDisabled();
+  for (const badge of ['Quick top-up', 'Most popular', 'Best value', 'Limited time'])
+    expect(view.getByText(badge)).toBeTruthy();
+  expect(view.getByText(englishMessages.coinStore.moreCoins(10))).toBeTruthy();
+  expect(view.getByText(englishMessages.coinStore.moreCoins(20))).toBeTruthy();
+  expect(view.getByText(englishMessages.coinStore.moreCoins(50))).toBeTruthy();
+  await fireEvent.press(view.getByRole('radio', { name: copy.packLabel(550, '\u20ac4.99') }));
   await fireEvent.press(
-    view.getByRole('button', { name: englishMessages.coinStore.previewBuy(500, '\u20ac4.99') }),
+    view.getByRole('button', { name: englishMessages.coinStore.previewBuy(550, '\u20ac4.99') }),
   );
   expect(view.getByRole('header', { name: copy.confirmation })).toBeTruthy();
-  expect(view.getByText('500 coins')).toBeTruthy();
+  expect(view.getByText('550 coins')).toBeTruthy();
   await fireEvent.press(view.getByRole('button', { name: copy.cancel }));
   expect(view.queryByRole('header', { name: copy.confirmation })).toBeNull();
   await fireEvent.press(
-    view.getByRole('button', { name: englishMessages.coinStore.previewBuy(500, '\u20ac4.99') }),
+    view.getByRole('button', { name: englishMessages.coinStore.previewBuy(550, '\u20ac4.99') }),
   );
   await fireEvent.press(view.getByRole('button', { name: copy.simulate }));
   expect(view.getByText(copy.completeDescription)).toBeTruthy();
@@ -96,27 +135,28 @@ it('loads once on initial focus, preserves episode navigation and rebinds after 
   };
   jest.mocked(createAppCheckoutCoordinator).mockReturnValue(first);
   const view = await renderWithSafeArea(<CoinsRoute />);
+  await waitFor(() => expect(view.getByTestId('wallet-balance')).toBeOnTheScreen());
+  expect(first.load).not.toHaveBeenCalled();
+  await fireEvent.press(view.getByTestId('wallet-top-up'));
   await waitFor(() => expect(first.load).toHaveBeenCalledTimes(1));
   expect(createAppCheckoutCoordinator).toHaveBeenCalledTimes(1);
+  await fireEvent.press(view.getByTestId('wallet-packs-close'));
+  expect(view.queryByTestId('coin-packs-screen')).toBeNull();
   await fireEvent.press(view.getByLabelText(englishMessages.common.back));
   expect(router.replace).toHaveBeenLastCalledWith('/');
-  await fireEvent.press(view.getByLabelText(englishMessages.common.account));
-  expect(router.push).toHaveBeenLastCalledWith({ pathname: '/account', params: mockParams });
-  await act(() => setAuthSession(null));
-  await fireEvent.press(view.getByLabelText(englishMessages.common.signIn));
-  expect(router.push).toHaveBeenLastCalledWith({ pathname: '/sign-in', params: mockParams });
-  await fireEvent.press(view.getByLabelText(englishMessages.purchases.title));
-  expect(router.push).toHaveBeenLastCalledWith({ pathname: '/purchases', params: mockParams });
   await fireEvent.press(view.getByLabelText(englishMessages.wallet.backToEpisode));
   expect(router.dismissTo).toHaveBeenLastCalledWith({
     pathname: '/unlock/[id]',
     params: { id: 'ep_synthetic' },
   });
+  await act(() => setAuthSession(null));
+  expect(view.getByTestId('sign-in-screen')).toBeTruthy();
+  expect(view.queryByTestId('wallet-balance')).toBeNull();
 
   const returned: CheckoutCoordinator = {
     load: jest.fn().mockResolvedValue({
       status: 'ready',
-      offers: [{ productId: 'coins_synthetic', coins: 25, price: 'EUR 0.99' }],
+      offers: [{ ...mockPack('coins_synthetic', 25, 0, '', false), price: 'EUR 0.99' }],
     }),
     purchase: jest.fn(),
     sync: jest.fn(),
@@ -126,6 +166,7 @@ it('loads once on initial focus, preserves episode navigation and rebinds after 
     setAuthSession({ credential: 'mock.other-purchase-navigation' });
     mockFocus();
   });
+  await fireEvent.press(await view.findByTestId('wallet-top-up'));
   await waitFor(() => expect(view.getByText('EUR 0.99')).toBeOnTheScreen());
   expect(returned.load).toHaveBeenCalledTimes(1);
   expect(createAppCheckoutCoordinator).toHaveBeenCalledTimes(2);
@@ -140,7 +181,7 @@ it('refreshes the unified balance from the server after verification, never from
   const coordinator: CheckoutCoordinator = {
     load: jest.fn().mockResolvedValue({
       status: 'ready',
-      offers: [{ productId: 'coins_test', coins: 100, price: 'EUR 0.99' }],
+      offers: [{ ...mockPack('coins_test', 100, 0, '', false), price: 'EUR 0.99' }],
     }),
     purchase: jest.fn().mockResolvedValue({
       status: 'credited',
@@ -153,6 +194,7 @@ it('refreshes the unified balance from the server after verification, never from
   jest.mocked(createAppCheckoutCoordinator).mockReturnValue(coordinator);
   const view = await renderWithSafeArea(<CoinsRoute />);
   await waitFor(() => expect(view.getByTestId('wallet-balance')).toHaveTextContent('25 coins'));
+  await fireEvent.press(view.getByTestId('wallet-top-up'));
   await fireEvent.press(await view.findByRole('radio', { name: '100 coins · EUR 0.99' }));
   expect(coordinator.purchase).not.toHaveBeenCalled();
   mockWallet.getWallet.mockResolvedValue({
@@ -173,7 +215,8 @@ it('does not create checkout or expose preview packs for a signed-out visit', as
   mockPreviewEnabled = true;
   setAuthSession(null);
   const view = await renderWithSafeArea(<CoinsRoute />);
-  expect(await view.findByText(englishMessages.wallet.signIn)).toBeOnTheScreen();
+  expect(await view.findByTestId('sign-in-screen')).toBeTruthy();
+  expect(view.queryByTestId('bottom-nav')).toBeNull();
   expect(view.queryAllByRole('radio')).toHaveLength(0);
   expect(mockWallet.getWallet).not.toHaveBeenCalled();
   expect(createAppCheckoutCoordinator).not.toHaveBeenCalled();

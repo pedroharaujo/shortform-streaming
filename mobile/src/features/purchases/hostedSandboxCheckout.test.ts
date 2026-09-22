@@ -73,6 +73,9 @@ beforeEach(() => {
         {
           product_id: productId,
           coins: 100,
+          bonus_percent: 0,
+          badge: '',
+          highlighted: false,
           product_type: 'consumable',
           store: 'PLAY_STORE',
           environment: 'SANDBOX',
@@ -105,7 +108,18 @@ test('staging Android release reaches verified sandbox checkout through the app 
   const checkout = createAppCheckoutCoordinator();
   expect(await checkout.load()).toEqual({
     status: 'ready',
-    offers: [{ productId, coins: 100, price: '€1.99', priceAmount: 1.99, currencyCode: 'EUR' }],
+    offers: [
+      {
+        productId,
+        coins: 100,
+        bonusPercent: 0,
+        badge: '',
+        highlighted: false,
+        price: '€1.99',
+        priceAmount: 1.99,
+        currencyCode: 'EUR',
+      },
+    ],
   });
   expect(await checkout.purchase(productId)).toEqual({
     status: 'credited',

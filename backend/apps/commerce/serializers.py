@@ -67,9 +67,23 @@ class PurchaseRecoveryRequestSerializer(PurchaseProductRequestSerializer):
     )
 
 
-class PurchaseProductSerializer(serializers.Serializer[Mapping[str, object]]):
+class CoinPackOfferSerializer(serializers.Serializer[Mapping[str, object]]):
     product_id = serializers.CharField(max_length=128)
-    coins = serializers.IntegerField(min_value=1, max_value=2147483647)
+    coins = serializers.IntegerField(
+        min_value=1, max_value=2147483647, help_text="Total coins credited, bonus included."
+    )
+    bonus_percent = serializers.IntegerField(
+        min_value=0, max_value=200, help_text="Bonus coins as a whole percent of base coins."
+    )
+    badge = serializers.CharField(max_length=24, allow_blank=True)
+    highlighted = serializers.BooleanField()
+
+
+class CoinPackPreviewSerializer(serializers.Serializer[Mapping[str, object]]):
+    packs = CoinPackOfferSerializer(many=True)
+
+
+class PurchaseProductSerializer(CoinPackOfferSerializer):
     product_type = serializers.ChoiceField(choices=["consumable"])
     store = serializers.ChoiceField(choices=["PLAY_STORE"])
     environment = serializers.ChoiceField(choices=["SANDBOX"])

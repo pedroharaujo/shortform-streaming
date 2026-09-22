@@ -22,9 +22,18 @@ jest.mock('expo-router', () => ({
     }, [callback]);
   },
 }));
+jest.mock('../auth/AppSignInScreen', () => ({
+  AppSignInScreen: () => {
+    const { View } = jest.requireActual('react-native');
+    return <View testID="sign-in-screen" />;
+  },
+}));
 jest.mock('../../api/createAppClients', () => ({
   createAppCatalogClient: () => ({ getHome: async () => ({ outcome: 'ok', data: { rails: [] } }) }),
-  createAppWalletClient: () => ({ getWallet: mockGetWallet }),
+  createAppProgressClient: () => ({
+    listContinue: async () => ({ outcome: 'ok', data: { items: [] } }),
+  }),
+  createAppWalletClient: () => ({ getWallet: mockGetWallet, getActivity: jest.fn() }),
 }));
 
 const wallet = (balance: number): WalletOutcome<Wallet> => ({
@@ -49,23 +58,23 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 
-it('replaces Sign in with account access after login, session restore, and logout without remounting', async () => {
+it('shows only the sign-in gate until login, then Home with its menu, and again after logout', async () => {
   setAuthSession(null);
   const view = await render(<HomeRoute />);
-  await fireEvent.press(view.getByRole('button', { name: 'Sign in' }));
-  expect(router.push).toHaveBeenLastCalledWith('/sign-in');
-  expect(view.queryByTestId('home-profile')).toBeNull();
-  expect(view.queryByTestId('home-wallet')).toBeNull();
+  expect(view.getByTestId('sign-in-screen')).toBeTruthy();
+  expect(view.queryByTestId('home-screen')).toBeNull();
+  expect(view.queryByTestId('bottom-nav')).toBeNull();
   expect(mockGetWallet).not.toHaveBeenCalled();
 
   await act(() => setAuthSession({ credential: 'mock.synthetic-login' }));
+  expect(view.queryByTestId('sign-in-screen')).toBeNull();
   expect(view.queryByRole('button', { name: 'Sign in' })).toBeNull();
   await fireEvent.press(view.getByRole('button', { name: 'Account' }));
   expect(router.push).toHaveBeenLastCalledWith('/account');
 
   await act(() => setAuthSession(null));
-  expect(view.getByRole('button', { name: 'Sign in' })).toBeTruthy();
-  expect(view.queryByTestId('home-profile')).toBeNull();
+  expect(view.getByTestId('sign-in-screen')).toBeTruthy();
+  expect(view.queryByTestId('bottom-nav')).toBeNull();
   expect(view.queryByTestId('home-wallet')).toBeNull();
 
   const revision = getAuthSessionRevision();
@@ -78,7 +87,7 @@ it('replaces Sign in with account access after login, session restore, and logou
     ).toBe(true);
   });
   expect(getAuthSessionRevision()).toBe(revision);
-  expect(view.queryByRole('button', { name: 'Sign in' })).toBeNull();
+  expect(view.queryByTestId('sign-in-screen')).toBeNull();
   await fireEvent.press(view.getByTestId('home-profile'));
   expect(router.push).toHaveBeenLastCalledWith('/account');
 });

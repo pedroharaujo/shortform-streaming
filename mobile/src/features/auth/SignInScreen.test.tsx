@@ -1,4 +1,4 @@
-import { act, render, userEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, userEvent, waitFor } from '@testing-library/react-native';
 
 import type { MeClient } from '../../api/me/types';
 import type { AccountAnalytics } from '../../analytics/accountAnalytics';
@@ -18,6 +18,7 @@ const PROFILE = {
   country: '',
   analytics_consent: false,
   ads_consent: false,
+  auto_unlock_next: false,
   consent_updated_at: null,
 };
 
@@ -58,6 +59,19 @@ function accountAnalyticsDouble(): jest.Mocked<AccountAnalytics> {
   };
 }
 
+async function completePasswordSteps(
+  view: Awaited<ReturnType<typeof render>>,
+  start: 'sign-in-start-create' | 'sign-in-start-login',
+  email: string,
+  password: string,
+): Promise<void> {
+  await fireEvent.press(view.getByTestId(start));
+  await fireEvent.changeText(view.getByTestId('sign-in-email'), email);
+  await fireEvent.press(view.getByTestId('sign-in-continue'));
+  await fireEvent.changeText(view.getByTestId('sign-in-password'), password);
+  await fireEvent.press(view.getByTestId('sign-in-submit'));
+}
+
 describe('SignInScreen', () => {
   afterEach(async () => {
     await act(() => setAuthSession(null));
@@ -69,7 +83,6 @@ describe('SignInScreen', () => {
     const analytics = accountAnalyticsDouble();
     const analyticsConsent = analyticsConsentDouble();
     const onFinished = jest.fn();
-    const user = userEvent.setup();
     const view = await render(
       <SignInScreen
         auth={auth}
@@ -80,12 +93,10 @@ describe('SignInScreen', () => {
       />,
     );
 
-    await user.type(view.getByTestId('sign-in-email'), 'user@example.com');
-    await user.type(view.getByTestId('sign-in-password'), 'correct-horse');
-    await user.press(view.getByTestId('sign-in-submit'));
+    await completePasswordSteps(view, 'sign-in-start-login', 'user@example.com', 'correct-horse');
 
-    await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
-    expect(getSessionCredential()).toBe('mock.user_example_com');
+    await waitFor(() => expect(getSessionCredential()).toBe('mock.user_example_com'));
+    expect(getMe).toHaveBeenCalledWith('mock.user_example_com');
     expect(getSessionCredential()).not.toContain('usr_from_server');
     expect(analyticsConsent.clear).toHaveBeenCalledTimes(1);
     expect(analyticsConsent.applyProfile).toHaveBeenCalledWith({
@@ -103,7 +114,7 @@ describe('SignInScreen', () => {
 
   it('records password sign-up only after the new account is confirmed by /v1/me', async () => {
     const auth = createLocalMockFirebaseAuth();
-    const { getMe, meClient } = okMeClient();
+    const { meClient } = okMeClient();
     const analytics = accountAnalyticsDouble();
     const user = userEvent.setup();
     const view = await render(
@@ -116,16 +127,80 @@ describe('SignInScreen', () => {
       />,
     );
 
-    await user.type(view.getByTestId('sign-in-email'), 'new@example.com');
-    await user.type(view.getByTestId('sign-in-password'), 'correct-horse');
-    await user.press(view.getByTestId('sign-in-create'));
-
-    await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
-    expect(analytics.recordAuthentication).toHaveBeenCalledWith(
-      'sign_up',
-      'password',
-      getAuthSessionRevision(),
+    await user.press(view.getByTestId('sign-in-start-create'));
+    await user.type(view.getByTestId('sign-in-email'), 'not-an-email');
+    await user.press(view.getByTestId('sign-in-continue'));
+    expect(view.getByTestId('sign-in-message')).toHaveTextContent(
+      englishMessages.auth.invalidEmail,
     );
+    expect(view.queryByTestId('sign-in-password')).toBeNull();
+
+    await user.clear(view.getByTestId('sign-in-email'));
+    await user.type(view.getByTestId('sign-in-email'), 'new@example.com');
+    await user.press(view.getByTestId('sign-in-continue'));
+    expect(view.getByText('new@example.com')).toBeTruthy();
+    await user.type(view.getByTestId('sign-in-password'), 'correct-horse');
+    await user.press(view.getByTestId('sign-in-submit'));
+
+    await waitFor(() =>
+      expect(analytics.recordAuthentication).toHaveBeenCalledWith(
+        'sign_up',
+        'password',
+        getAuthSessionRevision(),
+      ),
+    );
+  });
+
+  it('keeps the sign-in form open when the account service rejects the new session', async () => {
+    const auth = createLocalMockFirebaseAuth();
+    const onFinished = jest.fn();
+    const view = await render(
+      <SignInScreen
+        auth={auth}
+        analytics={accountAnalyticsDouble()}
+        analyticsConsent={analyticsConsentDouble()}
+        meClient={{
+          getMe: async () => ({
+            outcome: 'unauthenticated',
+            httpStatus: 401,
+            code: 'unauthenticated',
+            message: 'Authentication is required.',
+          }),
+        }}
+        onFinished={onFinished}
+      />,
+    );
+
+    await completePasswordSteps(view, 'sign-in-start-login', 'viewer@stovio.test', 'StovioLocal1!');
+
+    expect(await view.findByText(englishMessages.auth.profileFailed)).toBeTruthy();
+    expect(getSessionCredential()).toBeNull();
+    expect(onFinished).not.toHaveBeenCalled();
+    expect(view.getByTestId('sign-in-screen')).toBeTruthy();
+  });
+
+  it('keeps the password step open with a plain message when the password is wrong', async () => {
+    const auth = createLocalMockFirebaseAuth();
+    await auth.signUp('user@example.com', 'correct-horse');
+    await auth.signOut();
+    const { getMe, meClient } = okMeClient();
+    const view = await render(
+      <SignInScreen
+        auth={auth}
+        analytics={accountAnalyticsDouble()}
+        analyticsConsent={analyticsConsentDouble()}
+        meClient={meClient}
+        onFinished={jest.fn()}
+      />,
+    );
+
+    await completePasswordSteps(view, 'sign-in-start-login', 'user@example.com', 'wrong-horse');
+
+    expect(await view.findByText(englishMessages.auth.loginFailed)).toBeTruthy();
+    expect(view.queryByText('Email or password is incorrect.')).toBeNull();
+    expect(view.getByTestId('sign-in-password')).toBeTruthy();
+    expect(getMe).not.toHaveBeenCalled();
+    expect(getSessionCredential()).toBeNull();
   });
 
   it('signs out and clears the session credential', async () => {
@@ -153,7 +228,7 @@ describe('SignInScreen', () => {
 
   it('classifies first-time Google as sign-up without sending a backend user id', async () => {
     const auth = createLocalMockFirebaseAuth();
-    const { getMe, meClient } = okMeClient();
+    const { meClient } = okMeClient();
     const analytics = accountAnalyticsDouble();
     const analyticsConsent = analyticsConsentDouble();
     const onFinished = jest.fn();
@@ -171,8 +246,7 @@ describe('SignInScreen', () => {
     expect(view.queryByLabelText('Sign in with Apple')).toBeNull();
     await user.press(view.getByTestId('sign-in-google'));
 
-    await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
-    expect(getSessionCredential()).toBe('mock.google_user');
+    await waitFor(() => expect(getSessionCredential()).toBe('mock.google_user'));
     expect(getSessionCredential()).not.toContain('usr_from_server');
     expect(analytics.recordAuthentication).toHaveBeenCalledWith(
       'sign_up',
@@ -400,13 +474,8 @@ describe('SignInScreen', () => {
       auth: {
         ...englishMessages.auth,
         createAccount: 'Create a new account using this email address and password',
-        description:
-          'Sign in with deliberately long English interface copy that still leaves every primary action reachable.',
+        haveAccount: 'I already have an account and want to sign in with it on this device',
         signInGoogle: 'Continue by signing in with the Google account on this Android device',
-      },
-      common: {
-        ...englishMessages.common,
-        signIn: 'Sign in securely with this email address and password',
       },
     };
     const view = await renderWithSafeArea(
@@ -421,14 +490,19 @@ describe('SignInScreen', () => {
     );
 
     expect(view.getByTestId('sign-in-scroll')).toBeTruthy();
-    expect(view.getByRole('header', { name: longMessages.auth.title })).toBeTruthy();
-    expect(view.getByLabelText(longMessages.common.signIn)).toHaveStyle({
-      minHeight: minimumTouchTarget,
-    });
-    expect(view.getByLabelText(longMessages.auth.signInGoogle)).toHaveStyle({
-      minHeight: minimumTouchTarget,
-    });
-    expect(view.getByLabelText(longMessages.auth.email)).toHaveStyle({
+    expect(view.getByRole('header', { name: longMessages.catalog.brand })).toBeTruthy();
+    for (const label of [
+      longMessages.auth.createAccount,
+      longMessages.auth.haveAccount,
+      longMessages.auth.signInGoogle,
+    ]) {
+      expect(view.getByLabelText(label)).toHaveStyle({ minHeight: minimumTouchTarget });
+    }
+
+    await userEvent.setup().press(view.getByTestId('sign-in-start-login'));
+    expect(view.getByTestId('sign-in-scroll')).toBeTruthy();
+    expect(view.getByLabelText(longMessages.auth.email)).toHaveStyle({ minHeight: 60 });
+    expect(view.getByTestId('sign-in-continue')).toHaveStyle({
       minHeight: minimumTouchTarget,
     });
   });

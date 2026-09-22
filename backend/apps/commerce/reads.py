@@ -7,6 +7,7 @@ from apps.accounts.models import UserProfile
 from apps.accounts.profiles import lock_current_profile
 from apps.commerce.configuration import products, purchases_enabled
 from apps.commerce.models import ApplicationBinding, PurchaseDecision, PurchaseEvent
+from apps.commerce.packs import catalog_offers
 from apps.commerce.services import PurchaseUnavailable
 from apps.commerce.verification import digest
 
@@ -58,17 +59,10 @@ def purchase_catalog(profile: UserProfile, *, application_id: str) -> list[dict[
             .exists()
         ):
             raise PurchaseUnavailable()
-        return [
-            {
-                "product_id": product.product_id,
-                "coins": product.coins,
-                "product_type": product.product_type,
-                "store": product.store,
-                "environment": product.environment,
-                "price_source": product.price_source,
-            }
-            for product in selected
-        ]
+        offers = catalog_offers(selected)
+        if not offers:
+            raise PurchaseUnavailable()
+        return offers
 
 
 def purchase_status(
