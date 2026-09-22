@@ -376,30 +376,57 @@ second-episode unlock prompt. The founder then completed an approved Google Play
 test-card purchase followed by an always-decline attempt on the physical phone.
 Read-only hosted checks confirm one consistent 100-coin credit, one credited
 Stovio purchase decision, no quarantine and no unlock debit; the displayed balance
-remained 100. Hosted unlock/replay, interrupted/pending purchase recovery, refunds
-and sandbox callback setup remain outstanding. Physical testing exposed the
+remained 100 at that point. The subsequent hosted notification/refund checks
+are recorded below; interrupted/pending device recovery remains outstanding. Physical testing exposed the
 version-2 unlock route's local-only capability gate. Fixed it for Android staging
 with validated sandbox configuration, retained server authority and production
 blocking, and added a route-level regression. All 531 mobile tests and ten GitHub
 checks passed on `3b8d862`. Signed version 3 passed artifact verification and is
-available on the existing Play internal track; the founder's physical update and
-unlock/replay retest are pending. The wallet still contains 100 coins with no
-unlock deduction. The GitHub staging deployment
+available on the existing Play internal track. The founder subsequently confirmed
+unlocking episode 2 for one coin, playing it and replaying it after leaving and
+reopening the player. Read-only hosted accounting confirms one 100-coin credit,
+one one-coin debit, a 99-coin balance and one consistent durable episode-2 unlock
+receipt, with no extra replay deduction or quarantined purchase decision. The
+founder then confirmed fully closing and reopening Stovio and playing episode 2
+without another unlock. Physical restart/replay persistence now passes; the
+99-coin accounting result predates that final restart, and no new balance reading
+was supplied in the restart confirmation.
+The GitHub staging deployment
 remains a post-review merge gate;
 the direct live checks do not claim that workflow ran. The emulator's
 precise rejection cause remains unknown. See the hosted release runbook for
 artifact identity and open gates.
 
+The existing RevenueCat callback now uses the hosted consumer URL and the name
+**Stovio hosted sandbox lifecycle**, preserving its credentials, HMAC and
+sandbox/single-app/event filters. Provider TEST delivery and retry of the genuine
+purchase succeeded; client verification plus later notification still produced
+only one credit. A genuine no-charge sandbox refund reached the hosted server and
+created refund review. Repeated live-provider synchronization/recovery preserved
+that review, the original credit and saved episode unlock. Balance after the
+refund remained 99. This does not approve automatic commercial compensation under
+D-008. All 769 backend tests and 135 focused mobile recovery tests passed. See the
+[hosted release evidence](hosted-android-test-release.md) for exact scope and limits.
+
 ### Outstanding work
 
-1. Complete interrupted-purchase recovery, reinstall/account isolation and
-   genuine refund/callback validation. The basic new-package sandbox purchase,
+The 2026-09-22 delayed-payment device test failed: Play processed then refunded
+the new no-charge test order, while RevenueCat/hosted accounting received no new
+credit. Google's subsequent cancellation email confirms missing acknowledgment.
+The approved Stovio Pub/Sub connection now passes a Play-to-RevenueCat
+test notification. A reviewed local restart fix passes 142 purchase tests, but
+unknown-attempt correlation and terminal-state resolution still block launch and
+the next meaningful device retest. It is not deployed in the installed build.
+See the [delayed-payment evidence](hosted-android-test-release.md#delayed-payment-failure-and-notification-connection--2026-09-22).
+
+1. Complete interrupted-purchase recovery, reinstall/account isolation and the
+   remaining callback/refund matrix (including refund before credit and outages). The basic new-package sandbox purchase,
    credit, unlock and post-credit restart/replay checks above passed.
    Production purchases and coin spending remain disabled; the supervised local
    debug environment and protected hosted test service allow sandbox validation.
-2. Repeat the journey on a physical Android device with the intended store-signed
-   release and hosted test backend; finish the remaining P6-T03 device, privacy
-   and release checks. The local debug/emulator result is not release sign-off.
+2. Finish the remaining P6-T03 physical-device, privacy and release checks. The
+   basic hosted physical journey through purchase, unlock and restart/replay has
+   passed as recorded above; it does not establish complete release sign-off.
 3. Old Play, staging and Firebase are in their provider recovery periods;
    retirement actions are complete. Preserve required financial evidence and
    the private sandbox-purchase backup. Old Play recovery ends 2026-09-28.

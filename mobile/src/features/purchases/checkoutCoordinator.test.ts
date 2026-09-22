@@ -202,6 +202,94 @@ test('native unknown result survives restart and never infers credit or retries 
   expect(records.size).toBe(1);
 });
 
+test.each(['load', 'sync'] as const)(
+  'restarts the native provider for a pending payment during %s without another charge',
+  async (operation) => {
+    const f = nativeFixture();
+    await f.controller.load();
+    f.provider.purchase.mockResolvedValue({ ...f.nativeScope, outcome: 'pending' });
+    await f.controller.purchase(f.nativeScope.productId);
+    const saved = [...records.values()];
+    f.provider.prepare.mockClear();
+    f.provider.getOffers.mockClear();
+    f.fetcher.mockClear();
+    const restarted = createCheckoutCoordinator(f.dependencies);
+
+    expect(await restarted[operation]()).toEqual({ status: 'awaiting_verification' });
+    expect(f.provider.prepare).toHaveBeenCalledWith({
+      ownerId: owner,
+      applicationId: f.nativeScope.applicationId,
+    });
+    expect(f.provider.getOffers).not.toHaveBeenCalled();
+    expect(f.provider.purchase).toHaveBeenCalledTimes(1);
+    expect([...records.values()]).toEqual(saved);
+    expect(
+      f.fetcher.mock.calls.some(([input]) => /\/(sync|recover)$/.test(requestUrl(input))),
+    ).toBe(false);
+  },
+);
+
+test.each(['load', 'sync'] as const)(
+  'pending %s stops when the session changes while reconnecting the store',
+  async (operation) => {
+    const f = nativeFixture();
+    await f.controller.load();
+    f.provider.purchase.mockResolvedValue({ ...f.nativeScope, outcome: 'pending' });
+    await f.controller.purchase(f.nativeScope.productId);
+    const saved = [...records.values()];
+    f.fetcher.mockClear();
+    f.provider.prepare.mockImplementation(async () => {
+      setAuthSession({ credential: 'synthetic.other-owner' });
+      return { ownerId: owner, applicationId: f.nativeScope.applicationId };
+    });
+    const restarted = createCheckoutCoordinator(f.dependencies);
+    expect(await restarted[operation]()).toEqual({ status: 'session_changed' });
+    expect([...records.values()]).toEqual(saved);
+    expect(f.provider.purchase).toHaveBeenCalledTimes(1);
+    expect(
+      f.fetcher.mock.calls.some(([input]) => /\/(sync|recover)$/.test(requestUrl(input))),
+    ).toBe(false);
+  },
+);
+
+test.each(['load', 'sync'] as const)(
+  'pending %s refuses a store prepared for another owner',
+  async (operation) => {
+    const f = nativeFixture();
+    await f.controller.load();
+    f.provider.purchase.mockResolvedValue({ ...f.nativeScope, outcome: 'pending' });
+    await f.controller.purchase(f.nativeScope.productId);
+    const saved = [...records.values()];
+    f.fetcher.mockClear();
+    f.provider.prepare.mockResolvedValue({
+      ownerId: reference,
+      applicationId: f.nativeScope.applicationId,
+    });
+    const restarted = createCheckoutCoordinator(f.dependencies);
+    expect(await restarted[operation]()).toEqual({ status: 'unavailable' });
+    expect([...records.values()]).toEqual(saved);
+    expect(f.provider.purchase).toHaveBeenCalledTimes(1);
+    expect(
+      f.fetcher.mock.calls.some(([input]) => /\/(sync|recover)$/.test(requestUrl(input))),
+    ).toBe(false);
+  },
+);
+
+test('exact saved purchase recovers from the server even when store initialization is unavailable', async () => {
+  const f = nativeFixture();
+  await f.controller.load();
+  await f.controller.purchase(f.nativeScope.productId);
+  f.provider.prepare.mockClear();
+  f.provider.prepare.mockRejectedValue(new Error('Synthetic provider unavailable'));
+  f.responses['/v1/purchases/recover'] = credited;
+  const restarted = createCheckoutCoordinator(f.dependencies);
+  expect(await restarted.load()).toEqual({ status: 'awaiting_verification' });
+  expect(await restarted.sync()).toMatchObject({ status: 'credited' });
+  expect(f.provider.prepare).not.toHaveBeenCalled();
+  expect(f.provider.purchase).toHaveBeenCalledTimes(1);
+  expect(records.size).toBe(0);
+});
+
 test('native recovery response is discarded when the account changes during verification', async () => {
   const f = nativeFixture();
   await f.controller.load();

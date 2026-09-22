@@ -16,8 +16,12 @@ Current state (2026-09-22): the founder separately approved protected internet
 access for the consumer test service. Physical Google Play testing has passed
 verified catalog access, free playback and approved/declined sandbox checkout.
 Version 3 is available on the existing internal track to correct the hosted
-coin-unlock UI gate. Physical unlock/replay and the remaining provider/release
-checks below are still open; the dated sections retain the earlier evidence.
+coin-unlock UI gate. The founder has now confirmed the one-coin unlock and replay
+after leaving and reopening episode 2. Read-only hosted accounting confirms a
+99-coin balance and one durable unlock receipt. The founder subsequently confirmed
+replay without another unlock after fully closing and reopening Stovio. Remaining
+provider/release checks below are still open; the dated sections retain the earlier
+evidence.
 
 ### Private bootstrap verified — 2026-09-21 (#164 / #187)
 
@@ -298,9 +302,143 @@ as **available to internal testers** on the existing track. No supported devices
 were lost. The only warning is the missing deobfuscation file with minification
 disabled. No production/closed-test release or Git merge was performed.
 
-Fresh read-only accounting still shows 100 coins, one purchase credit and no
+At rollout, read-only accounting showed 100 coins, one purchase credit and no
 unlock debit. The founder was asked to install the Play update and check for
-the one-coin option; physical version-3 unlock/replay remains pending.
+the one-coin option.
+
+### Physical coin unlock and navigation replay — 2026-09-22 (#164 / #187)
+
+The founder confirmed unlocking episode 2 for one coin, playing it, leaving the
+player and reopening the episode successfully without another unlock. This is
+physical navigation/replay evidence after the update request; the installed
+version was not independently inspected in this pass because the phone was
+unavailable to ADB.
+
+Fresh read-only hosted accounting confirms exactly one 100-coin purchase credit,
+one one-coin unlock debit, a 99-coin balance and one durable episode-2 unlock
+receipt. The receipt matches the wallet and debit, the expected and charged price
+are both one coin, and the episode belongs to the generated test fixture. There
+are no quarantined purchase decisions and no second debit from replay. Only
+normalized counts and amounts are recorded here; no account or receipt identifiers
+or provider payloads are included.
+
+The one-coin unlock and navigation replay checks pass. The founder subsequently
+confirmed fully closing Stovio, reopening it and playing episode 2 without another
+unlock on the physical phone. Restart/replay persistence therefore passes as
+founder-observed evidence. The 99-coin accounting result above predates that final
+restart; this confirmation did not include a fresh balance reading or server query.
+Interrupted/pending purchase recovery,
+refunds, provider callback delivery and the remaining release gates remain open;
+this evidence does not establish complete launch readiness.
+
+### Hosted notifications and genuine refund — 2026-09-22 (#164 / #169)
+
+The saved RevenueCat integration still targeted the retired temporary receiver.
+Updated that existing integration to **Stovio hosted sandbox lifecycle** and
+`https://stovio-consumer-test-4qqbien72q-od.a.run.app/v1/purchases/revenuecat`.
+Sandbox-only scope, the single Stovio Play app, cancellation/non-renewing-purchase
+filters, Authorization and HMAC signing are unchanged. Both pinned hosted
+credentials match the existing private test credentials; neither was rotated.
+
+A provider-issued TEST delivery returned HTTP 200 with no ledger mutation. The
+founder's genuine purchase delivery had failed against the old address; manual
+provider retry reached the hosted receiver successfully. Read-only accounting
+then showed two normalized credited events (client verification and notification)
+but exactly one 100-coin ledger credit, one one-coin debit, a 99-coin balance and
+one saved episode unlock. This proves delayed notification after client credit
+does not duplicate funding; it is not a second successful webhook redelivery.
+
+Refunded that same no-charge sandbox purchase through RevenueCat. Its customer
+history reports the refund, its API reports `refunded`, and hosted accounting
+contains a `refund_after_credit` review event. The original credit/debit, 99-coin
+balance and saved unlock remained unchanged. This is the approved quarantine
+behavior, not an approved commercial refund settlement policy: D-008 remains a
+production gate for compensation or entitlement removal.
+
+Using the unchanged backend source with the live hosted configuration, normal
+synchronization, digest-based recovery and synchronization again all returned
+`review_required` with 100 historical credited coins. Fresh provider reads were
+used. The original transaction retains one decision and one immutable credit;
+its purchase-history entry remains in review and the unlock is preserved. This
+is direct service-level genuine-provider evidence, not an authenticated mobile
+HTTP recovery or interrupted-device checkout claim. No raw provider payloads,
+credentials, account IDs or order IDs are retained in public evidence.
+
+Validation:
+
+- `pnpm --filter @stovio/mobile test --runInBand checkoutCoordinator pendingPurchaseAttempt revenueCatProvider hostedSandboxCheckout`: 135 tests, four suites passed.
+- `.venv/Scripts/python.exe -m pytest backend/tests/commerce backend/tests/wallet -q -x -p no:cacheprovider --tb=short`: 371 passed.
+- Full `backend/tests` via `pytest.main`, with the loopback-only test database
+  explicitly named `test_stovio_launch_verification`: 769 passed in 133.52 seconds.
+  The name isolates this run from concurrent local work. Earlier broad execution
+  emitted setup errors and was interrupted; a focused notification run passed
+  58 tests and the subsequent complete isolated run passed. No production or
+  hosted database was used for pytest.
+- Backend lint, formatting (234 files), type checks (230 files) and migration
+  drift checks passed.
+- Live public readiness returned 200; both staff paths returned 404; an unsigned
+  notification remained rejected with 403 after the destination change.
+
+Read-only Play Console inspection still shows a draft app and only three of
+11 setup tasks complete. Privacy policy, sign-in/reviewer access, content rating,
+target audience, Data safety, financial-features declaration, category/contact
+information and the store listing remain incomplete. Closed testing has zero
+opted-in testers; the dashboard requires 12 testers continuously for 14 days and
+a production-access application. No declarations or release submissions were
+made during this inspection.
+
+### Delayed-payment failure and notification connection — 2026-09-22
+
+The founder selected Google's delayed-approval test method and closed the app.
+Play recorded pending at 11:54:53 UTC, processed at 11:55:54, then refunded at
+12:00:55. The founder subsequently supplied Google's cancellation email confirming
+that the test purchase was not acknowledged. RevenueCat had no
+new purchase for the test identity, and hosted accounting retained one credit,
+one unlock debit, balance 99 and the existing permanent unlock. The email's
+generic five-day estimate was not the actual outcome. This device test **failed**;
+do not record the unchanged balance as successful pending recovery.
+
+The founder explicitly approved connecting Play notifications. Engineering
+created `projects/stovio-app/topics/stovio-play-notifications`, granted the
+existing `stovio-revenuecat` service account Pub/Sub Editor in `stovio-app`, and
+granted Google's notification service Pub/Sub Publisher on this topic only.
+RevenueCat shows Connected to Google. Play settings were saved with subscriptions,
+voided purchases and all one-time products enabled. Play confirmed Test
+notification sent; RevenueCat recorded receipt at 12:13 UTC. Firebase project
+billing remains disabled. Existing credentials and their values were preserved.
+
+The local coordinator fix initializes the native provider on load/check when an
+unknown pending attempt survives restart. It retains that attempt, binds the
+server identity and never opens checkout or infers credit. Exact saved purchase
+references can still reach authoritative server recovery when SDK initialization
+is unavailable. Independent review caught and corrected that outage case for
+both load and check. Verification: the initial two restart regressions failed;
+after the fix, `pnpm --filter @stovio/mobile test --runInBand checkoutCoordinator
+pendingPurchaseAttempt revenueCatProvider hostedSandboxCheckout` passed 142 tests
+in four suites. `pnpm mobile:typecheck`, scoped ESLint from `mobile/`, and scoped
+Prettier checks passed. This code is local and is not in the Play-installed build.
+
+Unknown-reference resolution remains a launch blocker: SDK initialization alone
+does not correlate an attempt to a purchase or safely clear its marker. RevenueCat
+tracking of previously unknown purchases from notifications remains off because
+its anonymous/obfuscated identity behavior has not been integrated with Stovio's
+strict owner verification. A received test notification proves routing, not
+closed-app completion or consumption of a previously unknown purchase. Implement
+exact attempt correlation and terminal-state recovery before repeating this
+device test. Do not erase the current marker, infer cancellation from empty
+history, or manufacture a wallet credit.
+
+Automatic retry timing, provider API outage, refund before credit, account
+isolation/reinstall and the wider release matrix remain separate open checks.
+The installed app still blocks repurchasing because its local pending marker has
+no exact store reference. The cancellation email confirms the store outcome but
+cannot remotely erase that marker. A fresh read-only hosted check again found
+99 coins, one credit and the existing unlock. Do not claim that connecting
+notifications or the local startup patch has unblocked this installation.
+
+No real payment, production activation or Git merge occurred. See
+[RevenueCat notification behavior](https://www.revenuecat.com/docs/platform-resources/server-notifications/google-server-notifications)
+and [Google's test-payment guidance](https://developer.android.com/google/play/billing/test).
 
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified
@@ -398,13 +536,14 @@ here. [Cloud Run pricing](https://cloud.google.com/run/pricing),
 
 ## Focused live acceptance
 
-The end-to-end device checks below are **not yet performed**. Private service
-and permission checks passed as recorded above. The Stovio emulator evidence
-currently proves checkout cancellation, a successful no-charge purchase, one
-credit and unlock debit, restart/replay persistence, and unavailable-content
-rejection. Interrupted checkout, genuine refunds/callbacks and the hosted outage
-matrix remain open; historical or synthetic checks do not prove those journeys
-for the new package. See [the exact device evidence](stovio-rebrand.md).
+The end-to-end device checks below are **partially complete**. Physical hosted
+testing has passed catalog access, Google sign-in, free playback, approved and
+declined test checkout, one credit and unlock debit, and replay after fully closing
+and reopening the app. Private service and permission checks passed as recorded
+above. Checkout cancellation and unavailable-content rejection also have earlier
+local emulator evidence; that does not substitute for hosted physical validation.
+Interrupted checkout, genuine refunds/callbacks and the hosted outage matrix remain
+open. See [the exact device evidence](stovio-rebrand.md).
 
 - With the founder's computer/local services stopped, a registered test account
   opens the catalog, signs in, plays an eligible episode and sees its server balance.

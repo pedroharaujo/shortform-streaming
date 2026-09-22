@@ -6,7 +6,7 @@ import type { CatalogClient } from '../../api/catalog/types';
 import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { CatalogFetchStatus } from './CatalogFetchStatus';
-import { CatalogArtwork } from './CatalogArtwork';
+import { CatalogHero } from './CatalogHero';
 import { useCatalogEpisode } from './useCatalog';
 
 export interface EpisodeSelectedScreenProps {
@@ -62,11 +62,12 @@ export function EpisodeSelectedScreen({
           style={styles.scroll}
           testID="episode-selected"
         >
-          <CatalogArtwork size="hero" title={state.episode.title} uri={null} />
-          <Text accessibilityRole="header" style={styles.kicker}>
-            {messages.catalog.selectedEpisode}
-          </Text>
-          <Text style={styles.title}>{state.episode.title}</Text>
+          <CatalogHero compact title={state.episode.title} uri={null}>
+            <Text accessibilityRole="header" style={styles.kicker}>
+              {messages.catalog.selectedEpisode}
+            </Text>
+            <Text style={styles.title}>{state.episode.title}</Text>
+          </CatalogHero>
           <Text style={styles.synopsis}>{state.episode.synopsis}</Text>
           <Text style={styles.metadata}>
             {messages.catalog.season(state.episode.season_number)} ·{' '}
@@ -96,19 +97,22 @@ const styles = StyleSheet.create({
     minHeight: minimumTouchTarget,
     minWidth: minimumTouchTarget,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
   },
   backLabel: { color: colors.foreground, fontSize: fontSizes.body },
   body: { color: colors.foreground, fontSize: fontSizes.body, textAlign: 'center' },
   centered: { alignItems: 'center', flex: 1, gap: spacing.md, justifyContent: 'center' },
-  container: { backgroundColor: colors.background, flex: 1, padding: spacing.xxl },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+  },
   content: { flexGrow: 1, paddingBottom: spacing.xxl },
   kicker: {
-    color: colors.accent,
+    color: colors.foreground,
     fontSize: fontSizes.label,
-    marginBottom: spacing.sm,
-    marginTop: spacing.xxl,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
   },
   play: {
     alignItems: 'center',
@@ -133,8 +137,13 @@ const styles = StyleSheet.create({
   synopsis: {
     color: colors.muted,
     fontSize: fontSizes.body,
-    marginTop: spacing.sm,
+    marginTop: spacing.lg,
     lineHeight: 24,
   },
-  title: { color: colors.foreground, fontSize: fontSizes.display, fontWeight: '700' },
+  title: {
+    color: colors.foreground,
+    fontSize: fontSizes.display,
+    fontWeight: '700',
+    letterSpacing: -0.7,
+  },
 });

@@ -26,6 +26,11 @@ interruption recovery, full lifecycle and device evidence remain open.
 
 ## Bring up the existing viewing experience
 
+For the current installed Stovio sandbox, use the
+[progressive testing setup](#progressive-testing--current-stovio-sandbox) below.
+The following 8000/Auth-emulator instructions describe the generated-account
+profile; do not mix them with a build configured for 8001/cloud authentication.
+
 Engineering runs these commands from the repository root. Existing private local
 configuration is required; never put its contents in Git or screenshots.
 
@@ -72,6 +77,111 @@ before troubleshooting the app's backend connection.
 Two Metro workers also leave memory available for the emulator during native
 builds. If startup reports missing Expo manifest settings, follow the native
 rebuild steps in [mobile/README.md](../../mobile/README.md#missing-expo-manifest-settings-on-startup).
+
+## Progressive testing — current Stovio sandbox
+
+**Tracking:** P6-T01 visual iteration and P6-T03 final validation.
+
+Use the emulator for quick layout and journey feedback, then build the same
+reviewed source for Google Play internal testing and repeat the journey on the
+founder's phone. The installed local debug build uses the local API, while the
+Play build uses the approved hosted test API. Keep capabilities and server
+checks consistent, but retain the environment-specific identity, signing and
+store configuration. Local success does not establish Play-installed billing
+or Play Integrity success; those remain phone/release-build checks.
+
+The existing private sandbox profile on 2026-09-22 is:
+
+- AVD: `Stovio_Dev` (display name **Stovio Dev**), recreated at the founder's
+  request after they deleted the previous virtual devices. The earlier evidence
+  below used `Medium_Phone_API_36.1`. A fresh device needs the debug APK installed
+  and sign-in repeated; old device-local state is not retained.
+  The replacement has now booted, the existing development APK installed
+  successfully, and both local services returned HTTP 200. The desktop shortcut
+  **Stovio Emulator** opens this device; swipe up on Android Home to find Stovio.
+- Backend: `127.0.0.1:8001`, with the installed APK using
+  `http://10.0.2.2:8001` (Android's route to the host computer).
+- Firebase: cloud authentication against the existing non-production project;
+  no inherited `FIREBASE_AUTH_EMULATOR_HOST` in the backend process.
+- Checkout: the existing separately approved `revenuecat_sandbox` profile.
+  This does not enable production commerce.
+- Metro: port 8081, serving the current checkout's JavaScript.
+
+Engineering startup, in separate terminals:
+
+```powershell
+# Repository root: use the existing private backend configuration.
+docker compose up -d --wait postgres
+make start-backend BACKEND_PORT=8001
+```
+
+```powershell
+# Repository root: close an unrelated running AVD before selecting this one.
+$env:ANDROID_AVD='Stovio_Dev'
+uv run python scripts/start_android_avd.py
+```
+
+```powershell
+# mobile/ directory: reuse the installed native debug app for visual changes.
+Remove-Item Env:CI -ErrorAction SilentlyContinue
+$env:NODE_OPTIONS='--dns-result-order=ipv4first'
+$env:STOVIO_METRO_PLAIN_ANDROID_BUNDLE='1'
+node ../node_modules/expo/bin/cli start --localhost --port 8081 --max-workers 2
+```
+
+First check whether these services already run; do not start competing copies.
+Open Stovio in the emulator. Confirm Home, series detail, free playback, Account
+and the existing wallet/unlock journey. Keep actual checkout within the approved
+test-account setup. Use generated/self-owned catalog content and preserve
+existing balances and entitlements. Do not seed over the existing catalog.
+JavaScript/style edits can use Metro feedback. Changes to native modules or
+embedded environment configuration require a rebuilt debug APK; Metro cannot
+change `assets/app.config` inside an installed APK.
+
+Do not run interactive Metro with `CI=1`: Expo disables file watching in that
+mode, so the emulator can keep displaying an old bundle after source edits.
+If that happened, stop the affected Metro process, remove `CI` from its startup
+environment and restart the command above with `--clear` once. Reload the
+already-open app and verify the new styles on the device. Clearing the cache
+without removing CI mode does not restore live updates for subsequent edits.
+
+If the AVD is stuck offline while restoring a snapshot, use Android Studio
+Device Manager's **Cold Boot Now**, preserving its data. Do not wipe the device
+to fix a network failure.
+
+### Catalog recovery evidence — 2026-09-22
+
+The old local Django process on 8000 returned HTTP 500. A fresh Django process
+using the current private `.env` returned the existing catalog successfully.
+The installed debug artifact and mobile configuration both target port 8001.
+The stale 8000 process was stopped and Django was started on 8001 with automatic
+code reload. No catalog eligibility, authentication, data or application behavior
+was changed to recover the service.
+
+- Real HTTP checks: `/v1/catalog/home` returned 200 with one existing series;
+  series detail returned 200 with two episodes; first episode metadata returned
+  200. Anonymous `/v1/wallet` and `/v1/me` still returned 401.
+- `http://127.0.0.1:8081/status` returned `packager-status:running`.
+- ADB confirmed the intended AVD booted and `com.stovio.app` was installed after
+  a cold boot without clearing data.
+- `make -n start-backend` and `make -n start-backend BACKEND_PORT=8001`
+  confirmed the default and sandbox startup commands use their respective ports.
+  `python scripts/check_repository_foundation.py` passed the safety scan,
+  61 repository tests and AI governance; `git diff --check` passed.
+- The founder opened Stovio after automatic approval review blocked app launch.
+  Read-only emulator inspection confirmed the populated catalog, initially with
+  old styles. The live Metro bundle still contained the old palette: its startup
+  wrapper set `CI=1`, disabling Expo's file watching. Metro was restarted with
+  its cache cleared and CI removed; the already-open app was reloaded through
+  Metro. The served bundle and a second emulator inspection confirmed the new
+  palette, wordmark, rounded surfaces and larger hero. Only this Home state is
+  visually verified; checkout, player and accessibility checks remain separate.
+
+After emulator acceptance, create and distribute a new internal-test build,
+then repeat purchase, unlock, replay and restart checks through Google Play on
+the phone. Record the exact build/revision in the final validation register.
+Public MVP release follows completion of the existing release gates and founder
+approval. This recovery did not upload, replace or release a Play build.
 
 ## Finish genuine test checkout
 
