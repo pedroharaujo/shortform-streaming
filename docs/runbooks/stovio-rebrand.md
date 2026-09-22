@@ -372,7 +372,11 @@ publication and provenance checks. Signed playlists passed, unsigned/expired
 links were rejected, and a repeat import created no duplicates. Episode 1 is
 free and episode 2 retains its one-coin test lock. The founder confirmed that the
 first video played successfully on the physical phone and ended at the expected
-second-episode unlock prompt. Hosted authenticated purchase/unlock/replay checks
+second-episode unlock prompt. The founder then completed an approved Google Play
+test-card purchase followed by an always-decline attempt on the physical phone.
+Read-only hosted checks confirm one consistent 100-coin credit, one credited
+Stovio purchase decision, no quarantine and no unlock debit; the displayed balance
+remained 100. Hosted unlock/replay, interrupted/pending purchase recovery, refunds
 and sandbox callback setup remain outstanding. The GitHub staging deployment
 remains a post-review merge gate;
 the direct live checks do not claim that workflow ran. The emulator's

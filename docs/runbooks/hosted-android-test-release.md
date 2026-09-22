@@ -240,6 +240,20 @@ method; that must be checked before completing any order. The founder reported
 returning to Home to sign in, which is a navigation observation to review after
 the functional journey. No checkout, credit or unlock is claimed by this step.
 
+### Physical approved and declined checkout — 2026-09-22 (#164)
+
+The founder confirmed the Google Play test payment options on the physical phone:
+first an approved test-card purchase of the 100-coin pack, then an always-decline
+test-card attempt. The displayed final balance was 100 coins. Fresh read-only
+hosted accounting checks found exactly one 100-coin purchase credit and one
+credited `com.stovio.app` decision, with matching wallet, purchase identity,
+amount and ledger links; no quarantined decision, unlock debit or unlock receipt
+exists. The declined attempt produced no extra credit. This validates the basic
+approved/declined physical checkout sequence without real payment; it does not
+prove callback delivery, refunds or interrupted/pending purchase recovery.
+The next device gate is one-coin unlock, second-episode playback and persistence
+after restart/replay, with an expected balance of 99 coins and no second debit.
+
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified
 Firebase identity and consumer-only routes. `/admin/` and `/internal/staff-masters/1`
