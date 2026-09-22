@@ -1,4 +1,4 @@
-import type { components } from '@stovio/api-client';
+import type { components } from '@shortform/api-client';
 export type PurchaseIdentity = components['schemas']['PurchaseIdentity'];
 export type PurchaseCatalog = components['schemas']['PurchaseCatalog'];
 export type PurchaseStatus = components['schemas']['PurchaseStatus'];

@@ -2,7 +2,7 @@
  * Anonymous catalog reads mapped through the generated OpenAPI client.
  */
 
-import type { paths } from '@stovio/api-client';
+import type { paths } from '@shortform/api-client';
 
 import { createOpenApiClient } from '../context';
 import { DEFAULT_TIMEOUT_MS, mapJsonDomain, mapJsonRequest } from '../http';

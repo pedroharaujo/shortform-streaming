@@ -2,7 +2,7 @@
 
 P1-T05A records the policy and the landed versions that Application CI, expo-doctor, and the Python type-check must keep green. Dependabot is allowed to open patch, minor, and security updates on this compatible line. It is not allowed to reopen known-incompatible majors.
 
-Issue: [#31](https://github.com/pedroharaujo/stovio/issues/31). Original compatible-set PR: [#32](https://github.com/pedroharaujo/stovio/pull/32).
+Issue: [#31](https://github.com/pedroharaujo/shortform-streaming/issues/31). Original compatible-set PR: [#32](https://github.com/pedroharaujo/shortform-streaming/pull/32).
 
 ## Policy
 
@@ -123,7 +123,7 @@ Short operational record of the GitHub issue thread (no tokens, secrets, or pers
 
 ## Recovery
 
-If Application CI Mobile fails expo-doctor on SDK 57 **patch** pins (`expo` 57.0.x, `react-native` 0.86.x, matching router/constants/video/jest-expo/eslint-config-expo), bump with `pnpm --filter @stovio/mobile exec expo install` for those packages, keep the `react-native` / `@react-native/metro-config` workspace overrides on the same 0.86.x patch, add only new exact versions to `minimumReleaseAgeExclude`, regenerate `pnpm-lock.yaml`, and confirm frozen install plus `npx --yes expo-doctor`. Do not move to Expo 58 or RN 0.87.
+If Application CI Mobile fails expo-doctor on SDK 57 **patch** pins (`expo` 57.0.x, `react-native` 0.86.x, matching router/constants/video/jest-expo/eslint-config-expo), bump with `pnpm --filter @shortform/mobile exec expo install` for those packages, keep the `react-native` / `@react-native/metro-config` workspace overrides on the same 0.86.x patch, add only new exact versions to `minimumReleaseAgeExclude`, regenerate `pnpm-lock.yaml`, and confirm frozen install plus `npx --yes expo-doctor`. Do not move to Expo 58 or RN 0.87.
 
 If Application CI Mobile fails expo-doctor on `jest` or `@types/jest`, restore `jest@~29.7.0` and `@types/jest@29.5.14` with `npx expo install` from `mobile/`, regenerate `pnpm-lock.yaml` from the repository root, and confirm `pnpm install --frozen-lockfile` plus `npx --yes expo-doctor` from `mobile/`. Do not bump Jest 30 while the repository remains on Expo SDK 57.
 

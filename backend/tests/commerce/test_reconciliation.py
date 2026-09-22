@@ -25,7 +25,7 @@ from tests.commerce.test_revenuecat import Response, records, transport
 
 SYNC = "/v1/purchases/sync"
 QUERY = {
-    "application_id": "test.example.stovio",
+    "application_id": "test.example.shortform",
     "product_id": "generated_test_coins",
     "transaction_id": "GPA.0000-0000-0000-00001",
 }

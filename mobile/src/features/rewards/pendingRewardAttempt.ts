@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-const STORAGE_KEY = 'stovio.pending_reward_attempt.v1';
+const STORAGE_KEY = 'shortform.pending_reward_attempt.v1';
 const RECORD_VERSION = 1;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PUBLIC_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;

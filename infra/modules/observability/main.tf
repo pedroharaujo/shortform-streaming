@@ -24,7 +24,7 @@ locals {
   }
 
   dashboard_json = jsonencode({
-    displayName = "Stovio staging backend"
+    displayName = "Shortform staging backend"
     labels      = var.labels
     mosaicLayout = {
       columns = 12
@@ -129,7 +129,7 @@ locals {
                 targetAxis = "Y1"
                 timeSeriesQuery = {
                   timeSeriesFilter = {
-                    filter = "metric.type=\"logging.googleapis.com/user/stovio_request_completed\" AND ${local.monitoring_service_filter}"
+                    filter = "metric.type=\"logging.googleapis.com/user/shortform_request_completed\" AND ${local.monitoring_service_filter}"
                     aggregation = {
                       alignmentPeriod    = "60s"
                       perSeriesAligner   = "ALIGN_RATE"
@@ -159,7 +159,7 @@ locals {
                 targetAxis = "Y1"
                 timeSeriesQuery = {
                   timeSeriesFilter = {
-                    filter = "metric.type=\"logging.googleapis.com/user/stovio_request_duration_ms\" AND ${local.monitoring_service_filter}"
+                    filter = "metric.type=\"logging.googleapis.com/user/shortform_request_duration_ms\" AND ${local.monitoring_service_filter}"
                     aggregation = {
                       alignmentPeriod    = "300s"
                       perSeriesAligner   = "ALIGN_SUM"
@@ -245,8 +245,8 @@ resource "google_logging_metric" "request_completed" {
   count = var.enabled ? 1 : 0
 
   project     = var.project_id
-  name        = "stovio_request_completed"
-  description = "Privacy-safe request completions emitted by stovio.request."
+  name        = "shortform_request_completed"
+  description = "Privacy-safe request completions emitted by shortform.request."
   filter      = local.request_log_filter
 
   metric_descriptor {
@@ -273,8 +273,8 @@ resource "google_logging_metric" "request_duration" {
   count = var.enabled ? 1 : 0
 
   project         = var.project_id
-  name            = "stovio_request_duration_ms"
-  description     = "Privacy-safe request duration emitted by stovio.request."
+  name            = "shortform_request_duration_ms"
+  description     = "Privacy-safe request duration emitted by shortform.request."
   filter          = local.request_log_filter
   value_extractor = "EXTRACT(jsonPayload.duration_ms)"
 
@@ -357,7 +357,7 @@ resource "google_monitoring_alert_policy" "api_5xx" {
   count = var.enabled && var.alerts_enabled ? 1 : 0
 
   project               = var.project_id
-  display_name          = "Stovio staging API 5xx"
+  display_name          = "Shortform staging API 5xx"
   combiner              = "OR"
   enabled               = true
   notification_channels = var.notification_channel_ids
@@ -395,7 +395,7 @@ resource "google_monitoring_alert_policy" "api_latency" {
   count = var.enabled && var.alerts_enabled ? 1 : 0
 
   project               = var.project_id
-  display_name          = "Stovio staging API p95 latency"
+  display_name          = "Shortform staging API p95 latency"
   combiner              = "OR"
   enabled               = true
   notification_channels = var.notification_channel_ids

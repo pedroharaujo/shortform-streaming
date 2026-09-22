@@ -1,19 +1,18 @@
-# Stovio uses a fresh local database volume; previous volumes are not deleted.
-name: stovio
+name: shortform-streaming
 
 x-backend-container-environment: &backend-container-environment
   DJANGO_SETTINGS_MODULE: config.settings.production
   DJANGO_SECRET_KEY: local-compose-not-a-production-secret
   DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
-  DATABASE_URL: postgresql://stovio@postgres:5432/stovio
-  FIREBASE_PROJECT_ID: demo-stovio-local
+  DATABASE_URL: postgresql://shortform@postgres:5432/shortform
+  FIREBASE_PROJECT_ID: demo-shortform-local
 
 services:
   postgres:
     image: postgres:17.6-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-stovio}
-      POSTGRES_USER: ${POSTGRES_USER:-stovio}
+      POSTGRES_DB: ${POSTGRES_DB:-shortform}
+      POSTGRES_USER: ${POSTGRES_USER:-shortform}
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
@@ -28,7 +27,7 @@ services:
 
   migrate:
     profiles: ["container"]
-    image: ${STOVIO_BACKEND_IMAGE:-stovio-backend:ci}
+    image: ${SHORTFORM_BACKEND_IMAGE:-shortform-backend:ci}
     environment: *backend-container-environment
     depends_on:
       postgres:
@@ -37,7 +36,7 @@ services:
 
   api:
     profiles: ["container"]
-    image: ${STOVIO_BACKEND_IMAGE:-stovio-backend:ci}
+    image: ${SHORTFORM_BACKEND_IMAGE:-shortform-backend:ci}
     environment: *backend-container-environment
     depends_on:
       migrate:

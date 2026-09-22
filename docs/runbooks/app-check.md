@@ -43,7 +43,7 @@ by default.
 ## Private provider setup
 
 1. Confirm the Google Play app and Firebase Android app use the same isolated
-   staging project and package `com.stovio.app`.
+   staging project and package `com.shortformstreaming.app`.
 2. Link the Play Integrity API to that project. In Firebase App Check, register
    the Android app with the signing-certificate SHA-256 used by the tested build.
 3. For a development client, obtain the debug token from bounded device logs and

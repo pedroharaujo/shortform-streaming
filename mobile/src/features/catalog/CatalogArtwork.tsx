@@ -6,12 +6,12 @@ import { artworkPalettes, radii } from '../../ui/theme';
 export interface CatalogArtworkProps {
   readonly title: string;
   readonly uri: string | null;
-  readonly size: 'card' | 'hero' | 'backdrop';
+  readonly size: 'card' | 'hero';
 }
 
 export function CatalogArtwork({ title, uri, size }: CatalogArtworkProps): JSX.Element {
   const [failedUri, setFailedUri] = useState<string | null>(null);
-  const frameStyle = styles[size];
+  const frameStyle = size === 'hero' ? styles.hero : styles.card;
   const palette =
     artworkPalettes[
       Array.from(title).reduce((sum, character) => sum + character.charCodeAt(0), 0) %
@@ -48,7 +48,6 @@ export function CatalogArtwork({ title, uri, size }: CatalogArtworkProps): JSX.E
       accessibilityRole="image"
       onError={() => setFailedUri(uri)}
       source={{ uri }}
-      resizeMode="cover"
       style={frameStyle}
       testID="catalog-artwork-image"
     />
@@ -56,8 +55,7 @@ export function CatalogArtwork({ title, uri, size }: CatalogArtworkProps): JSX.E
 }
 
 const styles = StyleSheet.create({
-  backdrop: { width: '100%', height: '100%' },
-  card: { borderRadius: radii.md, aspectRatio: 2 / 3, width: '100%' },
+  card: { borderRadius: radii.md, height: 208, width: '100%' },
   fallback: {
     alignItems: 'center',
     overflow: 'hidden',
@@ -117,11 +115,5 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     transform: [{ rotate: '12deg' }],
   },
-  hero: {
-    alignSelf: 'stretch',
-    borderRadius: radii.lg,
-    aspectRatio: 1,
-    maxHeight: 440,
-    width: '100%',
-  },
+  hero: { alignSelf: 'stretch', borderRadius: radii.lg, height: 250, width: '100%' },
 });

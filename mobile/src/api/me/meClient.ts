@@ -3,7 +3,7 @@
  * on GET /v1/me only. Never sends a backend user id, public_id, or firebase_uid.
  */
 
-import type { paths } from '@stovio/api-client';
+import type { paths } from '@shortform/api-client';
 
 import { bearerHeaders, createOpenApiClient } from '../context';
 import { DEFAULT_TIMEOUT_MS, mapJsonDomain, mapJsonRequest } from '../http';

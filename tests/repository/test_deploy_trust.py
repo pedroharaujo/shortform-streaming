@@ -61,7 +61,7 @@ FORBIDDEN_DEPLOY_ROLES = (
     "roles/storage.admin",
 )
 
-REAL_REPO = "pedroharaujo/stovio"
+REAL_REPO = "pedroharaujo/shortform-streaming"
 
 
 def _read(path: Path) -> str:
@@ -298,7 +298,7 @@ class DeployTrustTests(unittest.TestCase):
     def test_deploy_sa_has_least_privilege_bindings(self) -> None:
         iam = _read(STAGING_IAM)
         self.assertIn('resource "google_service_account" "deploy"', iam)
-        self.assertIn("stovio-deploy", iam)
+        self.assertIn("shortform-deploy", iam)
         self.assertIn("roles/artifactregistry.writer", iam)
         self.assertIn("roles/run.developer", iam)
         self.assertIn("roles/iam.serviceAccountUser", iam)

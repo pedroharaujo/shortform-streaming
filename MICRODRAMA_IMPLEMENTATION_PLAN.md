@@ -3,7 +3,7 @@
 **Document status:** Founder strategy updated; new MVP work planned, release readiness open
 **Language:** English  
 **Last reviewed:** 2026-09-13
-**Repository:** `pedroharaujo/stovio` (public monorepo)
+**Repository:** `pedroharaujo/shortform-streaming` (public monorepo)  
 **MVP client:** Android / Google Play only; Django Admin is the only web interface. iOS is post-MVP (D-027).
 
 ---
@@ -314,7 +314,7 @@ Android --------- HTTPS ---- Cloud Run: Django API/Admin
 ### Proposed monorepo
 
 ```text
-stovio/
+shortform-streaming/
 ├── backend/
 │   ├── config/
 │   ├── apps/
@@ -545,7 +545,7 @@ Phase 1 may begin before Checkpoint 0 passes. Checkpoint 0 remains mandatory bef
 
 #### P1-T01 — Create and protect the public monorepo
 
-**Description:** Create `stovio`, add the agreed directory structure, ownership rules, issue/PR templates, contribution guide, and branch protection.
+**Description:** Create `shortform-streaming`, add the agreed directory structure, ownership rules, issue/PR templates, contribution guide, and branch protection.
 
 **Objective:** Provide one auditable home for backend, mobile, infrastructure, and documentation.
 
@@ -784,7 +784,7 @@ license reapproval, safe rollback, and exact verification are recorded in
 whole-branch review and CI results belong to the implementation PR. This evidence
 does not authorize a new market, production rollout, or an automatic merge.
 
-Implementation PR: [#139](https://github.com/pedroharaujo/stovio/pull/139).
+Implementation PR: [#139](https://github.com/pedroharaujo/shortform-streaming/pull/139).
 
 #### P2-T04 — Build home catalog and series-detail mobile screens
 
@@ -955,7 +955,7 @@ final whole-branch review passed after corrections. See
 [`docs/runbooks/access-policy.md`](docs/runbooks/access-policy.md) and the
 [execution evidence](docs/superpowers/plans/2026-09-07-p3-t01-f1-episode-access.md).
 Final-head GitHub check evidence is recorded in
-[PR #140](https://github.com/pedroharaujo/stovio/pull/140).
+[PR #140](https://github.com/pedroharaujo/shortform-streaming/pull/140).
 Human approval is required before merge.
 
 #### P3-T02 — Implement immutable coin wallet and atomic episode unlock
@@ -1100,7 +1100,7 @@ device playback evidence are deployment/release gates, not P3-T07/PR #97 merge
 or subsequent MVP coding prerequisites. The unobserved journey is not a pass.
 See `docs/runbooks/rewarded-ads.md` for exact evidence.
 Release work transferred from #96 to
-[P6-T05A / #98](https://github.com/pedroharaujo/stovio/issues/98).
+[P6-T05A / #98](https://github.com/pedroharaujo/shortform-streaming/issues/98).
 
 **Description:** Create a server reward intent bound to user/episode, show an AdMob rewarded ad with custom data, verify server-side callbacks, and grant one idempotent episode entitlement.
 

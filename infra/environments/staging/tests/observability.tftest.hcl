@@ -13,7 +13,7 @@ variables {
   region               = "europe-west9"
   billing_account_id   = "000000-000000-000000"
   private_bucket_name  = "example-only-nonvideo"
-  cloud_run_image      = "example.invalid/stovio:synthetic"
+  cloud_run_image      = "example.invalid/shortform:synthetic"
   django_allowed_hosts = "localhost"
   firebase_project_id  = "example-only"
   github_repository    = "example-org/example-repo"

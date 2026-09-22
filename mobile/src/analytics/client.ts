@@ -63,7 +63,7 @@ function validLogicalEventKey(value: string): boolean {
 async function eventId(name: AnalyticsEventName, logicalEventKey: string): Promise<string> {
   const digest = await digestStringAsync(
     CryptoDigestAlgorithm.SHA256,
-    `stovio-analytics-v1:${name}:${logicalEventKey}`,
+    `shortform-analytics-v1:${name}:${logicalEventKey}`,
     { encoding: CryptoEncoding.HEX },
   );
   return `evt_${digest.slice(0, 32)}`;

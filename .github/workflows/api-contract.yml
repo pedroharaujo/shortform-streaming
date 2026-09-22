@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      DATABASE_URL: postgresql://stovio@127.0.0.1:5432/stovio
+      DATABASE_URL: postgresql://shortform@127.0.0.1:5432/shortform
       DJANGO_SETTINGS_MODULE: config.settings.local
     steps:
       - name: Check out repository

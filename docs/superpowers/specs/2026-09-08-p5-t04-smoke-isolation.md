@@ -8,7 +8,7 @@ The staging smoke script uses Python's standard library to fetch a metadata
 identity token and call the candidate health endpoints. Its shared Django
 identity and injected Django/database/provider secrets are unnecessary.
 
-Give smoke a dedicated `stovio-smoke` service account with repository-scoped
+Give smoke a dedicated `shortform-smoke` service account with repository-scoped
 Artifact Registry reader and service-scoped Cloud Run invoker only. Scope the
 deploy account's additional `serviceAccountUser` grant to that account. Prevent
 the configurable Django runtime account ID from colliding with the smoke ID.

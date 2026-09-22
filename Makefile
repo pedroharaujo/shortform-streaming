@@ -4,8 +4,6 @@
 # Copy `.env.example` to `.env` when you need non-default values (Bunny, a
 # non-5432 Postgres port). Compose and `uv --env-file` both read `.env`.
 # Optional: ANDROID_AVD=<name> to pick a non-default AVD for start-avd.
-# Match this port to the API URL embedded in the installed Android build.
-BACKEND_PORT ?= 8000
 ifneq ($(wildcard .env),)
 UV_ENV := --env-file .env
 endif
@@ -15,7 +13,7 @@ endif
 help:
 	@echo "start-sql          Start local PostgreSQL (Docker Compose, wait until healthy)"
 	@echo "stop-sql           Stop Compose services (keeps the named data volume)"
-	@echo "start-backend      Migrate and run Django on 127.0.0.1:$(BACKEND_PORT) (override BACKEND_PORT)"
+	@echo "start-backend      Migrate and run Django on 127.0.0.1:8000"
 	@echo "start-avd          Boot the Android emulator without Android Studio and wait for adb"
 	@echo "emulate            Start the AVD if needed, then install the Android development client"
 	@echo "start-emulator     Same as emulate"
@@ -29,7 +27,7 @@ stop-sql:
 
 start-backend:
 	uv run $(UV_ENV) python backend/manage.py migrate
-	uv run $(UV_ENV) python backend/manage.py runserver 127.0.0.1:$(BACKEND_PORT)
+	uv run $(UV_ENV) python backend/manage.py runserver 127.0.0.1:8000
 
 reset-progress:
 	uv run $(UV_ENV) python backend/manage.py reset_local_progress

@@ -3,10 +3,6 @@ from __future__ import annotations
 from django.contrib import admin
 from django.urls import include, path
 
-admin.site.site_header = "Stovio administration"
-admin.site.site_title = "Stovio Admin"
-admin.site.index_title = "Stovio administration"
-
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", include("apps.health.urls")),

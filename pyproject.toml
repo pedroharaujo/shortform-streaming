@@ -1,7 +1,7 @@
 [project]
-name = "stovio-backend"
+name = "shortform-streaming-backend"
 version = "0.1.0"
-description = "Django backend for the Stovio MVP"
+description = "Django backend for the Shortform Streaming MVP"
 requires-python = ">=3.12,<3.15"
 dependencies = [
     "cryptography>=50,<51",

@@ -27,7 +27,7 @@ def test_admin_verifier_fail_closed_when_initialize_fails() -> None:
     reset_admin_verifier()
     verifier = AdminFirebaseTokenVerifier()
     with (
-        override_settings(FIREBASE_PROJECT_ID="demo-stovio-local"),
+        override_settings(FIREBASE_PROJECT_ID="demo-shortform-local"),
         patch(
             "apps.accounts.verification.get_firebase_admin_app",
             side_effect=FirebaseAdminUnavailable,

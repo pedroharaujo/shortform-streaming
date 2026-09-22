@@ -1,5 +1,5 @@
-import { useState, type JSX } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import type { JSX } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMessages } from '../../localization/messages';
 import { CoinIcon } from '../../ui/CoinIcon';
 import { ActionButton } from '../../ui/ScreenElements';
@@ -22,17 +22,11 @@ export function CoinPackPicker({
   readonly preview?: boolean;
 }): JSX.Element {
   const messages = useMessages();
-  const { fontScale } = useWindowDimensions();
-  const [availableWidth, setAvailableWidth] = useState(0);
-  const useGrid = availableWidth >= 344 && fontScale <= 1.1;
   const best = bestValueProductId(offers);
   const selected = offers.find((offer) => offer.productId === selection);
   const ordered = [...offers].sort((a, b) => a.coins - b.coins);
   return (
-    <View
-      style={styles.section}
-      onLayout={({ nativeEvent }) => setAvailableWidth(nativeEvent.layout.width)}
-    >
+    <View style={styles.section}>
       <Text accessibilityRole="header" style={styles.heading}>
         {messages.coinStore.choosePack}
       </Text>
@@ -40,7 +34,7 @@ export function CoinPackPicker({
         <Text style={styles.muted}>{messages.coinStore.empty}</Text>
       ) : (
         <>
-          <View style={[styles.list, useGrid && styles.grid]}>
+          <View style={styles.list}>
             {ordered.map((offer, index) => {
               const isBest = best === offer.productId;
               const checked = selection === offer.productId;
@@ -64,7 +58,6 @@ export function CoinPackPicker({
                   onPress={() => onSelect(offer.productId)}
                   style={({ pressed }) => [
                     styles.card,
-                    useGrid && styles.gridCard,
                     isBest && styles.best,
                     checked && styles.selected,
                     pressed && styles.pressed,
@@ -75,7 +68,7 @@ export function CoinPackPicker({
                       <Text style={styles.badgeText}>{messages.coinStore.bestValue}</Text>
                     </View>
                   ) : null}
-                  <View style={[styles.row, useGrid && styles.gridRow]}>
+                  <View style={styles.row}>
                     <View
                       accessible={false}
                       importantForAccessibility="no-hide-descendants"
@@ -95,13 +88,7 @@ export function CoinPackPicker({
                       <Text style={styles.muted}>{messages.coinStore.coinUnit}</Text>
                     </View>
                     <Text style={styles.price}>{offer.price}</Text>
-                    <View
-                      style={[
-                        styles.radio,
-                        useGrid && styles.gridRadio,
-                        checked && styles.radioSelected,
-                      ]}
-                    >
+                    <View style={[styles.radio, checked && styles.radioSelected]}>
                       {checked ? <View style={styles.radioDot} /> : null}
                     </View>
                   </View>
@@ -134,10 +121,6 @@ const styles = StyleSheet.create({
   section: { gap: spacing.lg },
   heading: { color: colors.foreground, fontSize: fontSizes.section, fontWeight: '700' },
   list: { gap: spacing.md },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  gridCard: { flexBasis: '47%', flexGrow: 1, minWidth: 160 },
-  gridRow: { flexDirection: 'column', alignItems: 'flex-start', gap: spacing.md },
-  gridRadio: { position: 'absolute', top: spacing.xs, right: 0 },
   card: {
     minHeight: minimumTouchTarget,
     padding: spacing.lg,
@@ -147,17 +130,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  best: { borderColor: colors.coinRim },
-  selected: {
-    borderColor: colors.coin,
-    backgroundColor: colors.coinSurface,
-    borderWidth: 2,
-    padding: spacing.lg - 1,
-  },
+  best: { borderColor: colors.coinRim, backgroundColor: '#252219' },
+  selected: { borderColor: colors.foreground, borderWidth: 2, padding: spacing.lg - 1 },
   badge: {
     alignSelf: 'flex-start',
     backgroundColor: colors.coin,
-    borderRadius: 6,
+    borderRadius: radii.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
@@ -165,16 +143,15 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md },
   art: { width: 50, height: 44 },
   coin: { position: 'absolute' },
-  quantity: { flexGrow: 1, flexShrink: 1, maxWidth: '100%', gap: 2 },
+  quantity: { flexGrow: 1, gap: 2 },
   amount: {
     color: colors.foreground,
-    fontSize: fontSizes.display,
+    fontSize: 28,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
   price: {
     color: colors.foreground,
-    maxWidth: '100%',
     fontSize: fontSizes.section,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
@@ -191,7 +168,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioSelected: { borderColor: colors.coin },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.coin },
+  radioSelected: { borderColor: colors.foreground },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.foreground },
   pressed: { opacity: 0.75 },
 });

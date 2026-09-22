@@ -14,7 +14,7 @@ def registry() -> list[dict[str, Any]]:
     return [
         {
             "app_id": "synthetic_android",
-            "application_id": "test.synthetic.stovio",
+            "application_id": "test.synthetic.shortform",
             "product_id": "synthetic_consumable",
             "coins": 13,
             "approval_reference": "synthetic:issue142",
@@ -42,7 +42,7 @@ def sandbox_registry() -> list[dict[str, Any]]:
         {
             **registry()[0],
             "app_id": "appGenerated",
-            "application_id": "test.example.stovio",
+            "application_id": "test.example.shortform",
             "product_id": "generated_test_coins",
             "synthetic": False,
             "approval_reference": "D-036",

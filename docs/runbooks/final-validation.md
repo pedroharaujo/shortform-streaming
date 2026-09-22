@@ -54,74 +54,19 @@ For each deferral, record:
 
 P3/P4 follow-ups must supply exact commands, private prerequisites, expected states and owner/revision evidence when implemented. The following required matrix extends the final pass; **it does not authorize deferring financial, entitlement, private-data or production-activation checks** under D-029. Automated integrity checks run before each relevant merge.
 
-| Owning tasks             | Test prerequisites and actions                                                                                                                                                                                                                   | Required outcome / gate                                                                                                                                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P2-T03-F3 / P3-T01-F1    | Generated titles with free/ad/coin/both policies; synthetic allowed/denied territory/language/segment grants; change policy, price, takedown and window across an unlock attempt                                                                 | Server active scope cannot be widened by client values. Offers/grants/debits/playback intersect valid rights; unauthorized/expired/unsupported DRM never yields access. P6-T03/P6-T05A blockers                            |
-| P3-T03/T04/T06           | Approved isolated Google Play/RevenueCat tester setup, D-008-compatible synthetic products, generated account; fetch offerings, buy pack, wait for verified completion, repeat/reorder event delivery, interrupt network/callback then reconcile | Store price matches; exactly one verified credit, no pending/client-success credit, no cross-account/environment fulfillment. Record restricted evidence without raw payloads. Financial protections are immediate gates   |
-| P3-T02 / P3-T08-F2       | Fund a generated wallet via verified test purchase; unlock coin-only/both episodes, duplicate taps/concurrent requests, stale-price changes and account replacement                                                                              | One atomic debit/entitlement, safe rollback, correct ownership, no negative spendable balance or duplicate charge, fresh playback authorization                                                                            |
-| P3-T04/T06/T09           | Same account reinstall/second Android device; provider refund/chargeback before and after coin spend; delayed/duplicate/unknown-user events, deletion then late callback                                                                         | Persistent server balance without re-crediting consumables; approved compensating policy, quarantine/support for unresolved states; store/ledger/entitlements reconcile; no accidental financial cascade loss              |
-| P4-T01-F5 / P4-T06       | Approved test attribution and consent state, Google Play tester link/install, bounded source/campaign/creative, private generated spend import; repeat install, withdraw consent, replace account                                                | Deduplicated coherent cohort keys or explicit unmatched/consent-limited result; no raw personal referrer, unauthorized tracking or identity adoption. Live spend stays off pending D-017/P6                                |
-| P4-T02/T03               | Generated cohort with known ad/IAP/refund/cost/spend facts, late/duplicate records, multiple original currencies, missing joins and immature dates; rerun model/import and stop a feed                                                           | Same reconciled metric totals; observed versus projected LTV, consent/maturity/unmatched coverage and allocation residual visible. Missing inputs unknown; failure/hold procedure works. Private output only for real data |
-| P0-T03 / P2-T02 / P6-T04 | Review new Google/RevenueCat, financial audit, attribution and warehouse processing; test deletion/opt-out and actual binary/network flows                                                                                                       | D-020-approved region/retention/minimization, legally required finance retention and processor cleanup; declarations and notices cover the exact binary. No production enablement inferred                                 |
+| Owning tasks | Test prerequisites and actions | Required outcome / gate |
+|---|---|---|
+| P2-T03-F3 / P3-T01-F1 | Generated titles with free/ad/coin/both policies; synthetic allowed/denied territory/language/segment grants; change policy, price, takedown and window across an unlock attempt | Server active scope cannot be widened by client values. Offers/grants/debits/playback intersect valid rights; unauthorized/expired/unsupported DRM never yields access. P6-T03/P6-T05A blockers |
+| P3-T03/T04/T06 | Approved isolated Google Play/RevenueCat tester setup, D-008-compatible synthetic products, generated account; fetch offerings, buy pack, wait for verified completion, repeat/reorder event delivery, interrupt network/callback then reconcile | Store price matches; exactly one verified credit, no pending/client-success credit, no cross-account/environment fulfillment. Record restricted evidence without raw payloads. Financial protections are immediate gates |
+| P3-T02 / P3-T08-F2 | Fund a generated wallet via verified test purchase; unlock coin-only/both episodes, duplicate taps/concurrent requests, stale-price changes and account replacement | One atomic debit/entitlement, safe rollback, correct ownership, no negative spendable balance or duplicate charge, fresh playback authorization |
+| P3-T04/T06/T09 | Same account reinstall/second Android device; provider refund/chargeback before and after coin spend; delayed/duplicate/unknown-user events, deletion then late callback | Persistent server balance without re-crediting consumables; approved compensating policy, quarantine/support for unresolved states; store/ledger/entitlements reconcile; no accidental financial cascade loss |
+| P4-T01-F5 / P4-T06 | Approved test attribution and consent state, Google Play tester link/install, bounded source/campaign/creative, private generated spend import; repeat install, withdraw consent, replace account | Deduplicated coherent cohort keys or explicit unmatched/consent-limited result; no raw personal referrer, unauthorized tracking or identity adoption. Live spend stays off pending D-017/P6 |
+| P4-T02/T03 | Generated cohort with known ad/IAP/refund/cost/spend facts, late/duplicate records, multiple original currencies, missing joins and immature dates; rerun model/import and stop a feed | Same reconciled metric totals; observed versus projected LTV, consent/maturity/unmatched coverage and allocation residual visible. Missing inputs unknown; failure/hold procedure works. Private output only for real data |
+| P0-T03 / P2-T02 / P6-T04 | Review new Google/RevenueCat, financial audit, attribution and warehouse processing; test deletion/opt-out and actual binary/network flows | D-020-approved region/retention/minimization, legally required finance retention and processor cleanup; declarations and notices cover the exact binary. No production enablement inferred |
 
 Initial paid-test activation also requires one approved audience, approximately 3–5 independently cleared titles and paid creatives, D-008 terms/prices, Google finance/EUR settlement and D-017 capped budget/business guardrails. Subscriptions, iOS, Looker, Remote Config, push and an automatic MMP remain outside this MVP gate. Conditional MMP need is D-018.
 
 ## Deferred validation register
-
-### P6-T01 — Visual-only refresh (2026-09-22)
-
-- **Source:** founder requested styles/layout changes only; D-029 development
-  sequencing. See [scope and evidence](mobile-visual-refresh.md). Changes are
-  based on `673f621`; record the final visual-refresh commit when executing.
-- **Unverified:** populated Home/series, signed-in Coins/Account, unlock/player,
-  keyboard and TalkBack layouts after this refresh. The local catalog returned
-  HTTP 500, isolated preview startup was blocked by automatic approval review,
-  and the emulator disconnected. These checks are deferred, not passed.
-- **Recovery update (2026-09-22):** the real local catalog now returns 200 and
-  the intended Stovio emulator has booted. See the
-  [runtime recovery evidence](android-first-journey.md#catalog-recovery-evidence--2026-09-22).
-  The founder opened Stovio. Metro's stale bundle was corrected by clearing its
-  cache and removing CI mode, which had disabled file watching. Populated Home
-  now visibly shows the new styles on the emulator. The remaining native checks
-  above are still pending; this does not pass the full visual journey.
-- **Second layout pass:** following founder feedback, the artwork/title layout
-  was revised again. Populated Home, series episode rows and selected-episode
-  navigation were visually verified on `Stovio_Dev` at normal text size. The
-  original font scale was restored after an inconclusive 2.0-text experiment.
-  Signed-in Coins/Account, player, small-screen, keyboard and TalkBack checks
-  remain pending. See the [layout revision evidence](mobile-visual-refresh.md#layout-revision-after-founder-feedback--2026-09-22).
-- **Disabled/fail-closed:** no production switch or commerce mode is changed.
-  Existing production coin spending remains disabled; purchases/unlocks and
-  playback retain all existing server verification and availability gates.
-  No financial-integrity, entitlement or privacy test is deferred by this entry.
-- **Prerequisites:** booted Android development client on the final revision;
-  working local or approved isolated test backend; generated/self-owned catalog
-  with artwork and missing-artwork cases; generated test account; disabled
-  provider purchasing for no-charge preview, or separately approved sandbox.
-- **Procedure:**
-  1. Record device size, density and text scale. Open Home as a guest, then inspect
-     long titles, hero artwork, rails, loading, empty and retry screens.
-  2. Open a series and episode. Confirm descriptions, episode rows and Play remain
-     reachable and the same routes/actions are retained. Return with Android Back.
-  3. Sign in with a generated test account. Open Coins using the Home balance and
-     Account menu. Check one-, two- and three-pack layouts, long store prices,
-     selected radio state, Best Value and reachable purchase/history/recovery
-     controls. In no-charge preview, open confirmation and cancel; never infer
-     live credit or fulfillment from a preview.
-  4. Repeat at 320 × 480 logical pixels and 130% text, then at 200% text. Coins
-     must become a list; labels, amounts and controls must wrap without clipping.
-     Inspect sign-in with the keyboard open and Account privacy/deletion panels
-     without submitting consent or deletion changes.
-  5. Inspect existing locked, insufficient-balance, pending and unavailable states
-     using generated fixtures. Ensure confirmations and recovery remain reachable.
-     Test actual fulfillment separately under the existing financial gates.
-  6. Inspect authorized self-owned playback: native controls, captions, safe areas,
-     Close, saved position and next-episode handling. Run TalkBack through all
-     primary actions. Restore the original device size, density and font scale.
-- **Acceptance/evidence:** readable values and actions at every size; no clipped
-  controls, changed navigation or lost confirmation/recovery access. Save only
-  generated/redacted screenshots with revision/device metadata. P6-T03/P6-T05A
-  remain blocked for release until these checks are completed.
 
 ### P4-T01 — Firebase Analytics consent, identity, account, and product trail
 
@@ -195,7 +140,7 @@ Initial paid-test activation also requires one approved audience, approximately 
   whose analytics preference can be tested both off and on. Use synthetic campaign
   tokens only.
 - **Actions:** from a logged-out cold state and again while the app is foregrounded,
-  open direct, organic, and fully tagged `stovio://series/<generated-id>` intents.
+  open direct, organic, and fully tagged `shortform://series/<generated-id>` intents.
   Repeat after login, with analytics consent off and on. Open malformed and
   unavailable series links. Clear app data and repeat the installed-link cases; do
   not label this a fresh-install/referrer test. Inspect bounded device logs and
@@ -251,7 +196,7 @@ Initial paid-test activation also requires one approved audience, approximately 
 - **Automated reproduction:**
 
   ```text
-  pnpm --filter @stovio/mobile test --runInBand EpisodeUnlockScreen WalletScreen pendingCoinUnlock interruptedAdRecovery rewardNavigation
+  pnpm --filter @shortform/mobile test --runInBand EpisodeUnlockScreen WalletScreen pendingCoinUnlock interruptedAdRecovery rewardNavigation
   pnpm mobile:check
   pnpm mobile:bundle:check
   ```
@@ -266,7 +211,7 @@ Initial paid-test activation also requires one approved audience, approximately 
   Ad testing retains the preceding section's operator/privacy/SSV requirements.
 - **Required native actions (unchecked):** open Account → Coin wallet; background
   and resume after changing test balance on a second device. Open
-  `stovio://play/<generated-episode-id>` → View episode options. Check each
+  `shortform://play/<generated-episode-id>` → View episode options. Check each
   configured method, exact coin confirmation and cancellation, insufficient funds,
   disabled spending, large text/TalkBack and navigation through Wallet/Account/
   sign-in. Interrupt before sending and after server commit, reopen the same
@@ -390,16 +335,6 @@ provider, release-device and refund gates.
   automatic retry timing and provider-API outage remain unchecked. See the
   [normalized Android record](android-play-registration.md). Automated
   financial, authentication and privacy checks are immediate merge requirements.
-- **Hosted follow-up (2026-09-22):** The existing single-app sandbox integration
-  now targets the protected hosted consumer endpoint with its original
-  Authorization/HMAC credentials. Provider TEST returned 200; genuine purchase
-  retry after earlier client fulfillment preserved one credit. A genuine sandbox
-  refund after coin spending established review, and three normal live-provider
-  synchronization/recovery calls retained review and the saved unlock. Balance
-  stayed 99. Physical close/reopen replay also passed. Delayed-payment device
-  recovery subsequently failed, as recorded in the sign-off checkpoint below;
-  automatic retry timing, provider outage and refund-before-credit remain
-  unchecked. See [hosted test evidence](hosted-android-test-release.md).
 - **Setup:** Follow [sandbox notification setup](revenuecat-sandbox.md#sandbox-notifications-while-the-app-is-closed).
   Requires the isolated RevenueCat/Play app, license tester, approved callback
   route, configured Authorization/HMAC and explicit local sandbox webhook flag.
@@ -517,16 +452,6 @@ provider, release-device and refund gates.
   production activation. Synthetic passes do not satisfy provider observations.
 
 ## Sign-off record
-
-2026-09-22 delayed-payment checkpoint (P3-T04/P3-T06, #164/#169): the closed-app
-slow-approval purchase processed then refunded without a new RevenueCat purchase
-or wallet credit. **Failed, not deferred or passed.** Approved Play notifications
-now reach RevenueCat through the dedicated Stovio topic; the 12:13 UTC test
-delivery was received. The reviewed local SDK restart fix passes 142 focused
-tests, typecheck, scoped lint and formatting, but is not deployed. Unknown
-transaction correlation and safe terminal-state recovery remain release blockers;
-the routing test does not prove those behaviors. Detailed evidence and precise
-limitations are in the [hosted release runbook](hosted-android-test-release.md#delayed-payment-failure-and-notification-connection--2026-09-22).
 
 For each release candidate, append a dated entry with the immutable revision,
 environment/configuration identifiers (never secret values), commands/results,

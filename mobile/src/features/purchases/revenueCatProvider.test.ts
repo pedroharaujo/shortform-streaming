@@ -34,7 +34,7 @@ jest.mock('react-native-purchases', () => ({
 
 const ownerId = '11111111-1111-4111-8111-111111111111';
 const otherOwner = '22222222-2222-4222-8222-222222222222';
-const applicationId = 'com.stovio.app';
+const applicationId = 'com.shortform.streaming';
 const productId = 'coins_100';
 const identity = { ownerId, applicationId } as const;
 const purchaseRequest = {

@@ -15,7 +15,7 @@ variables {
   region               = "europe-west9"
   billing_account_id   = "000000-000000-000000"
   private_bucket_name  = "example-only-nonvideo"
-  cloud_run_image      = "example.invalid/stovio:synthetic"
+  cloud_run_image      = "example.invalid/shortform:synthetic"
   django_allowed_hosts = "localhost"
   firebase_project_id  = "example-only"
   github_repository    = "example-org/example-repo"
@@ -23,7 +23,7 @@ variables {
   budget_currency_code = "EUR"
   hosted_sandbox = {
     service_name          = "example-consumer-test"
-    image                 = "example.invalid/stovio@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    image                 = "example.invalid/shortform@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     max_instances         = 2
     revenuecat_project_id = "example-project"
     secrets = {
@@ -92,7 +92,7 @@ run "reject_public_without_app_verification" {
   variables {
     hosted_sandbox = merge({
       service_name          = "example-consumer-test"
-      image                 = "example.invalid/stovio@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      image                 = "example.invalid/shortform@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       max_instances         = 2
       revenuecat_project_id = "example-project"
       secrets = {
@@ -115,7 +115,7 @@ run "public_opt_in_keeps_staff_private" {
     firebase_app_check_app_id = "1:123456789012:android:synthetic"
     hosted_sandbox = merge({
       service_name          = "example-consumer-test"
-      image                 = "example.invalid/stovio@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      image                 = "example.invalid/shortform@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       max_instances         = 2
       revenuecat_project_id = "example-project"
       secrets = {
@@ -131,7 +131,7 @@ run "public_opt_in_keeps_staff_private" {
   assert {
     condition = (google_cloud_run_v2_service.hosted_sandbox["consumer"].ingress == "INGRESS_TRAFFIC_ALL" &&
       google_cloud_run_v2_service.hosted_sandbox["consumer"].invoker_iam_disabled &&
-      module.cloud_run.service_name == "stovio-api"
+      module.cloud_run.service_name == "shortform-api"
     )
     error_message = "Only the distinct consumer service may opt into direct public invocation."
   }
@@ -142,7 +142,7 @@ run "reject_secret_alias" {
   variables {
     hosted_sandbox = merge({
       service_name          = "example-consumer-test"
-      image                 = "example.invalid/stovio@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      image                 = "example.invalid/shortform@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       max_instances         = 2
       revenuecat_project_id = "example-project"
       secrets = {
@@ -156,7 +156,7 @@ run "reject_secret_alias" {
       }, {
       secrets = merge(({
         service_name          = "example-consumer-test"
-        image                 = "example.invalid/stovio@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        image                 = "example.invalid/shortform@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         max_instances         = 2
         revenuecat_project_id = "example-project"
         secrets = {

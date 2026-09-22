@@ -63,7 +63,7 @@ data "google_project" "hosted_sandbox" {
 resource "google_service_account" "hosted_sandbox" {
   for_each     = local.hosted_sandbox_services
   project      = var.project_id
-  account_id   = "stovio-consumer-test"
+  account_id   = "shortform-consumer-test"
   display_name = "Consumer sandbox runtime, no staff storage access"
   depends_on   = [google_project_service.required]
 }
@@ -73,7 +73,7 @@ resource "google_service_account" "hosted_sandbox" {
 resource "google_project_iam_custom_role" "hosted_sandbox_identity" {
   for_each    = local.hosted_sandbox_services
   project     = var.firebase_project_id
-  role_id     = "stovioConsumerSandboxIdentity"
+  role_id     = "shortformConsumerSandboxIdentity"
   title       = "Consumer sandbox Firebase account lifecycle"
   permissions = ["firebaseauth.users.get", "firebaseauth.users.delete"]
 }

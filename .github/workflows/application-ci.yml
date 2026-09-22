@@ -48,19 +48,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      DATABASE_URL: postgresql://stovio@127.0.0.1:5432/stovio
+      DATABASE_URL: postgresql://shortform@127.0.0.1:5432/shortform
       DJANGO_SETTINGS_MODULE: config.settings.local
     services:
       postgres:
         image: postgres:17.6-alpine
         env:
-          POSTGRES_DB: stovio
-          POSTGRES_USER: stovio
+          POSTGRES_DB: shortform
+          POSTGRES_USER: shortform
           POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U stovio -d stovio"
+          --health-cmd "pg_isready -U shortform -d shortform"
           --health-interval 2s
           --health-timeout 3s
           --health-retries 15
@@ -150,7 +150,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build backend image
-        run: docker build -f backend/Dockerfile -t stovio-backend:ci .
+        run: docker build -f backend/Dockerfile -t shortform-backend:ci .
 
   dependency-review:
     name: Dependency review

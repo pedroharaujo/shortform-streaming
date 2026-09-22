@@ -16,7 +16,7 @@ storage failures. Backend accounting and playback authorization stay authoritati
 Files: `mobile/src/features/wallet/pendingCoinUnlock.ts` and its existing test.
 
 - [x] Add strict bounded journal key/value validation and `readPendingCoinUnlockForProfile(profileId)` returning the full original attempt or null.
-- [x] Write failing tests for journal-only recovery, mismatches, account isolation and partial writes/deletes; run `pnpm --filter @stovio/mobile test --runInBand pendingCoinUnlock`.
+- [x] Write failing tests for journal-only recovery, mismatches, account isolation and partial writes/deletes; run `pnpm --filter @shortform/mobile test --runInBand pendingCoinUnlock`.
 - [x] Under the existing serialization queue, enforce this order:
 
 ```text

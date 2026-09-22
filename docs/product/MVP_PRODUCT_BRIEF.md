@@ -2,12 +2,12 @@
 
 **Plan task:** P0-T01  
 **Status:** Founder strategy approved; implementation and Public Release Readiness remain open
-**Product brand:** Stovio
+**Product codename:** Shortform Streaming  
 **Last updated:** 2026-09-20
 
 ## Product statement and business hypothesis
 
-Stovio is an Android-first platform for vertical microdrama series. Viewers discover independently approved self-owned or licensed stories, watch free episodes, and continue using the purchased-coin unlocks configured for each episode. Rewarded ads are post-MVP (D-037).
+Shortform Streaming is an Android-first platform for vertical microdrama series. Viewers discover independently approved self-owned or licensed stories, watch free episodes, and continue using the purchased-coin unlocks configured for each episode. Rewarded ads are post-MVP (D-037).
 
 > Can we acquire users profitably? Can contribution LTV become greater than CAC for users acquired in our initial market and target audience?
 

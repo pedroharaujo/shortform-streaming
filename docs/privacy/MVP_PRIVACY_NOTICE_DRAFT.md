@@ -1,4 +1,4 @@
-# Stovio: MVP privacy notice
+# Shortform Streaming: MVP privacy notice
 
 **DRAFT — NOT AN EFFECTIVE OR APPROVED STORE PRIVACY POLICY.** This publicly
 reviewable document describes the current coin-only Android MVP implementation
@@ -14,7 +14,7 @@ activated or submitted to Google Play.
 
 ## What the service does
 
-Stovio is an Android app for browsing and watching short-form
+Shortform Streaming is an Android app for browsing and watching short-form
 series. People may browse and watch eligible free episodes without an account.
 An account is required to buy coins, use coins to unlock episodes, and sync
 progress and access across devices. The MVP does not show advertising or offer

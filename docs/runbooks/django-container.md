@@ -1,13 +1,13 @@
 # Django container (P5-T02)
 
-Issue: [#77](https://github.com/pedroharaujo/stovio/issues/77). This runbook is the local image and migration-vs-web contract. Live staging deploy, Artifact Registry push from GitHub, Cloud Run traffic, fail-smoke, and “deploy a backward-compatible migration and rollback a revision” are documented in [`staging-deploy.md`](staging-deploy.md) (P5-T03 / #81) and remain **unchecked founder follow-up** until live evidence exists. Do not treat a successful local Compose run as a Cloud Run deploy.
+Issue: [#77](https://github.com/pedroharaujo/shortform-streaming/issues/77). This runbook is the local image and migration-vs-web contract. Live staging deploy, Artifact Registry push from GitHub, Cloud Run traffic, fail-smoke, and “deploy a backward-compatible migration and rollback a revision” are documented in [`staging-deploy.md`](staging-deploy.md) (P5-T03 / #81) and remain **unchecked founder follow-up** until live evidence exists. Do not treat a successful local Compose run as a Cloud Run deploy.
 
 ## Build
 
 From the repository root, with no production secrets in the environment or build args:
 
 ```shell
-docker build -f backend/Dockerfile -t stovio-backend:ci .
+docker build -f backend/Dockerfile -t shortform-backend:ci .
 ```
 
 The GitHub Application CI **Container** job runs that exact command string only. It does **not** run Compose or `scripts/verify_backend_container.sh`. The image is multi-stage (`python:3.14-alpine3.24` + pinned uv `0.9.28`), non-root (`USER app`, uid/gid 1000), and does not `docker push`. The runtime applies Alpine's available `libuuid` fix and removes unused pip/ensurepip installers; application dependencies still come from `uv.lock`. Alpine uses musl, so native dependency and PostgreSQL integration checks must accompany base-image changes. Google CRC32C currently uses its Python fallback in this image.
@@ -17,13 +17,13 @@ The public [Supabase database CA](../../backend/certs/README.md) is bundled for 
 Confirm the image user and that secret names are not baked into `Env`:
 
 ```shell
-docker inspect --format '{{.Config.User}} {{json .Config.Env}}' stovio-backend:ci
+docker inspect --format '{{.Config.User}} {{json .Config.Env}}' shortform-backend:ci
 ```
 
 `web` without production process env must fail closed (`ImproperlyConfigured`):
 
 ```shell
-docker run --rm stovio-backend:ci web
+docker run --rm shortform-backend:ci web
 ```
 
 ## No secrets in image layers
@@ -81,12 +81,12 @@ Production settings use **explicit dummy** values in `compose.yaml` (not `.env.e
 Production enables `SECURE_SSL_REDIRECT`. Host curls and probes must send `X-Forwarded-Proto: https` and a matching `Host` (`127.0.0.1` or `localhost`). Do not add a production flag to disable SSL redirect.
 
 ```shell
-docker build -f backend/Dockerfile -t stovio-backend:ci .
+docker build -f backend/Dockerfile -t shortform-backend:ci .
 docker compose --profile container up -d --wait
 scripts/verify_backend_container.sh
 ```
 
-The verify script is **local** (and optional operator) evidence. It checks live/ready JSON, Admin login HTML, Admin CSS, Postgres stop/start recovery (ready 503 / live 200, then ready 200), and `docker stop` on `api` within the gunicorn graceful window. It tears down Compose on success or failure. Build the image first. `STOVIO_BACKEND_IMAGE` selects the same image for inspection, migrate and web; the default is `stovio-backend:ci`.
+The verify script is **local** (and optional operator) evidence. It checks live/ready JSON, Admin login HTML, Admin CSS, Postgres stop/start recovery (ready 503 / live 200, then ready 200), and `docker stop` on `api` within the gunicorn graceful window. It tears down Compose on success or failure. Build the image first. `SHORTFORM_BACKEND_IMAGE` selects the same image for inspection, migrate and web; the default is `shortform-backend:ci`.
 
 Do not claim the GitHub Container job ran Compose. Wiring `scripts/verify_backend_container.sh` into Application CI is deferred until that change does not ALWAYS_RUN the Mobile job (editing `.github/workflows/application-ci.yml` or `scripts/ci_path_filters.py` retriggers Mobile) or until expo pins are current (P2-T08 / P5-T03).
 
@@ -125,7 +125,7 @@ sequence, WIF, fail-smoke, and traffic-only rollback are in
 Scan-ready: run a local scanner against the built tag when the tool is installed, for example:
 
 ```shell
-trivy image --severity HIGH,CRITICAL stovio-backend:ci
+trivy image --severity HIGH,CRITICAL shortform-backend:ci
 ```
 
 This repository does not add a paid SaaS scanner. Deploy CI pins

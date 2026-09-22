@@ -1,4 +1,4 @@
-import type { components, paths } from '@stovio/api-client';
+import type { components, paths } from '@shortform/api-client';
 
 import type { EnvelopeOutcome, UnreachableOutcome } from '../outcomes';
 

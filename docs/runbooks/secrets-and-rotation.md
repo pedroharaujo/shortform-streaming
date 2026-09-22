@@ -4,7 +4,7 @@ This is a **local code/configuration acceptance slice**, not evidence of a live
 rotation. No credentials or secret values belong here. P5-T03's live WIF apply,
 GitHub Environments, first deployment, failed-smoke/no-promotion, traffic rollback
 and untrusted-fork proof remain required in [staging-deploy.md](staging-deploy.md).
-Follow-up: [P5-T04 / #101](https://github.com/pedroharaujo/stovio/issues/101).
+Follow-up: [P5-T04 / #101](https://github.com/pedroharaujo/shortform-streaming/issues/101).
 P5-T04 remains open until environment isolation, access restrictions, overlap,
 actual staging rotation and old-value revocation are independently observed.
 
@@ -95,7 +95,7 @@ zero-downtime acceptance remain open in #101.
 
 ## HTTP-only smoke isolation (#101 engineering slice)
 
-`stovio-smoke` uses a dedicated service account. Its only grants in this
+`shortform-smoke` uses a dedicated service account. Its only grants in this
 composition are Artifact Registry reader on this repository and Cloud Run
 invoker on this service. It has no Secret Manager, storage, project logging,
 metrics, WIF or impersonation grants. The deploy identity can act as this

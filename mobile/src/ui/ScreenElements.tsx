@@ -119,12 +119,14 @@ export const panelStyles = StyleSheet.create({
     borderRadius: radii.lg,
     padding: spacing.xl,
     gap: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   label: { color: colors.accent, fontSize: fontSizes.caption, fontWeight: '700', letterSpacing: 1 },
 });
 
 const styles = StyleSheet.create({
-  intro: { gap: spacing.sm, marginBottom: spacing.lg },
+  intro: { gap: spacing.md, marginBottom: spacing.sm },
   avatar: {
     width: 36,
     height: 36,
@@ -164,14 +166,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-    minHeight: 68,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
+    minHeight: 64,
+    padding: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   rowLabel: { color: colors.foreground, fontSize: fontSizes.body, flex: 1 },
-  chevron: { color: colors.muted, fontSize: 24 },
+  chevron: { color: colors.muted, fontSize: 26 },
   title: {
     color: colors.foreground,
     fontSize: fontSizes.display,
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: colors.accent, borderColor: colors.accent },
   primaryLabel: { color: colors.onAccent },
-  secondary: { backgroundColor: colors.surfaceRaised, borderColor: 'transparent' },
+  secondary: { backgroundColor: colors.surfaceRaised },
   quiet: { backgroundColor: 'transparent', borderColor: 'transparent' },
   quietLabel: { color: colors.muted },
   danger: { backgroundColor: colors.surface, borderColor: colors.danger },

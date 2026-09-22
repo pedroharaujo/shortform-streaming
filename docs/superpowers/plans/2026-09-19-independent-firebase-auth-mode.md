@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Issue: https://github.com/pedroharaujo/stovio/issues/175; parent journey: #164, decision D-036.
+- Issue: https://github.com/pedroharaujo/shortform-streaming/issues/175; parent journey: #164, decision D-036.
 - One bounded task and one PR; no extra worktree. Use the short-lived `codex/firebase-auth-mode` branch in the existing checkout. The earlier baseline ARM64 AAB attempt produced no artifact and is stopped, so source work and sequential checks may proceed. Build the store-registration AAB from the verified updated code later, with purchases, ads, analytics and App Check disabled. Do not overlap source mutations or heavy Jest work with native compilation.
 - Preserve defaults: local API uses the Auth emulator; staging/production APIs use cloud Auth. An explicitly selected local cloud mode is supported. An explicitly selected nonlocal emulator mode is rejected.
 - Never infer an auth mode from a purchase setting; preserve every purchase, analytics, ads, App Check and backend authorization gate.
@@ -114,7 +114,7 @@ describe('Firebase auth configuration', () => {
 Run from repo root, only after the build is clear:
 
 ```powershell
-pnpm --filter @stovio/mobile test --runInBand src/config/appConfiguration.test.ts
+pnpm --filter @shortform/mobile test --runInBand src/config/appConfiguration.test.ts
 ```
 
 Expected RED: the new reader/resolver is missing. If only unrelated tooling fails, resolve the test invocation before claiming the failure demonstrates this behavior.
@@ -243,7 +243,7 @@ Also add one case where `requireOptionalNativeModule` returns the old module sha
 Run:
 
 ```powershell
-pnpm --filter @stovio/mobile test --runInBand src/auth/nativeFirebaseAuth.test.ts
+pnpm --filter @shortform/mobile test --runInBand src/auth/nativeFirebaseAuth.test.ts
 ```
 
 Expected RED: no native mode guard is called; local cloud mode cannot yet bypass the old API-coupled attachment.
@@ -365,7 +365,7 @@ EXPO_PUBLIC_FIREBASE_AUTH_MODE=cloud
 # Backend .env: use the same non-production Firebase project as google-services.json
 FIREBASE_AUTH_MODE=admin
 FIREBASE_PROJECT_ID=replace-with-test-project-id
-GOOGLE_APPLICATION_CREDENTIALS=C:/private/stovio/firebase-auth-verifier.json
+GOOGLE_APPLICATION_CREDENTIALS=C:/private/shortform/firebase-auth-verifier.json
 # FIREBASE_AUTH_EMULATOR_HOST must be absent, including inherited process environment.
 ```
 
@@ -434,8 +434,8 @@ Exact local commands and final outcomes:
 
 | Command | Result |
 | --- | --- |
-| `pnpm --filter @stovio/mobile test --runInBand src/config/appConfiguration.test.ts` | RED: 19 new cases failed; GREEN: 33 tests passed. |
-| `pnpm --filter @stovio/mobile test --runInBand src/auth/nativeFirebaseAuth.test.ts` | RED: 9 new cases failed; GREEN: 21 tests passed. |
+| `pnpm --filter @shortform/mobile test --runInBand src/config/appConfiguration.test.ts` | RED: 19 new cases failed; GREEN: 33 tests passed. |
+| `pnpm --filter @shortform/mobile test --runInBand src/auth/nativeFirebaseAuth.test.ts` | RED: 9 new cases failed; GREEN: 21 tests passed. |
 | `pnpm mobile:lint` | Passed after replacing the plan's loose null comparison with explicit null/undefined checks. |
 | `pnpm mobile:format:check` | Passed after formatting the changed runtime configuration file. |
 | `pnpm mobile:typecheck` | Passed. |

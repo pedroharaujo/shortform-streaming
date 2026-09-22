@@ -403,7 +403,7 @@ it('retries a lost creation response with the same request id', async () => {
   expect(presenter.present).toHaveBeenCalledTimes(1);
 });
 
-const PENDING_REWARD_KEY = 'stovio.pending_reward_attempt.v1';
+const PENDING_REWARD_KEY = 'shortform.pending_reward_attempt.v1';
 const PERSISTED_REQUEST_ID = '22222222-2222-4222-8222-222222222222';
 
 function persistAttempt(

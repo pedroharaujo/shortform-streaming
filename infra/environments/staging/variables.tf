@@ -75,7 +75,7 @@ variable "billing_account_id" {
 variable "label_product" {
   type        = string
   description = "Product label."
-  default     = "stovio"
+  default     = "shortform"
 }
 
 variable "label_environment" {
@@ -99,7 +99,7 @@ variable "label_cost_center" {
 variable "artifact_registry_repository_id" {
   type        = string
   description = "Docker Artifact Registry repository ID."
-  default     = "stovio"
+  default     = "shortform"
 }
 
 variable "private_bucket_name" {
@@ -110,7 +110,7 @@ variable "private_bucket_name" {
 variable "cloud_run_service_name" {
   type        = string
   description = "Cloud Run service name. No custom domain or DNS."
-  default     = "stovio-api"
+  default     = "shortform-api"
 }
 
 variable "cloud_run_image" {
@@ -121,7 +121,7 @@ variable "cloud_run_image" {
 variable "runtime_service_account_id" {
   type        = string
   description = "Account ID for the dedicated Cloud Run runtime service account."
-  default     = "stovio-runtime"
+  default     = "shortform-runtime"
 }
 
 variable "django_allowed_hosts" {
@@ -205,13 +205,13 @@ variable "github_environment" {
 variable "migrate_job_name" {
   type        = string
   description = "Cloud Run Job that runs the image migrate entrypoint before traffic."
-  default     = "stovio-migrate"
+  default     = "shortform-migrate"
 }
 
 variable "smoke_job_name" {
   type        = string
   description = "Cloud Run Job that smokes an untrafficked candidate revision from inside the project."
-  default     = "stovio-smoke"
+  default     = "shortform-smoke"
 }
 
 variable "secret_ids" {

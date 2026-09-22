@@ -1,4 +1,4 @@
-import type { components } from '@stovio/api-client';
+import type { components } from '@shortform/api-client';
 import type { EnvelopeOutcome, UnreachableOutcome } from '../outcomes';
 
 export type PurchaseHistory = components['schemas']['PurchaseHistory'];

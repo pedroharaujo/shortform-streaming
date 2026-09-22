@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -137,6 +138,8 @@ export function PlayerScreen({
   const messages = useMessages();
   const [activeEpisodeId, setActiveEpisodeId] = useState(episodeId);
   const [paused, setPaused] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [progressRatio, setProgressRatio] = useState(0);
   const [nextGate, setNextGate] = useState<
     | {
         readonly phase: 'locked';
@@ -363,11 +366,70 @@ export function PlayerScreen({
   const handlePosition = useCallback(
     (seconds: number) => {
       positionRef.current = seconds;
+      if (durationRef.current > 0) {
+        setProgressRatio(Math.min(1, Math.max(0, seconds / durationRef.current)));
+      }
       if (isCompleteByPosition(seconds, durationRef.current)) {
         void flushProgress(true);
       }
     },
     [flushProgress],
+  );
+
+  const currentSeries = seriesRef.current;
+  const allEpisodes = currentSeries?.seasons.flatMap((s) => s.episodes) ?? [];
+  const currentEpIndex = allEpisodes.findIndex((e) => e.id === activeEpisodeId);
+  const prevEpisode = currentEpIndex > 0 ? allEpisodes[currentEpIndex - 1] : null;
+  const nextEpisode =
+    currentEpIndex >= 0 && currentEpIndex < allEpisodes.length - 1
+      ? allEpisodes[currentEpIndex + 1]
+      : null;
+
+  const handleNavigateEpisode = useCallback(
+    async (targetId: string) => {
+      await flushProgress(false);
+      clearThrottle();
+      const nextAuthorize = await playback.authorize(targetId);
+      if (nextAuthorize.outcome === 'locked') {
+        const nextEp =
+          seriesRef.current === null ? null : seriesEpisode(seriesRef.current, targetId);
+        if (nextEp === null) {
+          setNextGate({ phase: 'unavailable', episodeId: targetId });
+          setShowDrawer(false);
+          return;
+        }
+        setNextGate({
+          phase: 'locked',
+          reasons: nextAuthorize.lockReasons,
+          episodeId: targetId,
+          episode: nextEp,
+        });
+        setShowDrawer(false);
+        return;
+      }
+      if (nextAuthorize.outcome === 'not-found') {
+        setNextGate({ phase: 'unavailable', episodeId: targetId });
+        setShowDrawer(false);
+        return;
+      }
+      if (nextAuthorize.outcome !== 'ok') {
+        setNextGate({
+          phase: 'error',
+          message: messages.playback.failed,
+          failure: {
+            episodeId: targetId,
+            code: authorizeErrorCode(nextAuthorize.outcome),
+            phase: 'authorize',
+          },
+        });
+        setShowDrawer(false);
+        return;
+      }
+      setNextGate(null);
+      setShowDrawer(false);
+      setActiveEpisodeId(targetId);
+    },
+    [clearThrottle, flushProgress, messages.playback.failed, playback],
   );
 
   const displayed = nextGate ?? phase;
@@ -491,8 +553,142 @@ export function PlayerScreen({
             testID="player-video"
             uri={displayed.playbackUri}
           />
+
+          {/* Touch-to-pause overlay */}
+          <Pressable
+            accessibilityLabel={paused ? 'Play' : 'Pause'}
+            accessibilityRole="button"
+            onPress={() => setPaused((prev) => !prev)}
+            style={styles.touchOverlay}
+          >
+            {paused ? (
+              <View style={styles.pausedBadge}>
+                <Text style={styles.pausedIcon}>▶</Text>
+              </View>
+            ) : null}
+          </Pressable>
+
+          {/* Bottom player controls overlay */}
+          <View style={styles.bottomControls}>
+            {/* Quick episode jumper button */}
+            {allEpisodes.length > 1 ? (
+              <View style={styles.controlsRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Open episode drawer"
+                  onPress={() => setShowDrawer(true)}
+                  style={styles.episodesButton}
+                >
+                  <Text style={styles.episodesButtonText}>
+                    {currentEpIndex >= 0 ? `Episode ${currentEpIndex + 1} of ${allEpisodes.length}` : 'Episodes'} ☰
+                  </Text>
+                </Pressable>
+
+                <View style={styles.skipActions}>
+                  <Pressable
+                    accessibilityLabel="Previous episode"
+                    accessibilityRole="button"
+                    disabled={prevEpisode === null}
+                    onPress={() => {
+                      if (prevEpisode) void handleNavigateEpisode(prevEpisode.id);
+                    }}
+                    style={[styles.skipButton, prevEpisode === null && styles.skipButtonDisabled]}
+                  >
+                    <Text style={[styles.skipButtonText, prevEpisode === null && styles.skipButtonTextDisabled]}>
+                      ⏮ Prev
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityLabel="Next episode"
+                    accessibilityRole="button"
+                    disabled={nextEpisode === null}
+                    onPress={() => {
+                      if (nextEpisode) void handleNavigateEpisode(nextEpisode.id);
+                    }}
+                    style={[styles.skipButton, nextEpisode === null && styles.skipButtonDisabled]}
+                  >
+                    <Text style={[styles.skipButtonText, nextEpisode === null && styles.skipButtonTextDisabled]}>
+                      Next ⏭
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Progress track */}
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${Math.round(progressRatio * 100)}%` }]} />
+            </View>
+          </View>
         </View>
       ) : null}
+
+      {/* Episode Drawer Sheet */}
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setShowDrawer(false)}
+        transparent
+        visible={showDrawer}
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable onPress={() => setShowDrawer(false)} style={styles.modalDismissArea} />
+          <View style={styles.drawerSheet}>
+            <View style={styles.drawerHeader}>
+              <Text numberOfLines={1} style={styles.drawerTitle}>
+                {seriesRef.current?.title ?? 'Episodes'}
+              </Text>
+              <Pressable
+                accessibilityLabel="Close episode drawer"
+                accessibilityRole="button"
+                onPress={() => setShowDrawer(false)}
+                style={styles.drawerClose}
+              >
+                <Text style={styles.drawerCloseText}>✕</Text>
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.drawerList}>
+              {allEpisodes.map((ep, idx) => {
+                const isActive = ep.id === activeEpisodeId;
+                return (
+                  <Pressable
+                    key={ep.id}
+                    accessibilityRole="button"
+                    onPress={() => {
+                      void handleNavigateEpisode(ep.id);
+                    }}
+                    style={[styles.drawerItem, isActive && styles.drawerItemActive]}
+                  >
+                    <View style={[styles.drawerItemNumber, isActive && styles.drawerItemNumberActive]}>
+                      <Text style={[styles.drawerItemNumberText, isActive && styles.drawerItemNumberTextActive]}>
+                        {idx + 1}
+                      </Text>
+                    </View>
+                    <View style={styles.drawerItemInfo}>
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.drawerItemTitle, isActive && styles.drawerItemTitleActive]}
+                      >
+                        {ep.title || `Episode ${ep.order}`}
+                      </Text>
+                      {ep.duration_seconds > 0 ? (
+                        <Text style={styles.drawerItemDuration}>
+                          {Math.round(ep.duration_seconds)}s
+                        </Text>
+                      ) : null}
+                    </View>
+                    {isActive ? (
+                      <View style={styles.activePill}>
+                        <Text style={styles.activePillText}>Playing</Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -511,6 +707,8 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: spacing.xxl,
     backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
     borderRadius: radii.lg,
     padding: spacing.xxl,
   },
@@ -532,29 +730,227 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   closeLabel: { color: colors.foreground, fontSize: fontSizes.label, fontWeight: '600' },
-  container: {
-    backgroundColor: colors.background,
-    flex: 1,
-    paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
-  },
+  container: { backgroundColor: colors.background, flex: 1, padding: spacing.lg },
   muted: { color: colors.muted, fontSize: fontSizes.body, lineHeight: 24, textAlign: 'center' },
   nowPlaying: {
     color: colors.foreground,
-    fontSize: fontSizes.section,
-    fontWeight: '600',
+    fontSize: fontSizes.title,
+    fontWeight: '800',
+    letterSpacing: -0.6,
     marginBottom: spacing.xs,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    marginTop: spacing.lg,
   },
   playerWrap: {
     flex: 1,
     marginTop: spacing.md,
     overflow: 'hidden',
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    position: 'relative',
+    backgroundColor: '#000000',
+  },
+  touchOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pausedBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pausedIcon: {
+    color: '#ffffff',
+    fontSize: 24,
+    marginLeft: 4,
+  },
+  bottomControls: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.md,
+    gap: spacing.sm,
+    backgroundColor: 'rgba(10, 10, 12, 0.75)',
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  episodesButton: {
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    minHeight: 36,
+    justifyContent: 'center',
+  },
+  episodesButtonText: {
+    color: colors.foreground,
+    fontSize: fontSizes.caption,
+    fontWeight: '700',
+  },
+  skipActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  skipButton: {
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    minHeight: 36,
+    justifyContent: 'center',
+  },
+  skipButtonDisabled: {
+    opacity: 0.35,
+  },
+  skipButtonText: {
+    color: colors.foreground,
+    fontSize: fontSizes.caption,
+    fontWeight: '600',
+  },
+  skipButtonTextDisabled: {
+    color: colors.muted,
+  },
+  progressTrack: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: radii.pill,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.accent,
+    borderRadius: radii.pill,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalDismissArea: {
+    flex: 1,
+  },
+  drawerSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    maxHeight: '65%',
+    paddingBottom: spacing.xxl,
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  drawerTitle: {
+    color: colors.foreground,
+    fontSize: fontSizes.section,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    flex: 1,
+  },
+  drawerClose: {
+    padding: spacing.xs,
+    minWidth: 32,
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drawerCloseText: {
+    color: colors.muted,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  drawerList: {
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  drawerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
     borderRadius: radii.md,
+    backgroundColor: 'transparent',
+    gap: spacing.md,
+  },
+  drawerItemActive: {
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.accent,
+    borderWidth: 1,
+  },
+  drawerItemNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drawerItemNumberActive: {
+    backgroundColor: colors.accent,
+  },
+  drawerItemNumberText: {
+    color: colors.muted,
+    fontSize: fontSizes.caption,
+    fontWeight: '700',
+  },
+  drawerItemNumberTextActive: {
+    color: colors.onAccent,
+  },
+  drawerItemInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  drawerItemTitle: {
+    color: colors.foreground,
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+  },
+  drawerItemTitleActive: {
+    color: colors.accent,
+    fontWeight: '700',
+  },
+  drawerItemDuration: {
+    color: colors.muted,
+    fontSize: fontSizes.caption,
+  },
+  activePill: {
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radii.pill,
+  },
+  activePillText: {
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: '700',
   },
   rewardAction: {
     alignItems: 'center',

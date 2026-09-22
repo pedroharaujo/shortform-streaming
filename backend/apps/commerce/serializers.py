@@ -61,7 +61,7 @@ class PurchaseRecoveryRequestSerializer(PurchaseProductRequestSerializer):
         max_length=64,
         trim_whitespace=False,
         help_text=(
-            'SHA-256 of UTF-8 compact JSON ["stovio-purchase-v1", owner purchase UUID, '
+            'SHA-256 of UTF-8 compact JSON ["shortform-purchase-v1", owner purchase UUID, '
             "application_id, product_id, Google transaction ID]. Lowercase hex; ASCII identifiers."
         ),
     )

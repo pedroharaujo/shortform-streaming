@@ -1,4 +1,4 @@
-import { createApiClient } from '@stovio/api-client';
+import { createApiClient } from '@shortform/api-client';
 
 export function createOpenApiClient(options: {
   readonly baseUrl: string;

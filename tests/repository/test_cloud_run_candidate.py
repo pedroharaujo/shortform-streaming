@@ -8,8 +8,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/resolve_cloud_run_candidate.py"
-REVISION = "stovio-staging-00042-abc"
-URL = "https://candidate---stovio-staging-example-uc.a.run.app"
+REVISION = "shortform-staging-00042-abc"
+URL = "https://candidate---shortform-staging-example-uc.a.run.app"
 
 
 class CloudRunCandidateTests(unittest.TestCase):
@@ -34,7 +34,7 @@ class CloudRunCandidateTests(unittest.TestCase):
                 {
                     "status": {
                         "traffic": [
-                            {"revisionName": "stovio-staging-00041-abc", "percent": 100},
+                            {"revisionName": "shortform-staging-00041-abc", "percent": 100},
                             {"tag": "candidate", "revisionName": REVISION, "url": URL},
                         ]
                     }

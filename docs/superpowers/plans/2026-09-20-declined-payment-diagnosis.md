@@ -68,8 +68,8 @@ References:
 - [Post-transaction product lookup](https://github.com/RevenueCat/purchases-android/blob/10.20.0/purchases/src/main/kotlin/com/revenuecat/purchases/PostTransactionWithProductDetailsHelper.kt#L92)
 
 Verification:
-- `pnpm --filter @stovio/mobile test --runInBand revenueCatProvider.test.ts checkoutCoordinator.test.ts`: first failed the two new rejection expectations as intended; after the fix, 115 passed.
-- `pnpm --filter @stovio/mobile test --runInBand`: 50 suites, 510 tests passed.
+- `pnpm --filter @shortform/mobile test --runInBand revenueCatProvider.test.ts checkoutCoordinator.test.ts`: first failed the two new rejection expectations as intended; after the fix, 115 passed.
+- `pnpm --filter @shortform/mobile test --runInBand`: 50 suites, 510 tests passed.
 - `pnpm mobile:lint`, `pnpm mobile:typecheck`, `pnpm mobile:config:check`, `pnpm contract:check`: passed.
 
 Device retest remains required. The diagnostic attempt predates the fix and its

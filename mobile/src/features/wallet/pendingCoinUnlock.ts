@@ -1,8 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 import type { CoinUnlockRequest } from '../../api/wallet/types';
 
-const STORAGE_PREFIX = 'stovio.pending_coin_unlock.v1';
-const JOURNAL_PREFIX = 'stovio.pending_coin_unlock_journal.v1';
+const STORAGE_PREFIX = 'shortform.pending_coin_unlock.v1';
+const JOURNAL_PREFIX = 'shortform.pending_coin_unlock_journal.v1';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PROFILE_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const EPISODE_ID_PATTERN = /^[A-Za-z0-9_-]{1,40}$/;

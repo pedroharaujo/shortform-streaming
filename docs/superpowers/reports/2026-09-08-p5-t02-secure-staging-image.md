@@ -19,7 +19,7 @@ it does not complete secret rotation or authorize production activation.
 
 ## Validation
 
-- `docker build -f backend/Dockerfile -t stovio-backend:pr146-secure .`
+- `docker build -f backend/Dockerfile -t shortform-backend:pr146-secure .`
   passed, including collectstatic. Validated image digest:
   `sha256:ecfc43c59e925d4624cb84d2c1654c0c3c5929d28d0666765f4168d8aa19c846`.
 - Trivy 0.70.0, `image --input <exported-image> --severity HIGH,CRITICAL

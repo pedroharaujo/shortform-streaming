@@ -237,13 +237,7 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.md, marginTop: spacing.lg },
   body: { color: colors.foreground, fontSize: fontSizes.body, marginTop: spacing.md },
   container: { backgroundColor: colors.background, flex: 1 },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl,
-    gap: spacing.xl,
-  },
+  content: { flexGrow: 1, padding: spacing.xxl, gap: spacing.xl },
   fieldLabel: { color: colors.foreground, fontSize: fontSizes.label, fontWeight: '600' },
   input: {
     borderColor: colors.border,
@@ -252,7 +246,7 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     backgroundColor: colors.surfaceRaised,
     minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: fontSizes.body,
   },

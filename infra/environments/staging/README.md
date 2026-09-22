@@ -33,10 +33,10 @@ apply time) is **not** a D-020 residency/retention approval.
   image digest.
 - Firebase App Check API plus service configuration, defaulting to disabled;
   enforcement requires an explicit Android app ID and the P5-T05-F3 live checks.
-- Cloud Run Jobs `stovio-migrate` (`args = ["migrate"]`) and
-  `stovio-smoke` (in-project identity-token HTTP checks). `max_retries = 0`.
+- Cloud Run Jobs `shortform-migrate` (`args = ["migrate"]`) and
+  `shortform-smoke` (in-project identity-token HTTP checks). `max_retries = 0`.
 - GitHub OIDC workload identity pool/provider with exact repository, ref, and
-  Environment. Dedicated deploy SA `stovio-deploy` (Artifact Registry
+  Environment. Dedicated deploy SA `shortform-deploy` (Artifact Registry
   writer, Cloud Run developer on the service and jobs, `serviceAccountUser` on
   the runtime and dedicated smoke SAs only).
 - One Docker Artifact Registry repository in `var.region`.
@@ -51,7 +51,7 @@ apply time) is **not** a D-020 residency/retention approval.
   objectAdmin on that bucket, `run.invoker` on this service). Optional
   `logging.logWriter` and `monitoring.metricWriter`. No owner/editor/securityAdmin,
   no project-wide secret or storage admin. Not a WIF SA.
-- Dedicated `stovio-smoke` service account with only Artifact Registry reader
+- Dedicated `shortform-smoke` service account with only Artifact Registry reader
   on this repository and Cloud Run invoker on this service; no backend secret,
   storage or project telemetry grants.
 - Billing budget with caller-supplied amount/currency (no D-022 default)

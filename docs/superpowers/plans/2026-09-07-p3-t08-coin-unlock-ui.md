@@ -40,7 +40,7 @@ interface PendingCoinUnlock {
 - [x] Test per-profile/episode isolation, invalid/unreadable records and stale clear.
 - [x] Implement generated request types, existing authenticated/App Check fetch
   wiring, success validation and strict SecureStore recovery.
-- [x] Run `pnpm --filter @stovio/mobile test --runInBand pendingCoinUnlock`.
+- [x] Run `pnpm --filter @shortform/mobile test --runInBand pendingCoinUnlock`.
 
 ## 2. Screen behavior and ownership
 
@@ -63,7 +63,7 @@ if (!isCurrent()) return;
   mismatch, changed identity and fresh playback authorization.
 - [x] Implement safe choices and wallet refresh. Hide stale account data. Do not
   claim completion on pending, offline, malformed or rejected responses.
-- [x] Run `pnpm --filter @stovio/mobile test --runInBand EpisodeUnlockScreen WalletScreen`.
+- [x] Run `pnpm --filter @shortform/mobile test --runInBand EpisodeUnlockScreen WalletScreen`.
 
 ## 3. Navigation and validation
 
@@ -85,7 +85,7 @@ router.push({ pathname: '/wallet', params: { returnEpisode: episodeId } });
 ## Verification evidence
 
 - Implementation `08a8151` is published in
-  [PR #145](https://github.com/pedroharaujo/stovio/pull/145), unmerged.
+  [PR #145](https://github.com/pedroharaujo/shortform-streaming/pull/145), unmerged.
 - `pnpm check`: repository foundation (50 tests + secret/governance checks),
   backend lint/format/types/migrations and 418 tests, and OpenAPI generation/drift
   stages passed. Its mobile stage caught a missing `coin` helper type; corrected

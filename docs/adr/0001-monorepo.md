@@ -10,7 +10,7 @@ A small team will change Django, mobile, infrastructure, and API contracts toget
 
 ## Decision
 
-Keep backend, mobile, generated API client, infrastructure, tests, and documentation in `pedroharaujo/stovio`.
+Keep backend, mobile, generated API client, infrastructure, tests, and documentation in `pedroharaujo/shortform-streaming`.
 
 Because the repository is public:
 

@@ -181,7 +181,7 @@ LOGGING = {
     },
     "loggers": {
         "django.server": {"filters": ["redact_query"]},
-        "stovio.request": {
+        "shortform.request": {
             "handlers": ["privacy_safe_console"],
             "level": "INFO",
             "propagate": False,

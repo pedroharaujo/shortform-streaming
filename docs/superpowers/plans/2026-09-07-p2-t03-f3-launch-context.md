@@ -128,5 +128,5 @@ and main plan completion/evidence.
   JavaScript bundle export. A separate read-only addendum review found no material
   issue or policy weakening. `pnpm install --frozen-lockfile` passed with unchanged
   supply-chain policy. Implementation revision: `04cecde99f18f9740d97c1e73d79869eecb97dda`.
-  [PR #139](https://github.com/pedroharaujo/stovio/pull/139) contains
+  [PR #139](https://github.com/pedroharaujo/shortform-streaming/pull/139) contains
   the exact validation and final CI evidence; it requires human approval to merge.

@@ -11,7 +11,7 @@ import {
   subscribeAuthSession,
 } from '../../auth/session';
 import { useMessages } from '../../localization/messages';
-import { colors, fontSizes, radii, spacing } from '../../ui/theme';
+import { colors, fontSizes, spacing } from '../../ui/theme';
 import { ActionButton as Action, BackButton, panelStyles } from '../../ui/ScreenElements';
 import { CoinIcon } from '../../ui/CoinIcon';
 import { useCatalogQuery } from '../catalog/useCatalog';
@@ -187,12 +187,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  title: {
-    color: colors.foreground,
-    fontSize: fontSizes.title,
-    fontWeight: '700',
-    letterSpacing: -0.5,
-  },
+  title: { color: colors.foreground, fontSize: fontSizes.title, fontWeight: '700' },
   balanceHeader: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -200,31 +195,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  balance: {
-    color: colors.coin,
-    fontSize: 40,
-    fontWeight: '700',
-    flexShrink: 1,
-    fontVariant: ['tabular-nums'],
-  },
+  balance: { color: colors.foreground, fontSize: 36, fontWeight: '700', flexShrink: 1 },
   balanceRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md },
   body: { color: colors.foreground, fontSize: fontSizes.body },
   container: { backgroundColor: colors.background, flex: 1 },
-  content: {
-    flexGrow: 1,
-    gap: spacing.xl,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl,
-  },
+  content: { flexGrow: 1, gap: spacing.lg, padding: spacing.xxl },
   muted: { color: colors.muted, fontSize: fontSizes.label },
-  summary: {
-    gap: spacing.lg,
-    padding: spacing.xxl,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.coinRim,
-    backgroundColor: colors.coinSurface,
-    experimental_backgroundImage: 'linear-gradient(135deg, #403321 0%, #17171b 85%)',
-  },
+  summary: { gap: spacing.md },
 });

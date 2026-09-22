@@ -132,7 +132,7 @@ production, release JavaScript and non-Android runtimes cannot enable checkout.
 Missing or malformed purchase manifest settings disable the feature without
 breaking older clients. The default disabled factory does not load the provider.
 
-Open the home coin shortcut (or Account â†’ Coins) to the unified Coins screen.
+Open the home coin shortcut (or Account → Coins) to the unified Coins screen.
 Quantities come from the server registry;
 prices remain the exact store strings. RevenueCat owns acknowledgement and
 consumption; the app does not manually consume or call `syncPurchases()`. Native
@@ -186,7 +186,7 @@ Run `pnpm backend:check` and `pnpm contract:check` before merge.
 Known-result recovery uses `POST /v1/purchases/recover` with `application_id`,
 `product_id` and `transaction_fingerprint`. Version-2 SecureStore markers contain
 only owner/app/product/attempt and this SHA-256 digest, never the raw order ID.
-The digest is UTF-8 compact JSON of `["stovio-purchase-v1", owner UUID,
+The digest is UTF-8 compact JSON of `["shortform-purchase-v1", owner UUID,
 application ID, product ID, Google order ID]`. The backend reads the authenticated
 owner's [sandbox purchases](https://www.revenuecat.com/docs/api-v2/customer/resources),
 requires one exact match, and reuses full verification. It accepts only a complete

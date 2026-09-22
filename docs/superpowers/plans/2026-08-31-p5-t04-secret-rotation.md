@@ -74,7 +74,7 @@ remain required. P5-T04 environment isolation, overlap and a real staging
 rotation followed by old-value revocation remain unverified until separately
 authorized and observed. Keep the master task acceptance boxes unchecked.
 
-Follow-up opened as [#101](https://github.com/pedroharaujo/stovio/issues/101).
+Follow-up opened as [#101](https://github.com/pedroharaujo/shortform-streaming/issues/101).
 Independent read-only review found no blocking findings; the reviewer reran all
 nine mocked plans, validate, formatting, scanner regressions and diff hygiene.
 Final local results: OpenTofu format/init/validate and all nine mocked plans

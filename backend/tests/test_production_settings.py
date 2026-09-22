@@ -48,7 +48,7 @@ IMPORT_VALID_ENVIRONMENT = {
     "DJANGO_SECRET_KEY": "replace-with-provider-value",
     "DJANGO_ALLOWED_HOSTS": "api.example.test",
     "DATABASE_URL": "postgresql://example@127.0.0.1:5432/example",
-    "FIREBASE_PROJECT_ID": "demo-stovio-local",
+    "FIREBASE_PROJECT_ID": "demo-shortform-local",
 }
 
 
@@ -176,7 +176,7 @@ def test_production_settings_harden_admin_sessions_csrf_and_passwords() -> None:
         "session_cookie_secure": True,
         "session_cookie_httponly": True,
         "session_cookie_samesite": "Lax",
-        "session_cookie_name": "__Secure-stovio_admin_session",
+        "session_cookie_name": "__Secure-shortform_admin_session",
         "session_cookie_path": "/admin/",
         "session_cookie_age": 3600,
         "session_expire_at_browser_close": True,

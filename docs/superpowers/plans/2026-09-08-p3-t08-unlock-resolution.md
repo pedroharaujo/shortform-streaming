@@ -27,7 +27,7 @@ The detailed contract and race invariants are in the matching design file.
 PostgreSQL 17.6, generated fixtures only, temporary local database:
 
 ```powershell
-$env:DATABASE_URL = 'postgresql://stovio@127.0.0.1:55432/stovio'
+$env:DATABASE_URL = 'postgresql://shortform@127.0.0.1:55432/shortform'
 $env:PYTEST_ADDOPTS = '-p no:cacheprovider'
 pnpm backend:check
 uv run pytest backend/tests/wallet/test_migrations.py backend/tests/wallet/test_races.py backend/tests/wallet/test_resolution.py -q -p no:cacheprovider

@@ -213,7 +213,7 @@ Research rows below were labeled in-flight at `85207d2`. Those PRs have **merged
 
 ### P2-T01 — UserProfile / Firebase UID / `GET /v1/me` (PR #48)
 
-Branch researched: `origin/p2-t01/firebase-auth-django`. PR: https://github.com/pedroharaujo/stovio/pull/48
+Branch researched: `origin/p2-t01/firebase-auth-django`. PR: https://github.com/pedroharaujo/shortform-streaming/pull/48
 
 Does not implement P2-T02 consent/deletion, Apple/Google providers as complete product, App Check enforcement, or playback.
 
@@ -225,7 +225,7 @@ Does not implement P2-T02 consent/deletion, Apple/Google providers as complete p
 
 ### P2-T05 — Playback authorize and short-lived signed HLS URLs (PR #45)
 
-Branch researched: `origin/p2-t05/bunny-playback-spike`. PR: https://github.com/pedroharaujo/stovio/pull/45
+Branch researched: `origin/p2-t05/bunny-playback-spike`. PR: https://github.com/pedroharaujo/shortform-streaming/pull/45
 
 Anonymous free-playback spike. Does not implement MediaAsset (P2-T06), entitlements (P2-T07), or the full player (P2-T08). GCP Cloud CDN fallback was **not** activated. This inventory does not start P2-T05 device work.
 

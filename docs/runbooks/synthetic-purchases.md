@@ -254,7 +254,7 @@ Primary provider references: [webhook signatures and retry behavior](https://www
 
 On `codex/p3-t06-purchase-sync`, based on main `ae95d8f`, tests used a disposable
 PostgreSQL 17.6 container bound only to loopback port 55436, with generated data.
-`DATABASE_URL=postgresql://stovio@127.0.0.1:55436/stovio` and
+`DATABASE_URL=postgresql://shortform@127.0.0.1:55436/shortform` and
 `PYTEST_ADDOPTS=-p no:cacheprovider` selected it; no private environment file was loaded.
 
 - `uv run pytest backend/tests/commerce/test_purchase_sync.py -q`: initially
@@ -266,7 +266,7 @@ PostgreSQL 17.6 container bound only to loopback port 55436, with generated data
   regenerated OpenAPI/TypeScript consistency, mobile lint/format/types,
   **38 suites / 232 mobile tests**, and Expo configuration checks.
 - The aggregate mobile run recovered from a Windows `realpath` warning. Follow-up
-  `pnpm --filter @stovio/mobile test --runInBand src/features/catalog/EpisodeSelectedScreen.test.tsx src/features/rewards/RewardScreen.test.tsx`
+  `pnpm --filter @shortform/mobile test --runInBand src/features/catalog/EpisodeSelectedScreen.test.tsx src/features/rewards/RewardScreen.test.tsx`
   passed **2 suites / 30 tests** without that warning.
 - `git diff --check` and `git diff --cached --check`: passed.
 
@@ -285,7 +285,7 @@ validation, with its server implementation unchanged.
 P3-T06 / #142 adds the bounded read and Android history screen described above.
 The backend implementation is `fe6aeb1`; the mobile implementation is `85f1ef7`.
 Tests used generated data in disposable PostgreSQL 17.6 on loopback port 55436,
-with `DATABASE_URL=postgresql://stovio@127.0.0.1:55436/stovio` and
+with `DATABASE_URL=postgresql://shortform@127.0.0.1:55436/shortform` and
 `PYTEST_ADDOPTS=-p no:cacheprovider`.
 
 - `uv run pytest backend/tests/commerce/test_purchase_history.py -q` — **19 passed**,

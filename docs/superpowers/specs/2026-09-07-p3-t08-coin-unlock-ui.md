@@ -51,7 +51,7 @@ A first-send 400/404/409 rejection refreshes terms and requires a new confirmati
 An ambiguous network/server response retains the pending request. A subsequent
 replay rejection cannot prove whether the earlier request committed: keep the
 attempt, block replacement spending and show its safe support reference. Issue
-[#144](https://github.com/pedroharaujo/stovio/issues/144) owns the
+[#144](https://github.com/pedroharaujo/shortform-streaming/issues/144) owns the
 server-backed resolution protocol and support completion before live spending.
 Do not clear a missing receipt without serializing against a delayed original
 request. Existing backend idempotency and entitlement locks remain the financial

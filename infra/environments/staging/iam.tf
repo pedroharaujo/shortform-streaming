@@ -4,7 +4,7 @@
 resource "google_service_account" "runtime" {
   project      = var.project_id
   account_id   = var.runtime_service_account_id
-  display_name = "Stovio staging Cloud Run runtime"
+  display_name = "shortform staging Cloud Run runtime"
   description  = "Least-privilege runtime identity for staging Cloud Run. Not a WIF deploy SA. Invoker is granted on this service only; no public invoker and no project-wide admin roles."
 
   depends_on = [google_project_service.required]
@@ -91,14 +91,14 @@ resource "google_cloud_run_v2_service_iam_member" "runtime_invoker" {
 # HTTP-only smoke never receives backend secrets or bucket permissions.
 resource "google_service_account" "smoke" {
   project      = var.project_id
-  account_id   = "stovio-smoke"
-  display_name = "Stovio staging HTTP smoke"
+  account_id   = "shortform-smoke"
+  display_name = "shortform staging HTTP smoke"
   description  = "HTTP-only staging checks. Artifact reader and service-scoped invoker; no Secret Manager access."
 
   lifecycle {
     precondition {
-      condition     = var.runtime_service_account_id != "stovio-smoke"
-      error_message = "The Django runtime identity must be distinct from the HTTP-only stovio-smoke identity."
+      condition     = var.runtime_service_account_id != "shortform-smoke"
+      error_message = "The Django runtime identity must be distinct from the HTTP-only shortform-smoke identity."
     }
   }
 
@@ -121,14 +121,14 @@ resource "google_cloud_run_v2_service_iam_member" "smoke_invoker" {
   member   = "serviceAccount:${google_service_account.smoke.email}"
 }
 
-# Dedicated GitHub Actions deploy identity. account_id stovio-deploy.
+# Dedicated GitHub Actions deploy identity. account_id shortform-deploy.
 # Resource-scoped roles only. Do not grant owner, editor, iam.securityAdmin,
 # secretmanager.admin, or project-wide storage.admin.
 resource "google_service_account" "deploy" {
   project      = var.project_id
-  account_id   = "stovio-deploy"
-  display_name = "Stovio staging GitHub Actions deploy"
-  description  = "Least-privilege WIF deploy identity (stovio-deploy). Not a runtime SA."
+  account_id   = "shortform-deploy"
+  display_name = "shortform staging GitHub Actions deploy"
+  description  = "Least-privilege WIF deploy identity (shortform-deploy). Not a runtime SA."
 
   depends_on = [google_project_service.required]
 }

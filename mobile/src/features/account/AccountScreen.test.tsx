@@ -228,7 +228,7 @@ it.each(['pending', 'completed'])(
     expect(getSessionCredential()).toBeNull();
     expect(analyticsConsent.clearForAccountDeletion).toHaveBeenCalledTimes(1);
     expect(analyticsConsent.clear).toHaveBeenCalledTimes(1);
-    expect(mockDeleteSecureItem).toHaveBeenCalledWith('stovio.pending_reward_attempt.v1');
+    expect(mockDeleteSecureItem).toHaveBeenCalledWith('shortform.pending_reward_attempt.v1');
     expect(view.queryByLabelText('Current password')).toBeNull();
     expect(view.queryByLabelText('Save preferences')).toBeNull();
     expect(view.getByTestId('account-message')).toHaveTextContent(

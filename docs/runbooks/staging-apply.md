@@ -23,22 +23,22 @@ salta, adbridge, or production). Prefer a session override instead of changing
 the persistent `gcloud` default:
 
 ```bash
-export CLOUDSDK_CORE_PROJECT=stovio-staging
-export GOOGLE_CLOUD_PROJECT=stovio-staging
+export CLOUDSDK_CORE_PROJECT=shortform-streaming-stg
+export GOOGLE_CLOUD_PROJECT=shortform-streaming-stg
 # User ADC needs a quota project for Billing Budgets:
-export GOOGLE_CLOUD_QUOTA_PROJECT=stovio-staging
+export GOOGLE_CLOUD_QUOTA_PROJECT=shortform-streaming-stg
 ```
 
-Every `gcloud` mutate should also pass `--project=stovio-staging`.
-Abort if `staging.tfvars` `project_id` is not exactly `stovio-staging`.
+Every `gcloud` mutate should also pass `--project=shortform-streaming-stg`.
+Abort if `staging.tfvars` `project_id` is not exactly `shortform-streaming-stg`.
 
 Confirm identity before mutate:
 
 ```bash
 gcloud auth list --filter=status:ACTIVE --format='value(account)'
-gcloud projects describe stovio-staging \
+gcloud projects describe shortform-streaming-stg \
   --format='value(projectId,projectNumber,lifecycleState)'
-gcloud billing projects describe stovio-staging \
+gcloud billing projects describe shortform-streaming-stg \
   --format='yaml(billingAccountName,billingEnabled)'
 ```
 
@@ -102,15 +102,15 @@ enforces PAP; do not pass `=enforced`):
 ```bash
 gcloud services enable storage.googleapis.com serviceusage.googleapis.com \
   cloudresourcemanager.googleapis.com \
-  --project=stovio-staging
+  --project=shortform-streaming-stg
 
-gcloud storage buckets create gs://stovio-staging-tfstate-540100582720 \
-  --project=stovio-staging \
+gcloud storage buckets create gs://shortform-streaming-stg-tfstate-480151869295 \
+  --project=shortform-streaming-stg \
   --location=europe-west9 \
   --uniform-bucket-level-access \
   --public-access-prevention
 
-gcloud storage buckets update gs://stovio-staging-tfstate-540100582720 \
+gcloud storage buckets update gs://shortform-streaming-stg-tfstate-480151869295 \
   --versioning
 ```
 
@@ -183,9 +183,9 @@ drop the budget resource.
 ## Re-apply
 
 ```bash
-export CLOUDSDK_CORE_PROJECT=stovio-staging
-export GOOGLE_CLOUD_PROJECT=stovio-staging
-export GOOGLE_CLOUD_QUOTA_PROJECT=stovio-staging
+export CLOUDSDK_CORE_PROJECT=shortform-streaming-stg
+export GOOGLE_CLOUD_PROJECT=shortform-streaming-stg
+export GOOGLE_CLOUD_QUOTA_PROJECT=shortform-streaming-stg
 cd infra/environments/staging
 tofu init -input=false -lockfile=readonly -backend-config=backend.hcl
 tofu plan -var-file=staging.tfvars -input=false -no-color

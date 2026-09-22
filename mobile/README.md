@@ -86,7 +86,7 @@ EXPO_PUBLIC_FIREBASE_AUTH_MODE=cloud
 # Backend .env: same non-production project as google-services.json
 FIREBASE_AUTH_MODE=admin
 FIREBASE_PROJECT_ID=replace-with-test-project-id
-GOOGLE_APPLICATION_CREDENTIALS=C:/private/stovio/firebase-auth-verifier.json
+GOOGLE_APPLICATION_CREDENTIALS=C:/private/shortform/firebase-auth-verifier.json
 # FIREBASE_AUTH_EMULATOR_HOST must be absent, including inherited process environment.
 ```
 
@@ -154,7 +154,7 @@ the native build from the repository root, with the emulator running and private
 local configuration in place:
 
 ```shell
-pnpm --filter @stovio/mobile exec expo prebuild --platform android --no-install
+pnpm --filter @shortform/mobile exec expo prebuild --platform android --no-install
 pnpm mobile:android
 ```
 

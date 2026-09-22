@@ -6,7 +6,7 @@
  * holds a playback URL on the progress resource.
  */
 
-import type { paths } from '@stovio/api-client';
+import type { paths } from '@shortform/api-client';
 
 import { bearerHeaders, createOpenApiClient } from '../context';
 import { DEFAULT_TIMEOUT_MS, mapJsonDomain, mapJsonRequest } from '../http';

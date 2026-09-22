@@ -86,7 +86,7 @@ def test_early_request_rejection_is_correlated_without_logging_payload(client: C
 
 def test_formatter_ignores_message_exception_and_unreviewed_context() -> None:
     record = logging.LogRecord(
-        "stovio.request",
+        "shortform.request",
         logging.INFO,
         __file__,
         1,
