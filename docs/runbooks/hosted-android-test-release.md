@@ -12,6 +12,13 @@ release, not a public paid launch. The founder subsequently approved the private
 bootstrap described below, including its dedicated identity and secret access.
 This document does not authorize public activation or real payments.
 
+Current state (2026-09-22): the founder separately approved protected internet
+access for the consumer test service. Physical Google Play testing has passed
+verified catalog access, free playback and approved/declined sandbox checkout.
+Version 3 is available on the existing internal track to correct the hosted
+coin-unlock UI gate. Physical unlock/replay and the remaining provider/release
+checks below are still open; the dated sections retain the earlier evidence.
+
 ### Private bootstrap verified — 2026-09-21 (#164 / #187)
 
 Deployed `stovio-consumer-test` in `stovio-staging`, `europe-west9`, with the
@@ -272,8 +279,28 @@ now covers confirmation, the server-priced request and continuation to playback,
 plus the disabled cases and local compatibility. All 531 mobile tests (53 suites),
 lint, formatting, type checking, Expo configuration and API contract checks passed.
 Scoped correctness, security, maintainability and performance review found no
-additional issue. Signed build, Play delivery and physical retest are still
-pending; the existing wallet balance must be preserved across the update.
+additional issue. Repository foundation passed (629-file safety scan, 61 tests,
+governance), and all ten GitHub checks passed on fix commit `3b8d862`.
+
+`python .tmp/stovio-migration/build_hosted_v3.py` passed in 3m 41s: 802 Gradle
+tasks, 58 executed and 744 up-to-date. The private verifier passed bundletool,
+signature, package/version/embedded settings, known-secret/private-key scan and
+16 KB alignment for all 44 native libraries. The default Python lacked the
+verifier's cryptography dependency; rerunning with the repository virtual
+environment succeeded. No build change was needed for that tooling error.
+
+The artifact `Stovio/play-release/stovio-hosted-v3.aab` is 55,087,384 bytes,
+SHA-256 `55f9eec171e90028f39d18f64486fd16efd0ded535e7ac073d94c0a9cad8c412`.
+It retains package `com.stovio.app`, version name `0.1.0`, the upload certificate,
+App Check enforcement and sandbox-only purchases. Google Play accepted the
+checksum-verified Desktop copy and shows `Stovio 0.1.0 - Hosted coin unlock fix`
+as **available to internal testers** on the existing track. No supported devices
+were lost. The only warning is the missing deobfuscation file with minification
+disabled. No production/closed-test release or Git merge was performed.
+
+Fresh read-only accounting still shows 100 coins, one purchase credit and no
+unlock debit. The founder was asked to install the Play update and check for
+the one-coin option; physical version-3 unlock/replay remains pending.
 
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified

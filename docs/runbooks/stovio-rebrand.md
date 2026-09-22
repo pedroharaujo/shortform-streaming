@@ -377,7 +377,14 @@ test-card purchase followed by an always-decline attempt on the physical phone.
 Read-only hosted checks confirm one consistent 100-coin credit, one credited
 Stovio purchase decision, no quarantine and no unlock debit; the displayed balance
 remained 100. Hosted unlock/replay, interrupted/pending purchase recovery, refunds
-and sandbox callback setup remain outstanding. The GitHub staging deployment
+and sandbox callback setup remain outstanding. Physical testing exposed the
+version-2 unlock route's local-only capability gate. Fixed it for Android staging
+with validated sandbox configuration, retained server authority and production
+blocking, and added a route-level regression. All 531 mobile tests and ten GitHub
+checks passed on `3b8d862`. Signed version 3 passed artifact verification and is
+available on the existing Play internal track; the founder's physical update and
+unlock/replay retest are pending. The wallet still contains 100 coins with no
+unlock deduction. The GitHub staging deployment
 remains a post-review merge gate;
 the direct live checks do not claim that workflow ran. The emulator's
 precise rejection cause remains unknown. See the hosted release runbook for
