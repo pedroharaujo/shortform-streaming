@@ -23,9 +23,7 @@ export interface AppMessages {
     readonly description: string;
     readonly choosePack: string;
     readonly selection: string;
-    readonly bestValue: string;
-    readonly valueExplanation: string;
-    readonly rate: (coins: number, currency: string) => string;
+    readonly moreCoins: (percent: number) => string;
     readonly selectPack: string;
     readonly buy: (coins: number, price: string) => string;
     readonly previewBuy: (coins: number, price: string) => string;
@@ -40,6 +38,8 @@ export interface AppMessages {
     readonly notice: string;
     readonly examplePack: string;
     readonly packLabel: (coins: number, price: string) => string;
+    readonly loading: string;
+    readonly unavailable: string;
     readonly checkout: string;
     readonly confirmation: string;
     readonly simulate: string;
@@ -111,6 +111,20 @@ export interface AppMessages {
     readonly backToEpisode: string;
     readonly recoveryUnavailable: string;
     readonly retryRecovery: string;
+    readonly activityTitle: string;
+    readonly activityEmpty: string;
+    readonly activityUnavailable: string;
+    readonly activityLoading: string;
+    readonly activityPurchase: string;
+    readonly activityUnlock: (title: string | null) => string;
+    readonly activityCorrection: string;
+    readonly activityAmount: (amount: number) => string;
+    readonly activityBalanceAfter: (coins: number) => string;
+    readonly activityLatest: string;
+    readonly activityWhen: (isoDate: string) => string;
+    readonly subtitle: string;
+    readonly topUp: string;
+    readonly closePacks: string;
   };
   readonly unlock: {
     readonly title: string;
@@ -168,12 +182,34 @@ export interface AppMessages {
     readonly verificationHint: string;
     readonly verifyGoogleDelete: string;
     readonly verifyCredentialDelete: string;
+    readonly autoUnlock: string;
+    readonly autoUnlockHint: string;
   };
   readonly auth: {
     readonly authenticationFailed: string;
+    readonly changeEmail: string;
+    readonly continue: string;
     readonly createAccount: string;
     readonly description: string;
     readonly email: string;
+    readonly emailHintLogin: string;
+    readonly emailHintSignUp: string;
+    readonly emailTitleLogin: string;
+    readonly emailTitleSignUp: string;
+    readonly haveAccount: string;
+    readonly hideCredential: string;
+    readonly invalidEmail: string;
+    readonly loginFailed: string;
+    readonly or: string;
+    readonly credentialHintSignUp: string;
+    readonly credentialTitleLogin: string;
+    readonly credentialTitleSignUp: string;
+    readonly showCredential: string;
+    readonly signUpFailed: string;
+    readonly step: (current: number, total: number) => string;
+    readonly switchToLogin: string;
+    readonly switchToSignUp: string;
+    readonly tagline: string;
     readonly credential: string;
     readonly profileFailed: string;
     readonly profileUnreachable: string;
@@ -236,6 +272,9 @@ export interface AppMessages {
     readonly seriesLoadingLabel: string;
     readonly titleNotAvailable: string;
     readonly unreachable: string;
+    readonly continueWatching: string;
+    readonly resumeEpisode: (order: number, title: string) => string;
+    readonly resume: string;
   };
 }
 
@@ -267,10 +306,7 @@ export const englishMessages: AppMessages = {
     description: 'Your balance and coin packs, together.',
     choosePack: 'Choose your pack',
     selection: 'Your selection',
-    bestValue: 'Best Value',
-    valueExplanation: 'Best Value gives you the most coins per unit of currency.',
-    rate: (coins, currency) =>
-      `\u2248 ${coins.toLocaleString('en-US', { maximumFractionDigits: 1 })} coins / ${currency} 1`,
+    moreCoins: (percent) => `+${percent}% more coins`,
     selectPack: 'Select a pack',
     buy: (coins, price) => `Buy ${coins.toLocaleString('en-US')} coins \u00b7 ${price}`,
     previewBuy: (coins, price) => `Preview ${coins.toLocaleString('en-US')} coins \u00b7 ${price}`,
@@ -286,6 +322,8 @@ export const englishMessages: AppMessages = {
     notice: 'Example packs and prices. Nothing will be charged or added to your wallet.',
     examplePack: 'Example pack',
     packLabel: (coins, price) => `Example pack: ${coins} coins, ${price}`,
+    loading: 'Loading coin packs\u2026',
+    unavailable: 'Coin packs could not be loaded from the server.',
     checkout: 'Preview checkout',
     confirmation: 'Preview confirmation',
     simulate: 'Simulate purchase',
@@ -374,6 +412,26 @@ export const englishMessages: AppMessages = {
     backToEpisode: 'Back to episode',
     recoveryUnavailable: 'A saved coin unlock could not be checked. Try again.',
     retryRecovery: 'Retry coin unlock check',
+    activityTitle: 'Transaction activity',
+    activityEmpty: 'No coin activity yet. Purchases and episode unlocks will show up here.',
+    activityUnavailable: 'Coin activity could not be loaded.',
+    activityLoading: 'Loading activity…',
+    activityPurchase: 'Coin purchase',
+    activityUnlock: (title) => (title === null ? 'Episode unlock' : `Unlocked ${title}`),
+    activityCorrection: 'Balance correction',
+    activityAmount: (amount) => `${amount > 0 ? '+' : ''}${amount.toLocaleString('en-US')} coins`,
+    activityBalanceAfter: (coins) => `Balance after: ${coins.toLocaleString('en-US')} coins`,
+    activityLatest: 'Latest activity',
+    activityWhen: (isoDate) =>
+      new Date(isoDate).toLocaleString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    subtitle: 'Your balance, coin packs and every coin you spend.',
+    topUp: 'Top up coins',
+    closePacks: 'Close coin packs',
   },
   unlock: {
     title: 'Unlock episode',
@@ -442,12 +500,36 @@ export const englishMessages: AppMessages = {
       'Verify using the account you are currently signed in to. Use your password or the same Google account.',
     verifyGoogleDelete: 'Verify Google and delete account',
     verifyCredentialDelete: 'Verify password and delete account',
+    autoUnlock: 'Auto-unlock next episode',
+    autoUnlockHint:
+      'When an episode ends, spend coins on the next one if your balance covers the current price.',
   },
   auth: {
     authenticationFailed: 'Sign-in could not be completed. Check your details and try again.',
+    changeEmail: 'Change',
+    continue: 'Continue',
     createAccount: 'Create account',
     description: 'Continue with email or Google.',
     email: 'Email',
+    emailHintLogin: 'Use the email you signed up with.',
+    emailHintSignUp: 'Your episodes, progress, and coins stay with this account.',
+    emailTitleLogin: 'Welcome back',
+    emailTitleSignUp: 'What’s your email?',
+    haveAccount: 'I already have an account',
+    hideCredential: 'Hide password',
+    invalidEmail: 'Enter a valid email address.',
+    loginFailed: 'That email and password don’t match. Try again, or create an account.',
+    or: 'or',
+    credentialHintSignUp: 'Use at least 6 characters.',
+    credentialTitleLogin: 'Enter your password',
+    credentialTitleSignUp: 'Create a password',
+    showCredential: 'Show password',
+    signUpFailed:
+      'This account could not be created. The email may already be registered, or the password is too short.',
+    step: (current, total) => `Step ${current} of ${total}`,
+    switchToLogin: 'Already have an account? Sign in',
+    switchToSignUp: 'New to Stovio? Create an account',
+    tagline: 'Great productions.\nThe best stories, one episode at a time.',
     credential: 'Password',
     profileFailed: 'Your account could not be loaded. Please try again.',
     profileUnreachable: 'Unable to reach the account service. Check your connection and try again.',
@@ -511,6 +593,9 @@ export const englishMessages: AppMessages = {
     seriesLoadingLabel: 'Loading series',
     titleNotAvailable: 'This title is not available.',
     unreachable: 'Unable to reach the catalog. Check your connection and try again.',
+    continueWatching: 'Continue watching',
+    resumeEpisode: (order, title) => `Resume episode ${order}, ${title}`,
+    resume: 'Resume',
   },
 };
 

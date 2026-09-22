@@ -8,12 +8,14 @@ from apps.accounts.authentication import FirebaseAuthenticationFailed, FirebaseI
 from apps.accounts.models import UserProfile
 from apps.accounts.views import ERROR_401
 from apps.catalog.views import ERROR_404
+from apps.wallet.activity import list_wallet_activity
 from apps.wallet.capabilities import coin_spending_enabled
 from apps.wallet.models import CoinUnlock
 from apps.wallet.serializers import (
     CoinUnlockRequestSerializer,
     CoinUnlockResolutionSerializer,
     CoinUnlockSerializer,
+    WalletActivitySerializer,
     WalletSerializer,
 )
 from apps.wallet.services import read_wallet, resolve_unlock, unlock_episode
@@ -40,6 +42,32 @@ class WalletView(APIView):
                 }
             ).data
         )
+        response["Cache-Control"] = "no-store"
+        return response
+
+
+class WalletActivityView(APIView):
+    authentication_classes = [FirebaseIdTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["wallet"],
+        summary="Read the authenticated account's recent coin activity",
+        description=(
+            "Newest ledger lines for this account: purchases, episode unlocks and "
+            "corrections. Each line includes the signed coin amount and the balance "
+            "after that line. At most 20 lines are returned. No wallet id, profile id "
+            "or provider payload is included. An unlock includes an episode title only "
+            "while that episode remains catalog-eligible."
+        ),
+        responses={200: WalletActivitySerializer, 401: ERROR_401},
+    )
+    def get(self, request: Request) -> Response:
+        if not isinstance(request.user, UserProfile):
+            raise FirebaseAuthenticationFailed()
+        entries, has_more = list_wallet_activity(request.user)
+        payload = WalletActivitySerializer({"entries": entries, "has_more": has_more}).data
+        response = Response(payload)
         response["Cache-Control"] = "no-store"
         return response
 

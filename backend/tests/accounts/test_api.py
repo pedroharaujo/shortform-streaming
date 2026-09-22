@@ -71,6 +71,7 @@ def test_valid_token_creates_profile_without_firebase_uid(client: Client) -> Non
         "country",
         "analytics_consent",
         "ads_consent",
+        "auto_unlock_next",
         "consent_updated_at",
     }
     assert body["public_id"].startswith("usr_")

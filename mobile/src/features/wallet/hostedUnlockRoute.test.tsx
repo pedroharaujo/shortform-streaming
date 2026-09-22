@@ -25,6 +25,7 @@ jest.mock('expo-secure-store', () => ({
   },
 }));
 const mockWallet = {
+  getActivity: jest.fn(),
   getWallet: jest.fn(),
   resolve: jest.fn(),
   unlock: jest.fn(async (request) => {
@@ -42,7 +43,7 @@ jest.mock('../../api/createAppClients', () => ({
   createAppMeClient: () => ({
     getMe: async () => ({
       outcome: 'ok',
-      data: { public_id: 'usr_synthetic', ads_consent: false },
+      data: { public_id: 'usr_synthetic', ads_consent: false, auto_unlock_next: false },
     }),
   }),
   createAppRewardsClient: () => ({

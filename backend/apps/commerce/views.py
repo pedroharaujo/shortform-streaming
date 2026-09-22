@@ -12,9 +12,11 @@ from apps.accounts.models import UserProfile
 from apps.accounts.views import ERROR_401
 from apps.commerce.configuration import reconciliation_enabled
 from apps.commerce.notifications import process_notification
+from apps.commerce.packs import preview_enabled, preview_offers
 from apps.commerce.reads import purchase_catalog, purchase_history, purchase_status
 from apps.commerce.reconciliation import recover_purchase, synchronize_purchase
 from apps.commerce.serializers import (
+    CoinPackPreviewSerializer,
     PurchaseCatalogRequestSerializer,
     PurchaseCatalogSerializer,
     PurchaseHistorySerializer,
@@ -92,6 +94,31 @@ class PurchaseCatalogView(APIView):
         serializer.is_valid(raise_exception=True)
         rows = purchase_catalog(request.user, **serializer.validated_data)
         response = Response(PurchaseCatalogSerializer({"products": rows}).data)
+        response["Cache-Control"] = "no-store"
+        return response
+
+
+class CoinPackPreviewView(APIView):
+    authentication_classes = [FirebaseIdTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["commerce"],
+        summary="Read Admin coin packs for the local design preview",
+        description=(
+            "Local development with purchases disabled only. Returns live Django Admin packs "
+            "without prices or store scope; nothing here can be purchased."
+        ),
+        responses={200: CoinPackPreviewSerializer, **PURCHASE_READ_ERRORS},
+    )
+    def get(self, request: Request) -> Response:
+        if not isinstance(request.user, UserProfile):
+            raise FirebaseAuthenticationFailed()
+        if request.query_params:
+            raise ParseError("This operation accepts no query fields.")
+        if not preview_enabled():
+            raise PurchaseUnavailable()
+        response = Response(CoinPackPreviewSerializer({"packs": preview_offers()}).data)
         response["Cache-Control"] = "no-store"
         return response
 

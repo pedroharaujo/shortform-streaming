@@ -117,4 +117,57 @@ describe('HomeCatalogScreen', () => {
     expect(onOpenSignIn).toHaveBeenCalledTimes(1);
     expect(view.queryByRole('button', { name: 'Account' })).toBeNull();
   });
+
+  it('resumes a continue-watching episode from the server list', async () => {
+    const onResumeEpisode = jest.fn();
+    const view = await render(
+      <HomeCatalogScreen
+        client={stubClient({ outcome: 'ok', data: harborLightsHome })}
+        onOpenSignIn={() => {}}
+        onResumeEpisode={onResumeEpisode}
+        onSelectSeries={() => {}}
+        progress={{
+          get: async () => ({
+            outcome: 'not-found',
+            httpStatus: 404,
+            code: 'not_found',
+            message: 'Resource not found.',
+          }),
+          listContinue: async () => ({
+            outcome: 'ok',
+            data: {
+              items: [
+                {
+                  series_id: 'ser_harbor',
+                  series_title: 'Harbor Lights',
+                  artwork_url: null,
+                  episode_id: 'ep_harbor_2',
+                  episode_title: 'The tide',
+                  episode_order: 2,
+                  position_seconds: 30,
+                  duration_seconds: 90,
+                },
+              ],
+            },
+          }),
+          put: async () => ({
+            outcome: 'not-found',
+            httpStatus: 404,
+            code: 'not_found',
+            message: 'Resource not found.',
+          }),
+        }}
+      />,
+    );
+
+    const resume = await view.findByRole('button', { name: 'Resume episode 2, Harbor Lights' });
+    const featured = view.getByTestId('home-featured-series');
+    const continueRow = view.getByTestId('home-continue');
+    const rail = view.getByTestId('home-rail-featured');
+    const siblings = featured.parent?.children ?? [];
+    expect(siblings.indexOf(featured)).toBeLessThan(siblings.indexOf(continueRow));
+    expect(siblings.indexOf(continueRow)).toBeLessThan(siblings.indexOf(rail));
+    await fireEvent.press(resume);
+    expect(onResumeEpisode).toHaveBeenCalledWith('ep_harbor_2');
+  });
 });

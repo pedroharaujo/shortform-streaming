@@ -1,10 +1,11 @@
 import Film from 'lucide-react-native/icons/film';
 import Play from 'lucide-react-native/icons/play';
-import { useState, type JSX } from 'react';
+import { useEffect, useState, type JSX } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CatalogClient, CatalogSeriesCard } from '../../api/catalog/types';
+import type { ContinueWatchingItem, ProgressClient } from '../../api/progress/types';
 import { useMessages } from '../../localization/messages';
 import { colors, fontSizes, minimumTouchTarget, radii, spacing } from '../../ui/theme';
 import { ProfileAvatar } from '../../ui/ScreenElements';
@@ -20,6 +21,8 @@ export interface HomeCatalogScreenProps {
   readonly onSelectSeries: (seriesId: string) => void;
   readonly onOpenSignIn: () => void;
   readonly onOpenAccount?: () => void;
+  readonly progress?: ProgressClient;
+  readonly onResumeEpisode?: (episodeId: string) => void;
 }
 
 /** Web Navbar wordmark: white → neutral-100 → amber-200; logo tile amber→rose→violet. */
@@ -86,8 +89,10 @@ function SeriesCard({
           <Text numberOfLines={1} style={styles.cardTag}>
             {series.genres[0] ? `#${series.genres[0]}` : messages.catalog.featured}
           </Text>
-          <Text style={styles.cardAction}>{messages.common.play}</Text>
-          <Play color={colors.brand} fill={colors.brand} size={12} strokeWidth={2} />
+          <View style={styles.playPill}>
+            <Text style={styles.playPillLabel}>{messages.common.play}</Text>
+            <Play color={colors.onAccent} fill={colors.onAccent} size={10} strokeWidth={2.5} />
+          </View>
         </View>
       </View>
     </Pressable>
@@ -101,6 +106,8 @@ export function HomeCatalogScreen({
   onSelectSeries,
   onOpenSignIn,
   onOpenAccount,
+  progress,
+  onResumeEpisode,
 }: HomeCatalogScreenProps): JSX.Element {
   const { state, refresh } = useCatalogHome(client);
   const messages = useMessages();
@@ -110,6 +117,18 @@ export function HomeCatalogScreen({
     state.phase === 'loaded' ? state.home.rails.find((rail) => rail.series.length > 0) : undefined;
   const [genre, setGenre] = useState(messages.catalog.allGenres);
   const genres = [...new Set((firstRail?.series ?? []).flatMap((series) => series.genres))];
+  const [continueItems, setContinueItems] = useState<readonly ContinueWatchingItem[]>([]);
+  useEffect(() => {
+    if (progress === undefined) return undefined;
+    let active = true;
+    void progress.listContinue().then((result) => {
+      if (!active) return;
+      setContinueItems(result.outcome === 'ok' ? result.data.items : []);
+    });
+    return () => {
+      active = false;
+    };
+  }, [progress]);
   const featured = genre === messages.catalog.allGenres ? firstRail?.series[0] : undefined;
   const freeFeatured = featured ? shownFreeEpisodes(featured) : 0;
 
@@ -241,12 +260,62 @@ export function HomeCatalogScreen({
                     />
                     <Text style={styles.exploreLabel}>{messages.catalog.startWatching}</Text>
                   </View>
-                  <View style={styles.exploreSecondary}>
-                    <Text style={styles.exploreSecondaryLabel}>{messages.catalog.viewSeries}</Text>
-                  </View>
                 </View>
               </CatalogHero>
             </Pressable>
+          ) : null}
+          {continueItems.length > 0 && onResumeEpisode !== undefined ? (
+            <View style={styles.rail} testID="home-continue">
+              <View style={styles.railHeading}>
+                <View style={styles.railAccent} />
+                <Text accessibilityRole="header" style={styles.railTitle}>
+                  {messages.catalog.continueWatching}
+                </Text>
+              </View>
+              <ScrollView
+                horizontal
+                contentContainerStyle={styles.continueRow}
+                showsHorizontalScrollIndicator={false}
+              >
+                {continueItems.map((item) => {
+                  const progressRatio =
+                    item.duration_seconds > 0
+                      ? Math.min(1, item.position_seconds / item.duration_seconds)
+                      : 0;
+                  return (
+                    <Pressable
+                      key={item.episode_id}
+                      accessibilityLabel={messages.catalog.resumeEpisode(
+                        item.episode_order,
+                        item.series_title,
+                      )}
+                      accessibilityRole="button"
+                      onPress={() => onResumeEpisode(item.episode_id)}
+                      style={({ pressed }) => [styles.continueCard, pressed && styles.pressed]}
+                    >
+                      <CatalogArtwork
+                        size="card"
+                        title={item.series_title}
+                        uri={item.artwork_url}
+                      />
+                      <Text numberOfLines={1} style={styles.cardTitle}>
+                        {item.series_title}
+                      </Text>
+                      <Text numberOfLines={1} style={styles.cardSynopsis}>
+                        {messages.catalog.episode(item.episode_order)}
+                      </Text>
+                      <View style={styles.progressTrack}>
+                        <View style={[styles.progressFill, { width: `${progressRatio * 100}%` }]} />
+                      </View>
+                      <View style={styles.resumePill}>
+                        <Play color={colors.coin} fill={colors.coin} size={11} strokeWidth={2.5} />
+                        <Text style={styles.resumePillLabel}>{messages.catalog.resume}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
           ) : null}
           {genres.length > 0 ? (
             <ScrollView
@@ -313,7 +382,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.xxl,
   },
+  continueCard: { gap: spacing.xs, width: 148 },
+  continueRow: { gap: spacing.md, paddingRight: spacing.xl },
   container: { backgroundColor: colors.background, flex: 1 },
+  progressFill: {
+    backgroundColor: colors.brand,
+    height: '100%',
+  },
+  progressTrack: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.pill,
+    height: 4,
+    overflow: 'hidden',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -395,33 +476,31 @@ const styles = StyleSheet.create({
     lineHeight: 38,
   },
   featuredSynopsis: { color: colors.muted, fontSize: fontSizes.label, lineHeight: 21 },
-  heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
+  heroActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
   explore: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     backgroundColor: colors.brand,
+    experimental_backgroundImage: `linear-gradient(90deg, ${colors.brand} 0%, ${colors.coinRim} 100%)`,
     borderRadius: radii.md,
     minHeight: minimumTouchTarget,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
-    flexGrow: 1,
+    shadowColor: colors.brand,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
   exploreLabel: { color: colors.onAccent, fontSize: fontSizes.label, fontWeight: '800' },
-  exploreSecondary: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(38, 38, 38, 0.9)',
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    minHeight: minimumTouchTarget,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  exploreSecondaryLabel: { color: colors.foreground, fontSize: fontSizes.label, fontWeight: '700' },
-
   rail: { marginBottom: spacing.xxl, paddingHorizontal: spacing.lg },
   railHeading: {
     flexDirection: 'row',
@@ -479,7 +558,27 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   cardTag: { color: colors.muted, fontSize: fontSizes.caption, fontWeight: '600', flexShrink: 1 },
-  cardAction: { color: colors.brand, fontSize: fontSizes.caption, fontWeight: '800' },
+  playPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.brand,
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  playPillLabel: { color: colors.onAccent, fontSize: 12, fontWeight: '800' },
+  resumePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: 8,
+    paddingVertical: 6,
+    marginTop: spacing.xs,
+  },
+  resumePillLabel: { color: colors.coin, fontSize: 12, fontWeight: '800' },
   posterBadge: {
     position: 'absolute',
     top: spacing.sm,

@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import RewardRoute from '../../../app/reward/[id]';
 import SignInRoute from '../../../app/sign-in';
@@ -24,6 +24,7 @@ jest.mock('expo-router', () => ({
 jest.mock('../../api/createAppClients', () => ({
   createAppCatalogClient: jest.fn(),
   createAppMeClient: jest.fn(),
+  createAppPackPreviewClient: jest.fn(),
   createAppRewardsClient: jest.fn(),
   createAppPlaybackClient: jest.fn(),
   createAppAccountClient: jest.fn(),
@@ -254,13 +255,15 @@ it('retains the selected episode when choosing an ad or authorized playback', as
   });
 });
 
-it('keeps the episode when signing in from wallet and uses ordinary back navigation when available', async () => {
+it('asks a signed-out wallet visit to sign in first, then keeps the episode context', async () => {
   mockParams = { returnEpisode: 'ep_synthetic' };
   const wallet = await render(<WalletRoute />);
-  await fireEvent.press(wallet.getByText('Account action'));
-  expect(router.push).toHaveBeenLastCalledWith({
-    pathname: '/sign-in',
-    params: { returnEpisode: 'ep_synthetic' },
+  expect(wallet.queryByText('Return to episode')).toBeNull();
+  await act(() => setAuthSession({ credential: 'mock.synthetic_navigation' }));
+  await fireEvent.press(wallet.getByText('Return to episode'));
+  expect(router.dismissTo).toHaveBeenLastCalledWith({
+    pathname: '/unlock/[id]',
+    params: { id: 'ep_synthetic' },
   });
   jest.mocked(router.canGoBack).mockReturnValue(true);
   await fireEvent.press(wallet.getByText('Close'));
@@ -268,6 +271,7 @@ it('keeps the episode when signing in from wallet and uses ordinary back navigat
 });
 
 it('provides a safe home fallback for directly opened coins without episode context', async () => {
+  setAuthSession({ credential: 'mock.synthetic_navigation' });
   mockParams = {};
   const wallet = await render(<WalletRoute />);
   expect(wallet.queryByText('Return to episode')).toBeNull();

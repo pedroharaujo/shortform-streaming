@@ -19,6 +19,7 @@ class CurrentUserProfileSerializer(serializers.Serializer[UserProfile]):
     country = serializers.CharField(allow_blank=True)
     analytics_consent = serializers.BooleanField()
     ads_consent = serializers.BooleanField()
+    auto_unlock_next = serializers.BooleanField()
     consent_updated_at = serializers.DateTimeField(allow_null=True)
 
 
@@ -36,6 +37,7 @@ class AccountPreferencesSerializer(StrictSerializer):
     country = serializers.RegexField(r"^[A-Za-z]{2}$", allow_blank=True, required=False)
     analytics_consent = serializers.BooleanField(required=False)
     ads_consent = serializers.BooleanField(required=False)
+    auto_unlock_next = serializers.BooleanField(required=False)
 
     def validate_country(self, value: str) -> str:
         return value.upper()

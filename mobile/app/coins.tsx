@@ -1,8 +1,13 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useRef, useState, type JSX } from 'react';
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore, type JSX } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { createAppMeClient, createAppWalletClient } from '../src/api/createAppClients';
-import { getSessionCredential } from '../src/auth/session';
+import {
+  createAppMeClient,
+  createAppPackPreviewClient,
+  createAppWalletClient,
+} from '../src/api/createAppClients';
+import { getAuthSession, getSessionCredential, subscribeAuthSession } from '../src/auth/session';
+import { AppSignInScreen } from '../src/features/auth/AppSignInScreen';
 import { readRouteId } from '../src/features/catalog/readRouteId';
 import { CoinPacksScreen } from '../src/features/purchases/CoinPacksScreen';
 import { createAppCheckoutCoordinator } from '../src/features/purchases/createAppCheckoutCoordinator';
@@ -15,8 +20,10 @@ import { colors } from '../src/ui/theme';
 export default function CoinsRoute(): JSX.Element {
   const params = useLocalSearchParams<{ returnEpisode?: string | string[] }>();
   const returnEpisode = readRouteId(params.returnEpisode);
+  const session = useSyncExternalStore(subscribeAuthSession, getAuthSession);
   const client = useMemo(() => createAppWalletClient(), []);
   const me = useMemo(() => createAppMeClient(), []);
+  const packPreview = useMemo(() => createAppPackPreviewClient(), []);
   const [visit, setVisit] = useState(0);
   const firstFocus = useRef(true);
   useFocusEffect(
@@ -28,6 +35,14 @@ export default function CoinsRoute(): JSX.Element {
       setVisit((value) => value + 1);
     }, []),
   );
+  if (session === null) {
+    return (
+      <AppSignInScreen
+        onBack={returnEpisode ? () => router.back() : undefined}
+        onFinished={() => {}}
+      />
+    );
+  }
   return (
     <View style={styles.screen}>
       <WalletScreen
@@ -35,11 +50,6 @@ export default function CoinsRoute(): JSX.Element {
         client={client}
         me={me}
         onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-        onPurchases={() =>
-          router.push(
-            returnEpisode ? { pathname: '/purchases', params: { returnEpisode } } : '/purchases',
-          )
-        }
         onPendingUnlock={(id) => router.push({ pathname: '/unlock/[id]', params: { id } })}
         onAccount={() => {
           const pathname = getSessionCredential() === null ? '/sign-in' : '/account';
@@ -52,7 +62,7 @@ export default function CoinsRoute(): JSX.Element {
         }
         renderPacks={(refreshBalance) =>
           isPurchasePreviewEnabled() ? (
-            <CoinPurchasePreview />
+            <CoinPurchasePreview client={packPreview} />
           ) : (
             <CheckoutPacks onBalanceRefresh={refreshBalance} />
           )

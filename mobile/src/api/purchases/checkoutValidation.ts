@@ -36,6 +36,23 @@ export function isTransactionId(value: unknown): value is string {
 export function isCoins(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0 && value <= 2147483647;
 }
+export function isPackPresentation(
+  value: Record<string, unknown>,
+): value is Record<string, unknown> & {
+  readonly bonus_percent: number;
+  readonly badge: string;
+  readonly highlighted: boolean;
+} {
+  return (
+    typeof value.bonus_percent === 'number' &&
+    Number.isInteger(value.bonus_percent) &&
+    value.bonus_percent >= 0 &&
+    value.bonus_percent <= 200 &&
+    typeof value.badge === 'string' &&
+    value.badge.length <= 24 &&
+    typeof value.highlighted === 'boolean'
+  );
+}
 export function isAndroidApplication(value: unknown): value is string {
   return (
     typeof value === 'string' &&

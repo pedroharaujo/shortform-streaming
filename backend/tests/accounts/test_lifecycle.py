@@ -33,6 +33,7 @@ def test_preferences_are_opt_in_and_only_owned_fields_are_writable(client: Clien
     assert original["country"] == ""
     assert original["analytics_consent"] is False
     assert original["ads_consent"] is False
+    assert original["auto_unlock_next"] is False
     assert original["consent_updated_at"] is None
     response = client.patch(
         "/v1/me",
@@ -44,7 +45,17 @@ def test_preferences_are_opt_in_and_only_owned_fields_are_writable(client: Clien
     assert response.json()["country"] == "FR"
     assert response.json()["analytics_consent"] is True
     assert response.json()["ads_consent"] is False
+    assert response.json()["auto_unlock_next"] is False
     assert response.json()["consent_updated_at"] is not None
+    enabled = client.patch(
+        "/v1/me",
+        {"auto_unlock_next": True},
+        content_type="application/json",
+        **HEADERS,
+    )
+    assert enabled.status_code == 200
+    assert enabled.json()["auto_unlock_next"] is True
+    assert enabled.json()["analytics_consent"] is True
     for body in ({"firebase_uid": "other"}, {"locale": "fr"}, {"country": "France"}):
         response = client.patch("/v1/me", body, content_type="application/json", **HEADERS)
         assert response.status_code == 400

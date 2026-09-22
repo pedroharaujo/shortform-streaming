@@ -17,6 +17,21 @@ class WalletSerializer(serializers.Serializer[Mapping[str, object]]):
     spending_available = serializers.BooleanField()
 
 
+class WalletActivityEntrySerializer(serializers.Serializer[Mapping[str, object]]):
+    id = serializers.UUIDField()
+    kind = serializers.ChoiceField(choices=["purchase", "unlock", "correction"])
+    amount = serializers.IntegerField(min_value=-2147483647, max_value=2147483647)
+    balance_after = serializers.IntegerField(min_value=0, max_value=9007199254740991)
+    created_at = serializers.DateTimeField()
+    episode_id = serializers.CharField(allow_null=True)
+    episode_title = serializers.CharField(allow_null=True)
+
+
+class WalletActivitySerializer(serializers.Serializer[Mapping[str, object]]):
+    entries = WalletActivityEntrySerializer(many=True)
+    has_more = serializers.BooleanField()
+
+
 class CoinUnlockSerializer(serializers.Serializer[Mapping[str, object]]):
     episode_id = serializers.CharField()
     request_id = serializers.UUIDField()

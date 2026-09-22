@@ -1,9 +1,8 @@
-import type { PurchaseCheckoutClient } from '../../api/purchases/checkoutTypes';
+import type { PackPresentation, PurchaseCheckoutClient } from '../../api/purchases/checkoutTypes';
 import type { Wallet, WalletClient } from '../../api/wallet/types';
 import type { PendingPurchaseStorage } from './pendingPurchaseAttempt';
-export interface CheckoutOffer {
-  readonly productId: string;
-  readonly coins: number;
+export type { PackPresentation };
+export interface CheckoutOffer extends PackPresentation {
   readonly price: string;
   readonly priceAmount?: number;
   readonly currencyCode?: string;

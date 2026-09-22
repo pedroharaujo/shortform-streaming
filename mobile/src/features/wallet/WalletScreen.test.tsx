@@ -34,6 +34,10 @@ const wallet = (balance: number, spending_available = true): WalletOutcome<Walle
 function clientDouble(): jest.Mocked<WalletClient> {
   return {
     resolve: jest.fn(),
+    getActivity: jest.fn<ReturnType<WalletClient['getActivity']>, []>(async () => ({
+      outcome: 'ok',
+      data: { entries: [], has_more: false },
+    })),
     getWallet: jest.fn<ReturnType<WalletClient['getWallet']>, []>(async () => wallet(25)),
     unlock: jest.fn<ReturnType<WalletClient['unlock']>, Parameters<WalletClient['unlock']>>(
       async () => ({ outcome: 'unreachable', reason: 'Purchases unavailable' }),
@@ -45,7 +49,6 @@ function setup(client: WalletClient) {
   const onBack = jest.fn();
   const onAccount = jest.fn();
   const onReturnToEpisode = jest.fn();
-  const onPurchases = jest.fn();
   const onPendingUnlock = jest.fn();
   const me: MeClient = {
     getMe: jest.fn<ReturnType<MeClient['getMe']>, Parameters<MeClient['getMe']>>(async () => ({
@@ -58,6 +61,7 @@ function setup(client: WalletClient) {
         country: 'FR',
         ads_consent: false,
         analytics_consent: false,
+        auto_unlock_next: false,
         consent_updated_at: null,
       },
     })),
@@ -69,12 +73,11 @@ function setup(client: WalletClient) {
       onBack={onBack}
       onAccount={onAccount}
       onReturnToEpisode={onReturnToEpisode}
-      onPurchases={onPurchases}
       onPendingUnlock={onPendingUnlock}
     />,
     { metrics: compactAndroidMetrics },
   );
-  return { rendered, onBack, onAccount, onReturnToEpisode, onPurchases, onPendingUnlock, me };
+  return { rendered, onBack, onAccount, onReturnToEpisode, onPendingUnlock, me };
 }
 
 beforeEach(() => {
@@ -88,7 +91,7 @@ afterEach(() => {
 it('loads a server balance with accessible navigation and keeps purchases unavailable', async () => {
   const client = clientDouble();
   client.getWallet.mockResolvedValue(wallet(25, false));
-  const { rendered, onBack, onAccount, onReturnToEpisode, onPurchases } = setup(client);
+  const { rendered, onBack, onReturnToEpisode } = setup(client);
   const view = await rendered;
   await waitFor(() =>
     expect(view.getByTestId('wallet-balance')).toHaveTextContent(
@@ -102,14 +105,11 @@ it('loads a server balance with accessible navigation and keeps purchases unavai
   for (const action of view.getAllByRole('button')) {
     expect(action).toHaveStyle({ minHeight: minimumTouchTarget });
   }
-  await fireEvent.press(view.getByLabelText(englishMessages.common.account));
+  expect(view.queryByTestId('wallet-top-up')).toBeNull();
   await fireEvent.press(view.getByLabelText(englishMessages.wallet.backToEpisode));
   await fireEvent.press(view.getByLabelText(englishMessages.common.back));
-  await fireEvent.press(view.getByLabelText('Recent purchases'));
-  expect(onAccount).toHaveBeenCalledTimes(1);
   expect(onReturnToEpisode).toHaveBeenCalledTimes(1);
   expect(onBack).toHaveBeenCalledTimes(1);
-  expect(onPurchases).toHaveBeenCalledTimes(1);
 });
 
 it('clears the old balance during manual refresh and permits retry after a failure', async () => {
@@ -231,6 +231,41 @@ it('opens a saved unlock even when balance loading fails', async () => {
   await act(() => setAuthSession({ credential: 'mock.replacement-wallet-owner' }));
   await fireEvent.press(action);
   expect(onPendingUnlock).not.toHaveBeenCalled();
+});
+
+it('shows purchase and unlock lines from the ledger', async () => {
+  const client = clientDouble();
+  client.getActivity.mockResolvedValue({
+    outcome: 'ok',
+    data: {
+      has_more: false,
+      entries: [
+        {
+          id: '11111111-1111-4111-8111-111111111111',
+          kind: 'unlock',
+          amount: -4,
+          balance_after: 6,
+          created_at: '2026-09-22T12:00:00Z',
+          episode_id: 'ep_harbor_6',
+          episode_title: 'The tide',
+        },
+        {
+          id: '22222222-2222-4222-8222-222222222222',
+          kind: 'purchase',
+          amount: 10,
+          balance_after: 10,
+          created_at: '2026-09-22T11:00:00Z',
+          episode_id: null,
+          episode_title: null,
+        },
+      ],
+    },
+  });
+  const view = await setup(client).rendered;
+  expect(await view.findByText('Unlocked The tide')).toBeOnTheScreen();
+  expect(view.getByText('Coin purchase')).toBeOnTheScreen();
+  expect(view.getByText('-4 coins')).toBeOnTheScreen();
+  expect(view.getByText('+10 coins')).toBeOnTheScreen();
 });
 
 it('shows a separate retry when saved unlock storage cannot be checked', async () => {

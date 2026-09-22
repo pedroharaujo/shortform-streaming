@@ -16,9 +16,14 @@ from apps.catalog.models import Episode
 from apps.catalog.views import ERROR_404, CatalogAnonymousView
 from apps.entitlements.policy import Grant, Ineligible, Lock, evaluate_authorize_access
 from apps.playback.views import EPISODE_ID_PARAMETER
+from apps.progress.continue_watching import list_continue_watching
 from apps.progress.exceptions import PlaybackLocked, ProgressDeviceIdError
 from apps.progress.models import WatchProgress, upsert_watch_progress
-from apps.progress.serializers import WatchProgressSerializer, WatchProgressWriteSerializer
+from apps.progress.serializers import (
+    ContinueWatchingSerializer,
+    WatchProgressSerializer,
+    WatchProgressWriteSerializer,
+)
 
 _NOT_FOUND_MESSAGE = "Resource not found."
 _OPTIONAL_FIREBASE_AUTH: list[Any] = [{}, {"FirebaseIdToken": []}]
@@ -55,6 +60,39 @@ _SCHEMA_DESCRIPTION = (
     "Grant upserts progress and never calls the video provider. Django never "
     "serves video bytes. Client-supplied user identifiers are ignored."
 )
+
+
+class ContinueWatchingView(CatalogAnonymousView):
+    authentication_classes = [OptionalFirebaseIdTokenAuthentication]
+
+    @extend_schema(
+        auth=_OPTIONAL_FIREBASE_AUTH,
+        tags=["progress"],
+        summary="List episodes to continue",
+        description=(
+            "One resume row per series for the signed-in profile, or for the anonymous "
+            "X-Device-Id when no token is sent. A partial episode is resumed. A finished "
+            "episode advances to the next eligible episode that is not finished. "
+            "Taken-down, unpublished and unknown titles are omitted. No playback URL is "
+            "returned. Authenticated requests ignore X-Device-Id. A present invalid token "
+            "is 401. Anonymous requests without a UUID device id are 400."
+        ),
+        parameters=[DEVICE_ID_PARAMETER],
+        responses={
+            200: ContinueWatchingSerializer,
+            400: ERROR_404,
+            401: ERROR_401,
+        },
+    )
+    def get(self, request: Request) -> Response:
+        profile = request.user if isinstance(request.user, UserProfile) else None
+        device_id = None if profile is not None else _require_device_id(request)
+        payload = ContinueWatchingSerializer(
+            {"items": list_continue_watching(user_profile=profile, device_id=device_id)}
+        ).data
+        response = Response(payload)
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 class WatchProgressView(CatalogAnonymousView):

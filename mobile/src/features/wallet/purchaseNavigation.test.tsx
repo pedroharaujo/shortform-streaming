@@ -28,18 +28,14 @@ jest.mock('expo-router', () => ({
 }));
 jest.mock('../../api/createAppClients', () => ({
   createAppMeClient: jest.fn(),
+  createAppPackPreviewClient: jest.fn(),
   createAppWalletClient: jest.fn(),
   createAppPurchasesClient: jest.fn(),
 }));
 jest.mock('./WalletScreen', () => ({
-  WalletScreen: ({ onPurchases, onPendingUnlock }: WalletScreenProps) => {
+  WalletScreen: ({ onPendingUnlock }: WalletScreenProps) => {
     const { Button } = jest.requireActual('react-native');
-    return (
-      <>
-        <Button title="Recent purchases" onPress={onPurchases} />
-        <Button title="Check coin unlock" onPress={() => onPendingUnlock('ep_pending')} />
-      </>
-    );
+    return <Button title="Check coin unlock" onPress={() => onPendingUnlock('ep_pending')} />;
   },
 }));
 jest.mock('./PurchaseHistoryScreen', () => ({
@@ -65,8 +61,6 @@ it('preserves episode context through purchase history, account, sign-in and ret
   setAuthSession({ credential: 'mock.synthetic-navigation' });
   mockParams = { returnEpisode: 'ep_synthetic' };
   const wallet = await render(<CoinsRoute />);
-  await fireEvent.press(wallet.getByText('Recent purchases'));
-  expect(router.push).toHaveBeenLastCalledWith({ pathname: '/purchases', params: mockParams });
   await fireEvent.press(wallet.getByText('Check coin unlock'));
   expect(router.push).toHaveBeenLastCalledWith({
     pathname: '/unlock/[id]',
@@ -91,12 +85,9 @@ it('preserves episode context through purchase history, account, sign-in and ret
   expect(router.back).toHaveBeenCalledTimes(1);
 });
 
-it('opens purchases and falls back to wallet without an episode for a direct visit', async () => {
+it('falls back to wallet from purchases without an episode for a direct visit', async () => {
+  setAuthSession({ credential: 'mock.synthetic-direct' });
   mockParams = {};
-  const wallet = await render(<CoinsRoute />);
-  await fireEvent.press(wallet.getByText('Recent purchases'));
-  expect(router.push).toHaveBeenLastCalledWith('/purchases');
-  await wallet.unmount();
   const history = await render(<PurchasesRoute />);
   expect(history.queryByText('Back to episode')).toBeNull();
   await fireEvent.press(history.getByText('Back'));

@@ -164,7 +164,14 @@ export function createCheckoutCoordinator(options: CheckoutDependencies): Checko
       const providerOffer = byId.get(product.product_id);
       if (providerOffer === undefined) return null;
       result.push(
-        Object.freeze({ productId: product.product_id, coins: product.coins, ...providerOffer }),
+        Object.freeze({
+          productId: product.product_id,
+          coins: product.coins,
+          bonusPercent: product.bonus_percent,
+          badge: product.badge,
+          highlighted: product.highlighted,
+          ...providerOffer,
+        }),
       );
     }
     return Object.freeze(result);

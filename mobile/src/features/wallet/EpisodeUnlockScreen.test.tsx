@@ -64,6 +64,7 @@ function setup(methods: ('coin' | 'rewarded_ad')[] = ['coin'], adsEnabled = fals
         country: 'FR',
         ads_consent: false,
         analytics_consent: false,
+        auto_unlock_next: false,
         consent_updated_at: null,
       },
     })),
@@ -75,6 +76,10 @@ function setup(methods: ('coin' | 'rewarded_ad')[] = ['coin'], adsEnabled = fals
     resolve: jest.fn<ReturnType<WalletClient['resolve']>, Parameters<WalletClient['resolve']>>(
       async () => ({ outcome: 'unreachable', reason: 'timeout' }),
     ),
+    getActivity: jest.fn<
+      ReturnType<WalletClient['getActivity']>,
+      Parameters<WalletClient['getActivity']>
+    >(async () => ({ outcome: 'ok', data: { entries: [], has_more: false } })),
     getWallet: jest.fn<
       ReturnType<WalletClient['getWallet']>,
       Parameters<WalletClient['getWallet']>

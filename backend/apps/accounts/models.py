@@ -31,6 +31,7 @@ class UserProfile(models.Model):
     country = models.CharField(max_length=2, blank=True, default="", db_default="")
     analytics_consent = models.BooleanField(default=False, db_default=False)
     ads_consent = models.BooleanField(default=False, db_default=False)
+    auto_unlock_next = models.BooleanField(default=False, db_default=False)
     consent_updated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

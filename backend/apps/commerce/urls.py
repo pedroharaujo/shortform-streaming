@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.commerce.views import (
+    CoinPackPreviewView,
     PurchaseCallbackView,
     PurchaseCatalogView,
     PurchaseHistoryView,
@@ -13,6 +14,7 @@ from apps.commerce.views import (
 urlpatterns = [
     path("v1/purchases/history", PurchaseHistoryView.as_view(), name="purchase-history"),
     path("v1/purchases/catalog", PurchaseCatalogView.as_view(), name="purchase-catalog"),
+    path("v1/purchases/packs/preview", CoinPackPreviewView.as_view(), name="coin-pack-preview"),
     path("v1/purchases/status", PurchaseStatusView.as_view(), name="purchase-status"),
     path("v1/purchases/sync", PurchaseSyncView.as_view(), name="purchase-sync"),
     path("v1/purchases/recover", PurchaseRecoveryView.as_view(), name="purchase-recover"),

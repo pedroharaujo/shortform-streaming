@@ -76,6 +76,9 @@ def test_catalog_scopes_products_without_private_fields_or_financial_writes(
             {
                 "product_id": "synthetic_consumable",
                 "coins": 13,
+                "bonus_percent": 0,
+                "badge": "",
+                "highlighted": False,
                 "product_type": "consumable",
                 "store": "PLAY_STORE",
                 "environment": "SANDBOX",

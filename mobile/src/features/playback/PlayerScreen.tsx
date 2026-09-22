@@ -27,6 +27,7 @@ import type {
   PlaybackAnalyticsEpisode,
   PlaybackAnalyticsErrorCode,
 } from './playbackAnalytics';
+import type { EpisodeAutoUnlock } from './autoUnlock';
 import {
   clampResumePosition,
   isCompleteByPosition,
@@ -44,6 +45,7 @@ export interface PlayerScreenProps {
   readonly progress: ProgressClient;
   readonly onClose: () => void;
   readonly onReward?: (episodeId: string) => void;
+  readonly autoUnlock?: EpisodeAutoUnlock;
 }
 
 interface PlaybackFailure {
@@ -133,6 +135,7 @@ export function PlayerScreen({
   progress,
   onClose,
   onReward,
+  autoUnlock,
 }: PlayerScreenProps): JSX.Element {
   const messages = useMessages();
   const [activeEpisodeId, setActiveEpisodeId] = useState(episodeId);
@@ -332,6 +335,15 @@ export function PlayerScreen({
         setNextGate({ phase: 'unavailable', episodeId: nextId });
         return;
       }
+      if (autoUnlock !== undefined && (await autoUnlock.tryUnlock(nextId)) === 'unlocked') {
+        const granted = await playback.authorize(nextId);
+        if (granted.outcome === 'ok') {
+          setNextGate(null);
+          completingRef.current = false;
+          setActiveEpisodeId(nextId);
+          return;
+        }
+      }
       setNextGate({
         phase: 'locked',
         reasons: nextAuthorize.lockReasons,
@@ -357,8 +369,9 @@ export function PlayerScreen({
       return;
     }
     setNextGate(null);
+    completingRef.current = false;
     setActiveEpisodeId(nextId);
-  }, [clearThrottle, flushProgress, messages.playback.failed, playback]);
+  }, [autoUnlock, clearThrottle, flushProgress, messages.playback.failed, playback]);
 
   const handlePosition = useCallback(
     (seconds: number) => {

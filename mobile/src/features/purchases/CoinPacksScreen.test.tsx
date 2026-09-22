@@ -8,10 +8,13 @@ import { CoinPacksScreen } from './CoinPacksScreen';
 import type { CheckoutCoordinator, CheckoutOffer, CheckoutState } from './types';
 
 const reference = '44444444-4444-4444-8444-444444444444';
+function pack(badge: string, bonusPercent: number) {
+  return { badge, bonusPercent, highlighted: false };
+}
 const offers: readonly CheckoutOffer[] = [
-  { productId: 'coins_100', coins: 100, price: '$1.00', priceAmount: 1, currencyCode: 'USD' },
-  { productId: 'coins_200', coins: 200, price: '$1.50', priceAmount: 1.5, currencyCode: 'USD' },
-  { productId: 'coins_300', coins: 300, price: '$4.00', priceAmount: 4, currencyCode: 'USD' },
+  { productId: 'coins_100', coins: 100, price: '$1.00', ...pack('Quick top-up', 0) },
+  { productId: 'coins_200', coins: 200, price: '$1.50', ...pack('Most popular', 33) },
+  { productId: 'coins_300', coins: 300, price: '$4.00', ...pack('', 0) },
 ];
 
 function deferred<T>() {
@@ -56,7 +59,7 @@ it('offers support for an unresolved purchase without retrying checkout and hide
   open.mockRestore();
 });
 
-it('requires explicit selection, shows the non-largest best value, and refreshes after verification', async () => {
+it('requires explicit selection, labels each pack with its server badge and bonus, and refreshes after verification', async () => {
   setAuthSession({ credential: 'mock.synthetic-coin-screen' });
   const checkout = coordinator({ status: 'ready', offers });
   checkout.sync.mockResolvedValue({
@@ -72,14 +75,12 @@ it('requires explicit selection, shows the non-largest best value, and refreshes
 
   await waitFor(() => expect(view.getByText('$1.50')).toBeOnTheScreen());
   expect(view.getByLabelText(englishMessages.coinStore.selectPack)).toBeDisabled();
+  expect(view.getByLabelText('100 coins · $1.00')).toHaveProp('accessibilityHint', 'Quick top-up');
   expect(view.getByLabelText('200 coins · $1.50')).toHaveProp(
     'accessibilityHint',
-    expect.stringContaining(englishMessages.coinStore.bestValue),
+    `Most popular. ${englishMessages.coinStore.moreCoins(33)}`,
   );
-  expect(view.getByLabelText('300 coins · $4.00')).not.toHaveProp(
-    'accessibilityHint',
-    expect.stringContaining(englishMessages.coinStore.bestValue),
-  );
+  expect(view.getByLabelText('300 coins · $4.00')).toHaveProp('accessibilityHint', '');
 
   fireEvent.press(view.getByLabelText('200 coins · $1.50'));
   const buy = await view.findByLabelText(englishMessages.coinStore.buy(200, '$1.50'));

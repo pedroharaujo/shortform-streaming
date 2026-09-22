@@ -566,6 +566,51 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Unknown or unavailable public id. Does not confirm whether
             the id exists.
+  /v1/progress/continue:
+    get:
+      operationId: v1_progress_continue_retrieve
+      description: One resume row per series for the signed-in profile, or for the
+        anonymous X-Device-Id when no token is sent. A partial episode is resumed.
+        A finished episode advances to the next eligible episode that is not finished.
+        Taken-down, unpublished and unknown titles are omitted. No playback URL is
+        returned. Authenticated requests ignore X-Device-Id. A present invalid token
+        is 401. Anonymous requests without a UUID device id are 400.
+      summary: List episodes to continue
+      parameters:
+      - in: header
+        name: X-Device-Id
+        schema:
+          type: string
+        description: Anonymous device UUID (36-character hyphenated form). Required
+          when no Authorization header is present. Ignored when a verified profile
+          is present. Never a user id, profile public id, or Firebase UID.
+      tags:
+      - progress
+      security:
+      - FirebaseAppCheck: []
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContinueWatching'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Unknown or unavailable public id. Does not confirm whether
+            the id exists.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
   /v1/purchases/catalog:
     post:
       operationId: v1_purchases_catalog_create
@@ -691,6 +736,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Coin purchases are disabled or unavailable.
+  /v1/purchases/packs/preview:
+    get:
+      operationId: v1_purchases_packs_preview_retrieve
+      description: Local development with purchases disabled only. Returns live Django
+        Admin packs without prices or store scope; nothing here can be purchased.
+      summary: Read Admin coin packs for the local design preview
+      tags:
+      - commerce
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoinPackPreview'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Invalid or unexpected purchase lookup fields.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Coin purchases or the requested catalog are unavailable.
   /v1/purchases/recover:
     post:
       operationId: v1_purchases_recover_create
@@ -1077,6 +1159,34 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Missing, malformed, expired, revoked, or otherwise unverifiable
             Firebase ID token. The response never includes the token or firebase_uid.
+  /v1/wallet/activity:
+    get:
+      operationId: v1_wallet_activity_retrieve
+      description: 'Newest ledger lines for this account: purchases, episode unlocks
+        and corrections. Each line includes the signed coin amount and the balance
+        after that line. At most 20 lines are returned. No wallet id, profile id or
+        provider payload is included. An unlock includes an episode title only while
+        that episode remains catalog-eligible.'
+      summary: Read the authenticated account's recent coin activity
+      tags:
+      - wallet
+      security:
+      - FirebaseAppCheck: []
+        FirebaseIdToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletActivity'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Missing, malformed, expired, revoked, or otherwise unverifiable
+            Firebase ID token. The response never includes the token or firebase_uid.
 components:
   schemas:
     AccessMethodEnum:
@@ -1255,6 +1365,42 @@ components:
       - seasons
       - synopsis
       - title
+    CoinPackOffer:
+      type: object
+      properties:
+        product_id:
+          type: string
+          maxLength: 128
+        coins:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          description: Total coins credited, bonus included.
+        bonus_percent:
+          type: integer
+          maximum: 200
+          minimum: 0
+          description: Bonus coins as a whole percent of base coins.
+        badge:
+          type: string
+          maxLength: 24
+        highlighted:
+          type: boolean
+      required:
+      - badge
+      - bonus_percent
+      - coins
+      - highlighted
+      - product_id
+    CoinPackPreview:
+      type: object
+      properties:
+        packs:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoinPackOffer'
+      required:
+      - packs
     CoinUnlock:
       type: object
       properties:
@@ -1333,6 +1479,49 @@ components:
       description: |-
         * `completed` - completed
         * `cancelled` - cancelled
+    ContinueWatching:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContinueWatchingItem'
+      required:
+      - items
+    ContinueWatchingItem:
+      type: object
+      properties:
+        series_id:
+          type: string
+          description: Opaque series public id.
+        series_title:
+          type: string
+        artwork_url:
+          type: string
+          nullable: true
+        episode_id:
+          type: string
+          description: Opaque episode public id.
+        episode_title:
+          type: string
+        episode_order:
+          type: integer
+          minimum: 1
+        position_seconds:
+          type: integer
+          minimum: 0
+        duration_seconds:
+          type: integer
+          minimum: 0
+      required:
+      - artwork_url
+      - duration_seconds
+      - episode_id
+      - episode_order
+      - episode_title
+      - position_seconds
+      - series_id
+      - series_title
     CurrentUserProfile:
       type: object
       properties:
@@ -1354,6 +1543,8 @@ components:
           type: boolean
         ads_consent:
           type: boolean
+        auto_unlock_next:
+          type: boolean
         consent_updated_at:
           type: string
           format: date-time
@@ -1361,6 +1552,7 @@ components:
       required:
       - ads_consent
       - analytics_consent
+      - auto_unlock_next
       - consent_updated_at
       - country
       - created_at
@@ -1553,6 +1745,16 @@ components:
       description: |-
         * `ok` - ok
         * `unavailable` - unavailable
+    KindEnum:
+      enum:
+      - purchase
+      - unlock
+      - correction
+      type: string
+      description: |-
+        * `purchase` - purchase
+        * `unlock` - unlock
+        * `correction` - correction
     LocaleEnum:
       enum:
       - en
@@ -1606,6 +1808,8 @@ components:
         analytics_consent:
           type: boolean
         ads_consent:
+          type: boolean
+        auto_unlock_next:
           type: boolean
     PlaybackAuthorizeGranted:
       type: object
@@ -1776,6 +1980,17 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 1
+          description: Total coins credited, bonus included.
+        bonus_percent:
+          type: integer
+          maximum: 200
+          minimum: 0
+          description: Bonus coins as a whole percent of base coins.
+        badge:
+          type: string
+          maxLength: 24
+        highlighted:
+          type: boolean
         product_type:
           $ref: '#/components/schemas/ProductTypeEnum'
         store:
@@ -1785,8 +2000,11 @@ components:
         price_source:
           $ref: '#/components/schemas/PriceSourceEnum'
       required:
+      - badge
+      - bonus_percent
       - coins
       - environment
+      - highlighted
       - price_source
       - product_id
       - product_type
@@ -1975,6 +2193,52 @@ components:
       required:
       - balance
       - spending_available
+    WalletActivity:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletActivityEntry'
+        has_more:
+          type: boolean
+      required:
+      - entries
+      - has_more
+    WalletActivityEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/KindEnum'
+        amount:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483647
+        balance_after:
+          type: integer
+          maximum: 9007199254740991
+          minimum: 0
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        episode_id:
+          type: string
+          nullable: true
+        episode_title:
+          type: string
+          nullable: true
+      required:
+      - amount
+      - balance_after
+      - created_at
+      - episode_id
+      - episode_title
+      - id
+      - kind
     WatchProgress:
       type: object
       properties:
