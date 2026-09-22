@@ -222,10 +222,14 @@ free; episode 2 remains locked with the existing one-coin test price. Repeating
 the import preserved the same rows without duplication. These application-level
 checks do not substitute for watching playback on the physical phone.
 
-The founder was asked to reopen the app and play the first generated episode.
-Visible populated-catalog/playback acceptance, the hosted purchase journey and
-sandbox provider callback setup/delivery remain outstanding. No production
-release or real payments were enabled.
+The founder confirmed the first generated episode played successfully on the
+physical phone. At its end, the app displayed "Unlock this episode to keep
+watching," as expected for the locked second episode. This is founder-observed
+store-installed physical-device evidence for catalog access, free playback and
+the transition to the second-episode lock. It does not establish an authenticated
+coin unlock, purchase credit, replay persistence or callback delivery. Those
+hosted journey checks and sandbox callback setup remain outstanding. No
+production release or real payments were enabled.
 
 The code keeps the existing private service for staff. An optional second service
 runs the same image with `config.settings.hosted_sandbox`, DEBUG off, verified

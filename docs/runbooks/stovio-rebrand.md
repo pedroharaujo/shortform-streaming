@@ -370,9 +370,11 @@ contained no catalog rows. Added only the existing self-owned generated test
 series, one season, two episodes and two existing Bunny media references, with
 publication and provenance checks. Signed playlists passed, unsigned/expired
 links were rejected, and a repeat import created no duplicates. Episode 1 is
-free and episode 2 retains its one-coin test lock. Visible populated-catalog and
-hosted playback/purchase acceptance plus sandbox callback setup remain
-outstanding. The GitHub staging deployment remains a post-review merge gate;
+free and episode 2 retains its one-coin test lock. The founder confirmed that the
+first video played successfully on the physical phone and ended at the expected
+second-episode unlock prompt. Hosted authenticated purchase/unlock/replay checks
+and sandbox callback setup remain outstanding. The GitHub staging deployment
+remains a post-review merge gate;
 the direct live checks do not claim that workflow ran. The emulator's
 precise rejection cause remains unknown. See the hosted release runbook for
 artifact identity and open gates.
