@@ -387,6 +387,36 @@ opted-in testers; the dashboard requires 12 testers continuously for 14 days and
 a production-access application. No declarations or release submissions were
 made during this inspection.
 
+### Play Console setup and review account — 2026-09-22
+
+The founder authorized filling the reviewer-account, target-audience and
+financial-features items for the internal test. Nothing was sent for review, and
+no release, closed test or production access was requested.
+
+- **Financial features:** saved as "My app doesn't provide any financial
+  features". Coins are bought only through Google Play and spent only inside
+  Stovio. They cannot be withdrawn, transferred or exchanged for cash. The
+  declaration waits in Publishing overview until a release is sent for review.
+  Revisit it if D-008 consumer terms ever allow transfer or cash value.
+- **Firebase email/password:** the `stovio-app` project had only Google sign-in
+  enabled, although D-030 keeps email/password. Enabled Email/Password; the
+  passwordless email-link option stays off.
+- **Review account:** created Firebase Email/Password user
+  `pharaujo1094+stovio-play-review@gmail.com` in `stovio-app` and confirmed
+  that it signs in. The password is stored only in the ignored local file
+  `private/play-review-account.txt` and must be entered in Play Console. It is a
+  test identity with zero coins, not a production account. Before public
+  release, create a fresh review account, rotate the password and update Play
+  Console. Google reviewers cannot buy coins, so production review also needs a
+  documented way to reach paid episodes.
+- **Sign in details:** set "Is any part of your app restricted?" to Yes. Adding
+  the review account failed four times with "Your changes couldn't be saved"
+  and no field error; typed input made no difference. Still incomplete.
+- **Target audience and content:** Play requires Sign in details to be finished
+  first, so it is not started.
+- Content rating, privacy policy, Data safety, category/contact details and the
+  store listing were not changed.
+
 ### Delayed-payment failure and notification connection — 2026-09-22
 
 The founder selected Google's delayed-approval test method and closed the app.
