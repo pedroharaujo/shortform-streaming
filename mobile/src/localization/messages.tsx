@@ -15,8 +15,8 @@ export interface AppMessages {
     readonly opening: string;
     readonly openFailed: string;
     readonly operator: (name: string) => string;
-    readonly privacyDraft: string;
-    readonly privacyDraftDescription: string;
+    readonly privacyPolicy: string;
+    readonly privacyPolicyDescription: string;
   };
   readonly coinStore: {
     readonly title: string;
@@ -297,9 +297,9 @@ export const englishMessages: AppMessages = {
     openFailed:
       'Could not open an app for this link. You can email the support address from another device or email service.',
     operator: (name) => `Operated by ${name}`,
-    privacyDraft: 'Privacy notice (draft)',
-    privacyDraftDescription:
-      'The launch notice is under review. Opens on GitHub in your browser. Contact us by email with any privacy questions.',
+    privacyPolicy: 'Privacy policy',
+    privacyPolicyDescription:
+      'Opens in your browser. Contact us by email with any privacy questions.',
   },
   coinStore: {
     title: 'Coins',

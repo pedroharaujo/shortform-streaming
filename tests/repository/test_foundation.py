@@ -98,7 +98,9 @@ class RepositoryFoundationTests(unittest.TestCase):
         self.assertIn("application-ci.yml", workflows)
         self.assertIn("repository-safety.yml", workflows)
 
-        DEPLOY_WORKFLOWS = frozenset({"deploy-staging.yml", "deploy-production.yml"})
+        DEPLOY_WORKFLOWS = frozenset(
+            {"deploy-staging.yml", "deploy-production.yml", "public-pages.yml"}
+        )
 
         for name, workflow in workflows.items():
             with self.subTest(workflow=name):

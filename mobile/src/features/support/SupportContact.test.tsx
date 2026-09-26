@@ -46,10 +46,10 @@ it('keeps a selectable address and allows retry when no email app can open the d
   );
 });
 
-it('labels the inactive notice as a draft and opens its fixed HTTPS destination only on request', async () => {
+it('opens the published privacy policy only on request', async () => {
   const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
   const view = await render(<PrivacyNoticeLink />);
   expect(open).not.toHaveBeenCalled();
-  await fireEvent.press(view.getByRole('button', { name: englishMessages.support.privacyDraft }));
+  await fireEvent.press(view.getByRole('button', { name: englishMessages.support.privacyPolicy }));
   await waitFor(() => expect(open).toHaveBeenCalledWith(privacyNoticeUrl));
 });

@@ -75,8 +75,8 @@ export function PrivacyNoticeLink(): JSX.Element {
   const copy = useMessages().support;
   return (
     <View style={styles.content}>
-      <ExternalLink label={copy.privacyDraft} url={privacyNoticeUrl} />
-      <Text style={styles.body}>{copy.privacyDraftDescription}</Text>
+      <ExternalLink label={copy.privacyPolicy} url={privacyNoticeUrl} />
+      <Text style={styles.body}>{copy.privacyPolicyDescription}</Text>
     </View>
   );
 }
