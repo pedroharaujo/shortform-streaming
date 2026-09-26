@@ -1,8 +1,22 @@
 # MVP privacy publication checklist
 
-Use this checklist for the exact Android release candidate. The notice remains
-a draft and must not be used as the Play privacy-policy URL until every blocking
-item is resolved and the final text is approved.
+Use this checklist for the exact Android release candidate.
+
+## Publication status — 2026-09-26 (#193)
+
+At the founder's request, the privacy policy and account-deletion page are
+published from [`site/`](../../site/) by the `Public pages` workflow on merge to
+`main`, so Google Play testing can proceed:
+
+- Privacy policy: <https://pedroharaujo.github.io/stovio/privacy/>
+- Account deletion: <https://pedroharaujo.github.io/stovio/delete-account/>
+
+The text describes the current coin-only, signed-in, ad-free app and the
+approved D-020 retention defaults. It has not had legal review. Before public
+launch, the unchecked items below still apply, in particular the financial-record
+period, provider roles/transfers, AdMob SDK removal, the 24-month inactivity
+notice and three-year receipt expiry jobs, and RevenueCat cleanup on deletion.
+Update the pages whenever the binary, providers or retention behavior change.
 
 ## Decisions and legal review
 
@@ -95,8 +109,8 @@ remain deferred under D-029; they are not passed checks:
 4. With no email handler available, confirm the visible address/reference can be
    selected and copied and the failure message permits retry. Confirm opening the
    draft does not resolve a purchase, erase recovery state or spend coins.
-5. Open the privacy draft from Account without signing in. It must remain clearly
-   labeled inactive; replace its in-app label and URL only after final approval.
+5. Open "Privacy policy" from Account without signing in. It must open the
+   published page above in the browser.
 6. With the founder's authorization, send a non-sensitive test message and verify
    receipt and reply. A displayed address is not delivery or monitoring evidence.
 

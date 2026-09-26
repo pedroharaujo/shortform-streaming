@@ -127,7 +127,7 @@ it('keeps public support and the privacy draft reachable after sign-out without 
   expect(view.getByText(englishMessages.support.operator(operatorName))).toBeOnTheScreen();
   expect(view.getByText(supportEmail)).toHaveProp('selectable', true);
   expect(view.getByRole('button', { name: englishMessages.support.emailSupport })).toBeEnabled();
-  expect(view.getByRole('button', { name: englishMessages.support.privacyDraft })).toBeEnabled();
+  expect(view.getByRole('button', { name: englishMessages.support.privacyPolicy })).toBeEnabled();
   expect(requests).toHaveLength(requestCount);
 });
 
