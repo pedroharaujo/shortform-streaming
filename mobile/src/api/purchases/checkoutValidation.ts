@@ -36,9 +36,10 @@ export function isTransactionId(value: unknown): value is string {
 export function isCoins(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0 && value <= 2147483647;
 }
-export function isPackPresentation(
-  value: Record<string, unknown>,
-): value is Record<string, unknown> & {
+export function isPackPresentation(value: Record<string, unknown>): value is Record<
+  string,
+  unknown
+> & {
   readonly bonus_percent: number;
   readonly badge: string;
   readonly highlighted: boolean;
